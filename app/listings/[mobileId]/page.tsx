@@ -109,7 +109,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 <AdStatusBadge status={listing.ad_status} />
                 {listing.kaparo ? (
                   <span className="rounded-full bg-orange-900/70 px-2.5 py-1 text-xs text-orange-200">
-                    Kaparo
+                    капаро
                   </span>
                 ) : null}
               </div>
