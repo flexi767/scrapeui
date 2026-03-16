@@ -144,13 +144,14 @@ export default async function HomePage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-right">Reg.</th>
+                <th className="px-3 py-1.5 text-right">Month</th>
+                <th className="px-3 py-1.5 text-right">Year</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-16 text-center text-gray-500">
+                  <td colSpan={12} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
@@ -270,11 +271,14 @@ export default async function HomePage({
                       {formatMileage(row.mileage)}
                     </td>
 
-                    {/* Reg Month + Year */}
+                    {/* Reg Month */}
                     <td className="px-3 py-1 text-right text-gray-300">
-                      {row.reg_month && row.reg_year
-                        ? `${row.reg_month}/${row.reg_year}`
-                        : row.reg_year ?? '—'}
+                      {row.reg_month ?? '—'}
+                    </td>
+
+                    {/* Reg Year */}
+                    <td className="px-3 py-1 text-right text-gray-300">
+                      {row.reg_year ?? '—'}
                     </td>
                   </tr>
                 );
