@@ -14,6 +14,7 @@ export interface ListingRow {
   kaparo: number;
   ad_status: string;
   last_edit: string;
+  is_new: number;
   thumb_keys: string;
   image_meta: string;
   images_downloaded: number;
@@ -85,7 +86,7 @@ export function getListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage,
-      l.current_price, l.vat, l.kaparo, l.ad_status, l.last_edit,
+      l.current_price, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
       l.thumb_keys, l.image_meta, l.images_downloaded, l.is_active,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
