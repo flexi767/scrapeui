@@ -69,15 +69,15 @@ export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
           />
         </div>
 
-        {/* Low thumb */}
+        {/* Low thumb — thin bar, sharp right edge */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ width: THUMB * 2, height: THUMB * 2, left: lowPx, zIndex: 6 }}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-400 pointer-events-none"
+          style={{ width: 3, height: 12, left: lowPx, zIndex: 6, borderRadius: '2px 0 0 2px' }}
         />
-        {/* High thumb */}
+        {/* High thumb — thin bar, sharp left edge */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ width: THUMB * 2, height: THUMB * 2, left: highPx, zIndex: 6 }}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-400 pointer-events-none"
+          style={{ width: 3, height: 12, left: highPx, zIndex: 6, borderRadius: '0 2px 2px 0' }}
         />
 
         {/* Low input */}
