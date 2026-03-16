@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Dealer {
   id: number;
@@ -20,12 +20,13 @@ interface Dealer {
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
 
+  useEffect(() => {
+    onDealersChange?.(dealers);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealers]);
+
   function updateDealers(fn: (prev: Dealer[]) => Dealer[]) {
-    setDealers(prev => {
-      const next = fn(prev);
-      onDealersChange?.(next);
-      return next;
-    });
+    setDealers(prev => fn(prev));
   }
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
