@@ -97,15 +97,10 @@ export default async function ListingDetailPage({ params }: Props) {
           <div className="space-y-4">
             {/* Price card */}
             <div className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
-              <div className="mb-1 flex items-center gap-2">
+              <div className="mb-1 flex items-center gap-2 flex-wrap">
                 <span className="text-3xl font-bold text-green-400">
                   {formatPrice(listing.current_price)}
                 </span>
-                {lastPriceSnapshot && lastPriceSnapshot.price !== listing.current_price && (
-                  <span className="text-sm text-gray-500 line-through">
-                    {formatPrice(lastPriceSnapshot.price)}
-                  </span>
-                )}
                 {listing.vat === 'included' && (
                   <span className="rounded-full bg-blue-900/70 px-2.5 py-1 text-xs text-blue-200">има</span>
                 )}
@@ -115,19 +110,17 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listing.vat === 'excluded' && (
                   <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">+ДДС</span>
                 )}
-                {!listing.vat && (
-                  <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">—</span>
-                )}
-
-              </div>
-              <div className="flex flex-wrap gap-2">
                 <AdStatusBadge status={listing.ad_status} />
                 {listing.kaparo ? (
-                  <span className="rounded-full bg-orange-900/70 px-2.5 py-1 text-xs text-orange-200">
-                    капаро
-                  </span>
+                  <span className="rounded-full bg-orange-900/70 px-2.5 py-1 text-xs text-orange-200">капаро</span>
                 ) : null}
               </div>
+              {lastPriceSnapshot && lastPriceSnapshot.price !== listing.current_price && (
+                <div className="mt-1 flex items-center gap-2 text-sm">
+                  <span className="text-gray-500 line-through">{formatPrice(lastPriceSnapshot.price)}</span>
+                  <span className="text-xs text-gray-500">{formatDate(lastPriceSnapshot.recorded_at)}</span>
+                </div>
+              )}
 
               {/* History link */}
               {snapshots.length > 0 && (
