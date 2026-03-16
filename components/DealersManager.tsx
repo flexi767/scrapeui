@@ -210,23 +210,20 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                   </td>
                   <td className="px-4 py-2 text-center">
                     <div className="flex items-center justify-center gap-1.5">
+                      {/* Save (checkmark) — visible only when editing */}
+                      <button onClick={() => saveEdit(d.id)} disabled={saving} title="Save" className={`text-emerald-400 hover:text-emerald-300 disabled:opacity-50 ${editing ? '' : 'invisible'}`}>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      {/* Pencil / Cancel — swaps but always takes space */}
                       {editing ? (
-                        <>
-                          {/* Save icon (checkmark) */}
-                          <button onClick={() => saveEdit(d.id)} disabled={saving} title="Save" className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                          {/* Cancel icon (X) */}
-                          <button onClick={() => setEditingId(null)} title="Cancel" className="text-gray-400 hover:text-white">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </>
+                        <button onClick={() => setEditingId(null)} title="Cancel" className="text-gray-400 hover:text-white">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       ) : (
-                        /* Pencil icon */
                         <button onClick={() => startEdit(d)} title="Edit" className="text-gray-400 hover:text-blue-400">
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414a2 2 0 01.586-1.414z" />
