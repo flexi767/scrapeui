@@ -128,23 +128,23 @@ export default async function HomePage({
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-                <th className="w-16 px-3 py-3 text-left">Img</th>
-                <th className="px-3 py-3 text-left">Make / Model</th>
-                <th className="px-3 py-3 text-left">Title</th>
-                <th className="px-3 py-3 text-left">Dealer</th>
-                <th className="px-3 py-3 text-left">Status</th>
-                <th className="px-3 py-3 text-right">
+                <th className="w-16 px-3 py-1.5 text-left">Img</th>
+                <th className="px-3 py-1.5 text-left">Make / Model</th>
+                <th className="px-3 py-1.5 text-left">Title</th>
+                <th className="px-3 py-1.5 text-left">Dealer</th>
+                <th className="px-3 py-1.5 text-left">Status</th>
+                <th className="px-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-3 text-center">VAT</th>
-                <th className="px-3 py-3 text-center">капаро</th>
-                <th className="px-3 py-3 text-right">
+                <th className="px-3 py-1.5 text-center">VAT</th>
+                <th className="px-3 py-1.5 text-center">капаро</th>
+                <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-3 text-right">
+                <th className="px-3 py-1.5 text-right">
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-3 text-right">Year</th>
+                <th className="px-3 py-1.5 text-right">Year</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -173,7 +173,7 @@ export default async function HomePage({
                     className="group transition-colors hover:bg-gray-800/40"
                   >
                     {/* Thumbnail */}
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1">
                       {thumb ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -187,7 +187,7 @@ export default async function HomePage({
                     </td>
 
                     {/* Make + Model */}
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1">
                       {row.make ? (
                         <Link
                           href={`/?make=${encodeURIComponent(row.make)}`}
@@ -207,7 +207,7 @@ export default async function HomePage({
                     </td>
 
                     {/* Title */}
-                    <td className="max-w-xs px-3 py-2">
+                    <td className="max-w-xs px-3 py-1">
                       <Link
                         href={`/listings/${row.mobile_id}`}
                         className="line-clamp-2 text-white no-underline hover:text-white hover:no-underline"
@@ -217,7 +217,7 @@ export default async function HomePage({
                     </td>
 
                     {/* Dealer */}
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1">
                       {row.dealer_slug ? (
                         <Link
                           href={`/?dealer=${encodeURIComponent(row.dealer_slug)}`}
@@ -229,17 +229,17 @@ export default async function HomePage({
                     </td>
 
                     {/* Ad Status */}
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1">
                       <AdStatusBadge status={row.ad_status} />
                     </td>
 
                     {/* Price */}
-                    <td className="px-3 py-2 text-right font-semibold text-green-400">
+                    <td className="px-3 py-1 text-right font-semibold text-green-400">
                       {formatPrice(row.current_price)}
                     </td>
 
                     {/* VAT */}
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-1 text-center">
                       {row.vat === 'included' ? (
                         <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
                       ) : row.vat === 'exempt' ? (
@@ -252,7 +252,7 @@ export default async function HomePage({
                     </td>
 
                     {/* капаро */}
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-1 text-center">
                       {row.kaparo ? (
                         <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">
                           капаро
@@ -263,17 +263,17 @@ export default async function HomePage({
                     </td>
 
                     {/* Last Edit */}
-                    <td className="px-3 py-2 text-right text-xs text-gray-400">
+                    <td className="px-3 py-1 text-right text-xs text-gray-400">
                       {formatDate(row.last_edit)}
                     </td>
 
                     {/* Mileage */}
-                    <td className="px-3 py-2 text-right text-gray-300">
+                    <td className="px-3 py-1 text-right text-gray-300">
                       {formatMileage(row.mileage)}
                     </td>
 
                     {/* Reg Year */}
-                    <td className="px-3 py-2 text-right text-gray-300">
+                    <td className="px-3 py-1 text-right text-gray-300">
                       {row.reg_year ?? '—'}
                     </td>
                   </tr>
