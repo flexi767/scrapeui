@@ -54,6 +54,17 @@ export default function EmblaCarousel({ images, title }: Props) {
     };
   }, [mainApi, onSelect]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (zoomed) { setZoomed(false); setTranslate({ x: 0, y: 0 }); }
+        else if (lightbox) { setLightbox(null); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoomed, lightbox]);
+
   const scrollPrev = useCallback(() => mainApi?.scrollPrev(), [mainApi]);
   const scrollNext = useCallback(() => mainApi?.scrollNext(), [mainApi]);
 
