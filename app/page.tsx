@@ -230,7 +230,7 @@ export default async function HomePage({
                     <td className="px-3 py-1">
                       {row.make ? (
                         <Link
-                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make]]).toString()}`}
+                          href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make]]).toString()}`}
                           className="block font-medium text-white no-underline hover:text-white hover:no-underline"
                         >
                           {row.make}
@@ -238,7 +238,7 @@ export default async function HomePage({
                       ) : <div className="font-medium text-gray-200">—</div>}
                       {row.model ? (
                         <Link
-                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make ?? ''], ['model', row.model]]).toString()}`}
+                          href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make ?? ''], ['model', row.model]]).toString()}`}
                           className="block text-xs text-gray-400 no-underline hover:text-white hover:no-underline"
                         >
                           {row.model}
@@ -260,7 +260,7 @@ export default async function HomePage({
                     <td className="px-3 py-1">
                       {row.dealer_slug ? (
                         <Link
-                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
+                          href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
                           className="text-white no-underline hover:text-white hover:no-underline"
                         >
                           {row.dealer_name ?? '—'}
@@ -271,7 +271,7 @@ export default async function HomePage({
                     {/* Ad Status */}
                     <td className="px-2 py-1 text-center">
                       {row.ad_status && row.ad_status !== 'none' ? (
-                        <Link href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'page'), ...(!statuses.includes(row.ad_status) ? [['status', row.ad_status] as [string,string]] : [])]).toString()}`}>
+                        <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page'), ...(!statuses.includes(row.ad_status) ? [['status', row.ad_status] as [string,string]] : [])]).toString()}`}>
                           <AdStatusBadge status={row.ad_status} />
                         </Link>
                       ) : (
@@ -328,7 +328,7 @@ export default async function HomePage({
                     {/* Reg Year */}
                     <td className="px-3 py-1 text-right">
                       {row.reg_year ? (
-                        <Link href={`/?${new URLSearchParams([...currentParams.entries(), ['year', row.reg_year]]).toString()}`} className="text-gray-300 hover:text-white">
+                        <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-300 hover:text-white">
                           {row.reg_year}
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
