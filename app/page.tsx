@@ -132,8 +132,8 @@ export default async function HomePage({
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
                 <th className="px-3 py-1.5 text-left">Dealer</th>
-                <th className="px-3 py-1.5 text-left">Status</th>
-                <th className="px-3 py-1.5 text-right">
+                <th className="pl-3 pr-1 py-1.5 text-left">Status</th>
+                <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
@@ -229,12 +229,12 @@ export default async function HomePage({
                     </td>
 
                     {/* Ad Status */}
-                    <td className="px-3 py-1">
+                    <td className="pl-3 pr-1 py-1">
                       <AdStatusBadge status={row.ad_status} />
                     </td>
 
                     {/* Price */}
-                    <td className="px-3 py-1 text-right font-semibold text-green-400">
+                    <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
                       {formatPrice(row.current_price)}
                     </td>
 
