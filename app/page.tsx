@@ -192,13 +192,25 @@ export default async function HomePage({
                     {/* Thumbnail */}
                     <td className="px-3 py-1">
                       {thumb ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={thumb}
-                          alt=""
-                          className="w-16 rounded object-contain"
-                          style={{aspectRatio:'4/3'}}
-                        />
+                        <div className="group relative w-16">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={thumb}
+                            alt=""
+                            className="w-16 rounded object-contain"
+                            style={{aspectRatio:'4/3'}}
+                          />
+                          {/* Hover preview */}
+                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 group-hover:block">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={thumb}
+                              alt=""
+                              className="w-full rounded shadow-xl"
+                              style={{aspectRatio:'4/3'}}
+                            />
+                          </div>
+                        </div>
                       ) : (
                         <div className="h-10 w-14 rounded bg-gray-700" />
                       )}
