@@ -193,7 +193,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, sel
             currentStatuses.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentStatuses.length === 0 ? 'All Status' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
+          {currentStatuses.length === 0 ? 'All Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
           <span className="text-gray-400">{statusOpen ? '▲' : '▼'}</span>
         </button>
         {statusOpen && (
@@ -206,7 +206,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, sel
             ))}
             {currentStatuses.length > 0 && (
               <button onClick={() => { router.push(`/?${buildParams({ status: [] })}`); setStatusOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear status
+                Clear paid
               </button>
             )}
           </div>

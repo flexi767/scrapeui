@@ -149,7 +149,7 @@ export default async function HomePage({
                   <SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-2 py-1.5 text-center w-14">
-                  <SortLink label="Status" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />

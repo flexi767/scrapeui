@@ -56,7 +56,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                   <th className="px-4 py-3 text-right">Price</th>
                   <th className="px-4 py-3 text-center">VAT</th>
                   <th className="px-4 py-3 text-center">Last Edit</th>
-                  <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-center">Paid</th>
                   <th className="px-4 py-3 text-center">К</th>
                   <th className="px-4 py-3 text-left">Title</th>
                   <th className="px-4 py-3 text-left">Description</th>
