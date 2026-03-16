@@ -1,21 +1,16 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 
 interface Props {
   min: number;
   max: number;
 }
 
-const TRACK_W = 96; // px
-
-export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
+export default function PriceChangeFilter({ min, max }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const min = rawMin === rawMax ? rawMin - 1 : rawMin;
-  const max = rawMin === rawMax ? rawMax + 1 : rawMax;
 
   const paramMin = searchParams.get('pc_min');
   const paramMax = searchParams.get('pc_max');
@@ -37,68 +32,36 @@ export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
       if (lo === min) p.delete('pc_min'); else p.set('pc_min', String(lo));
       if (hi === max) p.delete('pc_max'); else p.set('pc_max', String(hi));
       router.push(`/?${p.toString()}`);
-    }, 300);
+    }, 400);
   }, [searchParams, router, min, max]);
 
-  const range = max - min;
   const active = low !== min || high !== max;
-  const lowFrac = (low - min) / range;
-  const highFrac = (high - min) / range;
-  // pixel position of thumb centre within the track
-  const THUMB = 6; // radius
-  const lowPx = lowFrac * (TRACK_W - THUMB * 2) + THUMB;
-  const highPx = highFrac * (TRACK_W - THUMB * 2) + THUMB;
   const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
-    <div className={`flex h-8 items-center gap-2 rounded border px-2 text-sm flex-shrink-0 transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
-      <span className="w-10 text-right text-xs text-gray-300 tabular-nums">{fmt(low)}</span>
-
-      <div className="relative flex-shrink-0" style={{ width: TRACK_W, height: 20 }}>
-        {/* Track */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 rounded bg-gray-600"
-          style={{ left: THUMB, right: THUMB, height: 2 }}
-        >
-          <div
-            className="absolute h-full rounded bg-blue-500"
-            style={{
-              left: `${lowFrac * 100}%`,
-              right: `${(1 - highFrac) * 100}%`,
-            }}
-          />
-        </div>
-
-        {/* Low thumb — thin bar, sharp right edge */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-400 pointer-events-none"
-          style={{ width: 3, height: 12, left: lowPx, zIndex: 6, borderRadius: '2px 0 0 2px' }}
-        />
-        {/* High thumb — thin bar, sharp left edge */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-400 pointer-events-none"
-          style={{ width: 3, height: 12, left: highPx, zIndex: 6, borderRadius: '0 2px 2px 0' }}
-        />
-
-        {/* Low input */}
-        <input
-          type="range" min={min} max={max} step={1} value={low}
-          onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          style={{ zIndex: lowFrac > 0.9 ? 5 : 3 }}
-        />
-        {/* High input */}
-        <input
-          type="range" min={min} max={max} step={1} value={high}
-          onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          style={{ zIndex: 4 }}
-        />
-      </div>
-
-      <span className="w-10 text-xs text-gray-300 tabular-nums">{fmt(high)}</span>
+    <div className={`flex h-8 items-center gap-1 rounded border px-2 text-xs transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
+      <span className="text-gray-500">Δ</span>
+      <input
+        type="number"
+        value={low}
+        min={min}
+        max={high}
+        onChange={e => { const v = Number(e.target.value); setLow(v); push(v, high); }}
+        className="w-14 bg-transparent text-center text-gray-300 tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        placeholder={fmt(min)}
+      />
+      <span className="text-gray-600">—</span>
+      <input
+        type="number"
+        value={high}
+        min={low}
+        max={max}
+        onChange={e => { const v = Number(e.target.value); setHigh(v); push(low, v); }}
+        className="w-14 bg-transparent text-center text-gray-300 tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        placeholder={fmt(max)}
+      />
       {active && (
-        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs">✕</button>
+        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="ml-0.5 text-gray-500 hover:text-white leading-none">✕</button>
       )}
     </div>
   );
