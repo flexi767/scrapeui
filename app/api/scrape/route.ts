@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { spawn } from 'child_process';
+import path from 'path';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
       };
 
       const child = spawn('node', [
-        '/Users/v/dev/scrapers/scripts/run-for-ui.js',
+        path.join(process.cwd(), 'scraper/scripts/run-for-ui.js'),
         ...scriptArgs,
       ], {
         env: {
