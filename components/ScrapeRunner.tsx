@@ -42,10 +42,9 @@ function formatPrice(price: number | null | undefined) {
   return `€${price.toLocaleString()}`;
 }
 
-export default function ScrapeRunner({ initialDealers }: { initialDealers: Dealer[] }) {
+export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: Dealer[]; onRunStart?: () => void }) {
   const activeDealers = initialDealers.filter(c => c.active);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
-  const [dealersOpen, setDealersOpen] = useState(true);
 
   // Effective selection: only keep slugs that are still active
   const activeSlugs = new Set(activeDealers.map(d => d.slug));
@@ -82,7 +81,7 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
 
   const run = async () => {
     if (effectiveSelected.length === 0) return;
-    setDealersOpen(false);
+    onRunStart?.();
     setRunning(true);
     setDone(false);
     setLog([]);
@@ -144,30 +143,24 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
         {/* Dealers */}
         <div>
-          <button
-            onClick={() => setDealersOpen(v => !v)}
-            className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300"
-          >
-            <span>{dealersOpen ? '▼' : '▶'}</span>
+          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
             <span>Dealers</span>
             <span className="text-xs text-gray-500">({effectiveSelected.length} selected)</span>
-          </button>
-          {dealersOpen && (
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {activeDealers.map(d => (
-                <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={effectiveSelected.includes(d.slug)}
-                    onChange={() => toggleDealer(d.slug)}
-                    disabled={running}
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
-                  />
-                  <span className="text-sm text-gray-200">{d.name}</span>
-                </label>
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {activeDealers.map(d => (
+              <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={effectiveSelected.includes(d.slug)}
+                  onChange={() => toggleDealer(d.slug)}
+                  disabled={running}
+                  className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                />
+                <span className="text-sm text-gray-200">{d.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
