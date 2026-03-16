@@ -196,7 +196,8 @@ export default async function HomePage({
                         <img
                           src={thumb}
                           alt=""
-                          className="h-10 w-14 rounded object-cover"
+                          className="w-16 rounded object-contain"
+                          style={{aspectRatio:'4/3'}}
                         />
                       ) : (
                         <div className="h-10 w-14 rounded bg-gray-700" />
