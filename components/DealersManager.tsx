@@ -106,8 +106,8 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
               <th className="px-4 py-2 text-left">Mobile.bg URL</th>
               <th className="px-4 py-2 text-center">Own</th>
               <th className="px-4 py-2 text-center">Active</th>
-              <th className="px-4 py-2 text-center">Edit</th>
-              <th className="px-4 py-2 text-center">Delete</th>
+              <th className="px-4 py-2 text-center w-16"></th>
+              <th className="px-4 py-2 text-center w-8"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50">
@@ -158,16 +158,39 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
                     <button onClick={() => onToggleActive(d)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}>{d.active ? 'on' : 'off'}</button>
                   </td>
                   <td className="px-4 py-2 text-center">
-                    {editing ? (
-                      <div className="flex items-center justify-center gap-2 text-xs">
-                        <button onClick={() => saveEdit(d.id)} disabled={saving} className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50">save</button>
-                        <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-white">cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => startEdit(d)} className="text-blue-400 hover:text-blue-300 text-xs">edit</button>
-                    )}
+                    <div className="flex items-center justify-center gap-1.5">
+                      {editing ? (
+                        <>
+                          {/* Save icon (checkmark) */}
+                          <button onClick={() => saveEdit(d.id)} disabled={saving} title="Save" className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                          {/* Cancel icon (X) */}
+                          <button onClick={() => setEditingId(null)} title="Cancel" className="text-gray-400 hover:text-white">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        /* Pencil icon */
+                        <button onClick={() => startEdit(d)} title="Edit" className="text-gray-400 hover:text-blue-400">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414a2 2 0 01.586-1.414z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-2 text-center"><button onClick={() => onDelete(d)} className="text-red-500 hover:text-red-300 text-xs">✕</button></td>
+                  <td className="px-4 py-2 text-center">
+                    <button onClick={() => onDelete(d)} title="Delete" className="text-gray-600 hover:text-red-400">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 011-1h4a1 1 0 011 1m-7 0H5m14 0h-2" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               );
             })}
