@@ -132,7 +132,7 @@ export default async function HomePage({
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
                 <th className="px-3 py-1.5 text-left">Dealer</th>
-                <th className="pl-3 pr-1 py-1.5 text-left">Status</th>
+                <th className="pl-3 pr-1 py-1.5 text-left w-14">Status</th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
