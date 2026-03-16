@@ -17,9 +17,11 @@ export default function EmblaCarousel({ images, title }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
-  const [origin, setOrigin] = useState('50% 50%');
+  const [zoomOrigin, setZoomOrigin] = useState('50% 50%');
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
-  const dragRef = useRef<{ startX: number; startY: number; tx: number; ty: number; dragging: boolean } | null>(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ mx: 0, my: 0, tx: 0, ty: 0 });
+  const hasMoved = useRef(false);
   const [mainRef, mainApi] = useEmblaCarousel({ loop: true });
   const [thumbsRef, thumbsApi] = useEmblaCarousel({
     containScroll: 'keepSnaps',
@@ -111,57 +113,62 @@ export default function EmblaCarousel({ images, title }: Props) {
       {lightbox && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          onClick={() => { if (zoomed) { setZoomed(false); setTranslate({ x: 0, y: 0 }); } else { setLightbox(null); } }}
+          onClick={() => { if (zoomed) { setZoomed(false); setTranslate({x:0,y:0}); } else { setLightbox(null); } }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={lightbox}
             alt=""
+            draggable={false}
             className="max-h-screen max-w-full select-none object-contain p-4"
             style={{
-              transformOrigin: origin,
+              transformOrigin: zoomOrigin,
               transform: zoomed
                 ? `scale(2.5) translate(${translate.x}px, ${translate.y}px)`
                 : 'scale(1)',
-              cursor: zoomed ? (dragRef.current?.dragging ? 'grabbing' : 'grab') : 'zoom-in',
-              transition: dragRef.current?.dragging ? 'none' : 'transform 0.2s',
+              cursor: zoomed ? (isDragging.current ? 'grabbing' : 'grab') : 'zoom-in',
+              transition: isDragging.current ? 'none' : 'transform 0.2s',
             }}
             onMouseDown={(e) => {
               if (!zoomed) return;
+              e.preventDefault();
               e.stopPropagation();
-              dragRef.current = { startX: e.clientX, startY: e.clientY, tx: translate.x, ty: translate.y, dragging: true };
+              isDragging.current = true;
+              hasMoved.current = false;
+              dragStart.current = { mx: e.clientX, my: e.clientY, tx: translate.x, ty: translate.y };
+
+              const onMove = (ev: MouseEvent) => {
+                const dx = (ev.clientX - dragStart.current.mx) / 2.5;
+                const dy = (ev.clientY - dragStart.current.my) / 2.5;
+                if (Math.abs(dx) + Math.abs(dy) > 2) hasMoved.current = true;
+                setTranslate({ x: dragStart.current.tx + dx, y: dragStart.current.ty + dy });
+              };
+              const onUp = () => {
+                isDragging.current = false;
+                if (!hasMoved.current) {
+                  setZoomed(false);
+                  setTranslate({ x: 0, y: 0 });
+                }
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+              };
+              window.addEventListener('mousemove', onMove);
+              window.addEventListener('mouseup', onUp);
             }}
-            onMouseMove={(e) => {
-              if (!dragRef.current?.dragging) return;
-              const dx = (e.clientX - dragRef.current.startX) / 2.5;
-              const dy = (e.clientY - dragRef.current.startY) / 2.5;
-              setTranslate({ x: dragRef.current.tx + dx, y: dragRef.current.ty + dy });
-            }}
-            onMouseUp={(e) => {
-              if (!dragRef.current) return;
-              const moved = Math.abs(e.clientX - dragRef.current.startX) + Math.abs(e.clientY - dragRef.current.startY);
-              dragRef.current.dragging = false;
-              if (moved < 5) {
-                // treat as click — zoom out
-                setZoomed(false);
-                setTranslate({ x: 0, y: 0 });
-              }
-            }}
-            onMouseLeave={() => { if (dragRef.current) dragRef.current.dragging = false; }}
             onClick={(e) => {
               e.stopPropagation();
               if (!zoomed) {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = ((e.clientX - rect.left) / rect.width) * 100;
                 const y = ((e.clientY - rect.top) / rect.height) * 100;
-                setOrigin(`${x}% ${y}%`);
+                setZoomOrigin(`${x}% ${y}%`);
                 setTranslate({ x: 0, y: 0 });
                 setZoomed(true);
               }
             }}
           />
           <button
-            onClick={() => { setZoomed(false); setTranslate({ x: 0, y: 0 }); setLightbox(null); }}
+            onClick={() => { setZoomed(false); setTranslate({x:0,y:0}); setLightbox(null); }}
             className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
