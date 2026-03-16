@@ -16,7 +16,7 @@ interface SearchParams {
 
 function AdStatusBadge({ status }: { status: string }) {
   if (!status || status === 'none') {
-    return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">—</span>;
+    return <span className="text-gray-600">—</span>;
   }
   if (status.toUpperCase() === 'TOP') {
     return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{backgroundColor:'#1a6496'}}>TOP</span>;
