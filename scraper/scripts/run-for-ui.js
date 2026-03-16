@@ -7,6 +7,7 @@
  */
 const { PlaywrightCrawler } = require('crawlee');
 const path = require('path');
+const util = require('util');
 const Database = require('better-sqlite3');
 const { fetchMakesModels, parseMakeModelSync } = require('../utils/makes-models');
 
@@ -19,6 +20,24 @@ const requestedSlugs = dealerArg ? dealerArg.split(',').map(s => s.trim()) : [];
 
 function emit(obj) {
   process.stdout.write(JSON.stringify(obj) + '\n');
+}
+
+function formatError(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  const anyErr = err;
+  if (Array.isArray(anyErr.errors) && anyErr.errors.length > 0) {
+    return anyErr.errors
+      .map((e) => formatError(e))
+      .filter(Boolean)
+      .join(' | ');
+  }
+  if (anyErr.cause) {
+    const cause = formatError(anyErr.cause);
+    if (cause && cause !== anyErr.message) return `${anyErr.message}: ${cause}`;
+  }
+  if (anyErr.message) return anyErr.message;
+  return util.inspect(anyErr, { depth: 4, breakLength: 120 });
 }
 
 function extractMobileId(url) {
@@ -402,21 +421,26 @@ async function main() {
     process.exit(1);
   }
 
+  let hadErrors = false;
+
   for (const dealer of selected) {
     emit({ type: 'log', message: `Starting scrape: ${dealer.name}` });
     try {
       const count = await scrapeCompetitorForUI(dealer, db, makesMap);
       emit({ type: 'done', dealer: dealer.slug, count });
     } catch (err) {
-      emit({ type: 'error', message: `Error scraping ${dealer.name}: ${err.message}` });
+      hadErrors = true;
+      emit({ type: 'error', message: `Error scraping ${dealer.name}: ${formatError(err)}` });
     }
   }
 
-  emit({ type: 'seeded', message: 'Database updated directly' });
+  if (!hadErrors) {
+    emit({ type: 'seeded', message: 'Database updated directly' });
+  }
   db.close();
 }
 
 main().catch(err => {
-  emit({ type: 'error', message: err.message });
+  emit({ type: 'error', message: formatError(err) });
   process.exit(1);
 });
