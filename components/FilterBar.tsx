@@ -145,8 +145,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   const STATUS_OPTIONS = [
-    { value: 'top', label: 'TOP' },
-    { value: 'vip', label: 'VIP' },
+    { value: 'TOP', label: 'TOP' },
+    { value: 'VIP', label: 'VIP' },
     { value: 'none', label: 'None' },
   ];
 
