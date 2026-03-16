@@ -106,6 +106,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Slug</th>
               <th className="px-4 py-2 text-left">Mobile.bg URL</th>
+              <th className="px-4 py-2 text-left">Cars.bg URL</th>
               <th className="px-4 py-2 text-center">Own</th>
               <th className="px-4 py-2 text-center">Priority</th>
               <th className="px-4 py-2 text-center">Active</th>
@@ -114,7 +115,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50">
-            {dealers.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
+            {dealers.length === 0 && <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
             {dealers.map(d => {
               const editing = editingId === d.id;
               return (
@@ -145,15 +146,29 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
                           <>
                             <input value={editForm.mobile_user} onChange={e => setEditForm(f => ({ ...f, mobile_user: e.target.value }))} placeholder="mobile user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                             <input value={editForm.mobile_password} onChange={e => setEditForm(f => ({ ...f, mobile_password: e.target.value }))} placeholder="mobile password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                            <input value={editForm.cars_url} onChange={e => setEditForm(f => ({ ...f, cars_url: e.target.value }))} placeholder="https://www.cars.bg/company/dealer" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                            <input value={editForm.cars_user} onChange={e => setEditForm(f => ({ ...f, cars_user: e.target.value }))} placeholder="cars user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                            <input value={editForm.cars_password} onChange={e => setEditForm(f => ({ ...f, cars_password: e.target.value }))} placeholder="cars password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                           </>
                         )}
                       </div>
                     ) : (
                       <a href={d.mobile_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
                         {d.mobile_url || '—'}
+                      </a>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {editing ? (
+                      <div className="space-y-2 min-w-[260px]">
+                        <input value={editForm.cars_url} onChange={e => setEditForm(f => ({ ...f, cars_url: e.target.value }))} placeholder="https://www.cars.bg/company/dealer" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                        {editForm.own && (
+                          <>
+                            <input value={editForm.cars_user} onChange={e => setEditForm(f => ({ ...f, cars_user: e.target.value }))} placeholder="cars user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                            <input value={editForm.cars_password} onChange={e => setEditForm(f => ({ ...f, cars_password: e.target.value }))} placeholder="cars password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <a href={d.cars_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
+                        {d.cars_url || '—'}
                       </a>
                     )}
                   </td>
@@ -214,7 +229,8 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
         <div className="grid grid-cols-2 gap-3">
           <input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: slugify(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
           <input placeholder="Slug" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
-          <input placeholder="https://dealer.mobile.bg" value={form.mobile_url} onChange={e => setForm(f => ({ ...f, mobile_url: e.target.value }))} required type="url" className="col-span-2 rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+          <input placeholder="https://dealer.mobile.bg" value={form.mobile_url} onChange={e => setForm(f => ({ ...f, mobile_url: e.target.value }))} required type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+          <input placeholder="https://www.cars.bg/company/dealer" value={form.cars_url} onChange={e => setForm(f => ({ ...f, cars_url: e.target.value }))} type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
           <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.own} onChange={e => setForm(f => ({ ...f, own: e.target.checked }))} /> own dealer</label>
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-400">Priority:</label>
@@ -224,7 +240,6 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
             <>
               <input placeholder="mobile user" value={form.mobile_user} onChange={e => setForm(f => ({ ...f, mobile_user: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="mobile password" value={form.mobile_password} onChange={e => setForm(f => ({ ...f, mobile_password: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
-              <input placeholder="https://www.cars.bg/company/dealer" value={form.cars_url} onChange={e => setForm(f => ({ ...f, cars_url: e.target.value }))} className="col-span-2 rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="cars user" value={form.cars_user} onChange={e => setForm(f => ({ ...f, cars_user: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="cars password" value={form.cars_password} onChange={e => setForm(f => ({ ...f, cars_password: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
             </>
