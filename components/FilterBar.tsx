@@ -19,7 +19,20 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
+  const [dealerOpen, setDealerOpen] = useState(false);
+  const dealerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Close dealer dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dealerRef.current && !dealerRef.current.contains(e.target as Node)) {
+        setDealerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   // Sync search input when URL changes externally
   useEffect(() => {
@@ -28,18 +41,15 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
     const p = new URLSearchParams();
-    // Preserve existing non-filter params
     const keep = ['sort', 'order'];
     for (const k of keep) {
       const v = searchParams.get(k);
       if (v) p.set(k, v);
     }
-    // Apply current values
     if (currentMake) p.set('make', currentMake);
     if (currentModel) p.set('model', currentModel);
     for (const d of currentDealers) p.append('dealer', d);
     if (currentSearch) p.set('search', currentSearch);
-    // Apply overrides
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
       if (Array.isArray(val)) {
@@ -85,8 +95,13 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
   }
 
   const availableModels = currentMake ? (makeModels[currentMake] ?? []) : [];
-  const hasFilters =
-    currentMake || currentModel || currentDealers.length > 0 || currentSearch;
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentSearch;
+
+  const dealerLabel = currentDealers.length === 0
+    ? 'All Dealers'
+    : currentDealers.length === 1
+      ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0]
+      : `${currentDealers.length} dealers`;
 
   return (
     <div className="flex flex-wrap items-start gap-3">
@@ -107,9 +122,7 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
       >
         <option value="">All Makes</option>
         {makes.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
+          <option key={m} value={m}>{m}</option>
         ))}
       </select>
 
@@ -122,41 +135,58 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
       >
         <option value="">All Models</option>
         {availableModels.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
+          <option key={m} value={m}>{m}</option>
         ))}
       </select>
 
-      {/* Dealer checkboxes */}
-      <div className="flex flex-wrap items-center gap-2">
-        {allDealers.map((d) => (
-          <label
-            key={d.slug}
-            className="flex cursor-pointer items-center gap-1.5 rounded border border-gray-600 px-2 py-1 text-xs transition-colors hover:border-gray-400"
-            style={
-              currentDealers.includes(d.slug)
-                ? { borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)' }
-                : {}
-            }
-          >
-            <input
-              type="checkbox"
-              checked={currentDealers.includes(d.slug)}
-              onChange={() => onDealerToggle(d.slug)}
-              className="accent-blue-500"
-            />
-            <span className="text-gray-200">{d.name}</span>
-            {d.type === 'own' && (
-              <span className="rounded-full bg-emerald-700 px-1 text-[10px] text-emerald-100">
-                own
-              </span>
+      {/* Dealer dropdown (multi-select) */}
+      <div className="relative" ref={dealerRef}>
+        <button
+          onClick={() => setDealerOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentDealers.length > 0
+              ? 'border-blue-500 bg-blue-500/10'
+              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {dealerLabel}
+          <span className="text-gray-400">{dealerOpen ? '▲' : '▼'}</span>
+        </button>
+        {dealerOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {allDealers.map((d) => {
+              const checked = currentDealers.includes(d.slug);
+              return (
+                <label
+                  key={d.slug}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onDealerToggle(d.slug)}
+                    className="accent-blue-500"
+                  />
+                  <span>{d.name}</span>
+                  {d.type === 'own' && (
+                    <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>
+                  )}
+                </label>
+              );
+            })}
+            {currentDealers.length > 0 && (
+              <button
+                onClick={() => { onDealerToggle(''); router.push(`/?${buildParams({ dealer: [] })}`); setDealerOpen(false); }}
+                className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white"
+              >
+                Clear dealers
+              </button>
             )}
-          </label>
-        ))}
+          </div>
+        )}
       </div>
 
-      {/* Clear */}
+      {/* Clear all */}
       {hasFilters && (
         <button
           onClick={onClearAll}

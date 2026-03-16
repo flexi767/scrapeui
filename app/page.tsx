@@ -191,23 +191,44 @@ export default async function HomePage({
 
                     {/* Make + Model */}
                     <td className="px-3 py-2">
-                      <div className="font-medium text-gray-200">{row.make}</div>
-                      <div className="text-xs text-gray-400">{row.model}</div>
+                      {row.make ? (
+                        <Link
+                          href={`/?make=${encodeURIComponent(row.make)}`}
+                          className="block font-medium text-white no-underline hover:text-white hover:no-underline"
+                        >
+                          {row.make}
+                        </Link>
+                      ) : <div className="font-medium text-gray-200">—</div>}
+                      {row.model ? (
+                        <Link
+                          href={`/?make=${encodeURIComponent(row.make ?? '')}&model=${encodeURIComponent(row.model)}`}
+                          className="block text-xs text-gray-400 no-underline hover:text-white hover:no-underline"
+                        >
+                          {row.model}
+                        </Link>
+                      ) : <div className="text-xs text-gray-400">—</div>}
                     </td>
 
                     {/* Title */}
                     <td className="max-w-xs px-3 py-2">
                       <Link
                         href={`/listings/${row.mobile_id}`}
-                        className="line-clamp-2 text-blue-400 hover:text-blue-300 hover:underline"
+                        className="line-clamp-2 text-white no-underline hover:text-white hover:no-underline"
                       >
                         {row.title}
                       </Link>
                     </td>
 
                     {/* Dealer */}
-                    <td className="px-3 py-2 text-gray-300">
-                      {row.dealer_name ?? '—'}
+                    <td className="px-3 py-2">
+                      {row.dealer_slug ? (
+                        <Link
+                          href={`/?dealer=${encodeURIComponent(row.dealer_slug)}`}
+                          className="text-white no-underline hover:text-white hover:no-underline"
+                        >
+                          {row.dealer_name ?? '—'}
+                        </Link>
+                      ) : <span className="text-gray-300">{row.dealer_name ?? '—'}</span>}
                     </td>
 
                     {/* Ad Status */}
