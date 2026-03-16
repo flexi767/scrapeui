@@ -179,12 +179,15 @@ export default function ScrapeRunner() {
               return (
                 <div key={i} className="flex items-start gap-3 py-1.5 border-b border-gray-800 last:border-0">
                   {entry.thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={entry.thumb}
-                      alt=""
-                      className="h-[45px] w-[60px] flex-shrink-0 rounded object-cover bg-gray-800"
-                    />
+                    <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={entry.thumb}
+                        alt=""
+                        className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
+                        style={{aspectRatio:'4/3'}}
+                      />
+                    </a>
                   ) : (
                     <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
                   )}
