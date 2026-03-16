@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import PriceChangeFilter from './PriceChangeFilter';
+import RangeFilter from './RangeFilter';
 
 interface Props {
   makes: string[];
@@ -12,9 +13,10 @@ interface Props {
   allFuels: string[];
   total: number;
   priceChangeRange?: { min: number; max: number } | null;
+  priceRange?: { min: number; max: number } | null;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total, priceChangeRange }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total, priceChangeRange, priceRange }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -389,6 +391,12 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
           </div>
         )}
       </div>
+
+      {/* Price range slider */}
+      {priceRange && (
+        <RangeFilter min={priceRange.min} max={priceRange.max} paramLow="p_min" paramHigh="p_max"
+          fmt={v => `€${(v/1000).toFixed(0)}k`} />
+      )}
 
       {/* Price change slider */}
       {priceChangeRange && (

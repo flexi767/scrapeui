@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange } from '@/lib/queries';
+import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import RangeFilter from '@/components/RangeFilter';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -13,6 +14,8 @@ interface SearchParams {
   vat?: string | string[];
   fuel?: string | string[];
   kaparo?: string;
+  p_min?: string;
+  p_max?: string;
   pc_min?: string;
   pc_max?: string;
   sort?: string;
@@ -82,6 +85,8 @@ export default async function HomePage({
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
+  const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
+  const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
   const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
   const kaparo = sp.kaparo ?? '';
@@ -98,6 +103,8 @@ export default async function HomePage({
     statuses,
     vatValues,
     fuels,
+    priceMin,
+    priceMax,
     priceChangeMin,
     priceChangeMax,
     kaparo,
@@ -147,6 +154,7 @@ export default async function HomePage({
               allFuels={getDistinctFuels()}
               total={total}
               priceChangeRange={getPriceChangeRange()}
+              priceRange={getPriceRange()}
             />
           </Suspense>
         </div>
