@@ -60,10 +60,23 @@ export default function EmblaCarousel({ images, title }: Props) {
         if (zoomed) { setZoomed(false); setTranslate({ x: 0, y: 0 }); }
         else if (lightbox) { setLightbox(null); }
       }
+      if (!lightbox) return;
+      if (e.key === 'ArrowLeft') {
+        setZoomed(false); setTranslate({ x: 0, y: 0 });
+        mainApi?.scrollPrev();
+        const idx = mainApi ? (mainApi.selectedScrollSnap() - 1 + images.length) % images.length : 0;
+        setLightbox(images[idx]?.full ?? lightbox);
+      }
+      if (e.key === 'ArrowRight') {
+        setZoomed(false); setTranslate({ x: 0, y: 0 });
+        mainApi?.scrollNext();
+        const idx = mainApi ? (mainApi.selectedScrollSnap() + 1) % images.length : 0;
+        setLightbox(images[idx]?.full ?? lightbox);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [zoomed, lightbox]);
+  }, [zoomed, lightbox, mainApi, images]);
 
   const scrollPrev = useCallback(() => mainApi?.scrollPrev(), [mainApi]);
   const scrollNext = useCallback(() => mainApi?.scrollNext(), [mainApi]);
