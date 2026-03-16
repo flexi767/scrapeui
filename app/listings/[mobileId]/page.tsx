@@ -38,12 +38,13 @@ export default async function ListingDetailPage({ params }: Props) {
     listing.image_meta,
     null,
   );
-  const fullKeys = parseJson<string[]>(listing.full_keys, []);
   const thumbKeys = parseJson<string[]>(listing.thumb_keys, []);
+  // Use thumbKeys for both — same key works for both thumb and full-size paths
+  // fullKeys from carousel are in different order than display order
 
   const images = buildImageList(
     listing.mobile_id,
-    fullKeys,
+    thumbKeys,
     thumbKeys,
     imageMeta,
     listing.images_downloaded === 1,
