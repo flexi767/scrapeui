@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 interface Dealer {
   id: number;
@@ -52,7 +53,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
   function showValidationError(message: string) {
     setError(message);
-    window.alert(message);
+    toast.error(message);
   }
 
   async function onAdd(e: React.FormEvent) {
