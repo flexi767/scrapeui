@@ -29,6 +29,15 @@
       "problemMatcher": ["$tsc"]
     },
     {
+      "label": "ui: Drizzle Studio",
+      "type": "shell",
+      "command": "npx drizzle-kit studio",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "ui: Install deps",
       "type": "shell",
       "command": "npm install",
