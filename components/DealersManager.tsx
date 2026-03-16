@@ -256,7 +256,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
           <input placeholder="Slug" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
           <input placeholder="https://dealer.mobile.bg" value={form.mobile_url} onChange={e => setForm(f => ({ ...f, mobile_url: e.target.value }))} required type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
           <input placeholder="https://www.cars.bg/company/dealer" value={form.cars_url} onChange={e => setForm(f => ({ ...f, cars_url: e.target.value }))} type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
-          <div className="flex items-start gap-3">
+          <div className="flex items-start justify-between gap-3">
             <button type="submit" disabled={adding} className="justify-self-start rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">{adding ? 'Adding…' : '+ Add'}</button>
             <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.own} onChange={e => setForm(f => ({ ...f, own: e.target.checked }))} /> own dealer</label>
           </div>
