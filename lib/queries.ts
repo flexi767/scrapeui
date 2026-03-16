@@ -159,12 +159,17 @@ export interface SnapshotRow {
   id: number;
   price: number;
   vat: string | null;
+  last_edit: string | null;
+  ad_status: string | null;
+  kaparo: number | null;
+  title: string | null;
+  description: string | null;
   recorded_at: string;
 }
 
 export function getSnapshots(listingId: number): SnapshotRow[] {
   return raw.prepare(`
-    SELECT id, price, vat, recorded_at
+    SELECT id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at
     FROM listing_snapshots
     WHERE listing_id = ?
     ORDER BY recorded_at ASC

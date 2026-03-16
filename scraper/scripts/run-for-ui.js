@@ -50,21 +50,36 @@ function upsertListing(db, dealerId, listing, makesMap) {
   const vat = listing.vat ?? null;
 
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId);
+  // Only overwrite detail-page fields if we actually scraped the detail page (deep crawl)
+  // Signals: images present, description present, or lastEdit set
+  const isDeep = (listing.images?.meta && listing.images?.thumbKeys?.length > 0)
+    || !!listing.lastEdit || !!listing.description;
 
   if (existing) {
     const priceChanged = price !== null && price !== existing.current_price;
-    const vatChanged = vat !== existing.vat;
-    if (priceChanged || vatChanged) {
+    const vatChanged = isDeep ? (vat !== existing.vat) : false;
+    const lastEditChanged = isDeep ? ((listing.lastEdit || null) !== (existing.last_edit || null)) : false;
+    const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
+    const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
+    const titleChanged = (listing.title || '') !== (existing.title || '');
+    const descriptionChanged = isDeep ? ((listing.description || '') !== (existing.description || '')) : false;
+    if (priceChanged || vatChanged || lastEditChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged) {
       db.prepare(`
-        INSERT INTO listing_snapshots (listing_id, price, vat, recorded_at)
-        VALUES (?, ?, ?, ?)
-      `).run(existing.id, existing.current_price, existing.vat, existing.last_seen_at || now);
+        INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        existing.id,
+        existing.current_price,
+        existing.vat,
+        existing.last_edit,
+        existing.ad_status,
+        existing.kaparo,
+        existing.title,
+        existing.description,
+        existing.last_seen_at || now,
+      );
     }
 
-    // Only overwrite detail-page fields if we actually scraped the detail page (deep crawl)
-    // Signals: images present, description present, or lastEdit set
-    const isDeep = (listing.images?.meta && listing.images?.thumbKeys?.length > 0)
-      || !!listing.lastEdit || !!listing.description;
     const hasImages = listing.images?.meta && listing.images?.thumbKeys?.length > 0;
     const imageFields = hasImages
       ? 'image_count = ?, image_meta = ?, thumb_keys = ?, full_keys = ?,'
@@ -119,9 +134,21 @@ function upsertListing(db, dealerId, listing, makesMap) {
     now, now
   );
 
-  if (price !== null) {
-    db.prepare(`INSERT INTO listing_snapshots (listing_id, price, vat, recorded_at) VALUES (?, ?, ?, ?)`)
-      .run(result.lastInsertRowid, price, vat, now);
+  if (price !== null || vat !== null || listing.lastEdit || listing.title || listing.description) {
+    db.prepare(`
+      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      result.lastInsertRowid,
+      price,
+      vat,
+      listing.lastEdit || null,
+      listing.adStatus || 'none',
+      listing.kaparo ? 1 : 0,
+      listing.title || null,
+      listing.description || null,
+      now,
+    );
   }
   return { action: 'inserted', snapshot: price !== null };
 }

@@ -50,6 +50,11 @@ export const listingSnapshots = sqliteTable('listing_snapshots', {
   listingId: integer('listing_id').references(() => listings.id),
   price: integer('price'),
   vat: text('vat'),
+  lastEdit: text('last_edit'),
+  adStatus: text('ad_status'),
+  kaparo: integer('kaparo'),
+  title: text('title'),
+  description: text('description'),
   recordedAt: text('recorded_at'),
 });
 

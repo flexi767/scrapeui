@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { formatPrice } from '@/lib/utils';
+import { formatDate as formatLastEdit, formatPrice } from '@/lib/utils';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
@@ -69,6 +69,9 @@ export default async function PriceHistoryPage({ params }: Props) {
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-right">Price</th>
                   <th className="px-4 py-3 text-center">VAT</th>
+                  <th className="px-4 py-3 text-center">Last Edit</th>
+                  <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-center">К</th>
                   <th className="px-4 py-3 text-right">Change</th>
                 </tr>
               </thead>
@@ -91,13 +94,24 @@ export default async function PriceHistoryPage({ params }: Props) {
                         {formatPrice(snap.price)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {snap.vat ? (
-                          <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">
-                            VAT
-                          </span>
+                        {snap.vat === 'included' ? (
+                          <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
+                        ) : snap.vat === 'exempt' ? (
+                          <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
+                        ) : snap.vat === 'excluded' ? (
+                          <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs text-gray-400">
+                        {snap.last_edit ? formatLastEdit(snap.last_edit) : <span className="text-gray-600">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs text-gray-300">
+                        {snap.ad_status && snap.ad_status !== 'none' ? snap.ad_status : <span className="text-gray-600">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs text-gray-300">
+                        {snap.kaparo ? 'К' : <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {delta === null ? (
