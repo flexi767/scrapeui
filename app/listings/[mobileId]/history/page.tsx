@@ -126,7 +126,7 @@ export default async function PriceHistoryPage({ params }: Props) {
         {snapshots.length > 1 && (
           <div className="mt-6 rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
-History Timeline
+              Price Timeline
             </h2>
             <div className="relative">
               {(() => {
