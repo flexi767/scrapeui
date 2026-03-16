@@ -131,9 +131,9 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                 <tr key={d.id} className="hover:bg-gray-800/40 align-top">
                   <td className="px-4 py-2 text-white">
                     {editing ? (
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2">
                         <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                        <label className="flex items-center gap-2 text-xs text-gray-300"><input type="checkbox" checked={editForm.own} onChange={e => setEditForm(f => ({ ...f, own: e.target.checked }))} /> own dealer</label>
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 whitespace-nowrap"><input type="checkbox" checked={editForm.own} onChange={e => setEditForm(f => ({ ...f, own: e.target.checked }))} /> own</label>
                       </div>
                     ) : (
                       <div>
