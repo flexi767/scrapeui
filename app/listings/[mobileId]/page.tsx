@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EmblaCarousel from '@/components/EmblaCarousel';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { buildImageList, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
@@ -179,7 +179,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 value={listing.power ? `${listing.power} hp` : null}
               />
               <SpecRow label="Mileage" value={formatMileage(listing.mileage)} />
-              <SpecRow label="Last Edit" value={listing.last_edit} />
+              <SpecRow label="Last Edit" value={formatDate(listing.last_edit)} />
             </div>
           </div>
         </div>

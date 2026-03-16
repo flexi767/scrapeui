@@ -8,9 +8,12 @@ export function formatMileage(mileage: number | null | undefined): string {
   return mileage.toLocaleString('en-US') + ' km';
 }
 
+// Input: "2026-03-10 08:36" → Output: "10.03.2026 08:36"
 export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  return dateStr;
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/);
+  if (!m) return dateStr;
+  return `${m[3]}.${m[2]}.${m[1]} ${m[4]}`;
 }
 
 export interface ImageMeta {

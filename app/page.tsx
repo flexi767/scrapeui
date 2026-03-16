@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getListings, getMakeModels } from '@/lib/queries';
-import { buildImageList, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
   make?: string;
@@ -244,7 +244,7 @@ export default async function HomePage({
 
                     {/* Last Edit */}
                     <td className="px-3 py-2 text-right text-xs text-gray-400">
-                      {row.last_edit ?? '—'}
+                      {formatDate(row.last_edit)}
                     </td>
 
                     {/* Mileage */}
