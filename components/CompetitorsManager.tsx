@@ -12,9 +12,12 @@ interface Competitor {
 
 export default function CompetitorsManager({ initialCompetitors }: { initialCompetitors: Competitor[] }) {
   const [competitors, setCompetitors] = useState<Competitor[]>(initialCompetitors);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; slug: string; mobile_url: string }>({ name: '', slug: '', mobile_url: '' });
   const [form, setForm] = useState({ name: '', slug: '', mobile_url: '' });
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   function slugify(name: string) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -49,6 +52,33 @@ export default function CompetitorsManager({ initialCompetitors }: { initialComp
     setCompetitors(cs => cs.map(x => x.id === c.id ? { ...x, active: newActive } : x));
   }
 
+  function startEdit(c: Competitor) {
+    setError('');
+    setEditingId(c.id);
+    setEditForm({ name: c.name, slug: c.slug, mobile_url: c.mobile_url });
+  }
+
+  async function saveEdit(id: number) {
+    setError('');
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/competitors/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Failed to save');
+        return;
+      }
+      setCompetitors(cs => cs.map(x => x.id === id ? { ...x, ...editForm } : x));
+      setEditingId(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function onDelete(c: Competitor) {
     if (!confirm(`Delete ${c.name}?`)) return;
     await fetch(`/api/competitors/${c.id}`, { method: 'DELETE' });
@@ -66,35 +96,61 @@ export default function CompetitorsManager({ initialCompetitors }: { initialComp
               <th className="px-4 py-2 text-left">Slug</th>
               <th className="px-4 py-2 text-left">Mobile.bg URL</th>
               <th className="px-4 py-2 text-center">Active</th>
+              <th className="px-4 py-2 text-center">Edit</th>
               <th className="px-4 py-2 text-center">Delete</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50">
             {competitors.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No competitors yet</td></tr>
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No competitors yet</td></tr>
             )}
-            {competitors.map(c => (
-              <tr key={c.id} className="hover:bg-gray-800/40">
-                <td className="px-4 py-2 text-white">{c.name}</td>
-                <td className="px-4 py-2 text-gray-400 font-mono text-xs">{c.slug}</td>
-                <td className="px-4 py-2">
-                  <a href={c.mobile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[200px]">
-                    {c.mobile_url}
-                  </a>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <button
-                    onClick={() => onToggleActive(c)}
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}
-                  >
-                    {c.active ? 'on' : 'off'}
-                  </button>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <button onClick={() => onDelete(c)} className="text-red-500 hover:text-red-300 text-xs">✕</button>
-                </td>
-              </tr>
-            ))}
+            {competitors.map(c => {
+              const editing = editingId === c.id;
+              return (
+                <tr key={c.id} className="hover:bg-gray-800/40">
+                  <td className="px-4 py-2 text-white">
+                    {editing ? (
+                      <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                    ) : c.name}
+                  </td>
+                  <td className="px-4 py-2 text-gray-400 font-mono text-xs">
+                    {editing ? (
+                      <input value={editForm.slug} onChange={e => setEditForm(f => ({ ...f, slug: slugify(e.target.value) }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono" />
+                    ) : c.slug}
+                  </td>
+                  <td className="px-4 py-2">
+                    {editing ? (
+                      <input value={editForm.mobile_url} onChange={e => setEditForm(f => ({ ...f, mobile_url: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                    ) : (
+                      <a href={c.mobile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[200px]">
+                        {c.mobile_url}
+                      </a>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    <button
+                      onClick={() => onToggleActive(c)}
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}
+                    >
+                      {c.active ? 'on' : 'off'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {editing ? (
+                      <div className="flex items-center justify-center gap-2 text-xs">
+                        <button onClick={() => saveEdit(c.id)} disabled={saving} className="text-emerald-400 hover:text-emerald-300 disabled:opacity-50">save</button>
+                        <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-white">cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(c)} className="text-blue-400 hover:text-blue-300 text-xs">edit</button>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    <button onClick={() => onDelete(c)} className="text-red-500 hover:text-red-300 text-xs">✕</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
