@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import ScrapeRunner from '@/components/ScrapeRunner';
-import CompetitorsManager from '@/components/CompetitorsManager';
+import DealersManager from '@/components/DealersManager';
 import { raw } from '@/db/client';
 
 interface DealerRow {
@@ -22,7 +22,7 @@ function getDealers(): DealerRow[] {
 }
 
 export default function ConfigPage() {
-  const competitors = getDealers();
+  const dealers = getDealers();
 
   return (
     <div className="min-h-screen bg-[#111827]">
@@ -41,13 +41,13 @@ export default function ConfigPage() {
         {/* Dealers manager */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-4">Dealers</h2>
-          <CompetitorsManager initialCompetitors={competitors} />
+          <DealersManager initialDealers={dealers} />
         </section>
 
         {/* Scraper runner */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-4">Run Scraper</h2>
-          <ScrapeRunner initialCompetitors={competitors} />
+          <ScrapeRunner initialDealers={dealers} />
         </section>
       </main>
     </div>

@@ -29,9 +29,9 @@ function formatPrice(price: number | null | undefined) {
   return `€${price.toLocaleString()}`;
 }
 
-export default function ScrapeRunner({ initialCompetitors }: { initialCompetitors: Dealer[] }) {
-  const activeCompetitors = initialCompetitors.filter(c => c.active);
-  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeCompetitors.map(d => d.slug));
+export default function ScrapeRunner({ initialDealers }: { initialDealers: Dealer[] }) {
+  const activeDealers = initialDealers.filter(c => c.active);
+  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.map(d => d.slug));
   const [deepCrawl, setDeepCrawl] = useState(true);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -117,7 +117,7 @@ export default function ScrapeRunner({ initialCompetitors }: { initialCompetitor
         <div>
           <p className="text-sm font-medium text-gray-300 mb-3">Dealers</p>
           <div className="flex gap-5">
-            {activeCompetitors.map(d => (
+            {activeDealers.map(d => (
               <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"

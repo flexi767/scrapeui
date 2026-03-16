@@ -15,8 +15,8 @@ interface Dealer {
   cars_password: string | null;
 }
 
-export default function CompetitorsManager({ initialCompetitors }: { initialCompetitors: Dealer[] }) {
-  const [dealers, setDealers] = useState<Dealer[]>(initialCompetitors);
+export default function DealersManager({ initialDealers }: { initialDealers: Dealer[] }) {
+  const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     name: '', slug: '', mobile_url: '', own: false,

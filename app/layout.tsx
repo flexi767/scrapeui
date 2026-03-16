@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Competitor Listings Tracker',
-  description: 'Track competitor car listings',
+  title: 'Dealer Listings Tracker',
+  description: 'Track dealer car listings',
 };
 
 export default function RootLayout({
