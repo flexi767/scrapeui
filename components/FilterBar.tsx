@@ -189,11 +189,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
 
-  const dealerLabel = currentDealers.length === 0
-    ? 'All Dealers'
-    : currentDealers.length === 1
-      ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0]
-      : `${currentDealers.length} dealers`;
+
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -230,6 +226,40 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
           <option key={m} value={m}>{m}</option>
         ))}
       </select>
+
+      {/* Dealer dropdown (multi-select) */}
+      <div className="relative" ref={dealerRef}>
+        <button
+          onClick={() => setDealerOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentDealers.length > 0
+              ? 'border-blue-500 bg-blue-500/10'
+              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {currentDealers.length === 0 ? 'Dealers' : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} dealers`}
+          <span className="text-gray-400">{dealerOpen ? '▲' : '▼'}</span>
+        </button>
+        {dealerOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {allDealers.map((d) => {
+              const checked = currentDealers.includes(d.slug);
+              return (
+                <label key={d.slug} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                  <input type="checkbox" checked={checked} onChange={() => onDealerToggle(d.slug)} className="accent-blue-500" />
+                  <span>{d.name}</span>
+                  {Boolean(d.own) && <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>}
+                </label>
+              );
+            })}
+            {currentDealers.length > 0 && (
+              <button onClick={() => { onDealerToggle(''); router.push(`/?${buildParams({ dealer: [] })}`); setDealerOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                Clear dealers
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Status multi-select dropdown */}
       <div className="relative" ref={statusRef}>
@@ -339,53 +369,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             {currentYears.length > 0 && (
               <button onClick={() => { router.push(`/?${buildParams({ year: [] })}`); setYearOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear years
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Dealer dropdown (multi-select) */}
-      <div className="relative" ref={dealerRef}>
-        <button
-          onClick={() => setDealerOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentDealers.length > 0
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {dealerLabel}
-          <span className="text-gray-400">{dealerOpen ? '▲' : '▼'}</span>
-        </button>
-        {dealerOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allDealers.map((d) => {
-              const checked = currentDealers.includes(d.slug);
-              return (
-                <label
-                  key={d.slug}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onDealerToggle(d.slug)}
-                    className="accent-blue-500"
-                  />
-                  <span>{d.name}</span>
-                  {Boolean(d.own) && (
-                    <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>
-                  )}
-                </label>
-              );
-            })}
-            {currentDealers.length > 0 && (
-              <button
-                onClick={() => { onDealerToggle(''); router.push(`/?${buildParams({ dealer: [] })}`); setDealerOpen(false); }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white"
-              >
-                Clear dealers
               </button>
             )}
           </div>
