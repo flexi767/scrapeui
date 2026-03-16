@@ -144,7 +144,7 @@ export default async function HomePage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-right">Year</th>
+                <th className="px-3 py-1.5 text-right">Reg.</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -270,9 +270,11 @@ export default async function HomePage({
                       {formatMileage(row.mileage)}
                     </td>
 
-                    {/* Reg Year */}
+                    {/* Reg Month + Year */}
                     <td className="px-3 py-1 text-right text-gray-300">
-                      {row.reg_year ?? '—'}
+                      {row.reg_month && row.reg_year
+                        ? `${row.reg_month}/${row.reg_year}`
+                        : row.reg_year ?? '—'}
                     </td>
                   </tr>
                 );
