@@ -167,7 +167,6 @@ export default async function HomePage({
                 <th className="px-2 py-1.5 text-center w-14">
                   <SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-1 py-1.5 text-center w-6"></th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -194,7 +193,7 @@ export default async function HomePage({
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={15} className="py-16 text-center text-gray-500">
+                  <td colSpan={14} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
@@ -295,20 +294,18 @@ export default async function HomePage({
                       </Link>
                     </td>
 
-                    {/* Price change indicator */}
-                    <td className="px-1 py-1 text-center text-sm">
-                      {row.price_change != null ? (
-                        <Link href={`/listings/${row.mobile_id}/history`} title={`${row.price_change > 0 ? '+' : ''}${row.price_change}`}>
-                          <span className={row.price_change < 0 ? 'text-green-400' : 'text-red-400'}>
-                            {row.price_change < 0 ? '↘' : '↗'}
-                          </span>
-                        </Link>
-                      ) : null}
-                    </td>
-
                     {/* Price */}
                     <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
-                      {formatPrice(row.current_price)}
+                      <span className="flex items-center justify-end gap-1">
+                        {row.price_change != null && (
+                          <Link href={`/listings/${row.mobile_id}/history`} title={`${row.price_change > 0 ? '+' : ''}${row.price_change}`} className="text-sm">
+                            <span className={row.price_change < 0 ? 'text-green-400' : 'text-red-400'}>
+                              {row.price_change < 0 ? '↘' : '↗'}
+                            </span>
+                          </Link>
+                        )}
+                        {formatPrice(row.current_price)}
+                      </span>
                     </td>
 
                     {/* VAT */}
