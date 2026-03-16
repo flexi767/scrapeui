@@ -90,6 +90,24 @@ function upsertListing(db, dealerId, listing, makesMap) {
         descriptionChanged ? (listing.description || null) : null,
         now,
       );
+      emit({
+        type: 'change',
+        mobileId: mobileId,
+        title: existing.title || listing.title,
+        url: listing.url || existing.url,
+        priceChanged,
+        oldPrice: priceChanged ? existing.current_price : null,
+        newPrice: priceChanged ? price : null,
+        vatChanged,
+        oldVat: vatChanged ? existing.vat : null,
+        newVat: vatChanged ? (isDeep ? vat : existing.vat) : null,
+        adStatusChanged,
+        oldStatus: adStatusChanged ? existing.ad_status : null,
+        newStatus: adStatusChanged ? (listing.adStatus || 'none') : null,
+        kaparoChanged,
+        titleChanged,
+        descriptionChanged,
+      });
     }
 
     const hasImages = listing.images?.meta && listing.images?.thumbKeys?.length > 0;

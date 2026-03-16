@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface LogEntry {
-  type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete';
+  type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
   dealer?: string;
   title?: string;
   price?: number | null;
@@ -13,6 +13,19 @@ interface LogEntry {
   count?: number;
   message?: string;
   code?: number | null;
+  mobileId?: string;
+  priceChanged?: boolean;
+  oldPrice?: number | null;
+  newPrice?: number | null;
+  vatChanged?: boolean;
+  oldVat?: string | null;
+  newVat?: string | null;
+  adStatusChanged?: boolean;
+  oldStatus?: string | null;
+  newStatus?: string | null;
+  kaparoChanged?: boolean;
+  titleChanged?: boolean;
+  descriptionChanged?: boolean;
 }
 
 interface Dealer {
@@ -32,6 +45,7 @@ function formatPrice(price: number | null | undefined) {
 export default function ScrapeRunner({ initialDealers }: { initialDealers: Dealer[] }) {
   const activeDealers = initialDealers.filter(c => c.active);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
+  const [dealersOpen, setDealersOpen] = useState(true);
 
   // Effective selection: only keep slugs that are still active
   const activeSlugs = new Set(activeDealers.map(d => d.slug));
@@ -64,8 +78,11 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
     });
   };
 
+  const changes = log.filter((e) => e.type === 'change');
+
   const run = async () => {
     if (effectiveSelected.length === 0) return;
+    setDealersOpen(false);
     setRunning(true);
     setDone(false);
     setLog([]);
@@ -127,25 +144,49 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
         {/* Dealers */}
         <div>
-          <p className="text-sm font-medium text-gray-300 mb-3">Dealers</p>
-          <div className="flex gap-5">
-            {activeDealers.map(d => (
-              <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={effectiveSelected.includes(d.slug)}
-                  onChange={() => toggleDealer(d.slug)}
-                  disabled={running}
-                  className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
-                />
-                <span className="text-sm text-gray-200">{d.name}</span>
-              </label>
-            ))}
-          </div>
+          <button
+            onClick={() => setDealersOpen(v => !v)}
+            className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300"
+          >
+            <span>{dealersOpen ? '▼' : '▶'}</span>
+            <span>Dealers</span>
+            <span className="text-xs text-gray-500">({effectiveSelected.length} selected)</span>
+          </button>
+          {dealersOpen && (
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {activeDealers.map(d => (
+                <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={effectiveSelected.includes(d.slug)}
+                    onChange={() => toggleDealer(d.slug)}
+                    disabled={running}
+                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                  />
+                  <span className="text-sm text-gray-200">{d.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Deep crawl toggle */}
-        <div>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Run button */}
+          <button
+            onClick={run}
+            disabled={running || effectiveSelected.length === 0}
+            className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {running && (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
+            {running ? 'Running…' : 'Run'}
+          </button>
+
+          {/* Deep crawl toggle */}
           <div
             onClick={() => !running && setDeepCrawl(v => !v)}
             className={`flex items-center gap-3 ${running ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
@@ -161,27 +202,56 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
             </div>
           </div>
         </div>
-
-        {/* Run button */}
-        <button
-          onClick={run}
-          disabled={running || effectiveSelected.length === 0}
-          className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {running && (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          )}
-          {running ? 'Running…' : 'Run'}
-        </button>
       </div>
 
       {/* Success banner */}
       {done && (
         <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
           ✅ Database updated
+        </div>
+      )}
+
+      {/* Detected changes */}
+      {changes.length > 0 && (
+        <div className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-x-auto">
+          <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Detected changes</div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-700 bg-gray-800/60 text-xs uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-2 text-left">Listing</th>
+                <th className="px-4 py-2 text-left">Price</th>
+                <th className="px-4 py-2 text-left">VAT</th>
+                <th className="px-4 py-2 text-left">Paid</th>
+                <th className="px-4 py-2 text-left">Other</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {changes.map((entry, i) => (
+                <tr key={i} className="hover:bg-gray-800/40 align-top">
+                  <td className="px-4 py-2">
+                    <a href={entry.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-300">
+                      {entry.title || entry.mobileId}
+                    </a>
+                    {entry.mobileId && <div className="text-xs text-gray-500">{entry.mobileId}</div>}
+                  </td>
+                  <td className="px-4 py-2 text-sm">
+                    {entry.priceChanged ? (
+                      <span className="text-gray-300">{formatPrice(entry.oldPrice)} <span className="text-gray-500">→</span> <span className={entry.newPrice != null && entry.oldPrice != null && entry.newPrice < entry.oldPrice ? 'text-green-400' : 'text-red-400'}>{formatPrice(entry.newPrice)}</span></span>
+                    ) : <span className="text-gray-600">—</span>}
+                  </td>
+                  <td className="px-4 py-2 text-sm text-gray-300">
+                    {entry.vatChanged ? `${entry.oldVat ?? '—'} → ${entry.newVat ?? '—'}` : <span className="text-gray-600">—</span>}
+                  </td>
+                  <td className="px-4 py-2 text-sm text-gray-300">
+                    {entry.adStatusChanged ? `${entry.oldStatus ?? '—'} → ${entry.newStatus ?? '—'}` : <span className="text-gray-600">—</span>}
+                  </td>
+                  <td className="px-4 py-2 text-sm text-gray-300">
+                    {[entry.kaparoChanged && 'капаро', entry.titleChanged && 'title', entry.descriptionChanged && 'description'].filter(Boolean).join(', ') || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
