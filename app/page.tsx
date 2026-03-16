@@ -268,13 +268,9 @@ export default async function HomePage({
 
                     {/* Ad Status */}
                     <td className="px-2 py-1 text-center">
-                      {row.ad_status && row.ad_status !== 'none' ? (
-                        <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page'), ...(!statuses.includes(row.ad_status) ? [['status', row.ad_status] as [string,string]] : [])]).toString()}`}>
-                          <AdStatusBadge status={row.ad_status} />
-                        </Link>
-                      ) : (
+                      <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page'), ...(!statuses.includes(row.ad_status || 'none') ? [['status', row.ad_status || 'none'] as [string,string]] : [])]).toString()}`}>
                         <AdStatusBadge status={row.ad_status} />
-                      )}
+                      </Link>
                     </td>
 
                     {/* Price */}
