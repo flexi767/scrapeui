@@ -206,7 +206,7 @@ export default async function HomePage({
                     <td className="px-3 py-1">
                       {row.make ? (
                         <Link
-                          href={`/?make=${encodeURIComponent(row.make)}`}
+                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make]]).toString()}`}
                           className="block font-medium text-white no-underline hover:text-white hover:no-underline"
                         >
                           {row.make}
@@ -214,7 +214,7 @@ export default async function HomePage({
                       ) : <div className="font-medium text-gray-200">—</div>}
                       {row.model ? (
                         <Link
-                          href={`/?make=${encodeURIComponent(row.make ?? '')}&model=${encodeURIComponent(row.model)}`}
+                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make ?? ''], ['model', row.model]]).toString()}`}
                           className="block text-xs text-gray-400 no-underline hover:text-white hover:no-underline"
                         >
                           {row.model}
@@ -236,7 +236,7 @@ export default async function HomePage({
                     <td className="px-3 py-1">
                       {row.dealer_slug ? (
                         <Link
-                          href={`/?dealer=${encodeURIComponent(row.dealer_slug)}`}
+                          href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
                           className="text-white no-underline hover:text-white hover:no-underline"
                         >
                           {row.dealer_name ?? '—'}
