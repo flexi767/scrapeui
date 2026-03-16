@@ -23,6 +23,14 @@ export default async function PriceHistoryPage({ params }: Props) {
 
   const snapshots = getSnapshots(listing.id);
 
+  // Build price series for the chart: old prices from snapshots + current price as final point
+  const pricePoints = [
+    ...snapshots
+      .filter(s => s.price != null)
+      .map(s => ({ price: s.price, recorded_at: s.recorded_at })),
+    { price: listing.current_price, recorded_at: new Date().toISOString() },
+  ];
+
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
@@ -132,14 +140,14 @@ export default async function PriceHistoryPage({ params }: Props) {
         )}
 
         {/* Timeline visualization */}
-        {snapshots.length > 1 && (
+        {pricePoints.length > 1 && (
           <div className="mt-6 rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
               Price Timeline
             </h2>
             <div className="relative">
               {(() => {
-                const prices = snapshots.map((s) => s.price);
+                const prices = pricePoints.map((s) => s.price);
                 const minP = Math.min(...prices);
                 const maxP = Math.max(...prices);
                 const range = maxP - minP || 1;
@@ -147,16 +155,19 @@ export default async function PriceHistoryPage({ params }: Props) {
 
                 return (
                   <div className="flex items-end gap-1" style={{ height: barH + 24 }}>
-                    {snapshots.map((snap, i) => {
+                    {pricePoints.map((snap, i) => {
                       const h = Math.max(
                         4,
                         ((snap.price - minP) / range) * barH,
                       );
-                      const prev = snapshots[i - 1];
+                      const prev = pricePoints[i - 1];
                       const delta = prev ? snap.price - prev.price : 0;
+                      const isLast = i === pricePoints.length - 1;
                       const color =
                         i === 0
                           ? 'bg-gray-500'
+                          : isLast
+                          ? 'bg-blue-500'
                           : delta < 0
                           ? 'bg-green-500'
                           : delta > 0
@@ -164,7 +175,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                           : 'bg-gray-500';
                       return (
                         <div
-                          key={snap.id}
+                          key={i}
                           className="group relative flex flex-1 flex-col items-center"
                         >
                           <div
@@ -172,7 +183,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                             style={{ height: h }}
                           />
                           <span className="mt-1 text-[10px] text-gray-500">
-                            {formatDateAxis(snap.recorded_at)}
+                            {isLast ? 'now' : formatDateAxis(snap.recorded_at)}
                           </span>
                           {/* Tooltip */}
                           <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block whitespace-nowrap">
