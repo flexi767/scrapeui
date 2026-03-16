@@ -154,7 +154,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                 const barH = 80;
 
                 return (
-                  <div className="flex items-end gap-1" style={{ height: barH + 24 }}>
+                  <div className="flex items-end gap-1 overflow-x-auto" style={{ height: barH + 24 }}>
                     {pricePoints.map((snap, i) => {
                       const h = barH * 0.35 + ((snap.price - minP) / range) * barH * 0.65;
                       const prev = pricePoints[i - 1];
@@ -173,7 +173,8 @@ export default async function PriceHistoryPage({ params }: Props) {
                       return (
                         <div
                           key={i}
-                          className="group relative flex flex-1 flex-col items-center"
+                          className="group relative flex flex-col items-center flex-shrink-0"
+                          style={{ width: Math.max(40, Math.min(80, 600 / pricePoints.length)) }}
                         >
                           <div
                             className={`w-full rounded-t ${color} transition-opacity group-hover:opacity-80`}
