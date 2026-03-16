@@ -9,6 +9,7 @@ export interface ListingRow {
   reg_month: string;
   reg_year: string;
   mileage: number;
+  fuel: string | null;
   current_price: number;
   vat: string | null;
   kaparo: number;
@@ -31,6 +32,7 @@ export interface ListingFilters {
   years?: string[];
   statuses?: string[];
   vatValues?: string[];
+  fuels?: string[];
   kaparo?: string;
   sort?: string;
   order?: string;
@@ -43,6 +45,7 @@ const VALID_SORT: Record<string, string> = {
   price: 'l.current_price',
   last_edit: 'l.last_edit',
   mileage: 'l.mileage',
+  fuel: 'l.fuel',
   dealer: 'd.priority DESC, d.name',
   ad_status: 'l.ad_status',
   kaparo: 'l.kaparo',
@@ -57,6 +60,7 @@ export function getListings(filters: ListingFilters = {}) {
     years = [],
     statuses = [],
     vatValues = [],
+    fuels = [],
     kaparo = '',
     sort = 'last_edit',
     order = 'desc',
@@ -88,6 +92,11 @@ export function getListings(filters: ListingFilters = {}) {
     if (includeNull) clauses.push('l.vat IS NULL');
     if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
   }
+  if (fuels.length > 0) {
+    const ph = fuels.map(() => '?').join(',');
+    wheres.push(`l.fuel IN (${ph})`);
+    params.push(...fuels);
+  }
   if (kaparo) {
     wheres.push('l.kaparo = ?');
     params.push(kaparo === 'yes' ? 1 : 0);
@@ -114,7 +123,7 @@ export function getListings(filters: ListingFilters = {}) {
 
   const rows = raw.prepare(`
     SELECT
-      l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage,
+      l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel,
       l.current_price, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       d.name as dealer_name, d.slug as dealer_slug
@@ -237,4 +246,11 @@ export function getDistinctYears(): string[] {
     `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL ORDER BY reg_year DESC`
   ).all() as { reg_year: string }[];
   return rows.map(r => r.reg_year);
+}
+
+export function getDistinctFuels(): string[] {
+  const rows = raw.prepare(
+    `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL ORDER BY fuel`
+  ).all() as { fuel: string }[];
+  return rows.map(r => r.fuel);
 }

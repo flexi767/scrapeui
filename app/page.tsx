@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctYears, getListings, getMakeModels } from '@/lib/queries';
+import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -11,6 +11,7 @@ interface SearchParams {
   year?: string | string[];
   status?: string | string[];
   vat?: string | string[];
+  fuel?: string | string[];
   kaparo?: string;
   sort?: string;
   order?: string;
@@ -78,6 +79,7 @@ export default async function HomePage({
   const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
+  const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
   const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'dealer';
   const order = sp.order ?? 'desc';
@@ -91,6 +93,7 @@ export default async function HomePage({
     years,
     statuses,
     vatValues,
+    fuels,
     kaparo,
     sort,
     order,
@@ -107,6 +110,7 @@ export default async function HomePage({
   const currentParams = new URLSearchParams();
   for (const s of statuses) currentParams.append('status', s);
   for (const v of vatValues) currentParams.append('vat', v);
+  for (const f of fuels) currentParams.append('fuel', f);
   if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
@@ -134,6 +138,7 @@ export default async function HomePage({
               makeModels={makeModels}
               allDealers={allDealers}
               allYears={getDistinctYears()}
+              allFuels={getDistinctFuels()}
               total={total}
             />
           </Suspense>
@@ -171,6 +176,7 @@ export default async function HomePage({
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
+                  <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
               </tr>
@@ -338,6 +344,14 @@ export default async function HomePage({
                       ) : <span className="text-gray-600">—</span>}
                     </td>
 
+                    {/* Fuel */}
+                    <td className="px-3 py-1 text-center">
+                      {row.fuel ? (
+                        <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'fuel'), ['fuel', row.fuel]]).toString()}`}>
+                          <span className="text-xs text-gray-300 hover:text-white">{row.fuel}</span>
+                        </Link>
+                      ) : null}
+                    </td>
                     {/* Mileage */}
                     <td className="px-3 py-1 text-right text-gray-300">
                       {formatMileage(row.mileage)}

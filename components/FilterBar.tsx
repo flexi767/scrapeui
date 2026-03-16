@@ -8,10 +8,11 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
+  allFuels: string[];
   total: number;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, total }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,6 +22,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, tot
   const currentYears = searchParams.getAll('year');
   const currentStatuses = searchParams.getAll('status');
   const currentVat = searchParams.getAll('vat');
+  const currentFuels = searchParams.getAll('fuel');
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
@@ -57,6 +59,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, tot
     for (const y of currentYears) p.append('year', y);
     for (const s of currentStatuses) p.append('status', s);
     for (const v of currentVat) p.append('vat', v);
+    for (const f of currentFuels) p.append('fuel', f);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -164,7 +167,22 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, tot
     { value: 'null', label: '—' },
   ];
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentSearch || currentSearch;
+  const [fuelOpen, setFuelOpen] = useState(false);
+  const fuelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (fuelRef.current && !fuelRef.current.contains(e.target as Node)) setFuelOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function onFuelToggle(f: string) {
+    const next = currentFuels.includes(f) ? currentFuels.filter(x => x !== f) : [...currentFuels, f];
+    router.push(`/?${buildParams({ fuel: next })}`);
+  }
+
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch;
 
   const dealerLabel = currentDealers.length === 0
     ? 'All Dealers'
@@ -258,6 +276,34 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, tot
             {currentVat.length > 0 && (
               <button onClick={() => { router.push(`/?${buildParams({ vat: [] })}`); setVatOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear VAT
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Fuel multi-select dropdown */}
+      <div className="relative" ref={fuelRef}>
+        <button
+          onClick={() => setFuelOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentFuels.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {currentFuels.length === 0 ? 'Fuel' : `Fuel (${currentFuels.length})`}
+          <span className="text-gray-400">{fuelOpen ? '▲' : '▼'}</span>
+        </button>
+        {fuelOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[160px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {allFuels.map(f => (
+              <label key={f} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                <input type="checkbox" checked={currentFuels.includes(f)} onChange={() => onFuelToggle(f)} className="accent-blue-500" />
+                <span>{f}</span>
+              </label>
+            ))}
+            {currentFuels.length > 0 && (
+              <button onClick={() => { router.push(`/?${buildParams({ fuel: [] })}`); setFuelOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                Clear Fuel
               </button>
             )}
           </div>
