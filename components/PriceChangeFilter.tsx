@@ -39,30 +39,36 @@ export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
   }, [searchParams, router, min, max]);
 
   const active = low !== min || high !== max;
+  const range = max - min;
+  const lowPct = ((low - min) / range) * 100;
+  const highPct = ((high - min) / range) * 100;
   const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
     <>
       <style>{`
-        .pc-range {
+        .pc-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 80px;
-          height: 4px;
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
           background: transparent;
+          pointer-events: none;
           outline: none;
-          cursor: pointer;
         }
-        .pc-range::-webkit-slider-thumb {
+        .pc-thumb::-webkit-slider-thumb {
           -webkit-appearance: none;
-          appearance: none;
+          pointer-events: all;
           width: 2px;
           height: 12px;
           background: #60a5fa;
           cursor: ew-resize;
           border-radius: 0;
         }
-        .pc-range::-moz-range-thumb {
+        .pc-thumb::-moz-range-thumb {
+          pointer-events: all;
           width: 2px;
           height: 12px;
           background: #60a5fa;
@@ -70,30 +76,35 @@ export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
           border-radius: 0;
           border: none;
         }
-        .pc-range::-webkit-slider-runnable-track {
-          height: 2px;
-          background: #4b5563;
-          border-radius: 1px;
-        }
-        .pc-range::-moz-range-track {
-          height: 2px;
-          background: #4b5563;
-          border-radius: 1px;
-        }
+        .pc-thumb::-webkit-slider-runnable-track { background: transparent; }
+        .pc-thumb::-moz-range-track { background: transparent; }
       `}</style>
       <div className={`flex h-8 items-center gap-1.5 rounded border px-2 text-xs transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
         <span className="text-gray-500 text-[11px]">Δ</span>
         <span className="w-9 text-right text-gray-300 tabular-nums">{fmt(low)}</span>
-        <input
-          type="range" min={min} max={max} step={1} value={low}
-          onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
-          className="pc-range"
-        />
-        <input
-          type="range" min={min} max={max} step={1} value={high}
-          onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
-          className="pc-range"
-        />
+
+        {/* Single track with two overlaid inputs */}
+        <div className="relative flex-shrink-0" style={{ width: 80, height: 12 }}>
+          {/* Track background */}
+          <div className="absolute top-1/2 -translate-y-1/2 rounded" style={{ left: 1, right: 1, height: 2, background: '#4b5563' }}>
+            {/* Active fill */}
+            <div className="absolute h-full rounded bg-blue-500"
+              style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }} />
+          </div>
+          {/* Low handle */}
+          <input type="range" min={min} max={max} step={1} value={low}
+            onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
+            className="pc-thumb"
+            style={{ zIndex: lowPct > 90 ? 5 : 3 }}
+          />
+          {/* High handle */}
+          <input type="range" min={min} max={max} step={1} value={high}
+            onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
+            className="pc-thumb"
+            style={{ zIndex: 4 }}
+          />
+        </div>
+
         <span className="w-9 text-gray-300 tabular-nums">{fmt(high)}</span>
         {active && (
           <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white leading-none">✕</button>
