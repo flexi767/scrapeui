@@ -247,7 +247,7 @@ export default async function HomePage({
                       ) : row.vat === 'excluded' ? (
                         <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
                       ) : (
-                        <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">—</span>
+                        <span className="text-gray-600">—</span>
                       )}
                     </td>
 
