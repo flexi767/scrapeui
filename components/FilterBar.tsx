@@ -395,8 +395,9 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         ✕ Clear all
       </button>
 
-      <div className="ml-auto text-sm text-gray-400">
-        {total.toLocaleString()} listing{total !== 1 ? 's' : ''}
+      <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
+        <span>{total.toLocaleString()} listing{total !== 1 ? 's' : ''}</span>
+        <a href="/config" className="text-gray-500 hover:text-gray-200 transition-colors text-xs">⚙ Config</a>
       </div>
     </div>
   );
