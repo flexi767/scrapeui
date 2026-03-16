@@ -102,9 +102,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listing.vat === 'included' && (
                   <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-xs text-blue-200">+ДДС</span>
                 )}
-                {listing.vat === 'exempt' && (
-                  <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-300">освоб. от ДДС</span>
-                )}
+
               </div>
               <div className="flex flex-wrap gap-2">
                 <AdStatusBadge status={listing.ad_status} />
