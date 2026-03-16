@@ -192,21 +192,21 @@ export default function ScrapeRunner() {
                     <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
                   )}
                   <div className="flex-1 min-w-0 text-xs">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-white truncate block font-medium mb-0.5"
+                    >
+                      {entry.title}
+                    </a>
+                    <div className="flex items-center gap-2">
                       <span className="rounded px-1.5 py-0.5 bg-gray-700 text-gray-300 text-[11px]">{entry.dealer}</span>
                       <span className="text-green-400 font-semibold">{formatPrice(entry.price)}</span>
                       {!!entry.imageCount && (
                         <span className="text-gray-500">{entry.imageCount} imgs</span>
                       )}
                     </div>
-                    <a
-                      href={entry.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline truncate block font-mono text-[11px]"
-                    >
-                      {entry.title}
-                    </a>
                   </div>
                 </div>
               );
