@@ -191,6 +191,39 @@ export default function EmblaCarousel({ images, title }: Props) {
               }
             }}
           />
+          {/* Prev */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomed(false); setTranslate({x:0,y:0});
+              mainApi?.scrollPrev();
+              const idx = mainApi ? (mainApi.selectedScrollSnap() - 1 + images.length) % images.length : 0;
+              setLightbox(images[idx]?.full ?? lightbox);
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white hover:bg-black/90"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Next */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomed(false); setTranslate({x:0,y:0});
+              mainApi?.scrollNext();
+              const idx = mainApi ? (mainApi.selectedScrollSnap() + 1) % images.length : 0;
+              setLightbox(images[idx]?.full ?? lightbox);
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white hover:bg-black/90"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Close */}
           <button
             onClick={() => { setZoomed(false); setTranslate({x:0,y:0}); setLightbox(null); }}
             className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90"
