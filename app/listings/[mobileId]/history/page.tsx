@@ -7,6 +7,15 @@ interface Props {
   params: Promise<{ mobileId: string }>;
 }
 
+function formatDateAxis(dateStr: string) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(2);
+  return `${dd}.${mm}.${yy}`;
+}
+
 export default async function PriceHistoryPage({ params }: Props) {
   const { mobileId } = await params;
   const listing = getListingByMobileId(mobileId);
@@ -163,7 +172,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                             style={{ height: h }}
                           />
                           <span className="mt-1 text-[10px] text-gray-500">
-                            {i + 1}
+                            {formatDateAxis(snap.recorded_at)}
                           </span>
                           {/* Tooltip */}
                           <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block whitespace-nowrap">
