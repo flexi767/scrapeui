@@ -187,7 +187,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     router.push(`/?${buildParams({ fuel: next })}`);
   }
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch;
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
 
   const dealerLabel = currentDealers.length === 0
     ? 'All Dealers'
