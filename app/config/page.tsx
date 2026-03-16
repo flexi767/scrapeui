@@ -28,7 +28,7 @@ export default function ConfigPage() {
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-[1600px] px-4 py-3">
+        <div className="mx-auto max-w-5xl px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Listings
