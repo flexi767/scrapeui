@@ -1,64 +1,292 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { Suspense } from 'react';
+import FilterBar from '@/components/FilterBar';
+import { getAllDealers, getListings, getMakeModels } from '@/lib/queries';
+import { buildImageList, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
-export default function Home() {
+interface SearchParams {
+  make?: string;
+  model?: string;
+  dealer?: string | string[];
+  sort?: string;
+  order?: string;
+  search?: string;
+  page?: string;
+}
+
+function AdStatusBadge({ status }: { status: string }) {
+  if (!status || status === 'none') {
+    return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">—</span>;
+  }
+  if (status.toUpperCase() === 'TOP') {
+    return <span className="rounded-full bg-amber-700 px-2 py-0.5 text-[11px] font-semibold text-amber-100">TOP</span>;
+  }
+  if (status.toUpperCase() === 'VIP') {
+    return <span className="rounded-full bg-purple-700 px-2 py-0.5 text-[11px] font-semibold text-purple-100">VIP</span>;
+  }
+  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
+}
+
+function SortLink({
+  label,
+  sortKey,
+  currentSort,
+  currentOrder,
+  params,
+}: {
+  label: string;
+  sortKey: string;
+  currentSort: string;
+  currentOrder: string;
+  params: URLSearchParams;
+}) {
+  const p = new URLSearchParams(params.toString());
+  p.delete('page');
+  if (currentSort === sortKey) {
+    p.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+  } else {
+    p.set('sort', sortKey);
+    p.set('order', 'desc');
+  }
+  const arrow =
+    currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <Link href={`/?${p.toString()}`} className="hover:text-white">
+      {label}{arrow}
+    </Link>
+  );
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+
+  const make = sp.make ?? '';
+  const model = sp.model ?? '';
+  const dealerSlugs = sp.dealer
+    ? Array.isArray(sp.dealer)
+      ? sp.dealer
+      : [sp.dealer]
+    : [];
+  const sort = sp.sort ?? 'last_edit';
+  const order = sp.order ?? 'desc';
+  const search = sp.search ?? '';
+  const page = parseInt(sp.page ?? '1', 10);
+
+  const { data: rows, total } = getListings({
+    make,
+    model,
+    dealerSlugs,
+    sort,
+    order,
+    search,
+    page,
+    limit: 50,
+  });
+
+  const makeModels = getMakeModels();
+  const allDealers = getAllDealers();
+  const makes = Object.keys(makeModels).sort();
+
+  // Build URL params object for sort links
+  const currentParams = new URLSearchParams();
+  if (make) currentParams.set('make', make);
+  if (model) currentParams.set('model', model);
+  for (const d of dealerSlugs) currentParams.append('dealer', d);
+  if (search) currentParams.set('search', search);
+  currentParams.set('sort', sort);
+  currentParams.set('order', order);
+
+  const totalPages = Math.ceil(total / 50);
+
+  return (
+    <div className="min-h-screen bg-[#111827]">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-[1600px] px-4 py-3">
+          <div className="mb-3 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-white">
+              Competitor Listings Tracker
+            </h1>
+            <span className="text-sm text-gray-400">
+              {total.toLocaleString()} listing{total !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <Suspense>
+            <FilterBar
+              makes={makes}
+              makeModels={makeModels}
+              allDealers={allDealers}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </Suspense>
         </div>
+      </header>
+
+      <main className="mx-auto max-w-[1600px] px-4 py-4">
+        {/* Table */}
+        <div className="overflow-x-auto rounded-lg border border-gray-700/60">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="w-16 px-3 py-3 text-left">Img</th>
+                <th className="px-3 py-3 text-left">Make / Model</th>
+                <th className="px-3 py-3 text-left">Title</th>
+                <th className="px-3 py-3 text-left">Dealer</th>
+                <th className="px-3 py-3 text-left">Status</th>
+                <th className="px-3 py-3 text-right">
+                  <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-3 py-3 text-center">VAT</th>
+                <th className="px-3 py-3 text-center">Kaparo</th>
+                <th className="px-3 py-3 text-right">
+                  <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-3 py-3 text-right">
+                  <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-3 py-3 text-right">Year</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/50">
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="py-16 text-center text-gray-500">
+                    No listings found
+                  </td>
+                </tr>
+              )}
+              {rows.map((row) => {
+                const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
+                const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
+                const images = buildImageList(
+                  row.mobile_id,
+                  thumbKeys,
+                  thumbKeys,
+                  imageMeta,
+                  row.images_downloaded === 1,
+                );
+                const thumb = images[0]?.thumb ?? null;
+
+                return (
+                  <tr
+                    key={row.mobile_id}
+                    className="group transition-colors hover:bg-gray-800/40"
+                  >
+                    {/* Thumbnail */}
+                    <td className="px-3 py-2">
+                      {thumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumb}
+                          alt=""
+                          className="h-10 w-14 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-14 rounded bg-gray-700" />
+                      )}
+                    </td>
+
+                    {/* Make + Model */}
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-gray-200">{row.make}</div>
+                      <div className="text-xs text-gray-400">{row.model}</div>
+                    </td>
+
+                    {/* Title */}
+                    <td className="max-w-xs px-3 py-2">
+                      <Link
+                        href={`/listings/${row.mobile_id}`}
+                        className="line-clamp-2 text-blue-400 hover:text-blue-300 hover:underline"
+                      >
+                        {row.title}
+                      </Link>
+                    </td>
+
+                    {/* Dealer */}
+                    <td className="px-3 py-2 text-gray-300">
+                      {row.dealer_name ?? '—'}
+                    </td>
+
+                    {/* Ad Status */}
+                    <td className="px-3 py-2">
+                      <AdStatusBadge status={row.ad_status} />
+                    </td>
+
+                    {/* Price */}
+                    <td className="px-3 py-2 text-right font-semibold text-green-400">
+                      {formatPrice(row.current_price)}
+                    </td>
+
+                    {/* VAT */}
+                    <td className="px-3 py-2 text-center">
+                      {row.vat ? (
+                        <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">
+                          VAT
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">—</span>
+                      )}
+                    </td>
+
+                    {/* Kaparo */}
+                    <td className="px-3 py-2 text-center">
+                      {row.kaparo ? (
+                        <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">
+                          Kaparo
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">—</span>
+                      )}
+                    </td>
+
+                    {/* Last Edit */}
+                    <td className="px-3 py-2 text-right text-xs text-gray-400">
+                      {row.last_edit ?? '—'}
+                    </td>
+
+                    {/* Mileage */}
+                    <td className="px-3 py-2 text-right text-gray-300">
+                      {formatMileage(row.mileage)}
+                    </td>
+
+                    {/* Reg Year */}
+                    <td className="px-3 py-2 text-right text-gray-300">
+                      {row.reg_year ?? '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+            {page > 1 && (
+              <Link
+                href={`/?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page - 1) }).toString()}`}
+                className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
+              >
+                ← Prev
+              </Link>
+            )}
+            <span className="text-gray-400">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages && (
+              <Link
+                href={`/?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page + 1) }).toString()}`}
+                className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
+              >
+                Next →
+              </Link>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
