@@ -39,49 +39,52 @@ export default function PriceChangeFilter({ min, max }: Props) {
   const active = low !== min || high !== max;
   const lowPct = ((low - min) / range) * 100;
   const highPct = ((high - min) / range) * 100;
-
   const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
-    <div className={`flex h-8 items-center gap-2 rounded border px-3 text-sm transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
-      <span className="text-xs text-gray-400 whitespace-nowrap">Δ Price</span>
-      <span className="w-10 text-right text-xs text-gray-300 tabular-nums">{fmt(low)}</span>
+    <div className={`flex h-8 items-center gap-1.5 rounded border px-2 text-sm transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
+      {/* Low value label */}
+      <span className="w-10 text-right text-xs text-gray-300 tabular-nums flex-shrink-0">{fmt(low)}</span>
 
-      {/* Track */}
-      <div className="relative h-1 w-28 rounded bg-gray-600 flex-shrink-0">
-        <div
-          className="absolute h-1 rounded bg-blue-500"
-          style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
-        />
-        {/* Low thumb visual */}
-        <div
-          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `${lowPct}%` }}
-        />
-        {/* High thumb visual */}
+      {/* Track container — fixed width, no overflow */}
+      <div className="relative w-24 flex-shrink-0" style={{ height: '20px' }}>
+        {/* Background track */}
+        <div className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 rounded bg-gray-600">
+          <div
+            className="absolute h-1 rounded bg-blue-500"
+            style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
+          />
+        </div>
+        {/* Thumb visuals (pointer-events-none, just decorative) */}
         <div
           className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `${highPct}%` }}
+          style={{ left: `${lowPct}%`, zIndex: 6 }}
         />
-        {/* Low input — on top when near left */}
+        <div
+          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
+          style={{ left: `${highPct}%`, zIndex: 6 }}
+        />
+        {/* Low range input */}
         <input
           type="range" min={min} max={max} step={1} value={low}
           onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           style={{ zIndex: lowPct > 90 ? 5 : 3 }}
         />
-        {/* High input */}
+        {/* High range input */}
         <input
           type="range" min={min} max={max} step={1} value={high}
           onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           style={{ zIndex: 4 }}
         />
       </div>
 
-      <span className="w-10 text-xs text-gray-300 tabular-nums">{fmt(high)}</span>
+      {/* High value label */}
+      <span className="w-10 text-xs text-gray-300 tabular-nums flex-shrink-0">{fmt(high)}</span>
+
       {active && (
-        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs leading-none">✕</button>
+        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs leading-none flex-shrink-0">✕</button>
       )}
     </div>
   );
