@@ -132,7 +132,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-gray-700/60 overflow-x-auto">
-        <table className="w-full min-w-max text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-700 bg-gray-800/60 text-xs uppercase tracking-wider text-gray-400">
               <th className="px-4 py-2 text-left w-40">Name</th>
