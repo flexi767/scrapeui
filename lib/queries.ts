@@ -71,9 +71,6 @@ export function getListings(filters: ListingFilters = {}) {
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
 
-    wheres.push('l.kaparo = ?');
-    params.push(kaparo === 'yes' ? 1 : 0);
-  }
   if (statuses.length > 0) {
     const ph = statuses.map(() => '?').join(',');
     wheres.push(`l.ad_status IN (${ph})`);
