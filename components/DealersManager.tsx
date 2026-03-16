@@ -175,11 +175,11 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                           </>
                         )}
                       </div>
-                    ) : (
-                      <a href={d.mobile_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
-                        {d.mobile_url || '—'}
+                    ) : d.mobile_url ? (
+                      <a href={d.mobile_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
+                        {d.mobile_url}
                       </a>
-                    )}
+                    ) : null}
                   </td>
                   <td className="px-4 py-2">
                     {editing ? (
@@ -192,11 +192,11 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                           </>
                         )}
                       </div>
-                    ) : (
-                      <a href={d.cars_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
-                        {d.cars_url || '—'}
+                    ) : d.cars_url ? (
+                      <a href={d.cars_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs truncate block max-w-[220px]">
+                        {d.cars_url}
                       </a>
-                    )}
+                    ) : null}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <button onClick={() => onToggleOwn(d)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.own ? 'bg-emerald-800/70 text-emerald-200' : 'bg-gray-700 text-gray-400'}`}>{d.own ? 'yes' : 'no'}</button>
