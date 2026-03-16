@@ -46,9 +46,28 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   }
 
+  function hasHttpProtocol(url: string) {
+    return /^https?:\/\//i.test(url.trim());
+  }
+
+  function showValidationError(message: string) {
+    setError(message);
+    window.alert(message);
+  }
+
   async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (!hasHttpProtocol(form.mobile_url)) {
+      showValidationError('Mobile URL must start with http:// or https://');
+      return;
+    }
+    if (form.cars_url.trim() && !hasHttpProtocol(form.cars_url)) {
+      showValidationError('Cars URL must start with http:// or https://');
+      return;
+    }
+
     setAdding(true);
     try {
       const res = await fetch('/api/dealers', {
@@ -106,6 +125,16 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
   async function saveEdit(id: number) {
     setError('');
+
+    if (!hasHttpProtocol(editForm.mobile_url)) {
+      showValidationError('Mobile URL must start with http:// or https://');
+      return;
+    }
+    if (editForm.cars_url.trim() && !hasHttpProtocol(editForm.cars_url)) {
+      showValidationError('Cars URL must start with http:// or https://');
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/dealers/${id}`, {
