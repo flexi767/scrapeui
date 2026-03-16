@@ -85,7 +85,7 @@ export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramH
       `}</style>
       <div className={`flex h-8 items-center gap-1.5 rounded border px-2 text-xs transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
         {label && <span className="text-gray-500 text-[11px]">{label}</span>}
-        <span className="w-12 text-right text-gray-300 tabular-nums">{display(low)}</span>
+        <span className="text-right text-gray-300 tabular-nums">{display(low)}</span>
 
         <div className="relative flex-shrink-0" style={{ width: 80, height: 12 }}>
           <div className="absolute top-1/2 -translate-y-1/2 rounded" style={{ left: 1, right: 1, height: 2, background: '#4b5563' }}>
@@ -102,7 +102,7 @@ export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramH
           />
         </div>
 
-        <span className="w-12 text-gray-300 tabular-nums">{display(high)}</span>
+        <span className="text-gray-300 tabular-nums">{display(high)}</span>
         {active && (
           <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white leading-none">✕</button>
         )}
