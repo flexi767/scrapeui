@@ -8,9 +8,10 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
+  total: number;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, total }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -172,7 +173,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
       : `${currentDealers.length} dealers`;
 
   return (
-    <div className="flex flex-wrap items-start gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {/* Search */}
       <input
         type="search"
@@ -348,6 +349,10 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
       >
         ✕ Clear all
       </button>
+
+      <div className="ml-auto text-sm text-gray-400">
+        {total.toLocaleString()} listing{total !== 1 ? 's' : ''}
+      </div>
     </div>
   );
 }
