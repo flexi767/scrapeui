@@ -156,10 +156,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                 return (
                   <div className="flex items-end gap-1" style={{ height: barH + 24 }}>
                     {pricePoints.map((snap, i) => {
-                      const h = Math.max(
-                        4,
-                        ((snap.price - minP) / range) * barH,
-                      );
+                      const h = barH * 0.35 + ((snap.price - minP) / range) * barH * 0.65;
                       const prev = pricePoints[i - 1];
                       const delta = prev ? snap.price - prev.price : 0;
                       const isLast = i === pricePoints.length - 1;
