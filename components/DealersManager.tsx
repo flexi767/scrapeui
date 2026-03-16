@@ -186,13 +186,15 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                     {editing ? (
                       <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                     ) : (
-                      <span>{d.name}</span>
+                      <button onClick={() => startEdit(d)} className="text-left text-white hover:text-blue-300">{d.name}</button>
                     )}
                   </td>
                   <td className="px-4 py-2 text-gray-400 font-mono text-xs">
                     {editing ? (
                       <input value={editForm.slug} onChange={e => setEditForm(f => ({ ...f, slug: slugify(e.target.value) }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono" />
-                    ) : d.slug}
+                    ) : (
+                      <button onClick={() => startEdit(d)} className="text-left font-mono text-xs text-gray-400 hover:text-blue-300">{d.slug}</button>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     {editing ? (
