@@ -15,18 +15,22 @@ interface LogEntry {
   code?: number | null;
 }
 
-const DEALERS = [
-  { slug: 'peevauto', name: 'PeevAuto' },
-  { slug: 'luxcars', name: 'LuxCars' },
-];
+interface Competitor {
+  id: number;
+  slug: string;
+  name: string;
+  mobile_url: string;
+  active: number;
+}
 
 function formatPrice(price: number | null | undefined) {
   if (!price) return '—';
   return `€${price.toLocaleString()}`;
 }
 
-export default function ScrapeRunner() {
-  const [selectedDealers, setSelectedDealers] = useState<string[]>(DEALERS.map(d => d.slug));
+export default function ScrapeRunner({ initialCompetitors }: { initialCompetitors: Competitor[] }) {
+  const activeCompetitors = initialCompetitors.filter(c => c.active);
+  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeCompetitors.map(d => d.slug));
   const [deepCrawl, setDeepCrawl] = useState(true);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -112,7 +116,7 @@ export default function ScrapeRunner() {
         <div>
           <p className="text-sm font-medium text-gray-300 mb-3">Competitors</p>
           <div className="flex gap-5">
-            {DEALERS.map(d => (
+            {activeCompetitors.map(d => (
               <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"

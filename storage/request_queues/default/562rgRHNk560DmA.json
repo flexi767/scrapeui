@@ -1,0 +1,9 @@
+{
+	"id": "562rgRHNk560DmA",
+	"json": "{\"id\":\"562rgRHNk560DmA\",\"url\":\"https://luxcars.mobile.bg\",\"loadedUrl\":\"https://luxcars.mobile.bg/\",\"uniqueKey\":\"https://luxcars.mobile.bg\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"label\":\"LIST\",\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-03-16T05:59:59.590Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "https://luxcars.mobile.bg",
+	"url": "https://luxcars.mobile.bg"
+}
