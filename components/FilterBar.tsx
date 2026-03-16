@@ -208,7 +208,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         onChange={(e) => onMakeChange(e.target.value)}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
       >
-        <option value="">All Makes</option>
+        <option value="">Make</option>
         {makes.map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
@@ -221,7 +221,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         disabled={!currentMake}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-40"
       >
-        <option value="">All Models</option>
+        <option value="">Model</option>
         {availableModels.map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
@@ -269,7 +269,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             currentStatuses.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentStatuses.length === 0 ? 'All Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
+          {currentStatuses.length === 0 ? 'Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
           <span className="text-gray-400">{statusOpen ? '▲' : '▼'}</span>
         </button>
         {statusOpen && (
@@ -355,7 +355,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentYears.length === 0 ? 'All Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
+          {currentYears.length === 0 ? 'Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
           <span className="text-gray-400">{yearOpen ? '▲' : '▼'}</span>
         </button>
         {yearOpen && (
