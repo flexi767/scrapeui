@@ -22,7 +22,7 @@ export default async function PriceHistoryPage({ params }: Props) {
             ← {listing.title}
           </Link>
           <span className="text-gray-600">/</span>
-          <span className="text-sm text-gray-300">Price History</span>
+          <span className="text-sm text-gray-300">History</span>
         </div>
       </header>
 
@@ -30,21 +30,13 @@ export default async function PriceHistoryPage({ params }: Props) {
         <div className="mb-6">
           <h1 className="text-xl font-bold text-white">{listing.title}</h1>
           <p className="mt-1 text-sm text-gray-400">
-            Current price:{' '}
-            <span className="font-semibold text-green-400">
-              {formatPrice(listing.current_price)}
-            </span>
-            {listing.vat && (
-              <span className="ml-2 rounded-full bg-blue-900/70 px-2 py-0.5 text-xs text-blue-200">
-                incl. VAT
-              </span>
-            )}
+            {snapshots.length} historical snapshot{snapshots.length !== 1 ? 's' : ''}
           </p>
         </div>
 
         {snapshots.length === 0 ? (
           <div className="rounded-lg border border-gray-700/60 p-12 text-center text-gray-500">
-            No price snapshots recorded yet.
+            No history recorded yet.
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-gray-700/60">
@@ -134,7 +126,7 @@ export default async function PriceHistoryPage({ params }: Props) {
         {snapshots.length > 1 && (
           <div className="mt-6 rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Price Timeline
+History Timeline
             </h2>
             <div className="relative">
               {(() => {

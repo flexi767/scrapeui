@@ -123,13 +123,13 @@ export default async function ListingDetailPage({ params }: Props) {
                 ) : null}
               </div>
 
-              {/* Price history link */}
+              {/* History link */}
               {snapshots.length > 1 && (
                 <Link
                   href={`/listings/${listing.mobile_id}/price-history`}
                   className="mt-3 block text-xs text-blue-400 hover:text-blue-300 hover:underline"
                 >
-                  View price history ({snapshots.length} snapshots) →
+                  View history ({snapshots.length} snapshots) →
                 </Link>
               )}
 
