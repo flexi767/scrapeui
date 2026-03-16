@@ -154,12 +154,12 @@ export default async function HomePage({
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
-                <th className="px-3 py-1.5 text-right">
-                  <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
-                </th>
                 <th className="px-3 py-1.5 text-right">Month</th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-3 py-1.5 text-right">
+                  <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
               </tr>
             </thead>
@@ -290,11 +290,6 @@ export default async function HomePage({
                       )}
                     </td>
 
-                    {/* Mileage */}
-                    <td className="px-3 py-1 text-right text-gray-300">
-                      {formatMileage(row.mileage)}
-                    </td>
-
                     {/* Reg Month */}
                     <td className="px-3 py-1 text-right text-gray-300">
                       {row.reg_month ?? '—'}
@@ -307,6 +302,11 @@ export default async function HomePage({
                           {row.reg_year}
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
+                    </td>
+
+                    {/* Mileage */}
+                    <td className="px-3 py-1 text-right text-gray-300">
+                      {formatMileage(row.mileage)}
                     </td>
                   </tr>
                 );
