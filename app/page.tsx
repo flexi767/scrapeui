@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels } from '@/lib/queries';
+import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange } from '@/lib/queries';
+import PriceChangeFilter from '@/components/PriceChangeFilter';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -13,6 +14,8 @@ interface SearchParams {
   vat?: string | string[];
   fuel?: string | string[];
   kaparo?: string;
+  pc_min?: string;
+  pc_max?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -80,6 +83,8 @@ export default async function HomePage({
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
+  const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
+  const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
   const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'dealer';
   const order = sp.order ?? 'desc';
@@ -94,6 +99,8 @@ export default async function HomePage({
     statuses,
     vatValues,
     fuels,
+    priceChangeMin,
+    priceChangeMax,
     kaparo,
     sort,
     order,
@@ -142,6 +149,16 @@ export default async function HomePage({
               total={total}
             />
           </Suspense>
+          {(() => {
+            const pcRange = getPriceChangeRange();
+            return pcRange ? (
+              <div className="mt-2 pb-1">
+                <Suspense>
+                  <PriceChangeFilter min={pcRange.min} max={pcRange.max} />
+                </Suspense>
+              </div>
+            ) : null;
+          })()}
         </div>
       </header>
 

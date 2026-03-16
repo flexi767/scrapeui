@@ -34,6 +34,8 @@ export interface ListingFilters {
   statuses?: string[];
   vatValues?: string[];
   fuels?: string[];
+  priceChangeMin?: number | null;
+  priceChangeMax?: number | null;
   kaparo?: string;
   sort?: string;
   order?: string;
@@ -62,6 +64,8 @@ export function getListings(filters: ListingFilters = {}) {
     statuses = [],
     vatValues = [],
     fuels = [],
+    priceChangeMin = null,
+    priceChangeMax = null,
     kaparo = '',
     sort = 'last_edit',
     order = 'desc',
@@ -97,6 +101,11 @@ export function getListings(filters: ListingFilters = {}) {
     const ph = fuels.map(() => '?').join(',');
     wheres.push(`l.fuel IN (${ph})`);
     params.push(...fuels);
+  }
+  if (priceChangeMin !== null || priceChangeMax !== null) {
+    wheres.push('l.price_change IS NOT NULL');
+    if (priceChangeMin !== null) { wheres.push('l.price_change >= ?'); params.push(priceChangeMin); }
+    if (priceChangeMax !== null) { wheres.push('l.price_change <= ?'); params.push(priceChangeMax); }
   }
   if (kaparo) {
     wheres.push('l.kaparo = ?');
@@ -247,6 +256,14 @@ export function getDistinctYears(): string[] {
     `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL ORDER BY reg_year DESC`
   ).all() as { reg_year: string }[];
   return rows.map(r => r.reg_year);
+}
+
+export function getPriceChangeRange(): { min: number; max: number } | null {
+  const row = raw.prepare(
+    `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL`
+  ).get() as { min: number | null; max: number | null };
+  if (row.min == null || row.max == null) return null;
+  return { min: row.min, max: row.max };
 }
 
 export function getDistinctFuels(): string[] {
