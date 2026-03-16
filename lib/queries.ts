@@ -38,6 +38,10 @@ const VALID_SORT: Record<string, string> = {
   price: 'l.current_price',
   last_edit: 'l.last_edit',
   mileage: 'l.mileage',
+  dealer: 'd.name',
+  ad_status: 'l.ad_status',
+  kaparo: 'l.kaparo',
+  reg_year: 'l.reg_year',
 };
 
 export function getListings(filters: ListingFilters = {}) {

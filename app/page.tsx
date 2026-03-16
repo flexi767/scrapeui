@@ -137,13 +137,19 @@ export default async function HomePage({
                 <th className="w-16 px-3 py-1.5 text-left">Img</th>
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
-                <th className="px-3 py-1.5 text-left">Dealer</th>
-                <th className="px-2 py-1.5 text-center w-14">Status</th>
+                <th className="px-3 py-1.5 text-left">
+                  <SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-2 py-1.5 text-center w-14">
+                  <SortLink label="Status" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
-                <th className="px-2 py-1.5 text-center w-14">капаро</th>
+                <th className="px-2 py-1.5 text-center w-14">
+                  <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -151,7 +157,9 @@ export default async function HomePage({
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-right">Month</th>
-                <th className="px-3 py-1.5 text-right">Year</th>
+                <th className="px-3 py-1.5 text-right">
+                  <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
