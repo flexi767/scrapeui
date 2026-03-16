@@ -167,10 +167,10 @@ export default async function HomePage({
                 <th className="px-2 py-1.5 text-center w-14">
                   <SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
+                <th className="px-1 py-1.5 text-center w-6"></th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-1 py-1.5 text-center w-6"></th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
                 <th className="px-2 py-1.5 text-center w-14">
                   <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} />
@@ -295,11 +295,6 @@ export default async function HomePage({
                       </Link>
                     </td>
 
-                    {/* Price */}
-                    <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
-                      {formatPrice(row.current_price)}
-                    </td>
-
                     {/* Price change indicator */}
                     <td className="px-1 py-1 text-center text-sm">
                       {row.price_change != null ? (
@@ -309,6 +304,11 @@ export default async function HomePage({
                           </span>
                         </Link>
                       ) : null}
+                    </td>
+
+                    {/* Price */}
+                    <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
+                      {formatPrice(row.current_price)}
                     </td>
 
                     {/* VAT */}
