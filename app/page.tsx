@@ -115,10 +115,13 @@ export default async function HomePage({
       {/* Sticky header */}
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-[1600px] px-4 py-3">
-          <div className="mb-3 flex items-center justify-end">
+          <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-gray-400">
               {total.toLocaleString()} listing{total !== 1 ? 's' : ''}
             </span>
+            <Link href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+              ⚙ Config
+            </Link>
           </div>
           <Suspense>
             <FilterBar
