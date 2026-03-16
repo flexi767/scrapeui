@@ -4,7 +4,6 @@
     "esbenp.prettier-vscode",
     "bradlc.vscode-tailwindcss",
     "ms-vscode.vscode-typescript-next",
-    "prisma.prisma",
     "qwtel.sqlite-viewer"
   ]
 }
