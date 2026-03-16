@@ -1,24 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { formatDate as formatLastEdit, formatPrice } from '@/lib/utils';
+import { formatDate, formatPrice } from '@/lib/utils';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
-}
-
-function formatDate(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 export default async function PriceHistoryPage({ params }: Props) {
@@ -107,7 +93,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-400">
-                        {snap.last_edit ? formatLastEdit(snap.last_edit) : <span className="text-gray-600">—</span>}
+                        {snap.last_edit ? formatDate(snap.last_edit) : <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-300">
                         {snap.ad_status && snap.ad_status !== 'none' ? snap.ad_status : <span className="text-gray-600">—</span>}

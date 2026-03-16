@@ -8,12 +8,25 @@ export function formatMileage(mileage: number | null | undefined): string {
   return mileage.toLocaleString('en-US') + ' km';
 }
 
-// Input: "2026-03-10 08:36" → Output: "10.03.2026 08:36"
+// Standard datetime display: dd.mm.yy hh:mm
+// Supports both "YYYY-MM-DD HH:MM" and ISO timestamps like "2026-03-16T10:21:00.000Z"
 export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/);
-  if (!m) return dateStr;
-  return `${m[3]}.${m[2]}.${m[1].slice(2)} ${m[4]}`;
+
+  const plain = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/);
+  if (plain) return `${plain[3]}.${plain[2]}.${plain[1].slice(2)} ${plain[4]}`;
+
+  const d = new Date(dateStr);
+  if (!Number.isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(2);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}.${mm}.${yy} ${hh}:${min}`;
+  }
+
+  return dateStr;
 }
 
 export interface ImageMeta {
