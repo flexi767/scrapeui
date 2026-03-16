@@ -100,10 +100,16 @@ export default async function ListingDetailPage({ params }: Props) {
                   {formatPrice(listing.current_price)}
                 </span>
                 {listing.vat === 'included' && (
-                  <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-xs text-blue-200">+ДДС</span>
+                  <span className="rounded-full bg-blue-900/70 px-2.5 py-1 text-xs text-blue-200">има</span>
                 )}
                 {listing.vat === 'exempt' && (
-                  <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-300">няма</span>
+                  <span className="rounded-full bg-green-900/70 px-2.5 py-1 text-xs text-green-200">няма</span>
+                )}
+                {listing.vat === 'excluded' && (
+                  <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">+ДДС</span>
+                )}
+                {!listing.vat && (
+                  <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">—</span>
                 )}
 
               </div>

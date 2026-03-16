@@ -223,11 +223,13 @@ export default async function HomePage({
                     {/* VAT */}
                     <td className="px-3 py-2 text-center">
                       {row.vat === 'included' ? (
-                        <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">+ДДС</span>
+                        <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
                       ) : row.vat === 'exempt' ? (
-                        <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">няма</span>
+                        <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
+                      ) : row.vat === 'excluded' ? (
+                        <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
                       ) : (
-                        <span className="text-gray-600">—</span>
+                        <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">—</span>
                       )}
                     </td>
 
