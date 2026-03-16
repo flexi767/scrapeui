@@ -15,6 +15,7 @@ interface Props {
 
 export default function EmblaCarousel({ images, title }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [mainRef, mainApi] = useEmblaCarousel({ loop: true });
   const [thumbsRef, thumbsApi] = useEmblaCarousel({
     containScroll: 'keepSnaps',
@@ -69,7 +70,8 @@ export default function EmblaCarousel({ images, title }: Props) {
               <img
                 src={img.full}
                 alt={title ? `${title} — photo ${i + 1}` : `Photo ${i + 1}`}
-                className="aspect-[4/3] w-full object-cover"
+                className="aspect-[4/3] w-full cursor-zoom-in object-cover"
+                onClick={() => setLightbox(img.full)}
               />
             </div>
           ))}
@@ -100,6 +102,30 @@ export default function EmblaCarousel({ images, title }: Props) {
           {selectedIndex + 1} / {images.length}
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox}
+            alt=""
+            className="max-h-screen max-w-full object-contain p-4"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Thumbnail strip */}
       <div className="overflow-hidden" ref={thumbsRef}>
