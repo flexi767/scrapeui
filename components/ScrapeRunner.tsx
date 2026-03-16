@@ -31,8 +31,8 @@ function formatPrice(price: number | null | undefined) {
 
 export default function ScrapeRunner({ initialDealers }: { initialDealers: Dealer[] }) {
   const activeDealers = initialDealers.filter(c => c.active);
-  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.map(d => d.slug));
-  const [deepCrawl, setDeepCrawl] = useState(true);
+  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
+  const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [done, setDone] = useState(false);
