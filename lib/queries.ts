@@ -30,6 +30,7 @@ export interface ListingFilters {
   dealerSlugs?: string[];
   years?: string[];
   statuses?: string[];
+  kaparo?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -54,6 +55,7 @@ export function getListings(filters: ListingFilters = {}) {
     dealerSlugs = [],
     years = [],
     statuses = [],
+    kaparo = '',
     sort = 'last_edit',
     order = 'desc',
     search = '',
@@ -70,6 +72,10 @@ export function getListings(filters: ListingFilters = {}) {
     const ph = statuses.map(() => '?').join(',');
     wheres.push(`l.ad_status IN (${ph})`);
     params.push(...statuses);
+  }
+  if (kaparo) {
+    wheres.push('l.kaparo = ?');
+    params.push(kaparo === 'yes' ? 1 : 0);
   }
   if (years.length > 0) {
     const ph = years.map(() => '?').join(',');

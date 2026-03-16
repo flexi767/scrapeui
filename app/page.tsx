@@ -10,6 +10,7 @@ interface SearchParams {
   dealer?: string | string[];
   year?: string | string[];
   status?: string | string[];
+  kaparo?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -75,6 +76,7 @@ export default async function HomePage({
     : [];
   const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
+  const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
@@ -86,6 +88,7 @@ export default async function HomePage({
     dealerSlugs,
     years,
     statuses,
+    kaparo,
     sort,
     order,
     search,
@@ -100,6 +103,7 @@ export default async function HomePage({
   // Build URL params object for sort links
   const currentParams = new URLSearchParams();
   for (const s of statuses) currentParams.append('status', s);
+  if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
   for (const d of dealerSlugs) currentParams.append('dealer', d);
@@ -293,11 +297,13 @@ export default async function HomePage({
 
                     {/* капаро */}
                     <td className="px-2 py-1 text-center">
-                      {row.kaparo ? (
-                        <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span>
-                      ) : (
-                        <span className="text-gray-600">—</span>
-                      )}
+                      <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'kaparo'), ['kaparo', row.kaparo ? 'yes' : 'no']]).toString()}`}>
+                        {row.kaparo ? (
+                          <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
+                      </Link>
                     </td>
 
                     {/* Last Edit */}
