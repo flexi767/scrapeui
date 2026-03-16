@@ -104,7 +104,7 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
       : `${currentDealers.length} dealers`;
 
   return (
-    <div className="flex flex-wrap items-start gap-3">
+    <div className="flex flex-wrap items-start gap-1.5">
       {/* Search */}
       <input
         type="search"
