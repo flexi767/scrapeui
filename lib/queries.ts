@@ -11,6 +11,7 @@ export interface ListingRow {
   mileage: number;
   fuel: string | null;
   current_price: number;
+  price_change: number | null;
   vat: string | null;
   kaparo: number;
   ad_status: string;
@@ -124,7 +125,7 @@ export function getListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel,
-      l.current_price, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
+      l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l

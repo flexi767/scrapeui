@@ -19,6 +19,7 @@ export const dealers = sqliteTable('dealers', {
 export const listings = sqliteTable('listings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   mobileId: text('mobile_id').unique(),
+  priceChange: integer('price_change'),
   dealerId: integer('dealer_id').references(() => dealers.id),
   url: text('url'),
   title: text('title'),

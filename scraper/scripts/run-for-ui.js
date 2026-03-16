@@ -101,11 +101,13 @@ function upsertListing(db, dealerId, listing, makesMap) {
          JSON.stringify(listing.images.thumbKeys), JSON.stringify(listing.images.fullKeys || [])]
       : [];
 
+    const priceChangeDelta = priceChanged ? price - existing.current_price : existing.price_change ?? null;
+
     db.prepare(`
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, reg_month = ?, reg_year = ?,
         fuel = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
-        is_new = ?, last_edit = ?, current_price = ?, vat = ?, ${imageFields}
+        is_new = ?, last_edit = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1
       WHERE id = ?
     `).run(
@@ -122,6 +124,7 @@ function upsertListing(db, dealerId, listing, makesMap) {
       isDeep ? (listing.lastEdit || null) : existing.last_edit,
       price,
       isDeep ? vat : (existing.vat ?? null),
+      priceChangeDelta,
       ...imageValues,
       now, existing.id
     );
