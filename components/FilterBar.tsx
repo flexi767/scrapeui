@@ -19,6 +19,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
   const currentDealers = searchParams.getAll('dealer');
   const currentYears = searchParams.getAll('year');
   const currentStatuses = searchParams.getAll('status');
+  const currentVat = searchParams.getAll('vat');
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
@@ -54,6 +55,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
     for (const d of currentDealers) p.append('dealer', d);
     for (const y of currentYears) p.append('year', y);
     for (const s of currentStatuses) p.append('status', s);
+    for (const v of currentVat) p.append('vat', v);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -139,7 +141,29 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
     { value: 'none', label: 'None' },
   ];
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentSearch;
+  const [vatOpen, setVatOpen] = useState(false);
+  const vatRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (vatRef.current && !vatRef.current.contains(e.target as Node)) setVatOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function onVatToggle(v: string) {
+    const next = currentVat.includes(v) ? currentVat.filter(x => x !== v) : [...currentVat, v];
+    router.push(`/?${buildParams({ vat: next })}`);
+  }
+
+  const VAT_OPTIONS = [
+    { value: 'included', label: 'има' },
+    { value: 'exempt', label: 'няма' },
+    { value: 'excluded', label: '+ДДС' },
+    { value: 'null', label: '—' },
+  ];
+
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentSearch || currentSearch;
 
   const dealerLabel = currentDealers.length === 0
     ? 'All Dealers'
@@ -205,6 +229,34 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
             {currentStatuses.length > 0 && (
               <button onClick={() => { router.push(`/?${buildParams({ status: [] })}`); setStatusOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear paid
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* VAT multi-select dropdown */}
+      <div className="relative" ref={vatRef}>
+        <button
+          onClick={() => setVatOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentVat.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {currentVat.length === 0 ? 'All VAT' : currentVat.join(', ')}
+          <span className="text-gray-400">{vatOpen ? '▲' : '▼'}</span>
+        </button>
+        {vatOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[120px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {VAT_OPTIONS.map(opt => (
+              <label key={opt.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                <input type="checkbox" checked={currentVat.includes(opt.value)} onChange={() => onVatToggle(opt.value)} className="accent-blue-500" />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+            {currentVat.length > 0 && (
+              <button onClick={() => { router.push(`/?${buildParams({ vat: [] })}`); setVatOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                Clear VAT
               </button>
             )}
           </div>

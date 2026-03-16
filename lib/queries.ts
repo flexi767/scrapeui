@@ -30,6 +30,7 @@ export interface ListingFilters {
   dealerSlugs?: string[];
   years?: string[];
   statuses?: string[];
+  vatValues?: string[];
   kaparo?: string;
   sort?: string;
   order?: string;
@@ -55,6 +56,7 @@ export function getListings(filters: ListingFilters = {}) {
     dealerSlugs = [],
     years = [],
     statuses = [],
+    vatValues = [],
     kaparo = '',
     sort = 'last_edit',
     order = 'desc',
@@ -68,10 +70,26 @@ export function getListings(filters: ListingFilters = {}) {
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
+
+    wheres.push('l.kaparo = ?');
+    params.push(kaparo === 'yes' ? 1 : 0);
+  }
   if (statuses.length > 0) {
     const ph = statuses.map(() => '?').join(',');
     wheres.push(`l.ad_status IN (${ph})`);
     params.push(...statuses);
+  }
+  if (vatValues.length > 0) {
+    const includeNull = vatValues.includes('null');
+    const nonNull = vatValues.filter(v => v !== 'null');
+    const clauses: string[] = [];
+    if (nonNull.length > 0) {
+      const ph = nonNull.map(() => '?').join(',');
+      clauses.push(`l.vat IN (${ph})`);
+      params.push(...nonNull);
+    }
+    if (includeNull) clauses.push('l.vat IS NULL');
+    if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
   }
   if (kaparo) {
     wheres.push('l.kaparo = ?');

@@ -10,6 +10,7 @@ interface SearchParams {
   dealer?: string | string[];
   year?: string | string[];
   status?: string | string[];
+  vat?: string | string[];
   kaparo?: string;
   sort?: string;
   order?: string;
@@ -76,6 +77,7 @@ export default async function HomePage({
     : [];
   const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
+  const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
@@ -88,6 +90,7 @@ export default async function HomePage({
     dealerSlugs,
     years,
     statuses,
+    vatValues,
     kaparo,
     sort,
     order,
@@ -103,6 +106,7 @@ export default async function HomePage({
   // Build URL params object for sort links
   const currentParams = new URLSearchParams();
   for (const s of statuses) currentParams.append('status', s);
+  for (const v of vatValues) currentParams.append('vat', v);
   if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
@@ -284,15 +288,17 @@ export default async function HomePage({
 
                     {/* VAT */}
                     <td className="px-3 py-1 text-center">
-                      {row.vat === 'included' ? (
-                        <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
-                      ) : row.vat === 'exempt' ? (
-                        <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
-                      ) : row.vat === 'excluded' ? (
-                        <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
-                      ) : (
-                        <span className="text-gray-600">—</span>
-                      )}
+                      <Link href={`/?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'vat'), ['vat', row.vat || 'null']]).toString()}`}>
+                        {row.vat === 'included' ? (
+                          <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
+                        ) : row.vat === 'exempt' ? (
+                          <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
+                        ) : row.vat === 'excluded' ? (
+                          <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
+                      </Link>
                     </td>
 
                     {/* капаро */}
