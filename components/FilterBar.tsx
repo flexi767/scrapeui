@@ -290,15 +290,14 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, sel
         )}
       </div>
 
-      {/* Clear all */}
-      {hasFilters && (
-        <button
-          onClick={onClearAll}
-          className="h-8 rounded border border-gray-600 px-3 text-xs text-gray-400 hover:border-gray-400 hover:text-white"
-        >
-          Clear all
-        </button>
-      )}
+      {/* Clear all — always visible */}
+      <button
+        onClick={onClearAll}
+        disabled={!hasFilters}
+        className="h-8 rounded border border-gray-600 px-3 text-xs text-gray-400 hover:border-gray-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        ✕ Clear all
+      </button>
     </div>
   );
 }
