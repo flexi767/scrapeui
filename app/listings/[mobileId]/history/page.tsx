@@ -179,9 +179,10 @@ export default async function PriceHistoryPage({ params }: Props) {
                             className={`w-full rounded-t ${color} transition-opacity group-hover:opacity-80`}
                             style={{ height: h }}
                           />
-                          <span className="mt-1 text-[10px] text-gray-500">
-                            {isLast ? 'now' : formatDateAxis(snap.recorded_at)}
-                          </span>
+                          <div className="mt-1 text-center text-[10px] leading-tight text-gray-500">
+                            <div>{formatDateAxis(snap.recorded_at)}</div>
+                            <div>{formatDate(snap.recorded_at).split(' ')[1] ?? ''}</div>
+                          </div>
                           {/* Tooltip */}
                           <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block whitespace-nowrap">
                             {formatPrice(snap.price)}
