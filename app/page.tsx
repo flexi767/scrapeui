@@ -9,6 +9,7 @@ interface SearchParams {
   model?: string;
   dealer?: string | string[];
   year?: string | string[];
+  status?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -73,6 +74,7 @@ export default async function HomePage({
       : [sp.dealer]
     : [];
   const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
+  const status = sp.status ?? '';
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
@@ -83,6 +85,7 @@ export default async function HomePage({
     model,
     dealerSlugs,
     years,
+    status,
     sort,
     order,
     search,
@@ -96,6 +99,7 @@ export default async function HomePage({
 
   // Build URL params object for sort links
   const currentParams = new URLSearchParams();
+  if (status) currentParams.set('status', status);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
   for (const d of dealerSlugs) currentParams.append('dealer', d);
@@ -262,7 +266,13 @@ export default async function HomePage({
 
                     {/* Ad Status */}
                     <td className="px-2 py-1 text-center">
-                      <AdStatusBadge status={row.ad_status} />
+                      {row.ad_status && row.ad_status !== 'none' ? (
+                        <Link href={`/?${new URLSearchParams([...currentParams.entries().filter(([k]) => k !== 'status' && k !== 'page'), ['status', row.ad_status]]).toString()}`}>
+                          <AdStatusBadge status={row.ad_status} />
+                        </Link>
+                      ) : (
+                        <AdStatusBadge status={row.ad_status} />
+                      )}
                     </td>
 
                     {/* Price */}
