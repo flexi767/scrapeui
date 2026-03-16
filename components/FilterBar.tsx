@@ -289,6 +289,12 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         )}
       </div>
 
+      {/* Price range slider */}
+      {priceRange && (
+        <RangeFilter min={priceRange.min} max={priceRange.max} paramLow="p_min" paramHigh="p_max"
+          fmt={v => `€${(v/1000).toFixed(0)}k`} />
+      )}
+
       {/* VAT multi-select dropdown */}
       <div className="relative" ref={vatRef}>
         <button
@@ -374,12 +380,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
           </div>
         )}
       </div>
-
-      {/* Price range slider */}
-      {priceRange && (
-        <RangeFilter min={priceRange.min} max={priceRange.max} paramLow="p_min" paramHigh="p_max"
-          fmt={v => `€${(v/1000).toFixed(0)}k`} />
-      )}
 
       {/* Price change slider */}
       {priceChangeRange && (
