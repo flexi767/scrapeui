@@ -17,8 +17,16 @@ interface Dealer {
   cars_password: string | null;
 }
 
-export default function DealersManager({ initialDealers }: { initialDealers: Dealer[] }) {
+export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
+
+  function updateDealers(fn: (prev: Dealer[]) => Dealer[]) {
+    setDealers(prev => {
+      const next = fn(prev);
+      onDealersChange?.(next);
+      return next;
+    });
+  }
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
@@ -48,7 +56,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed to add'); return; }
-      setDealers(d => [...d, data]);
+      updateDealers(d => [...d, data]);
       setForm({ name: '', slug: '', mobile_url: '', own: false, priority: 0, mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '' });
     } finally { setAdding(false); }
   }
@@ -59,7 +67,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: newActive }),
     });
-    setDealers(cs => cs.map(x => x.id === d.id ? { ...x, active: newActive } : x));
+    updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, active: newActive } : x));
   }
 
   function startEdit(d: Dealer) {
@@ -82,7 +90,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || 'Failed to save'); return; }
-      setDealers(cs => cs.map(x => x.id === id ? {
+      updateDealers(cs => cs.map(x => x.id === id ? {
         ...x,
         ...editForm,
         own: editForm.own ? 1 : 0,
@@ -94,7 +102,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
   async function onDelete(d: Dealer) {
     if (!confirm(`Delete ${d.name}?`)) return;
     await fetch(`/api/dealers/${d.id}`, { method: 'DELETE' });
-    setDealers(cs => cs.filter(x => x.id !== d.id));
+    updateDealers(cs => cs.filter(x => x.id !== d.id));
   }
 
   return (

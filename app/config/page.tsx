@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import ScrapeRunner from '@/components/ScrapeRunner';
-import DealersManager from '@/components/DealersManager';
+import ConfigShell from '@/components/ConfigShell';
 import { raw } from '@/db/client';
 
 interface DealerRow {
@@ -40,17 +39,7 @@ export default function ConfigPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-10">
-        {/* Dealers manager */}
-        <section>
-          <h2 className="text-lg font-semibold text-white mb-4">Dealers</h2>
-          <DealersManager initialDealers={dealers} />
-        </section>
-
-        {/* Scraper runner */}
-        <section>
-          <h2 className="text-lg font-semibold text-white mb-4">Run Scraper</h2>
-          <ScrapeRunner initialDealers={dealers} />
-        </section>
+        <ConfigShell initialDealers={dealers} />
       </main>
     </div>
   );
