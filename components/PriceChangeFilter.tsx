@@ -8,9 +8,14 @@ interface Props {
   max: number;
 }
 
-export default function PriceChangeFilter({ min, max }: Props) {
+const TRACK_W = 96; // px
+
+export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const min = rawMin === rawMax ? rawMin - 1 : rawMin;
+  const max = rawMin === rawMax ? rawMax + 1 : rawMax;
 
   const paramMin = searchParams.get('pc_min');
   const paramMax = searchParams.get('pc_max');
@@ -35,43 +40,54 @@ export default function PriceChangeFilter({ min, max }: Props) {
     }, 300);
   }, [searchParams, router, min, max]);
 
-  const range = max - min || 1;
+  const range = max - min;
   const active = low !== min || high !== max;
-  const lowPct = ((low - min) / range) * 100;
-  const highPct = ((high - min) / range) * 100;
+  const lowFrac = (low - min) / range;
+  const highFrac = (high - min) / range;
+  // pixel position of thumb centre within the track
+  const THUMB = 6; // radius
+  const lowPx = lowFrac * (TRACK_W - THUMB * 2) + THUMB;
+  const highPx = highFrac * (TRACK_W - THUMB * 2) + THUMB;
   const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
-    <div className={`flex h-8 items-center gap-1.5 rounded border px-2 text-sm transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
-      {/* Low value label */}
-      <span className="w-10 text-right text-xs text-gray-300 tabular-nums flex-shrink-0">{fmt(low)}</span>
+    <div className={`flex h-8 items-center gap-2 rounded border px-2 text-sm flex-shrink-0 transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
+      <span className="w-10 text-right text-xs text-gray-300 tabular-nums">{fmt(low)}</span>
 
-      {/* Track container — fixed width, no overflow */}
-      <div className="relative w-24 flex-shrink-0" style={{ height: '20px' }}>
-        {/* Background track */}
-        <div className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 rounded bg-gray-600">
+      <div className="relative flex-shrink-0" style={{ width: TRACK_W, height: 20 }}>
+        {/* Track */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 rounded bg-gray-600"
+          style={{ left: THUMB, right: THUMB, height: 2 }}
+        >
           <div
-            className="absolute h-1 rounded bg-blue-500"
-            style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
+            className="absolute h-full rounded bg-blue-500"
+            style={{
+              left: `${lowFrac * 100}%`,
+              right: `${(1 - highFrac) * 100}%`,
+            }}
           />
         </div>
-        {/* Thumb visuals (pointer-events-none, just decorative) */}
+
+        {/* Low thumb */}
         <div
-          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `${lowPct}%`, zIndex: 6 }}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
+          style={{ width: THUMB * 2, height: THUMB * 2, left: lowPx, zIndex: 6 }}
         />
+        {/* High thumb */}
         <div
-          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `${highPct}%`, zIndex: 6 }}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
+          style={{ width: THUMB * 2, height: THUMB * 2, left: highPx, zIndex: 6 }}
         />
-        {/* Low range input */}
+
+        {/* Low input */}
         <input
           type="range" min={min} max={max} step={1} value={low}
           onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          style={{ zIndex: lowPct > 90 ? 5 : 3 }}
+          style={{ zIndex: lowFrac > 0.9 ? 5 : 3 }}
         />
-        {/* High range input */}
+        {/* High input */}
         <input
           type="range" min={min} max={max} step={1} value={high}
           onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
@@ -80,11 +96,9 @@ export default function PriceChangeFilter({ min, max }: Props) {
         />
       </div>
 
-      {/* High value label */}
-      <span className="w-10 text-xs text-gray-300 tabular-nums flex-shrink-0">{fmt(high)}</span>
-
+      <span className="w-10 text-xs text-gray-300 tabular-nums">{fmt(high)}</span>
       {active && (
-        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs leading-none flex-shrink-0">✕</button>
+        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs">✕</button>
       )}
     </div>
   );
