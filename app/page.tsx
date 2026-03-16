@@ -175,8 +175,10 @@ export default async function HomePage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-right">
+                <th className="px-3 py-1.5 text-center">
                   <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
+                <th className="px-3 py-1.5 text-right">
                   <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
               </tr>
@@ -184,7 +186,7 @@ export default async function HomePage({
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="py-16 text-center text-gray-500">
+                  <td colSpan={14} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
