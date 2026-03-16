@@ -19,10 +19,10 @@ function AdStatusBadge({ status }: { status: string }) {
     return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">—</span>;
   }
   if (status.toUpperCase() === 'TOP') {
-    return <span className="rounded-full bg-amber-700 px-2 py-0.5 text-[11px] font-semibold text-amber-100">TOP</span>;
+    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{backgroundColor:'#1a6496'}}>TOP</span>;
   }
   if (status.toUpperCase() === 'VIP') {
-    return <span className="rounded-full bg-purple-700 px-2 py-0.5 text-[11px] font-semibold text-purple-100">VIP</span>;
+    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{backgroundColor:'#c0392b'}}>VIP</span>;
   }
   return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
 }
