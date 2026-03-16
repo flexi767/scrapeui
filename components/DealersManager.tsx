@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Dealer {
   id: number;
@@ -40,6 +40,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [flashId, setFlashId] = useState<number | null>(null);
 
   function slugify(name: string) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -89,6 +90,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       body: JSON.stringify({ priority: newPriority }),
     });
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, priority: newPriority } : x).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.name.localeCompare(b.name)));
+    setFlashId(d.id);
+    setTimeout(() => setFlashId(null), 600);
   }
 
   function startEdit(d: Dealer) {
@@ -148,7 +151,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
             {dealers.map(d => {
               const editing = editingId === d.id;
               return (
-                <tr key={d.id} className="hover:bg-gray-800/40 align-top">
+                <tr key={d.id} className={`align-top transition-colors duration-500 ${flashId === d.id ? 'bg-blue-900/40' : 'hover:bg-gray-800/40'}`}>
                   <td className="px-4 py-2 text-white">
                     {editing ? (
                       <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
