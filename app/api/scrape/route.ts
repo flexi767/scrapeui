@@ -20,7 +20,12 @@ export async function POST(req: NextRequest) {
       const child = spawn('node', [
         '/Users/v/dev/scrapers/scripts/run-for-ui.js',
         ...scriptArgs,
-      ]);
+      ], {
+        env: {
+          ...process.env,
+          CRAWLEE_STORAGE_DIR: '/Users/v/dev/scraped/crawlee-storage',
+        },
+      });
 
       let buffer = '';
 
