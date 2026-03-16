@@ -254,9 +254,7 @@ export default async function HomePage({
                     {/* капаро */}
                     <td className="px-2 py-1 text-center">
                       {row.kaparo ? (
-                        <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">
-                          капаро
-                        </span>
+                        <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span>
                       ) : (
                         <span className="text-gray-600">—</span>
                       )}
