@@ -16,6 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     priority: 'priority',
     mobile_user: 'mobile_user',
     mobile_password: 'mobile_password',
+    cars_url: 'cars_url',
     cars_user: 'cars_user',
     cars_password: 'cars_password',
   };

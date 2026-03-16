@@ -13,13 +13,14 @@ interface DealerRow {
   priority: number;
   mobile_user: string | null;
   mobile_password: string | null;
+  cars_url: string | null;
   cars_user: string | null;
   cars_password: string | null;
   created_at: string | null;
 }
 
 function getDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
 }
 
 export default function ConfigPage() {

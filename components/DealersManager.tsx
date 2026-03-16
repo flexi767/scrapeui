@@ -12,6 +12,7 @@ interface Dealer {
   priority: number;
   mobile_user: string | null;
   mobile_password: string | null;
+  cars_url: string | null;
   cars_user: string | null;
   cars_password: string | null;
 }
@@ -21,11 +22,11 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
-    mobile_user: '', mobile_password: '', cars_user: '', cars_password: '',
+    mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
   });
   const [form, setForm] = useState({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
-    mobile_user: '', mobile_password: '', cars_user: '', cars_password: '',
+    mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
   });
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
@@ -48,7 +49,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed to add'); return; }
       setDealers(d => [...d, data]);
-      setForm({ name: '', slug: '', mobile_url: '', own: false, priority: 0, mobile_user: '', mobile_password: '', cars_user: '', cars_password: '' });
+      setForm({ name: '', slug: '', mobile_url: '', own: false, priority: 0, mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '' });
     } finally { setAdding(false); }
   }
 
@@ -67,7 +68,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
     setEditForm({
       name: d.name, slug: d.slug, mobile_url: d.mobile_url || '', own: Boolean(d.own), priority: d.priority || 0,
       mobile_user: d.mobile_user || '', mobile_password: d.mobile_password || '',
-      cars_user: d.cars_user || '', cars_password: d.cars_password || '',
+      cars_url: d.cars_url || '', cars_user: d.cars_user || '', cars_password: d.cars_password || '',
     });
   }
 
@@ -144,6 +145,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
                           <>
                             <input value={editForm.mobile_user} onChange={e => setEditForm(f => ({ ...f, mobile_user: e.target.value }))} placeholder="mobile user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                             <input value={editForm.mobile_password} onChange={e => setEditForm(f => ({ ...f, mobile_password: e.target.value }))} placeholder="mobile password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                            <input value={editForm.cars_url} onChange={e => setEditForm(f => ({ ...f, cars_url: e.target.value }))} placeholder="https://www.cars.bg/company/dealer" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                             <input value={editForm.cars_user} onChange={e => setEditForm(f => ({ ...f, cars_user: e.target.value }))} placeholder="cars user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                             <input value={editForm.cars_password} onChange={e => setEditForm(f => ({ ...f, cars_password: e.target.value }))} placeholder="cars password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
                           </>
@@ -222,6 +224,7 @@ export default function DealersManager({ initialDealers }: { initialDealers: Dea
             <>
               <input placeholder="mobile user" value={form.mobile_user} onChange={e => setForm(f => ({ ...f, mobile_user: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="mobile password" value={form.mobile_password} onChange={e => setForm(f => ({ ...f, mobile_password: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+              <input placeholder="https://www.cars.bg/company/dealer" value={form.cars_url} onChange={e => setForm(f => ({ ...f, cars_url: e.target.value }))} className="col-span-2 rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="cars user" value={form.cars_user} onChange={e => setForm(f => ({ ...f, cars_user: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
               <input placeholder="cars password" value={form.cars_password} onChange={e => setForm(f => ({ ...f, cars_password: e.target.value }))} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
             </>
