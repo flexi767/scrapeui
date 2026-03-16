@@ -79,6 +79,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     });
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, own: newOwn } : x));
     if (newOwn === 1) startEdit({ ...d, own: newOwn });
+    else if (editingId === d.id) setEditingId(null);
   }
 
   async function onChangePriority(d: Dealer, delta: number) {
