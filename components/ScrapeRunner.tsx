@@ -303,7 +303,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
             if (entry.type === 'seeded') {
               return (
                 <div key={i} className="text-blue-400 text-xs py-1 font-mono">
-                  💾 Database seeded
+                  💾 {entry.message || 'Data saved'}
                 </div>
               );
             }

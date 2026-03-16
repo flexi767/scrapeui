@@ -435,7 +435,7 @@ async function main() {
   }
 
   if (!hadErrors) {
-    emit({ type: 'seeded', message: 'Database updated directly' });
+    emit({ type: 'seeded', message: 'Data saved' });
   }
   db.close();
 }
