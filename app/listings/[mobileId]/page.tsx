@@ -117,6 +117,9 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
               {lastPriceSnapshot && lastPriceSnapshot.price !== listing.current_price && (
                 <div className="mt-1 flex items-center gap-2 text-sm">
+                  <span className={listing.current_price < lastPriceSnapshot.price ? 'text-green-400' : 'text-red-400'}>
+                    {listing.current_price < lastPriceSnapshot.price ? '↘' : '↗'}
+                  </span>
                   <span className="text-gray-500 line-through">{formatPrice(lastPriceSnapshot.price)}</span>
                   <span className="text-xs text-gray-500">{formatDate(lastPriceSnapshot.recorded_at)}</span>
                 </div>
