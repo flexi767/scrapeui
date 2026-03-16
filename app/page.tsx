@@ -79,7 +79,7 @@ export default async function HomePage({
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const kaparo = sp.kaparo ?? '';
-  const sort = sp.sort ?? 'last_edit';
+  const sort = sp.sort ?? 'dealer';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
   const page = parseInt(sp.page ?? '1', 10);

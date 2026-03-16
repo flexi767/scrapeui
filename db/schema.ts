@@ -7,6 +7,7 @@ export const dealers = sqliteTable('dealers', {
   mobileUrl: text('mobile_url'),
   own: integer('own').default(0),
   active: integer('active').default(1),
+  priority: integer('priority').default(0),
   mobileUser: text('mobile_user'),
   mobilePassword: text('mobile_password'),
   carsUser: text('cars_user'),

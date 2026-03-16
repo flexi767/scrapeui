@@ -10,6 +10,7 @@ interface DealerRow {
   mobile_url: string | null;
   own: number;
   active: number;
+  priority: number;
   mobile_user: string | null;
   mobile_password: string | null;
   cars_user: string | null;
@@ -18,7 +19,7 @@ interface DealerRow {
 }
 
 function getDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY name').all() as DealerRow[];
+  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
 }
 
 export default function ConfigPage() {

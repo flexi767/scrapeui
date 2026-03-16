@@ -13,6 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     mobile_url: 'mobile_url',
     own: 'own',
     active: 'active',
+    priority: 'priority',
     mobile_user: 'mobile_user',
     mobile_password: 'mobile_password',
     cars_user: 'cars_user',
@@ -25,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
       }
       fields.push(`${col} = ?`);
-      values.push((k === 'own' || k === 'active') ? (body[k] ? 1 : 0) : body[k]);
+      values.push((k === 'own' || k === 'active') ? (body[k] ? 1 : 0) : (k === 'priority' ? Number(body[k]) : body[k]));
     }
   }
 

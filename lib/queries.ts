@@ -43,7 +43,7 @@ const VALID_SORT: Record<string, string> = {
   price: 'l.current_price',
   last_edit: 'l.last_edit',
   mileage: 'l.mileage',
-  dealer: 'd.name',
+  dealer: 'd.priority DESC, d.name',
   ad_status: 'l.ad_status',
   kaparo: 'l.kaparo',
   reg_year: 'l.reg_year',
@@ -220,6 +220,7 @@ export interface DealerRow {
   name: string;
   own: number;
   active: number;
+  priority: number;
   mobile_url?: string;
   mobile_user?: string | null;
   mobile_password?: string | null;
@@ -228,7 +229,7 @@ export interface DealerRow {
 }
 
 export function getAllDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, own, active, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers ORDER BY name').all() as DealerRow[];
+  return raw.prepare('SELECT id, slug, name, own, active, priority, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
 }
 
 export function getDistinctYears(): string[] {

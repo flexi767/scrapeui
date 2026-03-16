@@ -21,7 +21,7 @@ export function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { name, slug, mobile_url, own = false, mobile_user = null, mobile_password = null, cars_user = null, cars_password = null } = await req.json();
+  const { name, slug, mobile_url, own = false, priority = 0, mobile_user = null, mobile_password = null, cars_user = null, cars_password = null } = await req.json();
   if (!name || !slug || !mobile_url) {
     return NextResponse.json({ error: 'name, slug, mobile_url required' }, { status: 400 });
   }
@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
   }
   try {
     const result = raw.prepare(
-      'INSERT INTO dealers (slug, name, mobile_url, own, active, mobile_user, mobile_password, cars_user, cars_password, created_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)'
-    ).run(slug, name, mobile_url, own ? 1 : 0, mobile_user, mobile_password, cars_user, cars_password, new Date().toISOString());
-    return NextResponse.json({ id: result.lastInsertRowid, slug, name, mobile_url, own: own ? 1 : 0, active: 1, mobile_user, mobile_password, cars_user, cars_password });
+      'INSERT INTO dealers (slug, name, mobile_url, own, active, priority, mobile_user, mobile_password, cars_user, cars_password, created_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)'
+    ).run(slug, name, mobile_url, own ? 1 : 0, priority, mobile_user, mobile_password, cars_user, cars_password, new Date().toISOString());
+    return NextResponse.json({ id: result.lastInsertRowid, slug, name, mobile_url, own: own ? 1 : 0, active: 1, priority, mobile_user, mobile_password, cars_user, cars_password });
   } catch {
     return NextResponse.json({ error: 'slug already exists' }, { status: 409 });
   }
