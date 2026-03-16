@@ -25,9 +25,11 @@ export function getCdnImageUrl(
   mobileId: string,
   key: string,
   imageMeta: ImageMeta,
+  size: 'full' | 'thumb' = 'full',
 ): string {
   const last3 = mobileId.slice(-3);
-  return `https://${imageMeta.cdn}/mobile/photosorg/${last3}/${imageMeta.shard}/big1/${mobileId}_${key}.webp`;
+  const dir = size === 'full' ? 'big1/' : '';
+  return `https://${imageMeta.cdn}/mobile/photosorg/${last3}/${imageMeta.shard}/${dir}${mobileId}_${key}.webp`;
 }
 
 export function getLocalImageUrl(
@@ -62,8 +64,8 @@ export function buildImageList(
     }
     if (!imageMeta) return { full: '', thumb: '' };
     return {
-      full: getCdnImageUrl(mobileId, key, imageMeta),
-      thumb: getCdnImageUrl(mobileId, thumbKeys[i] ?? key, imageMeta),
+      full: getCdnImageUrl(mobileId, key, imageMeta, 'full'),
+      thumb: getCdnImageUrl(mobileId, thumbKeys[i] ?? key, imageMeta, 'thumb'),
     };
   });
 }
