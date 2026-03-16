@@ -71,6 +71,7 @@ export default async function ListingDetailPage({ params }: Props) {
               Inactive
             </span>
           )}
+          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</Link>
         </div>
       </header>
 

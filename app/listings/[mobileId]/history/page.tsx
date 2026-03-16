@@ -40,6 +40,7 @@ export default async function PriceHistoryPage({ params }: Props) {
           </Link>
           <span className="text-gray-600">/</span>
           <span className="text-sm text-gray-300">History</span>
+          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</Link>
         </div>
       </header>
 
