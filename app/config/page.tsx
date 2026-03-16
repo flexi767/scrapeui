@@ -37,7 +37,7 @@ export default function ConfigPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-8 space-y-10">
+      <main className="mx-auto max-w-5xl px-4 py-8 space-y-10">
         {/* Dealers manager */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-4">Dealers</h2>
