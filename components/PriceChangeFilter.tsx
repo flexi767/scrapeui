@@ -37,67 +37,51 @@ export default function PriceChangeFilter({ min, max }: Props) {
 
   const range = max - min || 1;
   const active = low !== min || high !== max;
+  const lowPct = ((low - min) / range) * 100;
+  const highPct = ((high - min) / range) * 100;
+
+  const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
-    <div className={`flex items-center gap-2 rounded border px-3 h-8 text-sm transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800'}`}>
-      <span className="text-gray-400 text-xs whitespace-nowrap">Δ Price</span>
-      <span className="text-xs text-gray-300 w-12 text-right">{low > 0 ? `+${low}` : low}</span>
-      <div className="relative w-28 h-4 flex items-center">
-        {/* Track */}
-        <div className="absolute inset-x-0 h-1 rounded bg-gray-600">
-          <div
-            className="absolute h-1 rounded bg-blue-500"
-            style={{
-              left: `${((low - min) / range) * 100}%`,
-              right: `${((max - high) / range) * 100}%`,
-            }}
-          />
-        </div>
-        {/* Low handle */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={low}
-          onChange={e => {
-            const v = Math.min(Number(e.target.value), high);
-            setLow(v);
-            push(v, high);
-          }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          style={{ zIndex: low > min + (range * 0.9) ? 5 : 3 }}
+    <div className={`flex h-8 items-center gap-2 rounded border px-3 text-sm transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
+      <span className="text-xs text-gray-400 whitespace-nowrap">Δ Price</span>
+      <span className="w-10 text-right text-xs text-gray-300 tabular-nums">{fmt(low)}</span>
+
+      {/* Track */}
+      <div className="relative h-1 w-28 rounded bg-gray-600 flex-shrink-0">
+        <div
+          className="absolute h-1 rounded bg-blue-500"
+          style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
         />
-        {/* High handle */}
+        {/* Low thumb visual */}
+        <div
+          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
+          style={{ left: `${lowPct}%` }}
+        />
+        {/* High thumb visual */}
+        <div
+          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
+          style={{ left: `${highPct}%` }}
+        />
+        {/* Low input — on top when near left */}
         <input
-          type="range"
-          min={min}
-          max={max}
-          value={high}
-          onChange={e => {
-            const v = Math.max(Number(e.target.value), low);
-            setHigh(v);
-            push(low, v);
-          }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          type="range" min={min} max={max} step={1} value={low}
+          onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          style={{ zIndex: lowPct > 90 ? 5 : 3 }}
+        />
+        {/* High input */}
+        <input
+          type="range" min={min} max={max} step={1} value={high}
+          onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           style={{ zIndex: 4 }}
         />
-        {/* Thumb visuals */}
-        <div
-          className="absolute w-3 h-3 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `calc(${((low - min) / range) * 100}% - 6px)`, zIndex: 6 }}
-        />
-        <div
-          className="absolute w-3 h-3 rounded-full bg-blue-400 border-2 border-gray-900 pointer-events-none"
-          style={{ left: `calc(${((high - min) / range) * 100}% - 6px)`, zIndex: 6 }}
-        />
       </div>
-      <span className="text-xs text-gray-300 w-12">{high > 0 ? `+${high}` : high}</span>
+
+      <span className="w-10 text-xs text-gray-300 tabular-nums">{fmt(high)}</span>
       {active && (
-        <button
-          onClick={() => { setLow(min); setHigh(max); push(min, max); }}
-          className="text-gray-500 hover:text-white text-xs"
-          title="Reset"
-        >✕</button>
+        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white text-xs leading-none">✕</button>
       )}
     </div>
   );

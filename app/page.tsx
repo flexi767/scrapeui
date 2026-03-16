@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange } from '@/lib/queries';
-import PriceChangeFilter from '@/components/PriceChangeFilter';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -147,18 +146,9 @@ export default async function HomePage({
               allYears={getDistinctYears()}
               allFuels={getDistinctFuels()}
               total={total}
+              priceChangeRange={getPriceChangeRange()}
             />
           </Suspense>
-          {(() => {
-            const pcRange = getPriceChangeRange();
-            return pcRange ? (
-              <div className="mt-2 pb-1">
-                <Suspense>
-                  <PriceChangeFilter min={pcRange.min} max={pcRange.max} />
-                </Suspense>
-              </div>
-            ) : null;
-          })()}
         </div>
       </header>
 
