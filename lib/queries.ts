@@ -65,7 +65,7 @@ export function getListings(filters: ListingFilters = {}) {
     limit = 25,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 1'];
+  const wheres: string[] = ['l.is_active = 1', 'd.active = 1'];
   const params: (string | number)[] = [];
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
