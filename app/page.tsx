@@ -192,16 +192,16 @@ export default async function HomePage({
                     {/* Thumbnail */}
                     <td className="px-3 py-1">
                       {thumb ? (
-                        <div className="group relative w-16">
+                        <div className="relative inline-block w-16">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={thumb}
                             alt=""
-                            className="w-16 rounded object-contain"
+                            className="peer w-16 rounded object-contain"
                             style={{aspectRatio:'4/3'}}
                           />
-                          {/* Hover preview */}
-                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 group-hover:block">
+                          {/* Hover preview — shown via peer-hover, pointer-events-none so it doesn't interfere */}
+                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={thumb}
