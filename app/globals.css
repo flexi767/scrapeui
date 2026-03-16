@@ -31,3 +31,7 @@ a:hover {
   color: white;
   text-decoration: none;
 }
+
+button, [role="button"], label[for], select {
+  cursor: pointer;
+}
