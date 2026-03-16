@@ -62,6 +62,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const [log, setLog] = useState<LogEntry[]>([]);
   const [done, setDone] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+  const changesRef = useRef<HTMLDivElement>(null);
 
   const toggleDealer = (slug: string) => {
     setSelectedDealers(prev =>
@@ -78,6 +79,12 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   };
 
   const changes = log.filter((e) => e.type === 'change');
+
+  useEffect(() => {
+    if (changes.length > 0) {
+      changesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [changes.length]);
 
   const run = async () => {
     if (effectiveSelected.length === 0) return;
@@ -206,7 +213,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
 
       {/* Detected changes */}
       {changes.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-x-auto">
+        <div ref={changesRef} className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-x-auto">
           <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Detected changes</div>
           <table className="w-full text-sm">
             <thead>
