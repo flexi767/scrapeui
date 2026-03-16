@@ -31,7 +31,7 @@ export default async function PriceHistoryPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[900px] items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3">
           <Link href={`/listings/${mobileId}`} className="text-sm text-gray-400 hover:text-white">
             ← {listing.title}
           </Link>
@@ -40,7 +40,7 @@ export default async function PriceHistoryPage({ params }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[900px] px-4 py-6">
+      <main className="mx-auto max-w-[1400px] px-4 py-6">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-white">{listing.title}</h1>
           <p className="mt-1 text-sm text-gray-400">
@@ -72,6 +72,8 @@ export default async function PriceHistoryPage({ params }: Props) {
                   <th className="px-4 py-3 text-center">Last Edit</th>
                   <th className="px-4 py-3 text-center">Status</th>
                   <th className="px-4 py-3 text-center">К</th>
+                  <th className="px-4 py-3 text-left">Title</th>
+                  <th className="px-4 py-3 text-left">Description</th>
                   <th className="px-4 py-3 text-right">Change</th>
                 </tr>
               </thead>
@@ -112,6 +114,12 @@ export default async function PriceHistoryPage({ params }: Props) {
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-300">
                         {snap.kaparo ? 'К' : <span className="text-gray-600">—</span>}
+                      </td>
+                      <td className="max-w-xs px-4 py-3 text-xs text-gray-300">
+                        <div className="line-clamp-2">{snap.title || '—'}</div>
+                      </td>
+                      <td className="max-w-md px-4 py-3 text-xs text-gray-400">
+                        <div className="line-clamp-3 whitespace-pre-wrap">{snap.description || '—'}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         {delta === null ? (
