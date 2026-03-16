@@ -71,6 +71,15 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, active: newActive } : x));
   }
 
+  async function onToggleOwn(d: Dealer) {
+    const newOwn = d.own ? 0 : 1;
+    await fetch(`/api/dealers/${d.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ own: newOwn }),
+    });
+    updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, own: newOwn } : x));
+  }
+
   async function onChangePriority(d: Dealer, delta: number) {
     const newPriority = (d.priority || 0) + delta;
     await fetch(`/api/dealers/${d.id}`, {
@@ -140,9 +149,9 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                 <tr key={d.id} className="hover:bg-gray-800/40 align-top">
                   <td className="px-4 py-2 text-white">
                     {editing ? (
-                      <div className="flex items-center gap-2">
+                      <div className="space-y-2">
                         <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                        <label className="flex items-center gap-1.5 text-xs text-gray-300 whitespace-nowrap"><input type="checkbox" checked={editForm.own} onChange={e => setEditForm(f => ({ ...f, own: e.target.checked }))} /> own</label>
+                        <label className="flex items-center gap-2 text-xs text-gray-300"><input type="checkbox" checked={editForm.own} onChange={e => setEditForm(f => ({ ...f, own: e.target.checked }))} /> own dealer</label>
                       </div>
                     ) : (
                       <div>
@@ -190,7 +199,9 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                       </a>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-center text-xs text-gray-300">{Boolean(d.own) ? 'yes' : 'no'}</td>
+                  <td className="px-4 py-2 text-center">
+                    <button onClick={() => onToggleOwn(d)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.own ? 'bg-emerald-800/70 text-emerald-200' : 'bg-gray-700 text-gray-400'}`}>{d.own ? 'yes' : 'no'}</button>
+                  </td>
                   <td className="px-4 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => onChangePriority(d, -1)} className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700">−</button>
