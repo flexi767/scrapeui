@@ -155,7 +155,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 <span className="font-medium text-gray-100">
                   {listing.dealer_name ?? '—'}
                 </span>
-                {listing.dealer_type === 'own' && (
+                {Boolean(listing.dealer_own) && (
                   <span className="rounded-full bg-emerald-700 px-2 py-0.5 text-[11px] text-emerald-100">
                     own
                   </span>

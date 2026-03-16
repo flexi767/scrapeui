@@ -3,21 +3,26 @@ import ScrapeRunner from '@/components/ScrapeRunner';
 import CompetitorsManager from '@/components/CompetitorsManager';
 import { raw } from '@/db/client';
 
-interface CompetitorRow {
+interface DealerRow {
   id: number;
   slug: string;
   name: string;
-  mobile_url: string;
+  mobile_url: string | null;
+  own: number;
   active: number;
-  created_at: string;
+  mobile_user: string | null;
+  mobile_password: string | null;
+  cars_user: string | null;
+  cars_password: string | null;
+  created_at: string | null;
 }
 
-function getCompetitors(): CompetitorRow[] {
-  return raw.prepare('SELECT * FROM competitors ORDER BY name').all() as CompetitorRow[];
+function getDealers(): DealerRow[] {
+  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY name').all() as DealerRow[];
 }
 
 export default function ConfigPage() {
-  const competitors = getCompetitors();
+  const competitors = getDealers();
 
   return (
     <div className="min-h-screen bg-[#111827]">
@@ -33,9 +38,9 @@ export default function ConfigPage() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8 space-y-10">
-        {/* Competitors manager */}
+        {/* Dealers manager */}
         <section>
-          <h2 className="text-lg font-semibold text-white mb-4">Competitors</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Dealers</h2>
           <CompetitorsManager initialCompetitors={competitors} />
         </section>
 

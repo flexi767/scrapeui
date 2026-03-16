@@ -4,8 +4,14 @@ export const dealers = sqliteTable('dealers', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
-  type: text('type').notNull(),
   mobileUrl: text('mobile_url'),
+  own: integer('own').default(0),
+  active: integer('active').default(1),
+  mobileUser: text('mobile_user'),
+  mobilePassword: text('mobile_password'),
+  carsUser: text('cars_user'),
+  carsPassword: text('cars_password'),
+  createdAt: text('created_at'),
 });
 
 export const listings = sqliteTable('listings', {

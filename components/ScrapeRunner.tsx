@@ -15,11 +15,12 @@ interface LogEntry {
   code?: number | null;
 }
 
-interface Competitor {
+interface Dealer {
   id: number;
   slug: string;
   name: string;
-  mobile_url: string;
+  mobile_url: string | null;
+  own: number;
   active: number;
 }
 
@@ -28,7 +29,7 @@ function formatPrice(price: number | null | undefined) {
   return `€${price.toLocaleString()}`;
 }
 
-export default function ScrapeRunner({ initialCompetitors }: { initialCompetitors: Competitor[] }) {
+export default function ScrapeRunner({ initialCompetitors }: { initialCompetitors: Dealer[] }) {
   const activeCompetitors = initialCompetitors.filter(c => c.active);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(activeCompetitors.map(d => d.slug));
   const [deepCrawl, setDeepCrawl] = useState(true);
@@ -114,7 +115,7 @@ export default function ScrapeRunner({ initialCompetitors }: { initialCompetitor
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
         {/* Dealers */}
         <div>
-          <p className="text-sm font-medium text-gray-300 mb-3">Competitors</p>
+          <p className="text-sm font-medium text-gray-300 mb-3">Dealers</p>
           <div className="flex gap-5">
             {activeCompetitors.map(d => (
               <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">

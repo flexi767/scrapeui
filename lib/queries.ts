@@ -140,7 +140,7 @@ export interface DetailListing {
   is_active: number;
   dealer_name: string;
   dealer_slug: string;
-  dealer_type: string;
+  dealer_own: number;
   dealer_url: string;
 }
 
@@ -148,7 +148,7 @@ export function getListingByMobileId(mobileId: string): DetailListing | null {
   return raw.prepare(`
     SELECT
       l.*, d.name as dealer_name, d.slug as dealer_slug,
-      d.type as dealer_type, d.mobile_url as dealer_url
+      d.own as dealer_own, d.mobile_url as dealer_url
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.mobile_id = ?
@@ -192,11 +192,17 @@ export interface DealerRow {
   id: number;
   slug: string;
   name: string;
-  type: string;
+  own: number;
+  active: number;
+  mobile_url?: string;
+  mobile_user?: string | null;
+  mobile_password?: string | null;
+  cars_user?: string | null;
+  cars_password?: string | null;
 }
 
 export function getAllDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, type FROM dealers ORDER BY name').all() as DealerRow[];
+  return raw.prepare('SELECT id, slug, name, own, active, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers ORDER BY name').all() as DealerRow[];
 }
 
 export function getDistinctYears(): string[] {

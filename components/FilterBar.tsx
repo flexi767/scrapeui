@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 interface Props {
   makes: string[];
   makeModels: Record<string, string[]>;
-  allDealers: { slug: string; name: string; type: string }[];
+  allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
   selectedYears: string[];
   selectedStatuses: string[];
@@ -272,7 +272,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, sel
                     className="accent-blue-500"
                   />
                   <span>{d.name}</span>
-                  {d.type === 'own' && (
+                  {Boolean(d.own) && (
                     <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>
                   )}
                 </label>
