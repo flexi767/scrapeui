@@ -129,8 +129,6 @@ export default async function HomePage({
               makeModels={makeModels}
               allDealers={allDealers}
               allYears={getDistinctYears()}
-              selectedYears={years}
-              selectedStatuses={statuses}
             />
           </Suspense>
         </div>

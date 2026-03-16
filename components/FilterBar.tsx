@@ -8,19 +8,17 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
-  selectedYears: string[];
-  selectedStatuses: string[];
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, selectedYears, selectedStatuses }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
   const currentDealers = searchParams.getAll('dealer');
-  const currentYears = selectedYears;
-  const currentStatuses = selectedStatuses;
+  const currentYears = searchParams.getAll('year');
+  const currentStatuses = searchParams.getAll('status');
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
