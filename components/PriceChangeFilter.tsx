@@ -1,16 +1,19 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Props {
   min: number;
   max: number;
 }
 
-export default function PriceChangeFilter({ min, max }: Props) {
+export default function PriceChangeFilter({ min: rawMin, max: rawMax }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const min = rawMin === rawMax ? rawMin - 10 : rawMin;
+  const max = rawMin === rawMax ? rawMax + 10 : rawMax;
 
   const paramMin = searchParams.get('pc_min');
   const paramMax = searchParams.get('pc_max');
@@ -32,37 +35,70 @@ export default function PriceChangeFilter({ min, max }: Props) {
       if (lo === min) p.delete('pc_min'); else p.set('pc_min', String(lo));
       if (hi === max) p.delete('pc_max'); else p.set('pc_max', String(hi));
       router.push(`/?${p.toString()}`);
-    }, 400);
+    }, 300);
   }, [searchParams, router, min, max]);
 
   const active = low !== min || high !== max;
   const fmt = (v: number) => v > 0 ? `+${v}` : String(v);
 
   return (
-    <div className={`flex h-8 items-center gap-1 rounded border px-2 text-xs transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
-      <span className="text-gray-500">Δ</span>
-      <input
-        type="number"
-        value={low}
-        min={min}
-        max={high}
-        onChange={e => { const v = Number(e.target.value); setLow(v); push(v, high); }}
-        className="w-14 bg-transparent text-center text-gray-300 tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        placeholder={fmt(min)}
-      />
-      <span className="text-gray-600">—</span>
-      <input
-        type="number"
-        value={high}
-        min={low}
-        max={max}
-        onChange={e => { const v = Number(e.target.value); setHigh(v); push(low, v); }}
-        className="w-14 bg-transparent text-center text-gray-300 tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        placeholder={fmt(max)}
-      />
-      {active && (
-        <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="ml-0.5 text-gray-500 hover:text-white leading-none">✕</button>
-      )}
-    </div>
+    <>
+      <style>{`
+        .pc-range {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 80px;
+          height: 4px;
+          background: transparent;
+          outline: none;
+          cursor: pointer;
+        }
+        .pc-range::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 2px;
+          height: 12px;
+          background: #60a5fa;
+          cursor: ew-resize;
+          border-radius: 0;
+        }
+        .pc-range::-moz-range-thumb {
+          width: 2px;
+          height: 12px;
+          background: #60a5fa;
+          cursor: ew-resize;
+          border-radius: 0;
+          border: none;
+        }
+        .pc-range::-webkit-slider-runnable-track {
+          height: 2px;
+          background: #4b5563;
+          border-radius: 1px;
+        }
+        .pc-range::-moz-range-track {
+          height: 2px;
+          background: #4b5563;
+          border-radius: 1px;
+        }
+      `}</style>
+      <div className={`flex h-8 items-center gap-1.5 rounded border px-2 text-xs transition-colors ${active ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'}`}>
+        <span className="text-gray-500 text-[11px]">Δ</span>
+        <span className="w-9 text-right text-gray-300 tabular-nums">{fmt(low)}</span>
+        <input
+          type="range" min={min} max={max} step={1} value={low}
+          onChange={e => { const v = Math.min(Number(e.target.value), high - 1); setLow(v); push(v, high); }}
+          className="pc-range"
+        />
+        <input
+          type="range" min={min} max={max} step={1} value={high}
+          onChange={e => { const v = Math.max(Number(e.target.value), low + 1); setHigh(v); push(low, v); }}
+          className="pc-range"
+        />
+        <span className="w-9 text-gray-300 tabular-nums">{fmt(high)}</span>
+        {active && (
+          <button onClick={() => { setLow(min); setHigh(max); push(min, max); }} className="text-gray-500 hover:text-white leading-none">✕</button>
+        )}
+      </div>
+    </>
   );
 }
