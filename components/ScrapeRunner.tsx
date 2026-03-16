@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete';
@@ -33,11 +33,9 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
   const activeDealers = initialDealers.filter(c => c.active);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
 
-  // Deselect dealers that become inactive
-  useEffect(() => {
-    const activeSlugs = new Set(initialDealers.filter(d => d.active).map(d => d.slug));
-    setSelectedDealers(prev => prev.filter(slug => activeSlugs.has(slug)));
-  }, [initialDealers]);
+  // Effective selection: only keep slugs that are still active
+  const activeSlugs = new Set(activeDealers.map(d => d.slug));
+  const effectiveSelected = selectedDealers.filter(slug => activeSlugs.has(slug));
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -59,7 +57,7 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
   };
 
   const run = async () => {
-    if (selectedDealers.length === 0) return;
+    if (effectiveSelected.length === 0) return;
     setRunning(true);
     setDone(false);
     setLog([]);
@@ -69,7 +67,7 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
       res = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealers: selectedDealers, deepCrawl }),
+        body: JSON.stringify({ dealers: effectiveSelected, deepCrawl }),
       });
     } catch (err) {
       setLog([{ type: 'error', message: String(err) }]);
@@ -127,7 +125,7 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
               <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  checked={selectedDealers.includes(d.slug)}
+                  checked={effectiveSelected.includes(d.slug)}
                   onChange={() => toggleDealer(d.slug)}
                   disabled={running}
                   className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
@@ -159,7 +157,7 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
         {/* Run button */}
         <button
           onClick={run}
-          disabled={running || selectedDealers.length === 0}
+          disabled={running || effectiveSelected.length === 0}
           className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {running && (
