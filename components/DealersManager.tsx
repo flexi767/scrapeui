@@ -71,6 +71,15 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, active: newActive } : x));
   }
 
+  async function onChangePriority(d: Dealer, delta: number) {
+    const newPriority = (d.priority || 0) + delta;
+    await fetch(`/api/dealers/${d.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: newPriority }),
+    });
+    updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, priority: newPriority } : x));
+  }
+
   function startEdit(d: Dealer) {
     setError('');
     setEditingId(d.id);
@@ -183,11 +192,11 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                   </td>
                   <td className="px-4 py-2 text-center text-xs text-gray-300">{Boolean(d.own) ? 'yes' : 'no'}</td>
                   <td className="px-4 py-2 text-center">
-                    {editing ? (
-                      <input type="number" value={editForm.priority} onChange={e => setEditForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))} className="w-16 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white text-center focus:border-blue-500 focus:outline-none" />
-                    ) : (
-                      <span className="text-gray-300">{d.priority || 0}</span>
-                    )}
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => onChangePriority(d, -1)} className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700">−</button>
+                      <span className="w-6 text-center text-sm text-gray-300">{d.priority || 0}</span>
+                      <button onClick={() => onChangePriority(d, 1)} className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700">+</button>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-center">
                     <button onClick={() => onToggleActive(d)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}>{d.active ? 'on' : 'off'}</button>
