@@ -33,6 +33,7 @@ export default async function ListingDetailPage({ params }: Props) {
   if (!listing) notFound();
 
   const snapshots = getSnapshots(listing.id);
+  const lastPriceSnapshot = [...snapshots].reverse().find((s) => s.price != null);
 
   const imageMeta = parseJson<{ cdn: string; shard: string } | null>(
     listing.image_meta,
@@ -100,6 +101,11 @@ export default async function ListingDetailPage({ params }: Props) {
                 <span className="text-3xl font-bold text-green-400">
                   {formatPrice(listing.current_price)}
                 </span>
+                {lastPriceSnapshot && lastPriceSnapshot.price !== listing.current_price && (
+                  <span className="text-sm text-gray-500 line-through">
+                    {formatPrice(lastPriceSnapshot.price)}
+                  </span>
+                )}
                 {listing.vat === 'included' && (
                   <span className="rounded-full bg-blue-900/70 px-2.5 py-1 text-xs text-blue-200">има</span>
                 )}
@@ -124,7 +130,7 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
 
               {/* History link */}
-              {snapshots.length > 1 && (
+              {snapshots.length > 0 && (
                 <Link
                   href={`/listings/${listing.mobile_id}/history`}
                   className="mt-3 block text-xs text-blue-400 hover:text-blue-300 hover:underline"
