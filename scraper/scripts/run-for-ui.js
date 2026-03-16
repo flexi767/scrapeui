@@ -69,14 +69,14 @@ function upsertListing(db, dealerId, listing, makesMap) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         existing.id,
-        existing.current_price,
-        existing.vat,
-        existing.last_edit,
-        existing.ad_status,
-        existing.kaparo,
-        existing.title,
-        existing.description,
-        existing.last_seen_at || now,
+        (priceChanged || vatChanged) ? existing.current_price : null,
+        (priceChanged || vatChanged) ? existing.vat : null,
+        lastEditChanged ? (listing.lastEdit || null) : null,
+        adStatusChanged ? (listing.adStatus || 'none') : null,
+        kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
+        titleChanged ? (listing.title || null) : null,
+        descriptionChanged ? (listing.description || null) : null,
+        now,
       );
     }
 
@@ -134,23 +134,7 @@ function upsertListing(db, dealerId, listing, makesMap) {
     now, now
   );
 
-  if (price !== null || vat !== null || listing.lastEdit || listing.title || listing.description) {
-    db.prepare(`
-      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      result.lastInsertRowid,
-      price,
-      vat,
-      listing.lastEdit || null,
-      listing.adStatus || 'none',
-      listing.kaparo ? 1 : 0,
-      listing.title || null,
-      listing.description || null,
-      now,
-    );
-  }
-  return { action: 'inserted', snapshot: price !== null };
+  return { action: 'inserted', snapshot: false };
 }
 
 async function scrapeCompetitorForUI(dealer, db, makesMap) {
