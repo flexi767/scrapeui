@@ -243,7 +243,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
             currentVat.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentVat.length === 0 ? 'All VAT' : currentVat.join(', ')}
+          {currentVat.length === 0 ? 'VAT' : currentVat.length === 1 ? 'VAT' : `VAT (${currentVat.length})`}
           <span className="text-gray-400">{vatOpen ? '▲' : '▼'}</span>
         </button>
         {vatOpen && (
