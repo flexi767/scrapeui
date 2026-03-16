@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete';
@@ -36,6 +36,14 @@ export default function ScrapeRunner({ initialDealers }: { initialDealers: Deale
   // Effective selection: only keep slugs that are still active
   const activeSlugs = new Set(activeDealers.map(d => d.slug));
   const effectiveSelected = selectedDealers.filter(slug => activeSlugs.has(slug));
+
+  useEffect(() => {
+    setSelectedDealers(prev => {
+      const next = prev.filter(slug => activeSlugs.has(slug));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [initialDealers]);
+
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
