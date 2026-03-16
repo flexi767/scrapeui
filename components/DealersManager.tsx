@@ -88,7 +88,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priority: newPriority }),
     });
-    updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, priority: newPriority } : x));
+    updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, priority: newPriority } : x).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.name.localeCompare(b.name)));
   }
 
   function startEdit(d: Dealer) {
