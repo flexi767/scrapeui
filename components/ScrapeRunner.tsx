@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete';
@@ -32,6 +32,12 @@ function formatPrice(price: number | null | undefined) {
 export default function ScrapeRunner({ initialDealers }: { initialDealers: Dealer[] }) {
   const activeDealers = initialDealers.filter(c => c.active);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
+
+  // Deselect dealers that become inactive
+  useEffect(() => {
+    const activeSlugs = new Set(initialDealers.filter(d => d.active).map(d => d.slug));
+    setSelectedDealers(prev => prev.filter(slug => activeSlugs.has(slug)));
+  }, [initialDealers]);
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
