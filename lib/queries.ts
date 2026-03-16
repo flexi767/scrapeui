@@ -29,7 +29,7 @@ export interface ListingFilters {
   model?: string;
   dealerSlugs?: string[];
   years?: string[];
-  status?: string;
+  statuses?: string[];
   sort?: string;
   order?: string;
   search?: string;
@@ -53,7 +53,7 @@ export function getListings(filters: ListingFilters = {}) {
     model = '',
     dealerSlugs = [],
     years = [],
-    status = '',
+    statuses = [],
     sort = 'last_edit',
     order = 'desc',
     search = '',
@@ -66,7 +66,11 @@ export function getListings(filters: ListingFilters = {}) {
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
-  if (status) { wheres.push('l.ad_status = ?'); params.push(status); }
+  if (statuses.length > 0) {
+    const ph = statuses.map(() => '?').join(',');
+    wheres.push(`l.ad_status IN (${ph})`);
+    params.push(...statuses);
+  }
   if (years.length > 0) {
     const ph = years.map(() => '?').join(',');
     wheres.push(`l.reg_year IN (${ph})`);
