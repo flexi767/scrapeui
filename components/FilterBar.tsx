@@ -7,15 +7,17 @@ interface Props {
   makes: string[];
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; type: string }[];
+  allYears: string[];
 }
 
-export default function FilterBar({ makes, makeModels, allDealers }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
   const currentDealers = searchParams.getAll('dealer');
+  const currentYear = searchParams.get('year') ?? '';
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
@@ -49,6 +51,7 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
     if (currentMake) p.set('make', currentMake);
     if (currentModel) p.set('model', currentModel);
     for (const d of currentDealers) p.append('dealer', d);
+    if (currentYear) p.set('year', currentYear);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -95,7 +98,11 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
   }
 
   const availableModels = currentMake ? (makeModels[currentMake] ?? []) : [];
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentSearch;
+  function onYearChange(year: string) {
+    router.push(`/?${buildParams({ year })}`);
+  }
+
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYear || currentSearch;
 
   const dealerLabel = currentDealers.length === 0
     ? 'All Dealers'
@@ -136,6 +143,18 @@ export default function FilterBar({ makes, makeModels, allDealers }: Props) {
         <option value="">All Models</option>
         {availableModels.map((m) => (
           <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+
+      {/* Year */}
+      <select
+        value={currentYear}
+        onChange={(e) => onYearChange(e.target.value)}
+        className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+      >
+        <option value="">All Years</option>
+        {allYears.map((y) => (
+          <option key={y} value={y}>{y}</option>
         ))}
       </select>
 

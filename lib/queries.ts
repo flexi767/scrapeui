@@ -6,6 +6,7 @@ export interface ListingRow {
   title: string;
   make: string;
   model: string;
+  reg_month: string;
   reg_year: string;
   mileage: number;
   current_price: number;
@@ -25,6 +26,7 @@ export interface ListingFilters {
   make?: string;
   model?: string;
   dealerSlugs?: string[];
+  year?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -43,6 +45,7 @@ export function getListings(filters: ListingFilters = {}) {
     make = '',
     model = '',
     dealerSlugs = [],
+    year = '',
     sort = 'last_edit',
     order = 'desc',
     search = '',
@@ -55,6 +58,7 @@ export function getListings(filters: ListingFilters = {}) {
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
+  if (year) { wheres.push('l.reg_year = ?'); params.push(year); }
   if (search) {
     wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
@@ -72,7 +76,7 @@ export function getListings(filters: ListingFilters = {}) {
 
   const rows = raw.prepare(`
     SELECT
-      l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.mileage,
+      l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage,
       l.current_price, l.vat, l.kaparo, l.ad_status, l.last_edit,
       l.thumb_keys, l.image_meta, l.images_downloaded, l.is_active,
       d.name as dealer_name, d.slug as dealer_slug
@@ -176,4 +180,11 @@ export interface DealerRow {
 
 export function getAllDealers(): DealerRow[] {
   return raw.prepare('SELECT id, slug, name, type FROM dealers ORDER BY name').all() as DealerRow[];
+}
+
+export function getDistinctYears(): string[] {
+  const rows = raw.prepare(
+    `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL ORDER BY reg_year DESC`
+  ).all() as { reg_year: string }[];
+  return rows.map(r => r.reg_year);
 }

@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getListings, getMakeModels } from '@/lib/queries';
+import { getAllDealers, getDistinctYears, getListings, getMakeModels } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
   make?: string;
   model?: string;
   dealer?: string | string[];
+  year?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -71,6 +72,7 @@ export default async function HomePage({
       ? sp.dealer
       : [sp.dealer]
     : [];
+  const year = sp.year ?? '';
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
@@ -80,6 +82,7 @@ export default async function HomePage({
     make,
     model,
     dealerSlugs,
+    year,
     sort,
     order,
     search,
@@ -96,6 +99,7 @@ export default async function HomePage({
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
   for (const d of dealerSlugs) currentParams.append('dealer', d);
+  if (year) currentParams.set('year', year);
   if (search) currentParams.set('search', search);
   currentParams.set('sort', sort);
   currentParams.set('order', order);
@@ -117,6 +121,7 @@ export default async function HomePage({
               makes={makes}
               makeModels={makeModels}
               allDealers={allDealers}
+              allYears={getDistinctYears()}
             />
           </Suspense>
         </div>
@@ -277,8 +282,12 @@ export default async function HomePage({
                     </td>
 
                     {/* Reg Year */}
-                    <td className="px-3 py-1 text-right text-gray-300">
-                      {row.reg_year ?? '—'}
+                    <td className="px-3 py-1 text-right">
+                      {row.reg_year ? (
+                        <Link href={`/?year=${encodeURIComponent(row.reg_year)}`} className="text-gray-300 hover:text-white">
+                          {row.reg_year}
+                        </Link>
+                      ) : <span className="text-gray-600">—</span>}
                     </td>
                   </tr>
                 );
