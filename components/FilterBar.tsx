@@ -8,16 +8,17 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; type: string }[];
   allYears: string[];
+  selectedYears: string[];
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, selectedYears }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
   const currentDealers = searchParams.getAll('dealer');
-  const currentYear = searchParams.get('year') ?? '';
+  const currentYears = selectedYears;
   const currentSearch = searchParams.get('search') ?? '';
 
   const [searchInput, setSearchInput] = useState(currentSearch);
@@ -51,7 +52,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
     if (currentMake) p.set('make', currentMake);
     if (currentModel) p.set('model', currentModel);
     for (const d of currentDealers) p.append('dealer', d);
-    if (currentYear) p.set('year', currentYear);
+    for (const y of currentYears) p.append('year', y);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -98,11 +99,25 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
   }
 
   const availableModels = currentMake ? (makeModels[currentMake] ?? []) : [];
-  function onYearChange(year: string) {
-    router.push(`/?${buildParams({ year })}`);
+  const [yearOpen, setYearOpen] = useState(false);
+  const yearRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (yearRef.current && !yearRef.current.contains(e.target as Node)) setYearOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function onYearToggle(year: string) {
+    const next = currentYears.includes(year)
+      ? currentYears.filter(y => y !== year)
+      : [...currentYears, year];
+    router.push(`/?${buildParams({ year: next })}`);
   }
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYear || currentSearch;
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentSearch;
 
   const dealerLabel = currentDealers.length === 0
     ? 'All Dealers'
@@ -146,17 +161,35 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears }: P
         ))}
       </select>
 
-      {/* Year */}
-      <select
-        value={currentYear}
-        onChange={(e) => onYearChange(e.target.value)}
-        className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-      >
-        <option value="">All Years</option>
-        {allYears.map((y) => (
-          <option key={y} value={y}>{y}</option>
-        ))}
-      </select>
+      {/* Year multi-select dropdown */}
+      <div className="relative" ref={yearRef}>
+        <button
+          onClick={() => setYearOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentYears.length > 0
+              ? 'border-blue-500 bg-blue-500/10'
+              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {currentYears.length === 0 ? 'All Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
+          <span className="text-gray-400">{yearOpen ? '▲' : '▼'}</span>
+        </button>
+        {yearOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[120px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {allYears.map(y => (
+              <label key={y} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                <input type="checkbox" checked={currentYears.includes(y)} onChange={() => onYearToggle(y)} className="accent-blue-500" />
+                <span>{y}</span>
+              </label>
+            ))}
+            {currentYears.length > 0 && (
+              <button onClick={() => { router.push(`/?${buildParams({ year: [] })}`); setYearOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                Clear years
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Dealer dropdown (multi-select) */}
       <div className="relative" ref={dealerRef}>

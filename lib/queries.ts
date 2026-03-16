@@ -26,7 +26,7 @@ export interface ListingFilters {
   make?: string;
   model?: string;
   dealerSlugs?: string[];
-  year?: string;
+  years?: string[];
   sort?: string;
   order?: string;
   search?: string;
@@ -45,7 +45,7 @@ export function getListings(filters: ListingFilters = {}) {
     make = '',
     model = '',
     dealerSlugs = [],
-    year = '',
+    years = [],
     sort = 'last_edit',
     order = 'desc',
     search = '',
@@ -58,7 +58,11 @@ export function getListings(filters: ListingFilters = {}) {
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
-  if (year) { wheres.push('l.reg_year = ?'); params.push(year); }
+  if (years.length > 0) {
+    const ph = years.map(() => '?').join(',');
+    wheres.push(`l.reg_year IN (${ph})`);
+    params.push(...years);
+  }
   if (search) {
     wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);

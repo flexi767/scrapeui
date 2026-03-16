@@ -8,7 +8,7 @@ interface SearchParams {
   make?: string;
   model?: string;
   dealer?: string | string[];
-  year?: string;
+  year?: string | string[];
   sort?: string;
   order?: string;
   search?: string;
@@ -72,7 +72,7 @@ export default async function HomePage({
       ? sp.dealer
       : [sp.dealer]
     : [];
-  const year = sp.year ?? '';
+  const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
@@ -82,7 +82,7 @@ export default async function HomePage({
     make,
     model,
     dealerSlugs,
-    year,
+    years,
     sort,
     order,
     search,
@@ -99,7 +99,7 @@ export default async function HomePage({
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
   for (const d of dealerSlugs) currentParams.append('dealer', d);
-  if (year) currentParams.set('year', year);
+  for (const y of years) currentParams.append('year', y);
   if (search) currentParams.set('search', search);
   currentParams.set('sort', sort);
   currentParams.set('order', order);
@@ -122,6 +122,7 @@ export default async function HomePage({
               makeModels={makeModels}
               allDealers={allDealers}
               allYears={getDistinctYears()}
+              selectedYears={years}
             />
           </Suspense>
         </div>
@@ -284,7 +285,7 @@ export default async function HomePage({
                     {/* Reg Year */}
                     <td className="px-3 py-1 text-right">
                       {row.reg_year ? (
-                        <Link href={`/?year=${encodeURIComponent(row.reg_year)}`} className="text-gray-300 hover:text-white">
+                        <Link href={`/?${new URLSearchParams([...currentParams.entries(), ['year', row.reg_year]]).toString()}`} className="text-gray-300 hover:text-white">
                           {row.reg_year}
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
