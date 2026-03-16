@@ -26,6 +26,12 @@ function formatError(err) {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
   const anyErr = err;
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  if (!isDev) {
+    return anyErr.message || 'Scrape failed';
+  }
+
   if (Array.isArray(anyErr.errors) && anyErr.errors.length > 0) {
     return anyErr.errors
       .map((e) => formatError(e))
