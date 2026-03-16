@@ -39,6 +39,18 @@ function parseReg(yearStr) {
   return { regMonth, regYear };
 }
 
+function cleanDescription(text) {
+  if (!text) return '';
+  const lines = String(text)
+    .replace(/\r\n/g, '\n')
+    .split('\n');
+
+  const start = lines.findIndex(line => line.trim() === 'Допълнителна информация');
+  const trimmed = start === -1 ? lines : lines.slice(start + 4);
+
+  return trimmed.join('\n').trim();
+}
+
 function upsertListing(db, dealerId, listing, makesMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
@@ -318,7 +330,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
           color: extract('Цвят'),
           fuel: extract('Двигател'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
-          description: raw.description || '',
+          description: cleanDescription(raw.description),
           imageCount: raw.thumbKeys.length,
           images: {
             meta: raw.imgMeta,
