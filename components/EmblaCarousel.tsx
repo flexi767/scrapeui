@@ -16,6 +16,8 @@ interface Props {
 export default function EmblaCarousel({ images, title }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState(false);
+  const [origin, setOrigin] = useState('50% 50%');
   const [mainRef, mainApi] = useEmblaCarousel({ loop: true });
   const [thumbsRef, thumbsApi] = useEmblaCarousel({
     containScroll: 'keepSnaps',
@@ -107,17 +109,31 @@ export default function EmblaCarousel({ images, title }: Props) {
       {lightbox && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          onClick={() => setLightbox(null)}
+          onClick={() => { if (zoomed) { setZoomed(false); } else { setLightbox(null); } }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={lightbox}
             alt=""
-            className="max-h-screen max-w-full object-contain p-4"
-            onClick={(e) => e.stopPropagation()}
+            className="max-h-screen max-w-full object-contain p-4 transition-transform duration-200"
+            style={{
+              transformOrigin: origin,
+              transform: zoomed ? 'scale(2.5)' : 'scale(1)',
+              cursor: zoomed ? 'zoom-out' : 'zoom-in',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!zoomed) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setOrigin(`${x}% ${y}%`);
+              }
+              setZoomed(z => !z);
+            }}
           />
           <button
-            onClick={() => setLightbox(null)}
+            onClick={() => { setZoomed(false); setLightbox(null); }}
             className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/90"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
