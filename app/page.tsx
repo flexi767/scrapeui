@@ -137,7 +137,7 @@ export default async function HomePage({
                   <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
-                <th className="px-3 py-1.5 text-center">капаро</th>
+                <th className="px-2 py-1.5 text-center w-14">капаро</th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -252,7 +252,7 @@ export default async function HomePage({
                     </td>
 
                     {/* капаро */}
-                    <td className="px-3 py-1 text-center">
+                    <td className="px-2 py-1 text-center">
                       {row.kaparo ? (
                         <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">
                           капаро
