@@ -174,9 +174,10 @@ export default async function HomePage({
               {rows.map((row) => {
                 const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
                 const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
+                const fullKeys = parseJson<string[]>(row.full_keys, []);
                 const images = buildImageList(
                   row.mobile_id,
-                  thumbKeys,
+                  fullKeys.length ? fullKeys : thumbKeys,
                   thumbKeys,
                   imageMeta,
                   row.images_downloaded === 1,
