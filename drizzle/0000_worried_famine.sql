@@ -109,7 +109,7 @@ CREATE TABLE `expenses` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`title` text NOT NULL,
 	`amount` integer NOT NULL,
-	`currency` text DEFAULT 'BGN' NOT NULL,
+	`currency` text DEFAULT 'EUR' NOT NULL,
 	`date` text NOT NULL,
 	`category` text NOT NULL,
 	`notes` text,
