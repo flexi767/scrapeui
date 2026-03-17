@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,24 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-login in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    setLoading(true);
+    signIn('credentials', {
+      username: '',
+      password: '__dev_auto__',
+      redirect: false,
+    }).then((res) => {
+      if (res?.error) {
+        setLoading(false);
+      } else {
+        router.push('/');
+        router.refresh();
+      }
+    });
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

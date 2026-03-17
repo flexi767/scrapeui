@@ -36,23 +36,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) return null;
+        // Dev auto-login: password "dev" + NODE_ENV=development → skip bcrypt
+        const isDev = process.env.NODE_ENV === 'development';
+        const isDevLogin = isDev && credentials?.password === '__dev_auto__';
 
-        const user = raw
-          .prepare(
-            'SELECT id, username, name, password_hash, role FROM users WHERE username = ?',
-          )
-          .get(credentials.username as string) as
-          | { id: number; username: string; name: string; password_hash: string; role: string }
-          | undefined;
+        if (!isDevLogin && (!credentials?.username || !credentials?.password))
+          return null;
+
+        const user = isDevLogin && !credentials?.username
+          ? (raw
+              .prepare(
+                "SELECT id, username, name, password_hash, role FROM users WHERE role = 'admin' LIMIT 1",
+              )
+              .get() as
+              | { id: number; username: string; name: string; password_hash: string; role: string }
+              | undefined)
+          : (raw
+              .prepare(
+                'SELECT id, username, name, password_hash, role FROM users WHERE username = ?',
+              )
+              .get(credentials!.username as string) as
+              | { id: number; username: string; name: string; password_hash: string; role: string }
+              | undefined);
 
         if (!user) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.password_hash,
-        );
-        if (!valid) return null;
+        if (!isDevLogin) {
+          const valid = await bcrypt.compare(
+            credentials!.password as string,
+            user.password_hash,
+          );
+          if (!valid) return null;
+        }
 
         return {
           id: String(user.id),
