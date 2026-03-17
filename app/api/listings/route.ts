@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
-import { getListings } from '@/lib/queries';
+import { getListings, getListingSummaries } from '@/lib/queries';
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
+
+  if (sp.has('summaries')) {
+    return Response.json(getListingSummaries());
+  }
 
   const make = sp.get('make') ?? '';
   const model = sp.get('model') ?? '';

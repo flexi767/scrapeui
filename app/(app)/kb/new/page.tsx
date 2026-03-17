@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 
 interface LabelOption { id: number; name: string; color: string; }
-interface ListingOption { id: number; mobile_id: string; title: string; make: string; model: string; }
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -19,11 +19,9 @@ export default function NewArticlePage() {
   const [saving, setSaving] = useState(false);
 
   const [labels, setLabels] = useState<LabelOption[]>([]);
-  const [listings, setListings] = useState<ListingOption[]>([]);
 
   useEffect(() => {
     fetch('/api/labels').then(r => r.json()).then(setLabels);
-    fetch('/api/listings?limit=500').then(r => r.json()).then(d => setListings(d.data || []));
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,21 +78,7 @@ export default function NewArticlePage() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Linked Cars</Label>
-          <div className="max-h-40 overflow-y-auto rounded-md border border-gray-600 bg-gray-800 p-2">
-            {listings.map((l) => (
-              <label key={l.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-700">
-                <input type="checkbox" checked={selectedListings.includes(l.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) setSelectedListings([...selectedListings, l.id]);
-                    else setSelectedListings(selectedListings.filter(x => x !== l.id));
-                  }} />
-                <span className="truncate">{l.make} {l.model} — {l.title || l.mobile_id}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
 
         <div className="flex gap-3">
           <Button type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create Article'}</Button>

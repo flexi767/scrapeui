@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 
 interface UserOption { id: number; name: string; }
-interface ListingOption { id: number; mobile_id: string; title: string; make: string; model: string; }
 interface LabelOption { id: number; name: string; color: string; }
 
 export default function EditTaskPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,16 +26,14 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
   const [loaded, setLoaded] = useState(false);
 
   const [users, setUsers] = useState<UserOption[]>([]);
-  const [listings, setListings] = useState<ListingOption[]>([]);
   const [labels, setLabels] = useState<LabelOption[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/tasks/${id}`).then(r => r.json()),
       fetch('/api/users').then(r => r.json()),
-      fetch('/api/listings?limit=500').then(r => r.json()),
       fetch('/api/labels').then(r => r.json()),
-    ]).then(([task, usersData, listingsData, labelsData]) => {
+    ]).then(([task, usersData, labelsData]) => {
       setTitle(task.title);
       setDescription(task.description || '');
       setStatus(task.status);
@@ -45,7 +43,6 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
       setSelectedListings(task.listings?.map((l: { id: number }) => l.id) || []);
       setSelectedLabels(task.labels?.map((l: { id: number }) => l.id) || []);
       setUsers(usersData);
-      setListings(listingsData.data || []);
       setLabels(labelsData);
       setLoaded(true);
     });
@@ -125,21 +122,7 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Linked Cars</Label>
-          <div className="max-h-40 overflow-y-auto rounded-md border border-gray-600 bg-gray-800 p-2">
-            {listings.map((l) => (
-              <label key={l.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-700">
-                <input type="checkbox" checked={selectedListings.includes(l.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) setSelectedListings([...selectedListings, l.id]);
-                    else setSelectedListings(selectedListings.filter(x => x !== l.id));
-                  }} />
-                <span className="truncate">{l.make} {l.model} — {l.title || l.mobile_id}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
 
         <div className="space-y-2">
           <Label>Labels</Label>

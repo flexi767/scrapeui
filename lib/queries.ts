@@ -326,8 +326,11 @@ export interface ListingSummary {
 
 export function getListingSummaries(): ListingSummary[] {
   return raw.prepare(`
-    SELECT id, mobile_id, title, make, model, reg_year, current_price
-    FROM listings WHERE is_active = 1 ORDER BY make, model, reg_year
+    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
+    FROM listings l
+    JOIN dealers d ON l.dealer_id = d.id
+    WHERE l.is_active = 1 AND d.own = 1
+    ORDER BY l.make, l.model, l.reg_year
   `).all() as ListingSummary[];
 }
 

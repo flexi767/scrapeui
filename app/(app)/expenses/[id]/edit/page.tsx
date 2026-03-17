@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
+import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 
 export default function EditExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -21,15 +22,13 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const [listings, setListings] = useState<{ id: number; make: string; model: string; title: string; mobile_id: string }[]>([]);
   const [labels, setLabels] = useState<{ id: number; name: string; color: string }[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/expenses/${id}`).then(r => r.json()),
-      fetch('/api/listings?limit=500').then(r => r.json()),
       fetch('/api/labels').then(r => r.json()),
-    ]).then(([exp, listingsData, labelsData]) => {
+    ]).then(([exp, labelsData]) => {
       setTitle(exp.title);
       setAmount((exp.amount / 100).toFixed(2));
       setCurrency(exp.currency);
@@ -38,7 +37,6 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
       setNotes(exp.notes || '');
       setSelectedListings(exp.listings?.map((l: { id: number }) => l.id) || []);
       setSelectedLabels(exp.labels?.map((l: { id: number }) => l.id) || []);
-      setListings(listingsData.data || []);
       setLabels(labelsData);
       setLoaded(true);
     });
@@ -101,21 +99,7 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200" rows={3} />
         </div>
-        <div className="space-y-2">
-          <Label>Linked Cars</Label>
-          <div className="max-h-40 overflow-y-auto rounded-md border border-gray-600 bg-gray-800 p-2">
-            {listings.map((l) => (
-              <label key={l.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-700">
-                <input type="checkbox" checked={selectedListings.includes(l.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) setSelectedListings([...selectedListings, l.id]);
-                    else setSelectedListings(selectedListings.filter(x => x !== l.id));
-                  }} />
-                <span className="truncate">{l.make} {l.model} — {l.title || l.mobile_id}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
         <div className="space-y-2">
           <Label>Labels</Label>
           <div className="flex flex-wrap gap-2">
