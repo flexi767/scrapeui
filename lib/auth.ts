@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { raw } from '@/db/client';
+import { authConfig } from './auth.config';
 
 declare module 'next-auth' {
   interface User {
@@ -27,6 +28,7 @@ declare module '@auth/core/jwt' {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -61,33 +63,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    authorized({ auth: session, request }) {
-      const isLoggedIn = !!session?.user;
-      const isLoginPage = request.nextUrl.pathname === '/login';
-      const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth');
-
-      if (isLoginPage || isApiAuth) return true;
-      if (!isLoggedIn) return false;
-      return true;
-    },
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id!;
-        token.role = (user as { role?: string }).role ?? 'user';
-        token.username = (user as { username?: string }).username ?? '';
-      }
-      return token;
-    },
-    session({ session, token }) {
-      session.user.id = token.id;
-      session.user.role = token.role;
-      session.user.username = token.username;
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/login',
-  },
-  session: { strategy: 'jwt' },
 });
