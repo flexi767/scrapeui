@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { QuickAdd } from '@/components/QuickAdd';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
   { href: '/', label: 'Listings', icon: CarIcon },
@@ -21,10 +23,9 @@ export function AppSidebar() {
 
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-gray-700 bg-gray-900">
-      <div className="flex h-14 items-center border-b border-gray-700 px-4">
-        <Link href="/" className="text-lg font-semibold text-gray-100">
-          DealerHub
-        </Link>
+      <div className="flex h-14 items-center justify-between border-b border-gray-700 px-3">
+        <QuickAdd />
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">

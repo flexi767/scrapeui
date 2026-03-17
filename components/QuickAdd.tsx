@@ -40,7 +40,7 @@ export function QuickAdd() {
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-gray-400 hover:border-gray-500 hover:text-gray-200"
       >
-        <span>Search or create...</span>
+        <span>Search...</span>
         <kbd className="rounded border border-gray-600 px-1.5 py-0.5 text-xs">⌘K</kbd>
       </button>
 
