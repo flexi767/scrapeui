@@ -50,7 +50,7 @@ export default function ExpensesPage() {
         <div>
           <h1 className="text-2xl font-bold">Expenses</h1>
           <p className="text-sm text-gray-400">
-            {total} expenses — Total: {formatAmount(totalAmount)} BGN
+            {total} expenses — Total: {formatAmount(totalAmount)} EUR
           </p>
         </div>
         <Link href="/expenses/new">

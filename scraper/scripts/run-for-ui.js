@@ -333,7 +333,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
 
         const euroMatch = raw.priceText.replace(/\s/g, '').match(/([\d.,]+)€/);
         const priceAmount = euroMatch ? Math.round(parseFloat(euroMatch[1].replace(',', ''))) : null;
-        const currency = euroMatch ? 'EUR' : (raw.priceText.includes('лв') ? 'BGN' : 'EUR');
+        const currency = 'EUR';
 
         const vatLower = raw.vatText.toLowerCase();
         let vat = null;

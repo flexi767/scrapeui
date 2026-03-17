@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const {
-    title, amount, currency = 'BGN', date, category,
+    title, amount, currency = 'EUR', date, category,
     notes, listingIds = [], taskIds = [], labelIds = [],
   } = body;
 

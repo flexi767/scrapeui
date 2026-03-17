@@ -144,7 +144,7 @@ export const expenses = sqliteTable('expenses', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   amount: integer('amount').notNull(),
-  currency: text('currency').notNull().default('BGN'),
+  currency: text('currency').notNull().default('EUR'),
   date: text('date').notNull(),
   category: text('category').notNull(),
   notes: text('notes'),

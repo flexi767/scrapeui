@@ -14,7 +14,7 @@ export default function NewExpensePage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('BGN');
+  const [currency] = useState('EUR');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState('other');
   const [notes, setNotes] = useState('');
@@ -81,12 +81,7 @@ export default function NewExpensePage() {
           </div>
           <div className="space-y-2">
             <Label>Currency</Label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}
-              className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200">
-              <option value="BGN">BGN</option>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
-            </select>
+            <Input value={currency} readOnly className="bg-gray-900 text-gray-300" />
           </div>
           <div className="space-y-2">
             <Label>Date</Label>
