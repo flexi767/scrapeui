@@ -37,8 +37,10 @@ async function fetchMakesModels() {
   const map = new Map();
   const block = cmmMatch[1];
 
-  // Each row looks roughly like:
+  // Each row can look like either:
   // ['Make','<makeId>','Model1','<modelId1>','Model2','<modelId2>', ...]
+  // or just a flat model list:
+  // ['Make','','Model1','Model2','Model 3', ...]
   const rowRegex = /\[\s*'([^']+)'\s*,\s*'([^']*)'((?:\s*,\s*'[^']*')*)\s*\]/g;
   let m;
   while ((m = rowRegex.exec(block)) !== null) {
@@ -46,11 +48,16 @@ async function fetchMakesModels() {
     const makeIdRaw = m[2].trim();
     const tokens = [...m[3].matchAll(/'([^']*)'/g)].map(x => x[1].trim());
     const models = [];
-    for (let i = 0; i < tokens.length; i += 2) {
+    for (let i = 0; i < tokens.length;) {
       const label = tokens[i] || '';
-      const idRaw = tokens[i + 1] || '';
-      if (!label || /^\d+$/.test(label)) continue;
-      models.push({ label, id: idRaw ? Number(idRaw) || null : null });
+      if (!label || /^\d+$/.test(label)) {
+        i += 1;
+        continue;
+      }
+      const nextToken = tokens[i + 1] || '';
+      const hasPairedId = /^\d+$/.test(nextToken);
+      models.push({ label, id: hasPairedId ? Number(nextToken) || null : null });
+      i += hasPairedId ? 2 : 1;
     }
     if (make && make.length < 50) {
       const key = make.toLowerCase();
