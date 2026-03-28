@@ -34,6 +34,8 @@ export const listings = sqliteTable('listings', {
   regMonth: text('reg_month'),
   regYear: text('reg_year'),
   fuel: text('fuel'),
+  bodyType: text('body_type'),
+  transmission: text('transmission'),
   color: text('color'),
   power: integer('power'),
   mileage: integer('mileage'),

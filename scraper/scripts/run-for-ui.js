@@ -13,6 +13,8 @@ const Database = require('better-sqlite3');
 const { fetchMakesModels, parseMakeModelSync } = require('../utils/makes-models');
 const { resolveCarsBgMakeModelIds } = require('../utils/carsbg-makes-models');
 const { fetchFuelTypes, normalizeFuelSync } = require('../utils/fuel-types');
+const { fetchTransmissionTypes, normalizeTransmissionSync } = require('../utils/transmission-types');
+const { getBodyTypeMap, normalizeBodyTypeSync } = require('../utils/body-types');
 
 // Parse args
 const args = process.argv.slice(2);
@@ -79,7 +81,7 @@ function cleanDescription(text) {
   return trimmed.join('\n').trim();
 }
 
-async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
+async function upsertListing(db, dealerId, listing, makesMap, fuelMap, transmissionMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
   if (!mobileId) return { action: 'skip', title: listing.title || '', make: '', model: '' };
@@ -90,6 +92,8 @@ async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
   const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({ title: rawTitle, make, model }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year);
   const fuel = normalizeFuelSync(listing.fuel, fuelMap);
+  const bodyType = normalizeBodyTypeSync(listing.bodyType, getBodyTypeMap());
+  const transmission = normalizeTransmissionSync(listing.transmission, transmissionMap);
   const price = listing.price?.amount ?? null;
   const vat = listing.vat ?? null;
 
@@ -161,7 +165,7 @@ async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
     db.prepare(`
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
-        fuel = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
+        fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1
       WHERE id = ?
@@ -170,6 +174,8 @@ async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
       isDeep ? (fuel || null) : existing.fuel,
+      isDeep ? (bodyType || null) : existing.body_type,
+      isDeep ? (transmission || null) : existing.transmission,
       isDeep ? (listing.color || null) : existing.color,
       isDeep ? (listing.power || null) : existing.power,
       isDeep ? (listing.mileage || null) : existing.mileage,
@@ -189,13 +195,13 @@ async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
   db.prepare(`
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
-      fuel, color, power, mileage, description, ad_status, kaparo, is_new,
+      fuel, body_type, transmission, color, power, mileage, description, ad_status, kaparo, is_new,
       last_edit, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, first_seen_at, last_seen_at, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
-    fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
+    fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
@@ -207,7 +213,7 @@ async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
   return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }
 
-async function scrapeCompetitorForUI(dealer, db, makesMap, fuelMap) {
+async function scrapeCompetitorForUI(dealer, db, makesMap, fuelMap, transmissionMap) {
   let count = 0;
   const maxPages = 20;
   const snapshotDate = new Date().toISOString().slice(0, 10);
@@ -281,7 +287,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap, fuelMap) {
               dealer: dealer.slug,
               snapshotDate,
             };
-            const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap);
+            const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
             count++;
             emit({
               type: 'listing',
@@ -392,6 +398,8 @@ async function scrapeCompetitorForUI(dealer, db, makesMap, fuelMap) {
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'),
           fuel: extract('Двигател'),
+          bodyType: extract('Категория'),
+          transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           description: cleanDescription(raw.description),
           imageCount: raw.thumbKeys.length,
@@ -433,6 +441,7 @@ async function main() {
   db.pragma('foreign_keys = ON');
   const makesMap = await fetchMakesModels().catch(() => null);
   const fuelMap = await fetchFuelTypes().catch(() => null);
+  const transmissionMap = await fetchTransmissionTypes().catch(() => null);
   const dealers = db.prepare(`
     SELECT
       id,
@@ -464,7 +473,7 @@ async function main() {
   for (const dealer of selected) {
     emit({ type: 'log', message: `Starting scrape: ${dealer.name}` });
     try {
-      const count = await scrapeCompetitorForUI(dealer, db, makesMap, fuelMap);
+      const count = await scrapeCompetitorForUI(dealer, db, makesMap, fuelMap, transmissionMap);
       emit({ type: 'done', dealer: dealer.slug, count });
     } catch (err) {
       hadErrors = true;
