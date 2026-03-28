@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
         controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
-      const child = spawn('node', [
-        path.join(process.cwd(), 'scraper/scripts/run-for-ui.js'),
+      const child = spawn(path.join(process.cwd(), 'node_modules/.bin/tsx'), [
+        path.join(process.cwd(), 'scraper/scripts/run-for-ui.ts'),
         ...scriptArgs,
       ], {
         env: {
