@@ -213,7 +213,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                     <input
                       type="number"
                       min="0"
-                      step="1"
+                      step="100"
                       value={editForm.current_price}
                       onChange={e => {
                         const v = parseInt(e.target.value, 10);
