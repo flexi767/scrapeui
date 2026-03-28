@@ -157,7 +157,7 @@ export default async function EditOwnPage({
           <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
         </div>
 
-        <OwnListingsTable initialRows={rows} />
+        <OwnListingsTable key={currentParams.toString()} initialRows={rows} />
 
         {/* Pagination */}
         {totalPages > 1 && (
