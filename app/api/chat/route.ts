@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-const LM_STUDIO_URL = 'http://10.210.232.53:1234/v1/chat/completions';
+const LM_STUDIO_URL = process.env.LM_STUDIO_URL ?? 'http://10.210.232.53:1234/v1/chat/completions';
 
 export async function POST(req: NextRequest) {
   const { messages, model } = await req.json();

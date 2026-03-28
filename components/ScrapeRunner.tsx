@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
+  level?: 'stderr' | 'info';
   dealer?: string;
   title?: string;
   price?: number | null;
@@ -357,8 +358,8 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
 
             if (entry.type === 'log') {
               return (
-                <div key={i} className="text-gray-400 text-xs py-0.5 font-mono">
-                  {entry.message}
+                <div key={i} className={`text-xs py-0.5 font-mono ${entry.level === 'stderr' ? 'text-yellow-500/80' : 'text-gray-400'}`}>
+                  {entry.level === 'stderr' ? '⚠ ' : ''}{entry.message}
                 </div>
               );
             }

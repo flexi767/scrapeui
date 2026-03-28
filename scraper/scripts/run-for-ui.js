@@ -416,7 +416,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
 }
 
 async function main() {
-  const db = new Database(path.resolve(__dirname, '../../../scraped/listings.db'));
+  const db = new Database(process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db'));
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   const makesMap = await fetchMakesModels().catch(() => null);
