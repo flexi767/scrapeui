@@ -18,6 +18,31 @@ interface Dealer {
   cars_password: string | null;
 }
 
+interface LoginResult {
+  ok: boolean;
+  reason?: string;
+}
+
+interface DealerLoginResult {
+  'mobile.bg'?: LoginResult;
+  'cars.bg'?: LoginResult;
+  error?: string;
+}
+
+function LoginBadge({ result, label }: { result?: LoginResult; label: string }) {
+  if (!result) return <span className="text-gray-600 text-[10px]">{label} —</span>;
+  if (result.ok) return (
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-800/60 px-1.5 py-px text-[10px] font-semibold text-emerald-300">
+      ✓ {label}
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-red-900/60 px-1.5 py-px text-[10px] font-semibold text-red-300" title={result.reason}>
+      ✗ {label}
+    </span>
+  );
+}
+
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
 
@@ -42,6 +67,25 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [flashId, setFlashId] = useState<number | null>(null);
+  const [loginResults, setLoginResults] = useState<Record<number, DealerLoginResult>>({});
+  const [loginRunning, setLoginRunning] = useState<Set<number>>(new Set());
+
+  async function testLogin(id: number) {
+    setLoginRunning(prev => new Set([...prev, id]));
+    try {
+      const res = await fetch('/api/dealers/test-logins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [id] }),
+      });
+      const data = await res.json() as Record<number, DealerLoginResult>;
+      setLoginResults(prev => ({ ...prev, ...data }));
+    } catch (err) {
+      setLoginResults(prev => ({ ...prev, [id]: { error: (err as Error).message } }));
+    } finally {
+      setLoginRunning(prev => { const next = new Set(prev); next.delete(id); return next; });
+    }
+  }
 
   function slugify(name: string) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -180,6 +224,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
             {dealers.length === 0 && <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
             {dealers.map(d => {
               const editing = editingId === d.id;
+              const loginResult = loginResults[d.id];
+              const isLoginRunning = loginRunning.has(d.id);
               return (
                 <tr key={d.id} className={`align-top transition-colors duration-500 ${flashId === d.id ? 'bg-blue-900/40' : 'hover:bg-gray-800/40'}`}>
                   <td className="px-4 py-2 text-white">
@@ -239,9 +285,27 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                       <span className="w-6 text-center text-sm text-gray-300">{d.priority || 0}</span>
                       <button onClick={() => onChangePriority(d, 1)} className="rounded px-1.5 py-0.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700">+</button>
                     </div>
+                    {editing && d.own === 1 && (
+                      <div className="mt-1.5 flex justify-center">
+                        {isLoginRunning ? (
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
+                        ) : (
+                          <LoginBadge result={loginResult?.['mobile.bg']} label="mobile" />
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <button onClick={() => onToggleActive(d)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}>{d.active ? 'on' : 'off'}</button>
+                    {editing && d.own === 1 && (
+                      <div className="mt-1.5 flex justify-center">
+                        {isLoginRunning ? (
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
+                        ) : (
+                          <LoginBadge result={loginResult?.['cars.bg']} label="cars" />
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <div className="flex items-center justify-center gap-1.5">
@@ -273,6 +337,16 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 011-1h4a1 1 0 011 1m-7 0H5m14 0h-2" />
                       </svg>
                     </button>
+                    {editing && d.own === 1 && (
+                      <button
+                        onClick={() => testLogin(d.id)}
+                        disabled={isLoginRunning}
+                        title="Test logins"
+                        className="mt-1.5 block w-full text-center text-[10px] text-gray-500 hover:text-blue-400 disabled:opacity-40"
+                      >
+                        {isLoginRunning ? '…' : 'test'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
