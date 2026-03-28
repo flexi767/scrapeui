@@ -120,6 +120,9 @@ function upsertListing(db, dealerId, listing, makesMap) {
         mobileId: mobileId,
         title: existing.title || listing.title,
         url: listing.url || existing.url,
+        dealer: listing.dealer || null,
+        thumb: listing.thumb || null,
+        price,
         priceChanged,
         oldPrice: priceChanged ? existing.current_price : null,
         newPrice: priceChanged ? price : null,
@@ -257,6 +260,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
               title: card.title,
               adStatus: card.adStatus,
               kaparo: card.kaparo,
+              thumb: card.thumb || '',
               price: { amount: priceAmount, currency: 'EUR' },
               vat: null,
               lastEdit: null,
@@ -268,7 +272,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
               dealer: dealer.slug,
               snapshotDate,
             };
-            upsertListing(db, dealer.id, listing, makesMap);
+            const result = upsertListing(db, dealer.id, listing, makesMap);
             count++;
             emit({
               type: 'listing',
@@ -277,6 +281,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
               price: priceAmount,
               url: card.url,
               thumb: card.thumb || '',
+              newListing: result.action === 'inserted',
               imageCount: 0,
             });
           }
@@ -367,6 +372,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
           title: request.userData?.title || '',
           adStatus: request.userData?.adStatus || 'none',
           kaparo: request.userData?.kaparo || false,
+          thumb: raw.firstThumbUrl || request.userData?.thumb || '',
           price: { amount: priceAmount, currency },
           vat,
           lastEdit,
@@ -388,7 +394,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
           dealer: dealer.slug,
           snapshotDate,
         };
-        upsertListing(db, dealer.id, listing, makesMap);
+        const result = upsertListing(db, dealer.id, listing, makesMap);
         count++;
         emit({
           type: 'listing',
@@ -397,6 +403,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
           price: priceAmount,
           url,
           thumb: raw.firstThumbUrl || request.userData?.thumb || '',
+          newListing: result.action === 'inserted',
           imageCount: raw.thumbKeys.length,
         });
       }
