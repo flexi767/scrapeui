@@ -158,7 +158,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 {/* Img */}
                 <td className="px-2 py-1.5">
                   {thumbSrc ? (
-                    <img src={thumbSrc} alt="" width={40} height={30} className="rounded object-cover" style={{ width: 40, height: 30 }} />
+                    <div className="relative inline-block" style={{ width: 40, height: 30 }}>
+                      <img src={thumbSrc} alt="" className="peer rounded object-cover" style={{ width: 40, height: 30 }} />
+                      <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
+                        <img src={thumbSrc} alt="" className="w-full rounded shadow-xl" />
+                      </div>
+                    </div>
                   ) : (
                     <div style={{ width: 40, height: 30 }} className="rounded bg-gray-700" />
                   )}
