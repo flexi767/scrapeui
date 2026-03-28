@@ -10,9 +10,10 @@ interface Props {
   paramHigh: string;  // URL param name for upper bound
   label?: string;     // short label shown before the slider
   fmt?: (v: number) => string;
+  basePath?: string;
 }
 
-export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramHigh, label, fmt }: Props) {
+export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramHigh, label, fmt, basePath = '/listings' }: Props) {
   const searchParams = useSearchParams();
 
   const min = rawMin === rawMax ? rawMin - 10 : rawMin;
@@ -36,6 +37,7 @@ export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramH
       label={label}
       fmt={fmt}
       searchParamsString={searchParams.toString()}
+      basePath={basePath}
     />
   );
 }
@@ -50,9 +52,10 @@ interface InnerProps {
   label?: string;
   fmt?: (v: number) => string;
   searchParamsString: string;
+  basePath: string;
 }
 
-function RangeFilterInner({ min, max, initialLow, initialHigh, paramLow, paramHigh, label, fmt, searchParamsString }: InnerProps) {
+function RangeFilterInner({ min, max, initialLow, initialHigh, paramLow, paramHigh, label, fmt, searchParamsString, basePath }: InnerProps) {
   const router = useRouter();
   const [low, setLow] = useState(initialLow);
   const [high, setHigh] = useState(initialHigh);
@@ -65,9 +68,9 @@ function RangeFilterInner({ min, max, initialLow, initialHigh, paramLow, paramHi
       p.delete('page');
       if (lo === min) p.delete(paramLow); else p.set(paramLow, String(lo));
       if (hi === max) p.delete(paramHigh); else p.set(paramHigh, String(hi));
-      router.push(`/?${p.toString()}`);
+      router.push(`${basePath}?${p.toString()}`);
     }, 300);
-  }, [searchParamsString, router, min, max, paramLow, paramHigh]);
+  }, [searchParamsString, router, min, max, paramLow, paramHigh, basePath]);
 
   const active = low !== min || high !== max;
   const range = max - min;
