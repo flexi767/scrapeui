@@ -11,6 +11,7 @@ const path = require('path');
 const util = require('util');
 const Database = require('better-sqlite3');
 const { fetchMakesModels, parseMakeModelSync } = require('../utils/makes-models');
+const { resolveCarsBgMakeModelIds } = require('../utils/carsbg-makes-models');
 
 // Parse args
 const args = process.argv.slice(2);
@@ -77,12 +78,13 @@ function cleanDescription(text) {
   return trimmed.join('\n').trim();
 }
 
-function upsertListing(db, dealerId, listing, makesMap) {
+async function upsertListing(db, dealerId, listing, makesMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
   if (!mobileId) return { action: 'skip' };
 
   const { make, model, mobileMakeId, mobileModelId } = parseMakeModelSync(listing.title, makesMap);
+  const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({ title: listing.title, make, model }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year);
   const price = listing.price?.amount ?? null;
   const vat = listing.vat ?? null;
@@ -152,13 +154,13 @@ function upsertListing(db, dealerId, listing, makesMap) {
 
     db.prepare(`
       UPDATE listings SET
-        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, reg_month = ?, reg_year = ?,
+        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
         fuel = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1
       WHERE id = ?
     `).run(
-      dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId,
+      dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
       isDeep ? (listing.fuel || null) : existing.fuel,
@@ -180,13 +182,13 @@ function upsertListing(db, dealerId, listing, makesMap) {
 
   db.prepare(`
     INSERT INTO listings (
-      mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, reg_month, reg_year,
+      mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
       fuel, color, power, mileage, description, ad_status, kaparo, is_new,
       last_edit, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, first_seen_at, last_seen_at, is_active
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
-    mobileId, dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, regMonth, regYear,
+    mobileId, dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
     listing.fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, price, vat, listing.imageCount || 0,
@@ -273,7 +275,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
               dealer: dealer.slug,
               snapshotDate,
             };
-            const result = upsertListing(db, dealer.id, listing, makesMap);
+            const result = await upsertListing(db, dealer.id, listing, makesMap);
             count++;
             emit({
               type: 'listing',
@@ -395,7 +397,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
           dealer: dealer.slug,
           snapshotDate,
         };
-        const result = upsertListing(db, dealer.id, listing, makesMap);
+        const result = await upsertListing(db, dealer.id, listing, makesMap);
         count++;
         emit({
           type: 'listing',
