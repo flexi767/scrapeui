@@ -6,6 +6,8 @@ interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
   level?: 'stderr' | 'info';
   dealer?: string;
+  make?: string;
+  model?: string;
   title?: string;
   price?: number | null;
   url?: string;
@@ -247,11 +249,17 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                         <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
                       )}
                       <div className="min-w-0 text-xs">
+                        {(entry.make || entry.model) && (
+                          <>
+                            <div className="truncate font-medium text-gray-100">{entry.make || '—'}</div>
+                            <div className="truncate text-[11px] text-gray-400">{entry.model || '—'}</div>
+                          </>
+                        )}
                         <a
                           href={entry.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mb-0.5 block truncate font-medium text-gray-100 hover:text-blue-300"
+                          className="mb-0.5 block truncate text-[11px] text-gray-300 hover:text-blue-300"
                         >
                           {entry.title || entry.mobileId}
                         </a>
@@ -309,11 +317,17 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                     <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
                   )}
                   <div className="flex-1 min-w-0 text-xs">
+                    {(entry.make || entry.model) && (
+                      <>
+                        <div className="truncate font-medium text-white">{entry.make || '—'}</div>
+                        <div className="truncate text-[11px] text-gray-400">{entry.model || '—'}</div>
+                      </>
+                    )}
                     <a
                       href={entry.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-white truncate block font-medium mb-0.5"
+                      className="mb-0.5 block truncate text-[11px] text-gray-300 hover:text-white"
                     >
                       {entry.title}
                     </a>

@@ -81,7 +81,7 @@ function cleanDescription(text) {
 async function upsertListing(db, dealerId, listing, makesMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
-  if (!mobileId) return { action: 'skip', title: listing.title || '' };
+  if (!mobileId) return { action: 'skip', title: listing.title || '', make: '', model: '' };
 
   const rawTitle = listing.title || '';
   const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
@@ -123,6 +123,8 @@ async function upsertListing(db, dealerId, listing, makesMap) {
       emit({
         type: 'change',
         mobileId: mobileId,
+        make,
+        model,
         title: existing.title || normalizedTitle,
         url: listing.url || existing.url,
         dealer: listing.dealer || null,
@@ -179,7 +181,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
       ...imageValues,
       now, existing.id
     );
-    return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle };
+    return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle, make, model };
   }
 
   db.prepare(`
@@ -200,7 +202,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
     now, now
   );
 
-  return { action: 'inserted', snapshot: false, title: normalizedTitle };
+  return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }
 
 async function scrapeCompetitorForUI(dealer, db, makesMap) {
@@ -282,6 +284,8 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
             emit({
               type: 'listing',
               dealer: dealer.slug,
+              make: result.make,
+              model: result.model,
               title: result.title,
               price: priceAmount,
               url: card.url,
@@ -404,6 +408,8 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
         emit({
           type: 'listing',
           dealer: dealer.slug,
+          make: result.make,
+          model: result.model,
           title: result.title,
           price: priceAmount,
           url,
