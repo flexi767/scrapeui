@@ -1,3 +1,6 @@
+// MIGRATED → lib/mobile-bg/auth.ts
+// (acceptMobileBgCookies, loginMobileBg)
+
 async function acceptMobileBgCookies(page) {
   await page.evaluate(() => {
     document.getElementById('cookiescript_injected_wrapper')?.remove();

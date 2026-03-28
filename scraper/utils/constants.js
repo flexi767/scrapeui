@@ -1,3 +1,6 @@
+// MIGRATED → lib/mobile-bg/constants.ts
+// (USER_AGENT)
+
 /**
  * Shared constants — edit here to change across all scrapers.
  */

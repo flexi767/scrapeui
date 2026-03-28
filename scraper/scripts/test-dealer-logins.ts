@@ -1,16 +1,16 @@
-#!/usr/bin/env node
-// MIGRATED → scraper/scripts/test-dealer-logins.ts
-// (uses @/lib/mobile-bg/auth and @/lib/cars-bg/auth instead of ../utils/)
-/* eslint-disable @typescript-eslint/no-require-imports */
-const Database = require('better-sqlite3');
-const { chromium } = require('playwright');
-const { loginMobileBg } = require('../utils/mobilebg-auth');
-const { loginToCarsBg } = require('../utils/carsbg-auth');
+#!/usr/bin/env tsx
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Database from 'better-sqlite3';
+import { chromium } from 'playwright';
+import { loginMobileBg } from '@/lib/mobile-bg/auth';
+import { loginToCarsBg } from '@/lib/cars-bg/auth';
 
-const DB_PATH = process.env.SCRAPEUI_DB_PATH || '/Users/v/dev/scraped/listings.db';
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
 const slug = process.argv[2];
 if (!slug) {
-  console.error('Usage: node scraper/scripts/test-dealer-logins.js <dealer-slug>');
+  console.error('Usage: tsx scraper/scripts/test-dealer-logins.ts <dealer-slug>');
   process.exit(1);
 }
 
@@ -19,7 +19,7 @@ async function main() {
   const dealer = db.prepare(`
     SELECT slug, name, mobile_user, mobile_password, cars_user, cars_password
     FROM dealers WHERE slug = ?
-  `).get(slug);
+  `).get(slug) as { slug: string; name: string; mobile_user: string | null; mobile_password: string | null; cars_user: string | null; cars_password: string | null } | undefined;
   db.close();
 
   if (!dealer) throw new Error(`Dealer not found: ${slug}`);

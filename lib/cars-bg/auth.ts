@@ -1,9 +1,8 @@
-// MIGRATED → lib/cars-bg/auth.ts
-// (CARS_BG_BASE_URL, hideCarsBgErrorOverlay, acceptCarsBgConsent, prepareCarsBgPage, loginToCarsBg)
+import type { Page } from 'playwright';
 
-const CARS_BG_BASE_URL = 'https://www.cars.bg';
+export const CARS_BG_BASE_URL = 'https://www.cars.bg';
 
-async function hideCarsBgErrorOverlay(page) {
+export async function hideCarsBgErrorOverlay(page: Page): Promise<void> {
   await page.evaluate(() => {
     [
       '#jsErrorMessage',
@@ -14,16 +13,18 @@ async function hideCarsBgErrorOverlay(page) {
       '.mdc-dialog-scrim',
       '.js-menu-overlay-backdrop',
       '.mdc-snackbar',
-    ].forEach((sel) => document.querySelectorAll(sel).forEach((el) => {
-      el.style.display = 'none';
-      el.style.visibility = 'hidden';
-      el.style.opacity = '0';
-      if (typeof el.remove === 'function') el.remove();
-    }));
+    ].forEach((sel) =>
+      document.querySelectorAll(sel).forEach((el) => {
+        (el as HTMLElement).style.display = 'none';
+        (el as HTMLElement).style.visibility = 'hidden';
+        (el as HTMLElement).style.opacity = '0';
+        if (typeof (el as HTMLElement & { remove?: () => void }).remove === 'function') el.remove();
+      }),
+    );
   }).catch(() => {});
 }
 
-async function acceptCarsBgConsent(page) {
+export async function acceptCarsBgConsent(page: Page): Promise<boolean> {
   try {
     const selectors = [
       '#cookiescript_accept',
@@ -56,11 +57,11 @@ async function acceptCarsBgConsent(page) {
         }
       }
     }
-  } catch (_) {}
+  } catch { /* ignore */ }
   return false;
 }
 
-async function prepareCarsBgPage(page) {
+export async function prepareCarsBgPage(page: Page): Promise<void> {
   await page.waitForLoadState('domcontentloaded').catch(() => {});
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.waitForTimeout(800);
@@ -72,7 +73,7 @@ async function prepareCarsBgPage(page) {
   await hideCarsBgErrorOverlay(page);
 }
 
-async function loginToCarsBg(page, username, password) {
+export async function loginToCarsBg(page: Page, username: string, password: string): Promise<boolean> {
   await page.goto(CARS_BG_BASE_URL, { waitUntil: 'domcontentloaded' });
   await prepareCarsBgPage(page);
 
@@ -121,9 +122,9 @@ async function loginToCarsBg(page, username, password) {
     if (drawerScrim) drawerScrim.classList.remove('mdc-drawer-scrim--open');
     const firm = document.getElementById('firm_login_conteiner');
     const priv = document.getElementById('private_login_conteiner');
-    if (firm) firm.style.display = 'block';
-    if (priv) priv.style.display = 'none';
-    const typeField = document.getElementById('typeId');
+    if (firm) (firm as HTMLElement).style.display = 'block';
+    if (priv) (priv as HTMLElement).style.display = 'none';
+    const typeField = document.getElementById('typeId') as HTMLInputElement | null;
     if (typeField) typeField.value = '2';
     const businessTab = document.getElementById('businessTab');
     const personTab = document.getElementById('personTab');
@@ -150,10 +151,10 @@ async function loginToCarsBg(page, username, password) {
   if (submitBtn) {
     await Promise.all([
       page.waitForLoadState('networkidle').catch(() => {}),
-      page.evaluate((btn) => btn.click(), submitBtn),
+      page.evaluate((btn) => (btn as HTMLElement).click(), submitBtn),
     ]);
   } else {
-    await page.evaluate(() => document.getElementById('loginForm')?.submit());
+    await page.evaluate(() => (document.getElementById('loginForm') as HTMLFormElement | null)?.submit());
     await page.waitForLoadState('networkidle').catch(() => {});
   }
 
@@ -163,11 +164,3 @@ async function loginToCarsBg(page, username, password) {
   const bodyText = await page.textContent('body').catch(() => '');
   return bodyText.includes('Моите обяви') || bodyText.includes('Добави обява');
 }
-
-module.exports = {
-  CARS_BG_BASE_URL,
-  hideCarsBgErrorOverlay,
-  acceptCarsBgConsent,
-  prepareCarsBgPage,
-  loginToCarsBg,
-};

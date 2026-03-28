@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// MIGRATED → scraper/scripts/fetch-publish-form.ts (CLI wrapper)
+//            lib/mobile-bg/fetch-publish-form.ts (form extraction logic)
+//            lib/mobile-bg/auth.ts (loginMobileBg)
 /**
  * Logs in to mobile.bg as a dealer and dumps the publish/edit form fields.
  * Usage: node scripts/fetch-publish-form.js --dealer <slug> [--adv <mobileId>]
