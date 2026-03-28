@@ -247,6 +247,9 @@ export interface DealerRow {
   active: number;
   priority: number;
   mobile_url?: string;
+}
+
+export interface DealerRowFull extends DealerRow {
   mobile_user?: string | null;
   mobile_password?: string | null;
   cars_user?: string | null;
@@ -254,7 +257,8 @@ export interface DealerRow {
 }
 
 export function getAllDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, own, active, priority, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  // Credentials are excluded here — use getDealerById for the config UI where they're needed
+  return raw.prepare('SELECT id, slug, name, own, active, priority, mobile_url FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
 }
 
 export function getDistinctYears(): string[] {

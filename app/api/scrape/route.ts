@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       ], {
         env: {
           ...process.env,
-          CRAWLEE_STORAGE_DIR: '/Users/v/dev/scraped/crawlee-storage',
+          CRAWLEE_STORAGE_DIR: process.env.CRAWLEE_STORAGE_DIR ?? '/Users/v/dev/scraped/crawlee-storage',
         },
       });
 
@@ -45,8 +45,16 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // Silently discard stderr (crawlee debug noise)
-      child.stderr.on('data', () => {});
+      // Forward stderr as log events (crawlee debug noise, but useful for debugging failures)
+      let stderrBuffer = '';
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderrBuffer += chunk.toString();
+        const lines = stderrBuffer.split('\n');
+        stderrBuffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.trim()) send({ type: 'log', level: 'stderr', message: line });
+        }
+      });
 
       child.on('close', (code: number | null) => {
         send({ type: 'complete', code });

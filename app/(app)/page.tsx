@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import RangeFilter from '@/components/RangeFilter';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
