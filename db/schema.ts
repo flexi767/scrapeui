@@ -48,6 +48,7 @@ export const listings = sqliteTable('listings', {
   firstSeenAt: text('first_seen_at'),
   lastSeenAt: text('last_seen_at'),
   isActive: integer('is_active').default(1),
+  needsSync: integer('needs_sync').default(0),
 });
 
 export const listingSnapshots = sqliteTable('listing_snapshots', {
