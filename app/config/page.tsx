@@ -30,7 +30,7 @@ export default function ConfigPage() {
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <Link href="/listings" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Listings
             </Link>
             <span className="text-sm font-medium text-gray-400">⚙ Config</span>

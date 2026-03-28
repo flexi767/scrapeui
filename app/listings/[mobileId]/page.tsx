@@ -61,7 +61,7 @@ export default async function ListingDetailPage({ params }: Props) {
       {/* Nav bar */}
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3">
-          <Link href="/" className="text-sm text-gray-400 hover:text-white">
+          <Link href="/listings" className="text-sm text-gray-400 hover:text-white">
             ← All Listings
           </Link>
           <span className="text-gray-600">/</span>
