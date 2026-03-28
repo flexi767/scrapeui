@@ -121,6 +121,12 @@ export default async function EditOwnPage({
 
   const totalPages = Math.ceil(total / 50);
 
+  // Build pagination params preserving multi-value query params
+  const prevPageParams = new URLSearchParams(currentParams.toString());
+  prevPageParams.set('page', String(page - 1));
+  const nextPageParams = new URLSearchParams(currentParams.toString());
+  nextPageParams.set('page', String(page + 1));
+
   return (
     <div className="min-h-screen bg-[#111827]">
       {/* Sticky header */}
@@ -158,7 +164,7 @@ export default async function EditOwnPage({
           <div className="mt-4 flex items-center justify-center gap-2 text-sm">
             {page > 1 && (
               <Link
-                href={`/editown?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page - 1) }).toString()}`}
+                href={`/editown?${prevPageParams.toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
                 ← Prev
@@ -169,7 +175,7 @@ export default async function EditOwnPage({
             </span>
             {page < totalPages && (
               <Link
-                href={`/editown?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page + 1) }).toString()}`}
+                href={`/editown?${nextPageParams.toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
                 Next →
