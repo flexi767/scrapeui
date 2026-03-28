@@ -1,6 +1,6 @@
 /**
  * Fetches all makes and models from mobile.bg's cmmvars.js.
- * Returns a Map: make (string) → models (string[])
+ * Returns a Map: make (string) → { make, makeId, models: [{ label, id }] }
  * Also exports parseMakeModel(title) using the authoritative list.
  */
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -37,25 +37,39 @@ async function fetchMakesModels() {
   const map = new Map();
   const block = cmmMatch[1];
 
-  // Each row is like: ['Make','','Model1','Model2',...]
-  // Split by lines and parse each array row
-  const rowRegex = /\[\s*'([^']+)'(?:\s*,\s*'[^']*')?((?:\s*,\s*'[^']*')*)\s*\]/g;
+  // Each row looks roughly like:
+  // ['Make','<makeId>','Model1','<modelId1>','Model2','<modelId2>', ...]
+  const rowRegex = /\[\s*'([^']+)'\s*,\s*'([^']*)'((?:\s*,\s*'[^']*')*)\s*\]/g;
   let m;
   while ((m = rowRegex.exec(block)) !== null) {
     const make = m[1].trim();
-    const modelsBlock = m[2] || '';
-    const models = [...modelsBlock.matchAll(/'([^']*)'/g)]
-      .map(x => x[1].trim())
-      .filter(s => s && !/^\d+$/.test(s)); // skip numeric IDs
+    const makeIdRaw = m[2].trim();
+    const tokens = [...m[3].matchAll(/'([^']*)'/g)].map(x => x[1].trim());
+    const models = [];
+    for (let i = 0; i < tokens.length; i += 2) {
+      const label = tokens[i] || '';
+      const idRaw = tokens[i + 1] || '';
+      if (!label || /^\d+$/.test(label)) continue;
+      models.push({ label, id: idRaw ? Number(idRaw) || null : null });
+    }
     if (make && make.length < 50) {
       const key = make.toLowerCase();
+      const makeId = makeIdRaw ? Number(makeIdRaw) || null : null;
       if (map.has(key)) {
-        // Merge models from duplicate entries (e.g. Hyundai cars + trucks)
         const existing = map.get(key);
-        const merged = [...new Set([...existing.models, ...models])];
-        map.set(key, { make: existing.make, models: merged });
+        const mergedByLabel = new Map(existing.models.map(x => [x.label.toLowerCase(), x]));
+        for (const model of models) {
+          if (!mergedByLabel.has(model.label.toLowerCase())) {
+            mergedByLabel.set(model.label.toLowerCase(), model);
+          }
+        }
+        map.set(key, {
+          make: existing.make,
+          makeId: existing.makeId ?? makeId,
+          models: [...mergedByLabel.values()],
+        });
       } else {
-        map.set(key, { make, models });
+        map.set(key, { make, makeId, models });
       }
     }
   }
@@ -77,23 +91,21 @@ async function parseMakeModel(title) {
   const sortedMakes = [...map.keys()].sort((a, b) => b.length - a.length);
   for (const makeLower of sortedMakes) {
     if (titleLower.startsWith(makeLower)) {
-      const { make, models } = map.get(makeLower);
+      const { make, makeId, models } = map.get(makeLower);
       const rest = title.slice(make.length).trim();
-      // Try to match a model from the known list (longest first)
-      const modelsSorted = [...models].sort((a, b) => b.length - a.length);
+      const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length);
       for (const model of modelsSorted) {
-        if (rest.toLowerCase().startsWith(model.toLowerCase())) {
-          return { make, model };
+        if (rest.toLowerCase().startsWith(model.label.toLowerCase())) {
+          return { make, model: model.label, mobileMakeId: makeId, mobileModelId: model.id };
         }
       }
-      // No model matched — take first word of remainder
-      return { make, model: rest.split(/\s+/)[0] || '' };
+      return { make, model: rest.split(/\s+/)[0] || '', mobileMakeId: makeId, mobileModelId: null };
     }
   }
 
   // Unknown make — best-effort split
   const parts = title.trim().split(/\s+/);
-  return { make: parts[0] || '', model: parts[1] || '' };
+  return { make: parts[0] || '', model: parts[1] || '', mobileMakeId: null, mobileModelId: null };
 }
 
 /**
@@ -105,19 +117,19 @@ function parseMakeModelSync(title, map) {
   const sortedMakes = [...map.keys()].sort((a, b) => b.length - a.length);
   for (const makeLower of sortedMakes) {
     if (titleLower.startsWith(makeLower)) {
-      const { make, models } = map.get(makeLower);
+      const { make, makeId, models } = map.get(makeLower);
       const rest = title.slice(make.length).trim();
-      const modelsSorted = [...models].sort((a, b) => b.length - a.length);
+      const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length);
       for (const model of modelsSorted) {
-        if (rest.toLowerCase().startsWith(model.toLowerCase())) {
-          return { make, model };
+        if (rest.toLowerCase().startsWith(model.label.toLowerCase())) {
+          return { make, model: model.label, mobileMakeId: makeId, mobileModelId: model.id };
         }
       }
-      return { make, model: rest.split(/\s+/)[0] || '' };
+      return { make, model: rest.split(/\s+/)[0] || '', mobileMakeId: makeId, mobileModelId: null };
     }
   }
   const parts = title.trim().split(/\s+/);
-  return { make: parts[0] || '', model: parts[1] || '' };
+  return { make: parts[0] || '', model: parts[1] || '', mobileMakeId: null, mobileModelId: null };
 }
 
 module.exports = { fetchMakesModels, parseMakeModel, parseMakeModelSync };

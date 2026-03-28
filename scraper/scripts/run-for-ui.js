@@ -82,7 +82,7 @@ function upsertListing(db, dealerId, listing, makesMap) {
   const mobileId = extractMobileId(listing.url);
   if (!mobileId) return { action: 'skip' };
 
-  const { make, model } = parseMakeModelSync(listing.title, makesMap);
+  const { make, model, mobileMakeId, mobileModelId } = parseMakeModelSync(listing.title, makesMap);
   const { regMonth, regYear } = parseReg(listing.year);
   const price = listing.price?.amount ?? null;
   const vat = listing.vat ?? null;
@@ -152,13 +152,13 @@ function upsertListing(db, dealerId, listing, makesMap) {
 
     db.prepare(`
       UPDATE listings SET
-        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, reg_month = ?, reg_year = ?,
+        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, reg_month = ?, reg_year = ?,
         fuel = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1
       WHERE id = ?
     `).run(
-      dealerId, listing.url, listing.title, make, model,
+      dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId,
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
       isDeep ? (listing.fuel || null) : existing.fuel,
@@ -180,13 +180,13 @@ function upsertListing(db, dealerId, listing, makesMap) {
 
   db.prepare(`
     INSERT INTO listings (
-      mobile_id, dealer_id, url, title, make, model, reg_month, reg_year,
+      mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, reg_month, reg_year,
       fuel, color, power, mileage, description, ad_status, kaparo, is_new,
       last_edit, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, first_seen_at, last_seen_at, is_active
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
-    mobileId, dealerId, listing.url, listing.title, make, model, regMonth, regYear,
+    mobileId, dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, regMonth, regYear,
     listing.fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, price, vat, listing.imageCount || 0,
