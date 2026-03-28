@@ -30,6 +30,22 @@ export interface OwnListingRow extends ListingRow {
   needs_sync: number;
 }
 
+export interface ListingMappingIssueRow {
+  id: number;
+  mobile_id: string;
+  title: string;
+  make: string | null;
+  model: string | null;
+  mobile_make_id: number | null;
+  mobile_model_id: number | null;
+  cars_make_id: number | null;
+  cars_model_id: number | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+  current_price: number | null;
+  last_edit: string | null;
+}
+
 export interface ListingFilters {
   make?: string;
   model?: string;
@@ -862,4 +878,34 @@ export function getExpensesByListing(listingId: number) {
     WHERE el.listing_id = ?
     ORDER BY e.date DESC
   `).all(listingId);
+}
+
+export function getListingMappingIssues(limit = 500): ListingMappingIssueRow[] {
+  return raw.prepare(`
+    SELECT
+      l.id,
+      l.mobile_id,
+      l.title,
+      l.make,
+      l.model,
+      l.mobile_make_id,
+      l.mobile_model_id,
+      l.cars_make_id,
+      l.cars_model_id,
+      l.current_price,
+      l.last_edit,
+      d.name as dealer_name,
+      d.slug as dealer_slug
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    WHERE l.is_active = 1
+      AND (
+        l.mobile_make_id IS NULL OR
+        l.mobile_model_id IS NULL OR
+        l.cars_make_id IS NULL OR
+        l.cars_model_id IS NULL
+      )
+    ORDER BY d.priority DESC, d.name, l.last_edit DESC
+    LIMIT ?
+  `).all(limit) as ListingMappingIssueRow[];
 }

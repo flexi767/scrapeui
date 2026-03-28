@@ -9,6 +9,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
   { href: '/', label: 'Listings', icon: CarIcon },
+  { href: '/mapping', label: 'Mapping', icon: MapIcon },
   { href: '/tasks', label: 'Tasks', icon: TaskIcon },
   { href: '/tasks/my', label: 'My Tasks', icon: UserTaskIcon, indent: true },
   { href: '/expenses', label: 'Expenses', icon: ExpenseIcon },
@@ -83,6 +84,14 @@ function CarIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25m-4.5 0H5.106a2.056 2.056 0 0 0-1.58.86A17.902 17.902 0 0 0 .314 17.126c-.04.62.468 1.124 1.09 1.124H2.25" />
+    </svg>
+  );
+}
+
+function MapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m9 20.25 6-2.25m0 0 6 2.25V6.75L15 4.5m0 13.5-6 2.25m6-15.75-6 2.25m0 13.5L3 18V4.5l6 2.25m0 13.5V6.75" />
     </svg>
   );
 }
