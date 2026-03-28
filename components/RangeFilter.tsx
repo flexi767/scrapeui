@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface Props {
   min: number;
@@ -13,7 +13,6 @@ interface Props {
 }
 
 export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramHigh, label, fmt }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const min = rawMin === rawMax ? rawMin - 10 : rawMin;
@@ -21,26 +20,54 @@ export default function RangeFilter({ min: rawMin, max: rawMax, paramLow, paramH
 
   const pLow = searchParams.get(paramLow);
   const pHigh = searchParams.get(paramHigh);
+  const initialLow = pLow !== null ? Number(pLow) : min;
+  const initialHigh = pHigh !== null ? Number(pHigh) : max;
+  const resetKey = `${paramLow}:${paramHigh}:${min}:${max}:${pLow ?? ''}:${pHigh ?? ''}`;
 
-  const [low, setLow] = useState(pLow !== null ? Number(pLow) : min);
-  const [high, setHigh] = useState(pHigh !== null ? Number(pHigh) : max);
+  return (
+    <RangeFilterInner
+      key={resetKey}
+      min={min}
+      max={max}
+      initialLow={initialLow}
+      initialHigh={initialHigh}
+      paramLow={paramLow}
+      paramHigh={paramHigh}
+      label={label}
+      fmt={fmt}
+      searchParamsString={searchParams.toString()}
+    />
+  );
+}
+
+interface InnerProps {
+  min: number;
+  max: number;
+  initialLow: number;
+  initialHigh: number;
+  paramLow: string;
+  paramHigh: string;
+  label?: string;
+  fmt?: (v: number) => string;
+  searchParamsString: string;
+}
+
+function RangeFilterInner({ min, max, initialLow, initialHigh, paramLow, paramHigh, label, fmt, searchParamsString }: InnerProps) {
+  const router = useRouter();
+  const [low, setLow] = useState(initialLow);
+  const [high, setHigh] = useState(initialHigh);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setLow(pLow !== null ? Number(pLow) : min);
-    setHigh(pHigh !== null ? Number(pHigh) : max);
-  }, [pLow, pHigh, min, max]);
 
   const push = useCallback((lo: number, hi: number) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      const p = new URLSearchParams(searchParams.toString());
+      const p = new URLSearchParams(searchParamsString);
       p.delete('page');
       if (lo === min) p.delete(paramLow); else p.set(paramLow, String(lo));
       if (hi === max) p.delete(paramHigh); else p.set(paramHigh, String(hi));
       router.push(`/?${p.toString()}`);
     }, 300);
-  }, [searchParams, router, min, max, paramLow, paramHigh]);
+  }, [searchParamsString, router, min, max, paramLow, paramHigh]);
 
   const active = low !== min || high !== max;
   const range = max - min;

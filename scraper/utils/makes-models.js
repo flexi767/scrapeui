@@ -3,6 +3,7 @@
  * Returns a Map: make (string) → models (string[])
  * Also exports parseMakeModel(title) using the authoritative list.
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const { execSync } = require('child_process');
 const { USER_AGENT } = require('./constants');
