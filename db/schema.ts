@@ -29,6 +29,8 @@ export const listings = sqliteTable('listings', {
   model: text('model'),
   mobileMakeId: integer('mobile_make_id'),
   mobileModelId: integer('mobile_model_id'),
+  carsMakeId: integer('cars_make_id'),
+  carsModelId: integer('cars_model_id'),
   regMonth: text('reg_month'),
   regYear: text('reg_year'),
   fuel: text('fuel'),
