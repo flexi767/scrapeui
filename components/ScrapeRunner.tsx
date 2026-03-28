@@ -14,6 +14,7 @@ interface LogEntry {
   message?: string;
   code?: number | null;
   mobileId?: string;
+  newListing?: boolean;
   priceChanged?: boolean;
   oldPrice?: number | null;
   newPrice?: number | null;
@@ -229,10 +230,38 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
               {changes.map((entry, i) => (
                 <tr key={i} className="hover:bg-gray-800/40 align-top">
                   <td className="px-4 py-2">
-                    <a href={entry.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-300">
-                      {entry.title || entry.mobileId}
-                    </a>
-                    {entry.mobileId && <div className="text-xs text-gray-500">{entry.mobileId}</div>}
+                    <div className="flex items-start gap-3">
+                      {entry.thumb ? (
+                        <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={entry.thumb}
+                            alt=""
+                            className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
+                            style={{ aspectRatio: '4/3' }}
+                          />
+                        </a>
+                      ) : (
+                        <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
+                      )}
+                      <div className="min-w-0 text-xs">
+                        <a
+                          href={entry.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mb-0.5 block truncate font-medium text-gray-100 hover:text-blue-300"
+                        >
+                          {entry.title || entry.mobileId}
+                        </a>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {entry.dealer && (
+                            <span className="rounded bg-gray-700 px-1.5 py-0.5 text-[11px] text-gray-300">{entry.dealer}</span>
+                          )}
+                          <span className="font-semibold text-green-400">{formatPrice(entry.price ?? entry.newPrice ?? entry.oldPrice)}</span>
+                        </div>
+                        {entry.mobileId && <div className="mt-0.5 text-[11px] text-gray-500">{entry.mobileId}</div>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-sm">
                     {entry.priceChanged ? (
@@ -290,6 +319,9 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                     <div className="flex items-center gap-2">
                       <span className="rounded px-1.5 py-0.5 bg-gray-700 text-gray-300 text-[11px]">{entry.dealer}</span>
                       <span className="text-green-400 font-semibold">{formatPrice(entry.price)}</span>
+                      {entry.newListing && (
+                        <span className="rounded-full bg-red-900/70 px-1.5 py-0.5 text-[10px] text-red-200">new</span>
+                      )}
                       {!!entry.imageCount && (
                         <span className="text-gray-500">{entry.imageCount} imgs</span>
                       )}
