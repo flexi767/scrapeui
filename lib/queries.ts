@@ -30,20 +30,18 @@ export interface OwnListingRow extends ListingRow {
   needs_sync: number;
 }
 
-export interface ListingMappingIssueRow {
-  id: number;
-  mobile_id: string;
-  title: string;
+export interface MakeModelMappingRow {
   make: string | null;
   model: string | null;
   mobile_make_id: number | null;
   mobile_model_id: number | null;
   cars_make_id: number | null;
   cars_model_id: number | null;
-  dealer_name: string | null;
-  dealer_slug: string | null;
-  current_price: number | null;
-  last_edit: string | null;
+  listing_count: number;
+  sample_mobile_id: string | null;
+  sample_title: string | null;
+  dealer_names: string | null;
+  latest_last_edit: string | null;
 }
 
 export interface ListingFilters {
@@ -880,32 +878,38 @@ export function getExpensesByListing(listingId: number) {
   `).all(listingId);
 }
 
-export function getListingMappingIssues(limit = 500): ListingMappingIssueRow[] {
+export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
   return raw.prepare(`
     SELECT
-      l.id,
-      l.mobile_id,
-      l.title,
       l.make,
       l.model,
       l.mobile_make_id,
       l.mobile_model_id,
       l.cars_make_id,
       l.cars_model_id,
-      l.current_price,
-      l.last_edit,
-      d.name as dealer_name,
-      d.slug as dealer_slug
+      COUNT(*) as listing_count,
+      MIN(l.mobile_id) as sample_mobile_id,
+      MIN(l.title) as sample_title,
+      GROUP_CONCAT(DISTINCT d.name) as dealer_names,
+      MAX(l.last_edit) as latest_last_edit
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.is_active = 1
-      AND (
-        l.mobile_make_id IS NULL OR
-        l.mobile_model_id IS NULL OR
-        l.cars_make_id IS NULL OR
-        l.cars_model_id IS NULL
-      )
-    ORDER BY d.priority DESC, d.name, l.last_edit DESC
+    GROUP BY
+      l.make,
+      l.model,
+      l.mobile_make_id,
+      l.mobile_model_id,
+      l.cars_make_id,
+      l.cars_model_id
+    ORDER BY
+      CASE
+        WHEN l.mobile_make_id IS NULL OR l.mobile_model_id IS NULL OR l.cars_make_id IS NULL OR l.cars_model_id IS NULL THEN 0
+        ELSE 1
+      END,
+      COUNT(*) DESC,
+      l.make,
+      l.model
     LIMIT ?
-  `).all(limit) as ListingMappingIssueRow[];
+  `).all(limit) as MakeModelMappingRow[];
 }
