@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Scraper runner for the scrapeui web interface.
  * Emits newline-delimited JSON to stdout for SSE streaming.
@@ -177,7 +178,7 @@ function upsertListing(db, dealerId, listing, makesMap) {
     return { action: 'updated', snapshot: priceChanged || vatChanged };
   }
 
-  const result = db.prepare(`
+  db.prepare(`
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, reg_month, reg_year,
       fuel, color, power, mileage, description, ad_status, kaparo, is_new,

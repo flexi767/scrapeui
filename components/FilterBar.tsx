@@ -29,7 +29,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const currentFuels = searchParams.getAll('fuel');
   const currentSearch = searchParams.get('search') ?? '';
 
-  const [searchInput, setSearchInput] = useState(currentSearch);
   const [dealerOpen, setDealerOpen] = useState(false);
   const dealerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,11 +43,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
-
-  // Sync search input when URL changes externally
-  useEffect(() => {
-    setSearchInput(searchParams.get('search') ?? '');
-  }, [searchParams]);
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
     const p = new URLSearchParams();
@@ -94,7 +88,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   function onSearchChange(value: string) {
-    setSearchInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       router.push(`/?${buildParams({ search: value })}`);
@@ -195,9 +188,10 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     <div className="flex flex-wrap items-center gap-1.5">
       {/* Search */}
       <input
+        key={currentSearch}
         type="search"
         placeholder="Search listings…"
-        value={searchInput}
+        defaultValue={currentSearch}
         onChange={(e) => onSearchChange(e.target.value)}
         className="h-8 w-48 rounded border border-gray-600 bg-gray-800 px-3 text-sm text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
       />

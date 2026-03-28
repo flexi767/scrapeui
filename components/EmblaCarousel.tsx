@@ -17,6 +17,7 @@ export default function EmblaCarousel({ images, title }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState('50% 50%');
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
@@ -45,7 +46,6 @@ export default function EmblaCarousel({ images, title }: Props) {
 
   useEffect(() => {
     if (!mainApi) return;
-    onSelect();
     mainApi.on('select', onSelect);
     mainApi.on('reInit', onSelect);
     return () => {
@@ -53,6 +53,10 @@ export default function EmblaCarousel({ images, title }: Props) {
       mainApi.off('reInit', onSelect);
     };
   }, [mainApi, onSelect]);
+
+  useEffect(() => {
+    thumbsApi?.scrollTo(selectedIndex);
+  }, [thumbsApi, selectedIndex]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -150,14 +154,15 @@ export default function EmblaCarousel({ images, title }: Props) {
               transform: zoomed
                 ? `scale(2.5) translate(${translate.x}px, ${translate.y}px)`
                 : 'scale(1)',
-              cursor: zoomed ? (isDragging.current ? 'grabbing' : 'grab') : 'zoom-in',
-              transition: isDragging.current ? 'none' : 'transform 0.2s',
+              cursor: zoomed ? (dragging ? 'grabbing' : 'grab') : 'zoom-in',
+              transition: dragging ? 'none' : 'transform 0.2s',
             }}
             onMouseDown={(e) => {
               if (!zoomed) return;
               e.preventDefault();
               e.stopPropagation();
               isDragging.current = true;
+              setDragging(true);
               hasMoved.current = false;
               dragStart.current = { mx: e.clientX, my: e.clientY, tx: translate.x, ty: translate.y };
 
@@ -169,6 +174,7 @@ export default function EmblaCarousel({ images, title }: Props) {
               };
               const onUp = () => {
                 isDragging.current = false;
+                setDragging(false);
                 if (!hasMoved.current) {
                   setZoomed(false);
                   setTranslate({ x: 0, y: 0 });
