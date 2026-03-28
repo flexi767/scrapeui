@@ -421,7 +421,18 @@ async function main() {
   db.pragma('foreign_keys = ON');
   const makesMap = await fetchMakesModels().catch(() => null);
   const dealers = db.prepare(`
-    SELECT id, slug, name, mobile_url as mobileBg, own, active
+    SELECT
+      id,
+      slug,
+      name,
+      mobile_url as mobileBg,
+      own,
+      active,
+      mobile_user,
+      mobile_password,
+      cars_url,
+      cars_user,
+      cars_password
     FROM dealers
     WHERE active = 1 AND mobile_url IS NOT NULL
     ORDER BY name
