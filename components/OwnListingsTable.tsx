@@ -19,14 +19,13 @@ function AdStatusBadge({ status }: { status: string }) {
 }
 
 function VatBadge({ vat }: { vat: string | null }) {
-  if (!vat) return null;
   if (vat === 'included')
-    return <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-xs text-blue-200">included</span>;
+    return <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>;
   if (vat === 'exempt')
-    return <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-xs text-green-200">exempt</span>;
+    return <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>;
   if (vat === 'excluded')
-    return <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-xs text-red-200">excluded</span>;
-  return null;
+    return <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>;
+  return <span className="text-gray-600">—</span>;
 }
 
 function KaparoBadge({ kaparo }: { kaparo: number }) {
@@ -103,28 +102,29 @@ export default function OwnListingsTable({ initialRows }: Props) {
     <div className="overflow-x-auto rounded-lg border border-gray-700/60">
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
-          <tr className="border-b border-gray-700 bg-gray-800/60 text-xs text-gray-400 uppercase tracking-wide">
-            <th className="px-2 py-2 text-left w-6">Sync</th>
-            <th className="px-2 py-2 text-left w-12">Img</th>
-            <th className="px-2 py-2 text-left">Make/Model</th>
-            <th className="px-2 py-2 text-left">Title</th>
-            <th className="px-2 py-2 text-left">Dealer</th>
-            <th className="px-2 py-2 text-left">Status</th>
-            <th className="px-2 py-2 text-right">Price</th>
-            <th className="px-2 py-2 text-left">VAT</th>
-            <th className="px-2 py-2 text-left">Kap</th>
-            <th className="px-2 py-2 text-left">Last Edit</th>
-            <th className="px-2 py-2 text-left">New</th>
-            <th className="px-2 py-2 text-left">Mo/Yr</th>
-            <th className="px-2 py-2 text-left">Fuel</th>
-            <th className="px-2 py-2 text-right">KM</th>
-            <th className="px-2 py-2 text-center w-16"></th>
+          <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
+            <th className="px-2 py-1.5 text-left w-6">Sync</th>
+            <th className="w-16 px-3 py-1.5 text-left">Img</th>
+            <th className="px-3 py-1.5 text-left">Make / Model</th>
+            <th className="px-3 py-1.5 text-left">Title</th>
+            <th className="px-3 py-1.5 text-left">Dealer</th>
+            <th className="px-2 py-1.5 text-center w-14">Paid</th>
+            <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
+            <th className="px-3 py-1.5 text-center">VAT</th>
+            <th className="px-2 py-1.5 text-center w-14">К</th>
+            <th className="px-3 py-1.5 text-right">Last Edit</th>
+            <th className="px-2 py-1.5 text-center w-12">New</th>
+            <th className="px-3 py-1.5 text-right">Month</th>
+            <th className="px-3 py-1.5 text-right">Year</th>
+            <th className="px-3 py-1.5 text-center">Fuel</th>
+            <th className="px-3 py-1.5 text-right">KM</th>
+            <th className="px-2 py-1.5 text-center w-16"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={15} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={16} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -134,10 +134,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
             const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
             const images = buildImageList(row.mobile_id, thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
             const thumbSrc = images[0]?.thumb ?? null;
-
-            const regDisplay = row.reg_month
-              ? `${row.reg_month}/${row.reg_year}`
-              : row.reg_year ?? '—';
 
             const kmFormatted = row.mileage != null
               ? row.mileage.toLocaleString('en-US')
@@ -170,8 +166,9 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 </td>
 
                 {/* Make / Model */}
-                <td className="px-2 py-1.5 text-gray-300 whitespace-nowrap">
-                  {row.make} {row.model}
+                <td className="px-2 py-1.5 whitespace-nowrap">
+                  <div className="font-medium text-white">{row.make ?? '—'}</div>
+                  <div className="text-xs text-gray-400">{row.model ?? '—'}</div>
                 </td>
 
                 {/* Title */}
@@ -242,9 +239,9 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       className="bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
                     >
                       <option value="">—</option>
-                      <option value="included">included</option>
-                      <option value="exempt">exempt</option>
-                      <option value="excluded">excluded</option>
+                      <option value="included">има</option>
+                      <option value="exempt">няма</option>
+                      <option value="excluded">+ДДС</option>
                     </select>
                   ) : (
                     <VatBadge vat={row.vat} />
@@ -280,9 +277,14 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   )}
                 </td>
 
-                {/* Month/Year */}
-                <td className="px-2 py-1.5 text-gray-400 whitespace-nowrap text-xs">
-                  {regDisplay}
+                {/* Month */}
+                <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
+                  {row.reg_month ?? '—'}
+                </td>
+
+                {/* Year */}
+                <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
+                  {row.reg_year ?? '—'}
                 </td>
 
                 {/* Fuel */}
