@@ -12,6 +12,7 @@ const util = require('util');
 const Database = require('better-sqlite3');
 const { fetchMakesModels, parseMakeModelSync } = require('../utils/makes-models');
 const { resolveCarsBgMakeModelIds } = require('../utils/carsbg-makes-models');
+const { fetchFuelTypes, normalizeFuelSync } = require('../utils/fuel-types');
 
 // Parse args
 const args = process.argv.slice(2);
@@ -78,7 +79,7 @@ function cleanDescription(text) {
   return trimmed.join('\n').trim();
 }
 
-async function upsertListing(db, dealerId, listing, makesMap) {
+async function upsertListing(db, dealerId, listing, makesMap, fuelMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
   if (!mobileId) return { action: 'skip', title: listing.title || '', make: '', model: '' };
@@ -88,6 +89,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
   const normalizedTitle = (titleRemainder || '').trim();
   const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({ title: rawTitle, make, model }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year);
+  const fuel = normalizeFuelSync(listing.fuel, fuelMap);
   const price = listing.price?.amount ?? null;
   const vat = listing.vat ?? null;
 
@@ -167,7 +169,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
       dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
-      isDeep ? (listing.fuel || null) : existing.fuel,
+      isDeep ? (fuel || null) : existing.fuel,
       isDeep ? (listing.color || null) : existing.color,
       isDeep ? (listing.power || null) : existing.power,
       isDeep ? (listing.mileage || null) : existing.mileage,
@@ -193,7 +195,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
-    listing.fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
+    fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
@@ -205,7 +207,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
   return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }
 
-async function scrapeCompetitorForUI(dealer, db, makesMap) {
+async function scrapeCompetitorForUI(dealer, db, makesMap, fuelMap) {
   let count = 0;
   const maxPages = 20;
   const snapshotDate = new Date().toISOString().slice(0, 10);
@@ -279,7 +281,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
               dealer: dealer.slug,
               snapshotDate,
             };
-            const result = await upsertListing(db, dealer.id, listing, makesMap);
+            const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap);
             count++;
             emit({
               type: 'listing',
@@ -430,6 +432,7 @@ async function main() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   const makesMap = await fetchMakesModels().catch(() => null);
+  const fuelMap = await fetchFuelTypes().catch(() => null);
   const dealers = db.prepare(`
     SELECT
       id,
@@ -461,7 +464,7 @@ async function main() {
   for (const dealer of selected) {
     emit({ type: 'log', message: `Starting scrape: ${dealer.name}` });
     try {
-      const count = await scrapeCompetitorForUI(dealer, db, makesMap);
+      const count = await scrapeCompetitorForUI(dealer, db, makesMap, fuelMap);
       emit({ type: 'done', dealer: dealer.slug, count });
     } catch (err) {
       hadErrors = true;
