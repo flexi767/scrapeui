@@ -59,7 +59,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     for (const s of currentStatuses) p.append('status', s);
     for (const v of currentVat) p.append('vat', v);
     for (const f of currentFuels) p.append('fuel', f);
-    for (const f of currentFuels) p.append('fuel', f);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
