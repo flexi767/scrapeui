@@ -81,10 +81,12 @@ function cleanDescription(text) {
 async function upsertListing(db, dealerId, listing, makesMap) {
   const now = new Date().toISOString();
   const mobileId = extractMobileId(listing.url);
-  if (!mobileId) return { action: 'skip' };
+  if (!mobileId) return { action: 'skip', title: listing.title || '' };
 
-  const { make, model, mobileMakeId, mobileModelId } = parseMakeModelSync(listing.title, makesMap);
-  const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({ title: listing.title, make, model }).catch(() => ({ carsMakeId: null, carsModelId: null }));
+  const rawTitle = listing.title || '';
+  const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
+  const normalizedTitle = (titleRemainder || '').trim();
+  const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({ title: rawTitle, make, model }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year);
   const price = listing.price?.amount ?? null;
   const vat = listing.vat ?? null;
@@ -101,7 +103,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
     const lastEditChanged = isDeep ? ((listing.lastEdit || null) !== (existing.last_edit || null)) : false;
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
-    const titleChanged = (listing.title || '') !== (existing.title || '');
+    const titleChanged = normalizedTitle !== (existing.title || '');
     const descriptionChanged = isDeep ? ((listing.description || '') !== (existing.description || '')) : false;
     if (priceChanged || vatChanged || lastEditChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged) {
       db.prepare(`
@@ -114,14 +116,14 @@ async function upsertListing(db, dealerId, listing, makesMap) {
         lastEditChanged ? (listing.lastEdit || null) : null,
         adStatusChanged ? (listing.adStatus || 'none') : null,
         kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
-        titleChanged ? (listing.title || null) : null,
+        titleChanged ? (normalizedTitle || null) : null,
         descriptionChanged ? (listing.description || null) : null,
         now,
       );
       emit({
         type: 'change',
         mobileId: mobileId,
-        title: existing.title || listing.title,
+        title: existing.title || normalizedTitle,
         url: listing.url || existing.url,
         dealer: listing.dealer || null,
         thumb: listing.thumb || null,
@@ -160,7 +162,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
         last_seen_at = ?, is_active = 1
       WHERE id = ?
     `).run(
-      dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
+      dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
       isDeep ? (listing.fuel || null) : existing.fuel,
@@ -177,7 +179,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
       ...imageValues,
       now, existing.id
     );
-    return { action: 'updated', snapshot: priceChanged || vatChanged };
+    return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle };
   }
 
   db.prepare(`
@@ -188,7 +190,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
       images_downloaded, first_seen_at, last_seen_at, is_active
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
-    mobileId, dealerId, listing.url, listing.title, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
+    mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
     listing.fuel || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, price, vat, listing.imageCount || 0,
@@ -198,7 +200,7 @@ async function upsertListing(db, dealerId, listing, makesMap) {
     now, now
   );
 
-  return { action: 'inserted', snapshot: false };
+  return { action: 'inserted', snapshot: false, title: normalizedTitle };
 }
 
 async function scrapeCompetitorForUI(dealer, db, makesMap) {
@@ -280,7 +282,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
             emit({
               type: 'listing',
               dealer: dealer.slug,
-              title: card.title,
+              title: result.title,
               price: priceAmount,
               url: card.url,
               thumb: card.thumb || '',
@@ -402,7 +404,7 @@ async function scrapeCompetitorForUI(dealer, db, makesMap) {
         emit({
           type: 'listing',
           dealer: dealer.slug,
-          title: listing.title,
+          title: result.title,
           price: priceAmount,
           url,
           thumb: raw.firstThumbUrl || request.userData?.thumb || '',

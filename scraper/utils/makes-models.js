@@ -10,6 +10,15 @@ const { USER_AGENT } = require('./constants');
 
 let _makesMap = null; // cached after first load
 
+function stripParsedPrefix(title, make, model) {
+  const rawTitle = String(title || '').trim();
+  if (!rawTitle) return '';
+  const prefix = [make, model].filter(Boolean).join(' ').trim();
+  if (!prefix) return rawTitle;
+  const remainder = rawTitle.slice(prefix.length).trim();
+  return rawTitle.toLowerCase().startsWith(prefix.toLowerCase()) ? remainder : rawTitle;
+}
+
 async function fetchMakesModels() {
   if (_makesMap) return _makesMap;
 
@@ -103,16 +112,37 @@ async function parseMakeModel(title) {
       const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length);
       for (const model of modelsSorted) {
         if (rest.toLowerCase().startsWith(model.label.toLowerCase())) {
-          return { make, model: model.label, mobileMakeId: makeId, mobileModelId: model.id };
+          return {
+            make,
+            model: model.label,
+            mobileMakeId: makeId,
+            mobileModelId: model.id,
+            titleRemainder: stripParsedPrefix(title, make, model.label),
+          };
         }
       }
-      return { make, model: rest.split(/\s+/)[0] || '', mobileMakeId: makeId, mobileModelId: null };
+      const fallbackModel = rest.split(/\s+/)[0] || '';
+      return {
+        make,
+        model: fallbackModel,
+        mobileMakeId: makeId,
+        mobileModelId: null,
+        titleRemainder: stripParsedPrefix(title, make, fallbackModel),
+      };
     }
   }
 
   // Unknown make — best-effort split
   const parts = title.trim().split(/\s+/);
-  return { make: parts[0] || '', model: parts[1] || '', mobileMakeId: null, mobileModelId: null };
+  const fallbackMake = parts[0] || '';
+  const fallbackModel = parts[1] || '';
+  return {
+    make: fallbackMake,
+    model: fallbackModel,
+    mobileMakeId: null,
+    mobileModelId: null,
+    titleRemainder: stripParsedPrefix(title, fallbackMake, fallbackModel),
+  };
 }
 
 /**
@@ -129,14 +159,35 @@ function parseMakeModelSync(title, map) {
       const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length);
       for (const model of modelsSorted) {
         if (rest.toLowerCase().startsWith(model.label.toLowerCase())) {
-          return { make, model: model.label, mobileMakeId: makeId, mobileModelId: model.id };
+          return {
+            make,
+            model: model.label,
+            mobileMakeId: makeId,
+            mobileModelId: model.id,
+            titleRemainder: stripParsedPrefix(title, make, model.label),
+          };
         }
       }
-      return { make, model: rest.split(/\s+/)[0] || '', mobileMakeId: makeId, mobileModelId: null };
+      const fallbackModel = rest.split(/\s+/)[0] || '';
+      return {
+        make,
+        model: fallbackModel,
+        mobileMakeId: makeId,
+        mobileModelId: null,
+        titleRemainder: stripParsedPrefix(title, make, fallbackModel),
+      };
     }
   }
   const parts = title.trim().split(/\s+/);
-  return { make: parts[0] || '', model: parts[1] || '', mobileMakeId: null, mobileModelId: null };
+  const fallbackMake = parts[0] || '';
+  const fallbackModel = parts[1] || '';
+  return {
+    make: fallbackMake,
+    model: fallbackModel,
+    mobileMakeId: null,
+    mobileModelId: null,
+    titleRemainder: stripParsedPrefix(title, fallbackMake, fallbackModel),
+  };
 }
 
 module.exports = { fetchMakesModels, parseMakeModel, parseMakeModelSync };
