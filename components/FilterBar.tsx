@@ -14,9 +14,10 @@ interface Props {
   total: number;
   priceChangeRange?: { min: number; max: number } | null;
   priceRange?: { min: number; max: number } | null;
+  basePath?: string;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total, priceChangeRange, priceRange }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total, priceChangeRange, priceRange, basePath = '/listings' }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -72,24 +73,24 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   function onMakeChange(make: string) {
-    router.push(`/?${buildParams({ make, model: '' })}`);
+    router.push(`${basePath}?${buildParams({ make, model: '' })}`);
   }
 
   function onModelChange(model: string) {
-    router.push(`/?${buildParams({ model })}`);
+    router.push(`${basePath}?${buildParams({ model })}`);
   }
 
   function onDealerToggle(slug: string) {
     const next = currentDealers.includes(slug)
       ? currentDealers.filter((d) => d !== slug)
       : [...currentDealers, slug];
-    router.push(`/?${buildParams({ dealer: next })}`);
+    router.push(`${basePath}?${buildParams({ dealer: next })}`);
   }
 
   function onSearchChange(value: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      router.push(`/?${buildParams({ search: value })}`);
+      router.push(`${basePath}?${buildParams({ search: value })}`);
     }, 350);
   }
 
@@ -99,7 +100,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     const order = searchParams.get('order');
     if (sort) p.set('sort', sort);
     if (order) p.set('order', order);
-    router.push(`/?${p.toString()}`);
+    router.push(`${basePath}?${p.toString()}`);
   }
 
   const availableModels = currentMake ? (makeModels[currentMake] ?? []) : [];
@@ -118,7 +119,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     const next = currentYears.includes(year)
       ? currentYears.filter(y => y !== year)
       : [...currentYears, year];
-    router.push(`/?${buildParams({ year: next })}`);
+    router.push(`${basePath}?${buildParams({ year: next })}`);
   }
 
   const [statusOpen, setStatusOpen] = useState(false);
@@ -133,7 +134,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   function onStatusToggle(s: string) {
     const next = currentStatuses.includes(s) ? currentStatuses.filter(x => x !== s) : [...currentStatuses, s];
-    router.push(`/?${buildParams({ status: next })}`);
+    router.push(`${basePath}?${buildParams({ status: next })}`);
   }
 
   const STATUS_OPTIONS = [
@@ -154,7 +155,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   function onVatToggle(v: string) {
     const next = currentVat.includes(v) ? currentVat.filter(x => x !== v) : [...currentVat, v];
-    router.push(`/?${buildParams({ vat: next })}`);
+    router.push(`${basePath}?${buildParams({ vat: next })}`);
   }
 
   const VAT_OPTIONS = [
@@ -176,7 +177,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   function onFuelToggle(f: string) {
     const next = currentFuels.includes(f) ? currentFuels.filter(x => x !== f) : [...currentFuels, f];
-    router.push(`/?${buildParams({ fuel: next })}`);
+    router.push(`${basePath}?${buildParams({ fuel: next })}`);
   }
 
   const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
@@ -246,7 +247,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               );
             })}
             {currentDealers.length > 0 && (
-              <button onClick={() => { onDealerToggle(''); router.push(`/?${buildParams({ dealer: [] })}`); setDealerOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+              <button onClick={() => { onDealerToggle(''); router.push(`${basePath}?${buildParams({ dealer: [] })}`); setDealerOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear dealers
               </button>
             )}
@@ -274,7 +275,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               </label>
             ))}
             {currentStatuses.length > 0 && (
-              <button onClick={() => { router.push(`/?${buildParams({ status: [] })}`); setStatusOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+              <button onClick={() => { router.push(`${basePath}?${buildParams({ status: [] })}`); setStatusOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear paid
               </button>
             )}
@@ -285,7 +286,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       {/* Price range slider */}
       {priceRange && (
         <RangeFilter min={priceRange.min} max={priceRange.max} paramLow="p_min" paramHigh="p_max"
-          fmt={v => `€${(v/1000).toFixed(0)}k`} />
+          fmt={v => `€${(v/1000).toFixed(0)}k`} basePath={basePath} />
       )}
 
       {/* VAT multi-select dropdown */}
@@ -308,7 +309,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               </label>
             ))}
             {currentVat.length > 0 && (
-              <button onClick={() => { router.push(`/?${buildParams({ vat: [] })}`); setVatOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+              <button onClick={() => { router.push(`${basePath}?${buildParams({ vat: [] })}`); setVatOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear VAT
               </button>
             )}
@@ -336,7 +337,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               </label>
             ))}
             {currentFuels.length > 0 && (
-              <button onClick={() => { router.push(`/?${buildParams({ fuel: [] })}`); setFuelOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+              <button onClick={() => { router.push(`${basePath}?${buildParams({ fuel: [] })}`); setFuelOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear Fuel
               </button>
             )}
@@ -366,7 +367,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
               </label>
             ))}
             {currentYears.length > 0 && (
-              <button onClick={() => { router.push(`/?${buildParams({ year: [] })}`); setYearOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+              <button onClick={() => { router.push(`${basePath}?${buildParams({ year: [] })}`); setYearOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear years
               </button>
             )}
@@ -376,7 +377,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
       {/* Price change slider */}
       {priceChangeRange && (
-        <PriceChangeFilter min={priceChangeRange.min} max={priceChangeRange.max} />
+        <PriceChangeFilter min={priceChangeRange.min} max={priceChangeRange.max} basePath={basePath} />
       )}
 
       {/* Clear all — always visible */}
@@ -390,6 +391,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
         <span>{total.toLocaleString()} ad{total !== 1 ? 's' : ''}</span>
+        <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Edit Own</a>
         <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</a>
       </div>
     </div>
