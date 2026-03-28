@@ -52,11 +52,12 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const effectiveSelected = selectedDealers.filter(slug => activeSlugs.has(slug));
 
   useEffect(() => {
+    const nextActiveSlugs = new Set(activeDealers.map(d => d.slug));
     setSelectedDealers(prev => {
-      const next = prev.filter(slug => activeSlugs.has(slug));
+      const next = prev.filter(slug => nextActiveSlugs.has(slug));
       return next.length === prev.length ? prev : next;
     });
-  }, [initialDealers]);
+  }, [activeDealers]);
 
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
@@ -259,7 +260,6 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                           )}
                           <span className="font-semibold text-green-400">{formatPrice(entry.price ?? entry.newPrice ?? entry.oldPrice)}</span>
                         </div>
-                        {entry.mobileId && <div className="mt-0.5 text-[11px] text-gray-500">{entry.mobileId}</div>}
                       </div>
                     </div>
                   </td>
