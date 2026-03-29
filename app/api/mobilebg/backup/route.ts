@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
-import { backupDealerToDb } from '@/lib/mobile-bg/backup';
+import { backupDealerToDb, type BackupProgressEvent } from '@/lib/mobile-bg/backup';
 
 export const runtime = 'nodejs';
 
@@ -27,14 +27,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
   }
 
-  const result = await backupDealerToDb(raw, {
-    id: dealer.id,
-    slug: dealer.slug,
-    name: dealer.name,
-    mobileUrl: dealer.mobile_url,
-    mobileUser: dealer.mobile_user,
-    mobilePassword: dealer.mobile_password,
-  }, raw.name);
+  const mobileUrl = dealer.mobile_url;
+  const mobileUser = dealer.mobile_user;
+  const mobilePassword = dealer.mobile_password;
 
-  return NextResponse.json(result);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const enc = new TextEncoder();
+
+      const send = (data: BackupProgressEvent | { type: 'error'; message: string }) => {
+        controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      try {
+        await backupDealerToDb(raw, {
+          id: dealer.id,
+          slug: dealer.slug,
+          name: dealer.name,
+          mobileUrl,
+          mobileUser,
+          mobilePassword,
+        }, raw.name, (event) => send(event));
+      } catch (error) {
+        send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }

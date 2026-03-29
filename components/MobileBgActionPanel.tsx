@@ -15,12 +15,30 @@ interface Props {
   backupId?: number | null;
 }
 
+interface BackupLogEntry {
+  type: 'status' | 'listing' | 'complete' | 'error';
+  dealer?: string;
+  message?: string;
+  total?: number;
+  current?: number;
+  action?: 'created' | 'updated';
+  mobileId?: string;
+  make?: string;
+  model?: string;
+  title?: string;
+  url?: string;
+  imageCount?: number;
+  listingsCount?: number;
+  imagesCount?: number;
+}
+
 export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, backupId }: Props) {
   const initialDealer = useMemo(() => defaultDealerSlug || dealers[0]?.slug || '', [defaultDealerSlug, dealers]);
   const [dealerSlug, setDealerSlug] = useState(initialDealer);
   const [backupRunning, setBackupRunning] = useState(false);
   const [editRunning, setEditRunning] = useState(false);
   const [repostRunning, setRepostRunning] = useState(false);
+  const [backupLog, setBackupLog] = useState<BackupLogEntry[]>([]);
 
   async function runAction(
     endpoint: string,
@@ -49,6 +67,63 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
     }
   }
 
+  async function runBackup() {
+    setBackupRunning(true);
+    setBackupLog([]);
+
+    try {
+      const res = await fetch('/api/mobilebg/backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealerSlug }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Backup failed');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let completed = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() ?? '';
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
+          const payload = JSON.parse(line.slice(6)) as BackupLogEntry;
+          setBackupLog((prev) => [...prev, payload]);
+
+          if (payload.type === 'error') {
+            toast.error(payload.message || 'Backup failed');
+          }
+
+          if (payload.type === 'complete') {
+            completed = true;
+            toast.success(`Backup completed: ${payload.listingsCount ?? 0} listings, ${payload.imagesCount ?? 0} images`);
+            if (typeof window !== 'undefined') window.location.reload();
+          }
+        }
+      }
+
+      if (!completed) {
+        toast.error('Backup ended without a completion event');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Backup failed');
+    } finally {
+      setBackupRunning(false);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-900/40 p-4 space-y-4">
       <div>
@@ -71,7 +146,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
 
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => runAction('/api/mobilebg/backup', { dealerSlug }, setBackupRunning, 'Backup completed')}
+          onClick={runBackup}
           disabled={!dealerSlug || backupRunning}
           className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -94,6 +169,52 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
           {repostRunning ? 'Reposting…' : 'Repost backup'}
         </button>
       </div>
+
+      {(backupRunning || backupLog.length > 0) && (
+        <div className="rounded-lg border border-gray-700 bg-gray-950/50">
+          <div className="border-b border-gray-700 px-4 py-3">
+            <div className="text-sm font-medium text-gray-200">Live backup feedback</div>
+            <p className="mt-1 text-xs text-gray-500">Shows what the backup is saving in real time.</p>
+          </div>
+          <div className="max-h-96 space-y-2 overflow-y-auto px-4 py-3">
+            {backupLog.map((entry, index) => (
+              entry.type === 'listing' ? (
+                <div key={`${entry.mobileId || index}-${index}`} className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white">
+                        {[entry.make, entry.model].filter(Boolean).join(' ') || entry.mobileId || 'Listing'}
+                      </div>
+                      <div className="truncate text-xs text-gray-400">{entry.title || entry.mobileId || '—'}</div>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${entry.action === 'created' ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/60 text-amber-200'}`}>
+                      {entry.action === 'created' ? 'new' : 'updated'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                    <span>{entry.current ?? 0}/{entry.total ?? 0}</span>
+                    <span>{entry.imageCount ?? 0} images</span>
+                    {entry.url ? (
+                      <a href={entry.url} target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200">
+                        open
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div key={`${entry.type}-${index}`} className="rounded-md border border-gray-800 bg-gray-900/40 px-3 py-2 text-sm">
+                  <div className={`${entry.type === 'error' ? 'text-red-300' : entry.type === 'complete' ? 'text-emerald-300' : 'text-gray-300'}`}>
+                    {entry.message || entry.type}
+                  </div>
+                </div>
+              )
+            ))}
+            {backupLog.length === 0 ? (
+              <div className="text-sm text-gray-500">Waiting for backup progress…</div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

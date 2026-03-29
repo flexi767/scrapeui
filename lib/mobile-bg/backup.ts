@@ -57,6 +57,24 @@ export interface BackupDealerResult {
   imagesCount: number;
 }
 
+export interface BackupProgressEvent {
+  type: 'status' | 'listing' | 'complete';
+  dealer?: string;
+  message?: string;
+  total?: number;
+  current?: number;
+  action?: 'created' | 'updated';
+  mobileId?: string;
+  make?: string;
+  model?: string;
+  title?: string;
+  url?: string;
+  imageCount?: number;
+  runId?: number;
+  listingsCount?: number;
+  imagesCount?: number;
+}
+
 export function getStorageRoot(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'mobilebg-backups');
 }
@@ -392,7 +410,7 @@ function upsertBackupArtifact(
   runId: number,
   dealerId: number,
   detail: ScrapedDetail,
-): number {
+): { backupId: number; action: 'created' | 'updated' } {
   const now = new Date().toISOString();
   const listingRow = db.prepare(`SELECT id FROM listings WHERE mobile_id = ? LIMIT 1`).get(detail.mobileId) as { id?: number } | undefined;
   const existing = db.prepare(`
@@ -447,7 +465,7 @@ function upsertBackupArtifact(
     );
 
     clearBackupImages(db, canonical.id);
-    return canonical.id;
+    return { backupId: canonical.id, action: 'updated' };
   }
 
   const result = db.prepare(`
@@ -487,7 +505,7 @@ function upsertBackupArtifact(
     now,
   );
 
-  return Number(result.lastInsertRowid);
+  return { backupId: Number(result.lastInsertRowid), action: 'created' };
 }
 
 function insertBackupImages(db: Database.Database, backupId: number, savedImages: SavedImage[]): void {
@@ -509,6 +527,7 @@ export async function backupDealerToDb(
   db: Database.Database,
   dealer: DealerBackupConfig,
   dbPath: string,
+  onProgress?: (event: BackupProgressEvent) => void,
 ): Promise<BackupDealerResult> {
   const storageRoot = getStorageRoot(dbPath);
   const dealerRoot = path.join(storageRoot, dealer.slug);
@@ -516,6 +535,7 @@ export async function backupDealerToDb(
   dedupeMobileBgBackups(db, dealer.id);
 
   const runId = createBackupRun(db, dealer.id, dealer.mobileUrl);
+  onProgress?.({ type: 'status', dealer: dealer.name, message: 'Starting backup run', runId });
   const makesMap = await fetchMakesModels().catch(() => null);
 
   const browser = await chromium.launch({ headless: true });
@@ -523,22 +543,46 @@ export async function backupDealerToDb(
   const page = await context.newPage();
 
   try {
+    onProgress?.({ type: 'status', dealer: dealer.name, message: 'Logging into mobile.bg', runId });
     const loggedIn = await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword);
     if (!loggedIn) {
       throw new Error(`Login failed for ${dealer.slug}`);
     }
 
+    onProgress?.({ type: 'status', dealer: dealer.name, message: 'Collecting dealer listings', runId });
     const links = await collectListingLinks(page, dealer.mobileUrl);
+    onProgress?.({
+      type: 'status',
+      dealer: dealer.name,
+      message: `Found ${links.length} listings to save`,
+      runId,
+      total: links.length,
+    });
     let imageCount = 0;
 
-    for (const link of links) {
+    for (let index = 0; index < links.length; index += 1) {
+      const link = links[index];
       const detail = await scrapeListingDetail(page, link, makesMap);
       const listingDir = path.join(dealerRoot, detail.mobileId);
       await ensureDir(listingDir);
-      const backupId = upsertBackupArtifact(db, runId, dealer.id, detail);
+      const { backupId, action } = upsertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
       imageCount += savedImages.length;
+      onProgress?.({
+        type: 'listing',
+        dealer: dealer.name,
+        runId,
+        current: index + 1,
+        total: links.length,
+        action,
+        mobileId: detail.mobileId,
+        make: detail.make,
+        model: detail.model,
+        title: detail.title || detail.sourceTitle,
+        url: detail.url,
+        imageCount: savedImages.length,
+      });
     }
 
     const finishedAt = new Date().toISOString();
@@ -548,7 +592,14 @@ export async function backupDealerToDb(
       WHERE id = ?
     `).run(links.length, imageCount, finishedAt, finishedAt, runId);
 
-    return { runId, listingsCount: links.length, imagesCount: imageCount };
+    const result = { runId, listingsCount: links.length, imagesCount: imageCount };
+    onProgress?.({
+      type: 'complete',
+      dealer: dealer.name,
+      message: `Saved ${links.length} listings and ${imageCount} images`,
+      ...result,
+    });
+    return result;
   } catch (error) {
     const failedAt = new Date().toISOString();
     db.prepare(`
