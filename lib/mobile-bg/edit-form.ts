@@ -10,7 +10,7 @@ function getSnapshotDir(dbPath: string, dealerSlug: string, mobileId: string): s
   return path.join(getStorageRoot(dbPath), dealerSlug, mobileId, 'edit-form');
 }
 
-async function submitMyAdsEditForm(page: import('playwright').Page, listingId: string, listingToken: string) {
+export async function submitMyAdsEditForm(page: import('playwright').Page, listingId: string, listingToken: string) {
   return page.evaluate(({ listingId: id, listingToken: token }) => {
     const form = (document.forms.namedItem('search') as HTMLFormElement | null) || (document as Document & { search?: HTMLFormElement }).search || null;
     if (!form) throw new Error('My Ads search form not found');
