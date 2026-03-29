@@ -87,12 +87,6 @@ export async function applyCapturedMobileBgDraft(
       field.name && !skip.has(String(field.name)) && !['hidden', 'file'].includes(String(field.type || '')),
     );
 
-    const setValue = (element: HTMLInputElement | HTMLTextAreaElement, value: unknown) => {
-      element.value = String(value ?? '');
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-
     for (const field of editable) {
       const element = document.querySelector(`[name="${String(field.name)}"]`) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
       if (!element) continue;
@@ -119,7 +113,9 @@ export async function applyCapturedMobileBgDraft(
       }
 
       if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-        setValue(element, effectiveValue);
+        element.value = String(effectiveValue ?? '');
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
   }, {

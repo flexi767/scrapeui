@@ -116,13 +116,23 @@ export async function updateBackupOnMobileBg(
     await page.screenshot({ path: afterSubmitPath, fullPage: true });
 
     const bodyText = (await page.textContent('body').catch(() => '')) || '';
+    const successState =
+      bodyText.includes('Избор на тип промотиране') ||
+      bodyText.includes('Преглед на обявата') ||
+      bodyText.includes('Вашата обява') ||
+      bodyText.includes('Моите обяви');
+    const stillOnEditForm =
+      bodyText.includes('Допълнителна информация') &&
+      bodyText.includes('Данни за обратна връзка') &&
+      bodyText.includes('Марка');
     const hasValidationError =
-      bodyText.includes('Попълнете') ||
-      bodyText.includes('греш') ||
-      bodyText.includes('задължител') ||
-      bodyText.includes('Невалид');
+      stillOnEditForm &&
+      (bodyText.includes('Попълнете') ||
+        bodyText.includes('греш') ||
+        bodyText.includes('задължител') ||
+        bodyText.includes('Невалид'));
 
-    if (hasValidationError) {
+    if (!successState && hasValidationError) {
       throw new Error('Mobile.bg rejected the update form');
     }
 
