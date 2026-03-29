@@ -44,6 +44,117 @@ export interface MakeModelMappingRow {
   latest_last_edit: string | null;
 }
 
+export interface MobileBgDashboardSummary {
+  runs: number;
+  backups: number;
+  images: number;
+  editForms: number;
+  repostJobs: number;
+}
+
+export interface MobileBgBackupRunRow {
+  id: number;
+  status: string;
+  source_url: string | null;
+  listings_count: number;
+  images_count: number;
+  notes: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+}
+
+export interface MobileBgBackupListRow {
+  id: number;
+  run_id: number | null;
+  listing_id: number | null;
+  mobile_id: string | null;
+  source_url: string | null;
+  source_title: string | null;
+  make: string | null;
+  model: string | null;
+  title: string | null;
+  price_amount: number | null;
+  price_currency: string | null;
+  image_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+}
+
+export interface MobileBgBackupImageRow {
+  id: number;
+  backup_id: number;
+  sort_order: number;
+  filename: string;
+  source_url: string | null;
+  local_path: string;
+  created_at: string | null;
+}
+
+export interface MobileBgBackupDetailRow extends MobileBgBackupListRow {
+  vat_included: number | null;
+  year: number | null;
+  mileage: number | null;
+  fuel: string | null;
+  power: number | null;
+  engine: string | null;
+  color: string | null;
+  transmission: string | null;
+  category: string | null;
+  description: string | null;
+  phones_json: string | null;
+  extras_json: string | null;
+  tech_data_json: string | null;
+  photo_order_json: string | null;
+}
+
+export interface MobileBgEditFormRow {
+  id: number;
+  backup_id: number | null;
+  listing_id: number | null;
+  mobile_id: string | null;
+  source_url: string | null;
+  listing_token: string | null;
+  row_title: string | null;
+  row_price_text: string | null;
+  form_url: string | null;
+  screenshot_path: string | null;
+  created_at: string | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+}
+
+export interface MobileBgEditFormDetailRow extends MobileBgEditFormRow {
+  forms_json: string | null;
+  fields_json: string | null;
+  checked_boxes_json: string | null;
+  checked_radios_json: string | null;
+  hidden_json: string | null;
+}
+
+export interface MobileBgRepostJobRow {
+  id: number;
+  backup_id: number | null;
+  listing_id: number | null;
+  source_mobile_id: string | null;
+  target_mobile_id: string | null;
+  status: string;
+  message: string | null;
+  preview_screenshot_path: string | null;
+  debug_dir: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+  backup_title: string | null;
+}
+
 export interface ListingFilters {
   make?: string;
   model?: string;
@@ -912,4 +1023,114 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
       l.model
     LIMIT ?
   `).all(limit) as MakeModelMappingRow[];
+}
+
+export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
+  const runs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_runs`).get() as { count: number };
+  const backups = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backups`).get() as { count: number };
+  const images = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_images`).get() as { count: number };
+  const editForms = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`).get() as { count: number };
+  const repostJobs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`).get() as { count: number };
+  return {
+    runs: runs.count,
+    backups: backups.count,
+    images: images.count,
+    editForms: editForms.count,
+    repostJobs: repostJobs.count,
+  };
+}
+
+export function getMobileBgBackupRuns(limit = 20): MobileBgBackupRunRow[] {
+  return raw.prepare(`
+    SELECT
+      r.id, r.status, r.source_url, r.listings_count, r.images_count, r.notes,
+      r.started_at, r.finished_at, r.created_at, r.updated_at,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_backup_runs r
+    LEFT JOIN dealers d ON r.dealer_id = d.id
+    ORDER BY COALESCE(r.started_at, r.created_at) DESC, r.id DESC
+    LIMIT ?
+  `).all(limit) as MobileBgBackupRunRow[];
+}
+
+export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
+  return raw.prepare(`
+    SELECT
+      b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
+      b.make, b.model, b.title, b.price_amount, b.price_currency, b.image_count,
+      b.created_at, b.updated_at,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_backups b
+    LEFT JOIN dealers d ON b.dealer_id = d.id
+    ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+    LIMIT ?
+  `).all(limit) as MobileBgBackupListRow[];
+}
+
+export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { images: MobileBgBackupImageRow[] }) | null {
+  const row = raw.prepare(`
+    SELECT
+      b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
+      b.make, b.model, b.title, b.price_amount, b.price_currency, b.vat_included,
+      b.year, b.mileage, b.fuel, b.power, b.engine, b.color, b.transmission,
+      b.category, b.description, b.phones_json, b.extras_json, b.tech_data_json, b.photo_order_json,
+      b.image_count, b.created_at, b.updated_at,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_backups b
+    LEFT JOIN dealers d ON b.dealer_id = d.id
+    WHERE b.id = ?
+  `).get(id) as MobileBgBackupDetailRow | undefined;
+
+  if (!row) return null;
+
+  const images = raw.prepare(`
+    SELECT id, backup_id, sort_order, filename, source_url, local_path, created_at
+    FROM mobilebg_backup_images
+    WHERE backup_id = ?
+    ORDER BY sort_order ASC, id ASC
+  `).all(id) as MobileBgBackupImageRow[];
+
+  return { ...row, images };
+}
+
+export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {
+  return raw.prepare(`
+    SELECT
+      e.id, e.backup_id, e.listing_id, e.mobile_id, e.source_url, e.listing_token,
+      e.row_title, e.row_price_text, e.form_url, e.screenshot_path, e.created_at,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_edit_form_snapshots e
+    LEFT JOIN dealers d ON e.dealer_id = d.id
+    ORDER BY e.created_at DESC, e.id DESC
+    LIMIT ?
+  `).all(limit) as MobileBgEditFormRow[];
+}
+
+export function getMobileBgEditFormById(id: number): MobileBgEditFormDetailRow | null {
+  const row = raw.prepare(`
+    SELECT
+      e.id, e.backup_id, e.listing_id, e.mobile_id, e.source_url, e.listing_token,
+      e.row_title, e.row_price_text, e.form_url, e.screenshot_path, e.created_at,
+      e.forms_json, e.fields_json, e.checked_boxes_json, e.checked_radios_json, e.hidden_json,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_edit_form_snapshots e
+    LEFT JOIN dealers d ON e.dealer_id = d.id
+    WHERE e.id = ?
+  `).get(id) as MobileBgEditFormDetailRow | undefined;
+  return row ?? null;
+}
+
+export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
+  return raw.prepare(`
+    SELECT
+      r.id, r.backup_id, r.listing_id, r.source_mobile_id, r.target_mobile_id, r.status,
+      r.message, r.preview_screenshot_path, r.debug_dir, r.started_at, r.finished_at, r.created_at,
+      d.name as dealer_name, d.slug as dealer_slug,
+      b.title as backup_title
+    FROM mobilebg_repost_jobs r
+    LEFT JOIN dealers d ON r.dealer_id = d.id
+    LEFT JOIN mobilebg_backups b ON r.backup_id = b.id
+    ORDER BY COALESCE(r.started_at, r.created_at) DESC, r.id DESC
+    LIMIT ?
+  `).all(limit) as MobileBgRepostJobRow[];
 }

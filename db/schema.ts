@@ -251,6 +251,100 @@ export const activityLog = sqliteTable('activity_log', {
   createdAt: text('created_at'),
 });
 
+// ─── Mobile.bg Backup / Edit / Repost Artifacts ──────────────────
+
+export const mobileBgBackupRuns = sqliteTable('mobilebg_backup_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  dealerId: integer('dealer_id').references(() => dealers.id),
+  status: text('status').notNull().default('pending'),
+  sourceUrl: text('source_url'),
+  listingsCount: integer('listings_count').default(0),
+  imagesCount: integer('images_count').default(0),
+  notes: text('notes'),
+  startedAt: text('started_at'),
+  finishedAt: text('finished_at'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const mobileBgBackups = sqliteTable('mobilebg_backups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  runId: integer('run_id').references(() => mobileBgBackupRuns.id),
+  dealerId: integer('dealer_id').references(() => dealers.id),
+  listingId: integer('listing_id').references(() => listings.id),
+  mobileId: text('mobile_id'),
+  sourceUrl: text('source_url'),
+  sourceTitle: text('source_title'),
+  make: text('make'),
+  model: text('model'),
+  title: text('title'),
+  priceAmount: integer('price_amount'),
+  priceCurrency: text('price_currency'),
+  vatIncluded: integer('vat_included'),
+  year: integer('year'),
+  mileage: integer('mileage'),
+  fuel: text('fuel'),
+  power: integer('power'),
+  engine: text('engine'),
+  color: text('color'),
+  transmission: text('transmission'),
+  category: text('category'),
+  description: text('description'),
+  phonesJson: text('phones_json'),
+  extrasJson: text('extras_json'),
+  techDataJson: text('tech_data_json'),
+  photoOrderJson: text('photo_order_json'),
+  imageCount: integer('image_count').default(0),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const mobileBgBackupImages = sqliteTable('mobilebg_backup_images', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  backupId: integer('backup_id').notNull().references(() => mobileBgBackups.id, { onDelete: 'cascade' }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  filename: text('filename').notNull(),
+  sourceUrl: text('source_url'),
+  localPath: text('local_path').notNull(),
+  createdAt: text('created_at'),
+});
+
+export const mobileBgEditFormSnapshots = sqliteTable('mobilebg_edit_form_snapshots', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  dealerId: integer('dealer_id').references(() => dealers.id),
+  listingId: integer('listing_id').references(() => listings.id),
+  backupId: integer('backup_id').references(() => mobileBgBackups.id),
+  mobileId: text('mobile_id'),
+  sourceUrl: text('source_url'),
+  listingToken: text('listing_token'),
+  rowTitle: text('row_title'),
+  rowPriceText: text('row_price_text'),
+  formUrl: text('form_url'),
+  formsJson: text('forms_json'),
+  fieldsJson: text('fields_json'),
+  checkedBoxesJson: text('checked_boxes_json'),
+  checkedRadiosJson: text('checked_radios_json'),
+  hiddenJson: text('hidden_json'),
+  screenshotPath: text('screenshot_path'),
+  createdAt: text('created_at'),
+});
+
+export const mobileBgRepostJobs = sqliteTable('mobilebg_repost_jobs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  dealerId: integer('dealer_id').references(() => dealers.id),
+  backupId: integer('backup_id').references(() => mobileBgBackups.id),
+  listingId: integer('listing_id').references(() => listings.id),
+  sourceMobileId: text('source_mobile_id'),
+  targetMobileId: text('target_mobile_id'),
+  status: text('status').notNull().default('pending'),
+  message: text('message'),
+  previewScreenshotPath: text('preview_screenshot_path'),
+  debugDir: text('debug_dir'),
+  startedAt: text('started_at'),
+  finishedAt: text('finished_at'),
+  createdAt: text('created_at'),
+});
+
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;
@@ -258,6 +352,11 @@ export type Listing = typeof listings.$inferSelect;
 export type ListingSnapshot = typeof listingSnapshots.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Label = typeof labels.$inferSelect;
+export type MobileBgBackupRun = typeof mobileBgBackupRuns.$inferSelect;
+export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
+export type MobileBgBackupImage = typeof mobileBgBackupImages.$inferSelect;
+export type MobileBgEditFormSnapshot = typeof mobileBgEditFormSnapshots.$inferSelect;
+export type MobileBgRepostJob = typeof mobileBgRepostJobs.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type TimeEntry = typeof timeEntries.$inferSelect;

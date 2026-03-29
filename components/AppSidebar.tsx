@@ -9,6 +9,10 @@ import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
   { href: '/', label: 'Listings', icon: CarIcon },
+  { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
+  { href: '/mobilebg/backups', label: 'Backups', icon: ArchiveIcon, indent: true },
+  { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon, indent: true },
+  { href: '/mobilebg/reposts', label: 'Reposts', icon: UploadIcon, indent: true },
   { href: '/mapping', label: 'Mapping', icon: MapIcon },
   { href: '/tasks', label: 'Tasks', icon: TaskIcon },
   { href: '/tasks/my', label: 'My Tasks', icon: UserTaskIcon, indent: true },
@@ -92,6 +96,30 @@ function MapIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m9 20.25 6-2.25m0 0 6 2.25V6.75L15 4.5m0 13.5-6 2.25m6-15.75-6 2.25m0 13.5L3 18V4.5l6 2.25m0 13.5V6.75" />
+    </svg>
+  );
+}
+
+function ArchiveIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5H3.75m16.5 0-1.4 9.795a2.25 2.25 0 0 1-2.228 1.955H7.378A2.25 2.25 0 0 1 5.15 17.295L3.75 7.5m16.5 0V5.25A2.25 2.25 0 0 0 18 3H6a2.25 2.25 0 0 0-2.25 2.25V7.5m5.25 4.5h6" />
+    </svg>
+  );
+}
+
+function FormIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 21h-15A2.25 2.25 0 0 1 2.25 18.75V5.25A2.25 2.25 0 0 1 4.5 3h9.879a2.25 2.25 0 0 1 1.591.659l3.371 3.371A2.25 2.25 0 0 1 20 8.621V18.75A2.25 2.25 0 0 1 17.75 21ZM7.5 12h9m-9 3h6m-6-6h3" />
+    </svg>
+  );
+}
+
+function UploadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.125A2.625 2.625 0 0 0 5.625 20.25h12.75A2.625 2.625 0 0 0 21 17.625V16.5m-12-9 3-3m0 0 3 3m-3-3v12" />
     </svg>
   );
 }
