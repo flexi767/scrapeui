@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getAllDealers, getMobileBgBackupById } from '@/lib/queries';
 import { formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
+import { MobileBgBackupEditor } from '@/components/MobileBgBackupEditor';
 
 export default async function MobileBgBackupDetailPage({
   params,
@@ -32,6 +33,24 @@ export default async function MobileBgBackupDetailPage({
         defaultDealerSlug={backup.dealer_slug}
         mobileId={backup.mobile_id}
         backupId={backup.id}
+      />
+
+      <MobileBgBackupEditor
+        backupId={backup.id}
+        initialValues={{
+          title: backup.title || '',
+          price_amount: backup.price_amount,
+          vat_included: backup.vat_included,
+          year: backup.year,
+          mileage: backup.mileage,
+          fuel: backup.fuel,
+          power: backup.power,
+          engine: backup.engine,
+          color: backup.color,
+          transmission: backup.transmission,
+          category: backup.category,
+          description: backup.description,
+        }}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">

@@ -12,6 +12,15 @@ interface BackupRow {
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
+  vat_included: number | null;
+  mileage: number | null;
+  fuel: string | null;
+  power: number | null;
+  engine: string | null;
+  color: string | null;
+  transmission: string | null;
+  category: string | null;
+  description: string | null;
 }
 
 interface EditSnapshotRow {
@@ -38,6 +47,29 @@ function createRepostJob(db: Database.Database, dealerId: number, backupId: numb
   return Number(result.lastInsertRowid);
 }
 
+function buildBackupFieldOverrides(backup: BackupRow): Record<string, string | number | null> {
+  const engineMatch = backup.engine?.match(/(\d{3,5})/);
+
+  return {
+    f7: backup.title || backup.source_title || null,
+    f8: backup.fuel || null,
+    f9: backup.power ?? null,
+    f10: backup.transmission || null,
+    f11: backup.category || null,
+    f12: backup.price_amount ?? null,
+    f16: backup.mileage ?? null,
+    f17: backup.color || null,
+    f21: backup.description || null,
+    f30: engineMatch?.[1] || null,
+    f31:
+      backup.vat_included == null
+        ? null
+        : backup.vat_included === 1
+          ? 'Цената е с включено ДДС'
+          : 'Частна продажба. / Освободена от ДДС продажба.',
+  };
+}
+
 export async function repostBackupFromDb(
   db: Database.Database,
   dealer: DealerBackupConfig,
@@ -45,7 +77,9 @@ export async function repostBackupFromDb(
   dbPath: string,
 ): Promise<{ jobId: number; targetMobileId: string }> {
   const backup = db.prepare(`
-    SELECT id, listing_id, mobile_id, title, source_title, price_amount
+    SELECT
+      id, listing_id, mobile_id, title, source_title, price_amount, vat_included,
+      mileage, fuel, power, engine, color, transmission, category, description
     FROM mobilebg_backups
     WHERE id = ?
   `).get(backupId) as (BackupRow & { listing_id?: number | null }) | undefined;
@@ -75,6 +109,7 @@ export async function repostBackupFromDb(
   const checkedBoxes = new Set(
     JSON.parse(editSnapshot.checked_boxes_json || '[]').map((x: { name: string; value: string }) => `${x.name}::${x.value}`),
   );
+  const backupFieldOverrides = buildBackupFieldOverrides(backup);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ userAgent: USER_AGENT });
@@ -124,7 +159,7 @@ export async function repostBackupFromDb(
     if (regionField?.value) await selectAndMaybeSubmit('f18', regionField.value, true);
     if (cityField?.value) await selectAndMaybeSubmit('f19', cityField.value, false);
 
-    await page.evaluate(({ capturedFields, capturedCheckboxes, priceOverride }) => {
+    await page.evaluate(({ capturedFields, capturedCheckboxes, fieldOverrides }) => {
       const checkboxSet = new Set(capturedCheckboxes);
       const skip = new Set(['f5', 'f6', 'f18', 'f19']);
       const editable = capturedFields.filter((field: Record<string, unknown>) =>
@@ -140,11 +175,13 @@ export async function repostBackupFromDb(
       for (const field of editable) {
         const element = document.querySelector(`[name="${String(field.name)}"]`) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
         if (!element) continue;
+        const overrideValue = fieldOverrides[String(field.name)];
+        const effectiveValue = overrideValue ?? field.value;
 
         if (field.tag === 'select') {
           const select = element as HTMLSelectElement;
           const option = Array.from(select.options).find((opt) =>
-            String(opt.value) === String(field.value) || opt.textContent?.trim() === String(field.value),
+            String(opt.value) === String(effectiveValue) || opt.textContent?.trim() === String(effectiveValue),
           );
           if (option) {
             select.value = option.value;
@@ -161,12 +198,9 @@ export async function repostBackupFromDb(
         }
 
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-          setValue(element, field.value);
+          setValue(element, effectiveValue);
         }
       }
-
-      const priceEl = document.querySelector('[name="f12"]') as HTMLInputElement | null;
-      if (priceEl) setValue(priceEl, priceOverride);
 
       const pubForm = (document as Document & { pub?: HTMLFormElement }).pub;
       if (pubForm && !pubForm.querySelector('[name="nup"]')) {
@@ -179,7 +213,7 @@ export async function repostBackupFromDb(
     }, {
       capturedFields: fields,
       capturedCheckboxes: Array.from(checkedBoxes),
-      priceOverride: backup.price_amount,
+      fieldOverrides: backupFieldOverrides,
     });
 
     await page.waitForTimeout(800);
