@@ -47,6 +47,10 @@ interface SavedImage {
   localPath: string;
 }
 
+interface ExistingBackupRow {
+  id: number;
+}
+
 export interface BackupDealerResult {
   runId: number;
   listingsCount: number;
@@ -303,12 +307,23 @@ async function downloadAllImages(urls: string[], destDir: string): Promise<Saved
 
   for (let i = 0; i < validUrls.length; i += 1) {
     const imageUrl = validUrls[i];
+    const filename = `${String(i + 1).padStart(2, '0')}.webp`;
+    const localPath = path.join(destDir, filename);
+
+    try {
+      const existingStat = await fsp.stat(localPath);
+      if (existingStat.isFile() && existingStat.size > 0) {
+        saved.push({ filename, url: imageUrl, localPath });
+        continue;
+      }
+    } catch {
+      // File missing, continue with download.
+    }
+
     try {
       const res = await fetch(imageUrl, { headers: { 'User-Agent': USER_AGENT } });
       if (!res.ok) continue;
       const buf = Buffer.from(await res.arrayBuffer());
-      const filename = `${String(i + 1).padStart(2, '0')}.webp`;
-      const localPath = path.join(destDir, filename);
       await fsp.writeFile(localPath, buf);
       saved.push({ filename, url: imageUrl, localPath });
     } catch {
@@ -328,7 +343,51 @@ function createBackupRun(db: Database.Database, dealerId: number, sourceUrl: str
   return Number(result.lastInsertRowid);
 }
 
-function insertBackupArtifact(
+function clearBackupImages(db: Database.Database, backupId: number): void {
+  db.prepare(`DELETE FROM mobilebg_backup_images WHERE backup_id = ?`).run(backupId);
+}
+
+function deleteDuplicateBackups(db: Database.Database, canonicalId: number, duplicateIds: number[]): void {
+  if (duplicateIds.length === 0) return;
+
+  const placeholders = duplicateIds.map(() => '?').join(', ');
+  db.prepare(`UPDATE mobilebg_edit_form_snapshots SET backup_id = ? WHERE backup_id IN (${placeholders})`).run(canonicalId, ...duplicateIds);
+  db.prepare(`UPDATE mobilebg_repost_jobs SET backup_id = ? WHERE backup_id IN (${placeholders})`).run(canonicalId, ...duplicateIds);
+  db.prepare(`DELETE FROM mobilebg_backup_images WHERE backup_id IN (${placeholders})`).run(...duplicateIds);
+  db.prepare(`DELETE FROM mobilebg_backups WHERE id IN (${placeholders})`).run(...duplicateIds);
+}
+
+export function dedupeMobileBgBackups(db: Database.Database, dealerId?: number): number {
+  const duplicateGroups = db.prepare(`
+    SELECT dealer_id, mobile_id
+    FROM mobilebg_backups
+    ${dealerId == null ? '' : 'WHERE dealer_id = ?'}
+    GROUP BY dealer_id, mobile_id
+    HAVING COUNT(*) > 1
+  `).all(...(dealerId == null ? [] : [dealerId])) as Array<{ dealer_id: number; mobile_id: string }>;
+
+  let deletedCount = 0;
+
+  for (const group of duplicateGroups) {
+    const rows = db.prepare(`
+      SELECT id
+      FROM mobilebg_backups
+      WHERE dealer_id = ? AND mobile_id = ?
+      ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+    `).all(group.dealer_id, group.mobile_id) as ExistingBackupRow[];
+
+    const canonical = rows[0];
+    const duplicateIds = rows.slice(1).map((row) => row.id);
+    if (!canonical || duplicateIds.length === 0) continue;
+
+    deleteDuplicateBackups(db, canonical.id, duplicateIds);
+    deletedCount += duplicateIds.length;
+  }
+
+  return deletedCount;
+}
+
+function upsertBackupArtifact(
   db: Database.Database,
   runId: number,
   dealerId: number,
@@ -336,6 +395,61 @@ function insertBackupArtifact(
 ): number {
   const now = new Date().toISOString();
   const listingRow = db.prepare(`SELECT id FROM listings WHERE mobile_id = ? LIMIT 1`).get(detail.mobileId) as { id?: number } | undefined;
+  const existing = db.prepare(`
+    SELECT id
+    FROM mobilebg_backups
+    WHERE dealer_id = ? AND mobile_id = ?
+    ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+  `).all(dealerId, detail.mobileId) as ExistingBackupRow[];
+
+  const canonical = existing[0];
+  const duplicateIds = existing.slice(1).map((row) => row.id);
+
+  if (canonical) {
+    if (duplicateIds.length > 0) {
+      deleteDuplicateBackups(db, canonical.id, duplicateIds);
+    }
+
+    db.prepare(`
+      UPDATE mobilebg_backups
+      SET
+        run_id = ?, listing_id = ?, source_url = ?, source_title = ?, make = ?, model = ?, title = ?,
+        price_amount = ?, price_currency = ?, vat_included = ?, year = ?, mileage = ?, fuel = ?, power = ?, engine = ?,
+        color = ?, transmission = ?, category = ?, description = ?, phones_json = ?, extras_json = ?, tech_data_json = ?,
+        photo_order_json = ?, image_count = 0, updated_at = ?
+      WHERE id = ?
+    `).run(
+      runId,
+      listingRow?.id ?? null,
+      detail.url,
+      detail.sourceTitle,
+      detail.make,
+      detail.model,
+      detail.title,
+      detail.priceAmount,
+      detail.priceCurrency,
+      detail.vatIncluded == null ? null : detail.vatIncluded ? 1 : 0,
+      detail.year,
+      detail.mileage,
+      detail.fuel,
+      detail.power,
+      detail.engine,
+      detail.color,
+      detail.transmission,
+      detail.category,
+      detail.description,
+      JSON.stringify(detail.phones),
+      JSON.stringify(detail.extras),
+      JSON.stringify(detail.techData),
+      JSON.stringify(detail.photoOrder),
+      now,
+      canonical.id,
+    );
+
+    clearBackupImages(db, canonical.id);
+    return canonical.id;
+  }
+
   const result = db.prepare(`
     INSERT INTO mobilebg_backups (
       run_id, dealer_id, listing_id, mobile_id, source_url, source_title, make, model, title,
@@ -399,6 +513,7 @@ export async function backupDealerToDb(
   const storageRoot = getStorageRoot(dbPath);
   const dealerRoot = path.join(storageRoot, dealer.slug);
   await ensureDir(dealerRoot);
+  dedupeMobileBgBackups(db, dealer.id);
 
   const runId = createBackupRun(db, dealer.id, dealer.mobileUrl);
   const makesMap = await fetchMakesModels().catch(() => null);
@@ -420,7 +535,7 @@ export async function backupDealerToDb(
       const detail = await scrapeListingDetail(page, link, makesMap);
       const listingDir = path.join(dealerRoot, detail.mobileId);
       await ensureDir(listingDir);
-      const backupId = insertBackupArtifact(db, runId, dealer.id, detail);
+      const backupId = upsertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
       imageCount += savedImages.length;

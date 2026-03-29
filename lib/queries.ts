@@ -1027,7 +1027,14 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
 
 export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
   const runs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_runs`).get() as { count: number };
-  const backups = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backups`).get() as { count: number };
+  const backups = raw.prepare(`
+    SELECT COUNT(*) as count
+    FROM (
+      SELECT 1
+      FROM mobilebg_backups
+      GROUP BY dealer_id, mobile_id
+    )
+  `).get() as { count: number };
   const images = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_images`).get() as { count: number };
   const editForms = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`).get() as { count: number };
   const repostJobs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`).get() as { count: number };
@@ -1055,13 +1062,23 @@ export function getMobileBgBackupRuns(limit = 20): MobileBgBackupRunRow[] {
 
 export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
   return raw.prepare(`
+    WITH ranked AS (
+      SELECT
+        b.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY b.dealer_id, b.mobile_id
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+        ) as row_num
+      FROM mobilebg_backups b
+    )
     SELECT
       b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.image_count,
       b.created_at, b.updated_at,
       d.name as dealer_name, d.slug as dealer_slug
-    FROM mobilebg_backups b
+    FROM ranked b
     LEFT JOIN dealers d ON b.dealer_id = d.id
+    WHERE b.row_num = 1
     ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
     LIMIT ?
   `).all(limit) as MobileBgBackupListRow[];

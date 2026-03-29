@@ -17,6 +17,7 @@ export default async function MobileBgBackupDetailPage({
   const phones = parseJson<string[]>(backup.phones_json, []);
   const extras = parseJson<Record<string, Array<{ label: string; alias?: string | null }>>>(backup.extras_json, {});
   const techData = parseJson<Record<string, string>>(backup.tech_data_json, {});
+  const photoOrder = parseJson<string[]>(backup.photo_order_json, []);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -60,6 +61,30 @@ export default async function MobileBgBackupDetailPage({
             <h2 className="mb-3 text-sm font-medium text-gray-200">Description</h2>
             <div className="whitespace-pre-wrap text-sm text-gray-300">
               {backup.description || 'No description stored.'}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900/40 p-4">
+            <h2 className="mb-3 text-sm font-medium text-gray-200">Artifact Details</h2>
+            <div className="space-y-2 text-sm">
+              <Meta label="Backup row" value={`#${backup.id}`} />
+              <Meta label="Last run" value={backup.run_id ? `#${backup.run_id}` : '—'} />
+              <Meta label="Source title" value={backup.source_title || '—'} />
+              <Meta label="Image files" value={backup.images.length ? backup.images.map((image) => image.filename).join(', ') : '—'} />
+            </div>
+            <div className="mt-4">
+              <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Photo order keys</div>
+              {photoOrder.length === 0 ? (
+                <div className="text-sm text-gray-500">No photo order captured.</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {photoOrder.map((key) => (
+                    <span key={key} className="rounded-full bg-gray-800 px-2 py-0.5 text-xs text-gray-300">
+                      {key}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
