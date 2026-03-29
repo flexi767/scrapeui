@@ -7,7 +7,7 @@ import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
 
 function getSnapshotDir(dbPath: string, dealerSlug: string, mobileId: string): string {
-  return path.join(getStorageRoot(dbPath), dealerSlug, new Date().toISOString().slice(0, 10), mobileId, 'edit-form');
+  return path.join(getStorageRoot(dbPath), dealerSlug, mobileId, 'edit-form');
 }
 
 async function submitMyAdsEditForm(page: import('playwright').Page, listingId: string, listingToken: string) {

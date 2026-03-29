@@ -105,6 +105,10 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
         return '';
       }
     };
+    const toFullSizeUrl = (source: string) =>
+      source
+        .replace(/(\/mobile\/photosorg\/\d+)\/\d+\/(?!big1)/, '$1/1/big1/')
+        .replace(/\/1\/big1\/big1\//, '/1/big1/');
 
     const galleryEls = document.querySelectorAll('.smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]');
     if (galleryEls.length > 0) {
@@ -112,13 +116,13 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
       const imgs: string[] = [];
       galleryEls.forEach((el) => {
         const source = normalizeUrl(
-          (el as HTMLImageElement).src ||
-            el.getAttribute('data-src-gallery') ||
+          el.getAttribute('data-src-gallery') ||
             el.getAttribute('data-lazy') ||
             el.getAttribute('data-src') ||
+            (el as HTMLImageElement).src ||
             '',
         );
-        const bigSource = source.replace(/\/\d+\/(?!big1)/, '/1/big1/').replace(/\/1\/big1\/big1\//, '/1/big1/');
+        const bigSource = toFullSizeUrl(source);
         const canonical = bigSource.includes('/big1/') ? bigSource : source;
         if (canonical && !seen.has(canonical) && canonical.includes('photosorg')) {
           seen.add(canonical);
@@ -132,17 +136,19 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
     const imgs: string[] = [];
     document.querySelectorAll('img, [data-lazy], [data-src]').forEach((el) => {
       const source = normalizeUrl(
-        (el as HTMLImageElement).src ||
-          el.getAttribute('data-src-gallery') ||
+        el.getAttribute('data-src-gallery') ||
           el.getAttribute('data-lazy') ||
           el.getAttribute('data-src') ||
+          (el as HTMLImageElement).src ||
           '',
       );
-      if (!source || seen.has(source)) return;
-      const isCarPhoto = source.includes('/big1/') && /\.(webp|jpg|jpeg|png)(\?|$)/i.test(source);
+      if (!source) return;
+      const canonical = toFullSizeUrl(source);
+      if (seen.has(canonical)) return;
+      const isCarPhoto = canonical.includes('/big1/') && /\.(webp|jpg|jpeg|png)(\?|$)/i.test(canonical);
       if (isCarPhoto) {
-        seen.add(source);
-        imgs.push(source);
+        seen.add(canonical);
+        imgs.push(canonical);
       }
     });
     return imgs;
@@ -391,8 +397,8 @@ export async function backupDealerToDb(
   dbPath: string,
 ): Promise<BackupDealerResult> {
   const storageRoot = getStorageRoot(dbPath);
-  const datedRoot = path.join(storageRoot, dealer.slug, new Date().toISOString().slice(0, 10));
-  await ensureDir(datedRoot);
+  const dealerRoot = path.join(storageRoot, dealer.slug);
+  await ensureDir(dealerRoot);
 
   const runId = createBackupRun(db, dealer.id, dealer.mobileUrl);
   const makesMap = await fetchMakesModels().catch(() => null);
@@ -412,7 +418,7 @@ export async function backupDealerToDb(
 
     for (const link of links) {
       const detail = await scrapeListingDetail(page, link, makesMap);
-      const listingDir = path.join(datedRoot, detail.mobileId);
+      const listingDir = path.join(dealerRoot, detail.mobileId);
       await ensureDir(listingDir);
       const backupId = insertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
