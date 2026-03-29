@@ -55,6 +55,8 @@ export const listings = sqliteTable('listings', {
   lastSeenAt: text('last_seen_at'),
   isActive: integer('is_active').default(1),
   needsSync: integer('needs_sync').default(0),
+  carsId: text('cars_id'),          // cars.bg offer ID after sync
+  carsSyncedAt: text('cars_synced_at'), // last successful push to cars.bg
 });
 
 export const listingSnapshots = sqliteTable('listing_snapshots', {
