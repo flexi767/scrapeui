@@ -29,6 +29,9 @@ export interface ListingRow {
 export interface OwnListingRow extends ListingRow {
   needs_sync: number;
   backup_id: number;
+  last_mobile_sync_status: string | null;
+  last_mobile_sync_error: string | null;
+  last_mobile_sync_at: string | null;
 }
 
 export interface MakeModelMappingRow {
@@ -111,6 +114,8 @@ export interface MobileBgBackupDetailRow extends MobileBgBackupListRow {
   ad_status: string | null;
   kaparo: number | null;
   draft_needs_sync: number;
+  last_mobile_sync_status: string | null;
+  last_mobile_sync_error: string | null;
   last_mobile_sync_at: string | null;
   phones_json: string | null;
   extras_json: string | null;
@@ -158,6 +163,21 @@ export interface MobileBgRepostJobRow {
   dealer_name: string | null;
   dealer_slug: string | null;
   backup_title: string | null;
+}
+
+export interface EditOwnSyncRow {
+  backup_id: number;
+  mobile_id: string;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+  make: string | null;
+  model: string | null;
+  title: string | null;
+  current_price: number | null;
+  needs_sync: number;
+  last_mobile_sync_status: string | null;
+  last_mobile_sync_error: string | null;
+  last_mobile_sync_at: string | null;
 }
 
 export interface ListingFilters {
@@ -421,6 +441,9 @@ export function getOwnListings(filters: ListingFilters = {}) {
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      b.last_mobile_sync_status,
+      b.last_mobile_sync_error,
+      b.last_mobile_sync_at,
       d.name as dealer_name, d.slug as dealer_slug
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
@@ -482,6 +505,9 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      b.last_mobile_sync_status,
+      b.last_mobile_sync_error,
+      b.last_mobile_sync_at,
       d.name as dealer_name, d.slug as dealer_slug
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
@@ -1176,7 +1202,8 @@ export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { 
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.vat_included,
       b.year, b.mileage, b.fuel, b.power, b.engine, b.color, b.transmission,
       b.category, b.description, b.phones_json, b.extras_json, b.tech_data_json, b.photo_order_json,
-      b.ad_status, b.kaparo, COALESCE(b.draft_needs_sync, 0) as draft_needs_sync, b.last_mobile_sync_at,
+      b.ad_status, b.kaparo, COALESCE(b.draft_needs_sync, 0) as draft_needs_sync,
+      b.last_mobile_sync_status, b.last_mobile_sync_error, b.last_mobile_sync_at,
       b.image_count, b.created_at, b.updated_at,
       d.name as dealer_name, d.slug as dealer_slug
     FROM mobilebg_backups b
@@ -1194,6 +1221,41 @@ export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { 
   `).all(id) as MobileBgBackupImageRow[];
 
   return { ...row, images };
+}
+
+export function getEditOwnSyncRows(): EditOwnSyncRow[] {
+  return raw.prepare(`
+    WITH ranked_backups AS (
+      SELECT
+        b.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY b.dealer_id, b.mobile_id
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+        ) as row_num
+      FROM mobilebg_backups b
+    )
+    SELECT
+      b.id as backup_id,
+      l.mobile_id,
+      d.name as dealer_name,
+      d.slug as dealer_slug,
+      COALESCE(b.make, l.make) as make,
+      COALESCE(b.model, l.model) as model,
+      COALESCE(b.title, l.title) as title,
+      COALESCE(b.price_amount, l.current_price) as current_price,
+      COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      b.last_mobile_sync_status,
+      b.last_mobile_sync_error,
+      b.last_mobile_sync_at
+    FROM ranked_backups b
+    JOIN listings l ON l.id = b.listing_id
+    JOIN dealers d ON d.id = b.dealer_id
+    WHERE b.row_num = 1 AND d.own = 1 AND d.active = 1
+    ORDER BY
+      CASE WHEN COALESCE(b.draft_needs_sync, 0) = 1 THEN 0 ELSE 1 END,
+      COALESCE(b.updated_at, b.created_at) DESC,
+      b.id DESC
+  `).all() as EditOwnSyncRow[];
 }
 
 export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {

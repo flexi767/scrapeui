@@ -6,7 +6,7 @@ import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
-import { submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
+import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
 
 interface BackupRow {
   id: number;
@@ -34,6 +34,20 @@ interface EditSnapshotRow {
   checked_boxes_json: string | null;
 }
 
+function getLatestEditSnapshot(
+  db: Database.Database,
+  backupId: number,
+  mobileId: string,
+): EditSnapshotRow | undefined {
+  return db.prepare(`
+    SELECT id, listing_token, source_url, fields_json, checked_boxes_json
+    FROM mobilebg_edit_form_snapshots
+    WHERE backup_id = ? OR mobile_id = ?
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+  `).get(backupId, mobileId) as EditSnapshotRow | undefined;
+}
+
 function getUpdateDir(dbPath: string, dealerSlug: string, backupId: number): string {
   return path.join(getStorageRoot(dbPath), dealerSlug, 'updates', String(backupId));
 }
@@ -56,16 +70,15 @@ export async function updateBackupOnMobileBg(
     throw new Error(`Backup ${backupId} not found or missing mobile ID`);
   }
 
-  const editSnapshot = db.prepare(`
-    SELECT id, listing_token, source_url, fields_json, checked_boxes_json
-    FROM mobilebg_edit_form_snapshots
-    WHERE backup_id = ?
-    ORDER BY created_at DESC, id DESC
-    LIMIT 1
-  `).get(backupId) as EditSnapshotRow | undefined;
+  let editSnapshot = getLatestEditSnapshot(db, backupId, backup.mobile_id);
 
   if (!editSnapshot?.listing_token || !editSnapshot.fields_json) {
-    throw new Error(`No edit form snapshot found for backup ${backupId}`);
+    await captureEditFormSnapshot(db, dealer, backup.mobile_id, dbPath);
+    editSnapshot = getLatestEditSnapshot(db, backupId, backup.mobile_id);
+  }
+
+  if (!editSnapshot?.listing_token || !editSnapshot.fields_json) {
+    throw new Error(`No edit form snapshot found for backup ${backupId} after auto-capture`);
   }
 
   const fields = JSON.parse(editSnapshot.fields_json) as Array<Record<string, unknown>>;
@@ -77,6 +90,12 @@ export async function updateBackupOnMobileBg(
   const page = await context.newPage();
   const updateDir = getUpdateDir(dbPath, dealer.slug, backupId);
   await fsp.mkdir(updateDir, { recursive: true });
+  const startedAt = new Date().toISOString();
+  db.prepare(`
+    UPDATE mobilebg_backups
+    SET last_mobile_sync_status = 'running', last_mobile_sync_error = NULL, updated_at = ?
+    WHERE id = ?
+  `).run(startedAt, backup.id);
 
   try {
     if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
@@ -139,7 +158,12 @@ export async function updateBackupOnMobileBg(
     const now = new Date().toISOString();
     db.prepare(`
       UPDATE mobilebg_backups
-      SET draft_needs_sync = 0, last_mobile_sync_at = ?, updated_at = ?
+      SET
+        draft_needs_sync = 0,
+        last_mobile_sync_status = 'success',
+        last_mobile_sync_error = NULL,
+        last_mobile_sync_at = ?,
+        updated_at = ?
       WHERE id = ?
     `).run(now, now, backup.id);
 
@@ -147,6 +171,11 @@ export async function updateBackupOnMobileBg(
   } catch (error) {
     const debugPath = path.join(updateDir, 'error.png');
     await page.screenshot({ path: debugPath, fullPage: true }).catch(() => {});
+    db.prepare(`
+      UPDATE mobilebg_backups
+      SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?
+      WHERE id = ?
+    `).run(error instanceof Error ? error.message : String(error), new Date().toISOString(), backup.id);
     throw error;
   } finally {
     await browser.close();

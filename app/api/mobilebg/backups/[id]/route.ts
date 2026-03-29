@@ -82,6 +82,8 @@ export async function PATCH(
         category = ?,
         description = ?,
         draft_needs_sync = 1,
+        last_mobile_sync_status = 'pending',
+        last_mobile_sync_error = NULL,
         updated_at = ?
       WHERE id = ?
     `).run(

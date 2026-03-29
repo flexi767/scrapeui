@@ -295,6 +295,8 @@ export const mobileBgBackups = sqliteTable('mobilebg_backups', {
   adStatus: text('ad_status'),
   kaparo: integer('kaparo').default(0),
   draftNeedsSync: integer('draft_needs_sync').default(0),
+  lastMobileSyncStatus: text('last_mobile_sync_status'),
+  lastMobileSyncError: text('last_mobile_sync_error'),
   lastMobileSyncAt: text('last_mobile_sync_at'),
   phonesJson: text('phones_json'),
   extrasJson: text('extras_json'),

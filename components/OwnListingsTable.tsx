@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { OwnListingRow } from '@/lib/queries';
 import { formatPrice, formatDate, buildImageList, parseJson } from '@/lib/utils';
@@ -36,6 +37,7 @@ function KaparoBadge({ kaparo }: { kaparo: number }) {
 export default function OwnListingsTable({ initialRows }: Props) {
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
   const [editForm, setEditForm] = useState<{
     title: string;
     current_price: number;
@@ -98,12 +100,58 @@ export default function OwnListingsTable({ initialRows }: Props) {
     setEditingId(null);
   }
 
+  async function handleSync(row: OwnListingRow) {
+    setRows((prev) => prev.map((item) => item.backup_id === row.backup_id ? {
+      ...item,
+      last_mobile_sync_status: 'running',
+      last_mobile_sync_error: null,
+    } : item));
+    setSyncingIds((prev) => ({ ...prev, [row.backup_id]: true }));
+    try {
+      const res = await fetch('/api/mobilebg/updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealerSlug: row.dealer_slug, backupId: row.backup_id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = data.error || 'Sync failed';
+        setRows((prev) => prev.map((item) => item.backup_id === row.backup_id ? {
+          ...item,
+          last_mobile_sync_status: 'failed',
+          last_mobile_sync_error: message,
+        } : item));
+        toast.error(message);
+        return;
+      }
+
+      setRows((prev) => prev.map((item) => item.backup_id === row.backup_id ? {
+        ...item,
+        needs_sync: 0,
+        last_mobile_sync_status: 'success',
+        last_mobile_sync_error: null,
+        last_mobile_sync_at: new Date().toISOString(),
+      } : item));
+      toast.success('Listing synced to mobile.bg');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sync failed';
+      setRows((prev) => prev.map((item) => item.backup_id === row.backup_id ? {
+        ...item,
+        last_mobile_sync_status: 'failed',
+        last_mobile_sync_error: message,
+      } : item));
+      toast.error(message);
+    } finally {
+      setSyncingIds((prev) => ({ ...prev, [row.backup_id]: false }));
+    }
+  }
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-700/60">
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-            <th className="px-2 py-1.5 text-left w-6">Sync</th>
+            <th className="px-2 py-1.5 text-left w-28">Sync</th>
             <th className="w-16 px-3 py-1.5 text-left">Img</th>
             <th className="px-3 py-1.5 text-left">Make / Model</th>
             <th className="px-3 py-1.5 text-left">Title</th>
@@ -147,8 +195,24 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 style={{ cursor: editing ? 'default' : 'pointer' }}
               >
                 {/* Sync */}
-                <td className="px-2 py-1.5 text-center">
-                  {row.needs_sync === 1 && <span className="text-amber-400 text-xs">●</span>}
+                <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                  <div className="flex flex-col items-start gap-1">
+                    {row.needs_sync === 1 ? (
+                      <button
+                        onClick={() => handleSync(row)}
+                        disabled={Boolean(syncingIds[row.backup_id])}
+                        className="rounded border border-blue-500/60 px-2 py-1 text-[11px] font-medium text-blue-200 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {syncingIds[row.backup_id] ? 'Syncing…' : 'Sync'}
+                      </button>
+                    ) : (
+                      <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-500">Up to date</span>
+                    )}
+                    <SyncStatusBadge
+                      status={row.last_mobile_sync_status}
+                      error={row.last_mobile_sync_error}
+                    />
+                  </div>
                 </td>
 
                 {/* Img */}
@@ -328,6 +392,14 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       ✎
                     </button>
                   )}
+                  {!editing && row.needs_sync === 1 && (
+                    <Link
+                      href="/editown/sync"
+                      className="ml-2 text-xs text-blue-300 hover:text-blue-200"
+                    >
+                      batch
+                    </Link>
+                  )}
                 </td>
               </tr>
             );
@@ -336,4 +408,24 @@ export default function OwnListingsTable({ initialRows }: Props) {
       </table>
     </div>
   );
+}
+
+function SyncStatusBadge({ status, error }: { status: string | null; error: string | null }) {
+  if (status === 'running') {
+    return <span className="text-[10px] text-amber-300">running</span>;
+  }
+  if (status === 'success') {
+    return <span className="text-[10px] text-emerald-300">success</span>;
+  }
+  if (status === 'failed') {
+    return (
+      <span className="max-w-28 truncate text-[10px] text-red-300" title={error || 'failed'}>
+        failed
+      </span>
+    );
+  }
+  if (status === 'pending') {
+    return <span className="text-[10px] text-amber-300">pending</span>;
+  }
+  return null;
 }

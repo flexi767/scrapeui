@@ -104,7 +104,16 @@ export async function PATCH(
     raw
       .prepare(
         `UPDATE mobilebg_backups
-         SET title = ?, price_amount = ?, vat_included = ?, kaparo = ?, ad_status = ?, draft_needs_sync = 1, updated_at = ?
+         SET
+           title = ?,
+           price_amount = ?,
+           vat_included = ?,
+           kaparo = ?,
+           ad_status = ?,
+           draft_needs_sync = 1,
+           last_mobile_sync_status = 'pending',
+           last_mobile_sync_error = NULL,
+           updated_at = ?
          WHERE id = ?`
       )
       .run(

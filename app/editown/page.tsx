@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctFuels, getDistinctYears, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { getAllDealers, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import OwnListingsTable from '@/components/OwnListingsTable';
 
 interface SearchParams {
@@ -104,6 +104,7 @@ export default async function EditOwnPage({
   const makeModels = getMakeModels();
   const allOwnDealers = getAllDealers().filter(d => d.own);
   const makes = Object.keys(makeModels).sort();
+  const dirtyCount = getEditOwnSyncRows().filter((row) => row.needs_sync === 1).length;
 
   // Build URL params object for sort links
   const currentParams = new URLSearchParams();
@@ -155,6 +156,18 @@ export default async function EditOwnPage({
           <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
           <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
           <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
+          <div className="ml-auto">
+            <Link
+              href={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
+              className={`rounded border px-3 py-1.5 text-xs font-medium ${
+                dirtyCount > 0
+                  ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/15'
+                  : 'border-gray-700 text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Sync all{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
+            </Link>
+          </div>
         </div>
 
         <OwnListingsTable key={currentParams.toString()} initialRows={rows} />
