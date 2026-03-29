@@ -1134,3 +1134,33 @@ export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
     LIMIT ?
   `).all(limit) as MobileBgRepostJobRow[];
 }
+
+export interface CompetitorStats {
+  make: string;
+  model: string;
+  count: number;
+  min_price: number | null;
+  max_price: number | null;
+  avg_price: number | null;
+}
+
+export function getCompetitorStatsByMakeModel(): Map<string, CompetitorStats> {
+  const rows = raw.prepare(`
+    SELECT
+      make,
+      model,
+      COUNT(*) as count,
+      MIN(price) as min_price,
+      MAX(price) as max_price,
+      CAST(AVG(price) AS INTEGER) as avg_price
+    FROM competitor_listings
+    WHERE price IS NOT NULL AND make IS NOT NULL
+    GROUP BY make, model
+  `).all() as CompetitorStats[];
+
+  const map = new Map<string, CompetitorStats>();
+  for (const row of rows) {
+    map.set(`${row.make}|||${row.model}`, row);
+  }
+  return map;
+}

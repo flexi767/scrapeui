@@ -97,12 +97,27 @@ async function collectListingLinks(page: Page, dealerUrl: string, maxPages = 30)
 
 async function scrapeAllImages(page: Page): Promise<string[]> {
   return page.evaluate(() => {
+    const normalizeUrl = (value: string) => {
+      if (!value) return '';
+      try {
+        return new URL(value, window.location.href).toString();
+      } catch {
+        return '';
+      }
+    };
+
     const galleryEls = document.querySelectorAll('.smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]');
     if (galleryEls.length > 0) {
       const seen = new Set<string>();
       const imgs: string[] = [];
       galleryEls.forEach((el) => {
-        const source = (el as HTMLImageElement).src || el.getAttribute('data-lazy') || el.getAttribute('data-src') || '';
+        const source = normalizeUrl(
+          (el as HTMLImageElement).src ||
+            el.getAttribute('data-src-gallery') ||
+            el.getAttribute('data-lazy') ||
+            el.getAttribute('data-src') ||
+            '',
+        );
         const bigSource = source.replace(/\/\d+\/(?!big1)/, '/1/big1/').replace(/\/1\/big1\/big1\//, '/1/big1/');
         const canonical = bigSource.includes('/big1/') ? bigSource : source;
         if (canonical && !seen.has(canonical) && canonical.includes('photosorg')) {
@@ -116,7 +131,13 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
     const seen = new Set<string>();
     const imgs: string[] = [];
     document.querySelectorAll('img, [data-lazy], [data-src]').forEach((el) => {
-      const source = (el as HTMLImageElement).src || el.getAttribute('data-lazy') || el.getAttribute('data-src') || '';
+      const source = normalizeUrl(
+        (el as HTMLImageElement).src ||
+          el.getAttribute('data-src-gallery') ||
+          el.getAttribute('data-lazy') ||
+          el.getAttribute('data-src') ||
+          '',
+      );
       if (!source || seen.has(source)) return;
       const isCarPhoto = source.includes('/big1/') && /\.(webp|jpg|jpeg|png)(\?|$)/i.test(source);
       if (isCarPhoto) {
@@ -126,6 +147,20 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
     });
     return imgs;
   });
+}
+
+function normalizeImageUrl(value: string): string | null {
+  if (!value) return null;
+
+  try {
+    return new URL(value).toString();
+  } catch {
+    try {
+      return new URL(value, 'https://www.mobile.bg').toString();
+    } catch {
+      return null;
+    }
+  }
 }
 
 async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap | null): Promise<ScrapedDetail> {
@@ -250,12 +285,15 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
 
 async function downloadAllImages(urls: string[], destDir: string): Promise<SavedImage[]> {
   const saved: SavedImage[] = [];
-  const validUrls = urls.filter((url) => {
+  const validUrls = urls
+    .map((url) => normalizeImageUrl(url))
+    .filter((url): url is string => Boolean(url))
+    .filter((url) => {
     if (!url) return false;
     if (!/\.(webp|jpg|jpeg|png)(\?|$)/i.test(url)) return false;
     if (!url.includes('/big1/') && !url.includes('/snimka/')) return false;
     return true;
-  });
+    });
 
   for (let i = 0; i < validUrls.length; i += 1) {
     const imageUrl = validUrls[i];
