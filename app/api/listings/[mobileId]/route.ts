@@ -85,12 +85,37 @@ export async function PATCH(
       );
     }
 
-    // Update the listing
+    const backup = raw.prepare(`
+      SELECT b.id
+      FROM mobilebg_backups b
+      JOIN listings l ON l.id = b.listing_id
+      JOIN dealers d ON d.id = b.dealer_id
+      WHERE l.mobile_id = ? AND d.own = 1
+      LIMIT 1
+    `).get(mobileId) as { id?: number } | undefined;
+
+    if (!backup?.id) {
+      return NextResponse.json(
+        { error: 'No editable backup draft found for this listing' },
+        { status: 404 }
+      );
+    }
+
     raw
       .prepare(
-        `UPDATE listings SET title = ?, current_price = ?, vat = ?, kaparo = ?, ad_status = ?, needs_sync = 1 WHERE mobile_id = ?`
+        `UPDATE mobilebg_backups
+         SET title = ?, price_amount = ?, vat_included = ?, kaparo = ?, ad_status = ?, draft_needs_sync = 1, updated_at = ?
+         WHERE id = ?`
       )
-      .run(trimmedTitle, currentPrice, vatForDb, kaparo, adStatus, mobileId);
+      .run(
+        trimmedTitle,
+        currentPrice,
+        vatForDb === null ? null : vatForDb === 'included' ? 1 : 0,
+        kaparo,
+        adStatus,
+        new Date().toISOString(),
+        backup.id,
+      );
 
     // Re-fetch the listing
     const updatedListing = getOwnListingByMobileId(mobileId);

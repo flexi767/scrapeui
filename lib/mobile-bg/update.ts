@@ -136,9 +136,12 @@ export async function updateBackupOnMobileBg(
       throw new Error('Mobile.bg rejected the update form');
     }
 
-    if (backup.listing_id) {
-      db.prepare(`UPDATE listings SET needs_sync = 0 WHERE id = ?`).run(backup.listing_id);
-    }
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE mobilebg_backups
+      SET draft_needs_sync = 0, last_mobile_sync_at = ?, updated_at = ?
+      WHERE id = ?
+    `).run(now, now, backup.id);
 
     return { mobileId: backup.mobile_id };
   } catch (error) {

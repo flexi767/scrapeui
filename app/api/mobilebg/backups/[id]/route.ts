@@ -81,6 +81,7 @@ export async function PATCH(
         transmission = ?,
         category = ?,
         description = ?,
+        draft_needs_sync = 1,
         updated_at = ?
       WHERE id = ?
     `).run(
@@ -99,38 +100,6 @@ export async function PATCH(
       now,
       backupId,
     );
-
-    if (backup.listing_id) {
-      const listingVat = vatIncluded == null ? null : vatIncluded === 1 ? 'included' : 'excluded';
-      raw.prepare(`
-        UPDATE listings
-        SET
-          title = ?,
-          current_price = ?,
-          vat = ?,
-          mileage = ?,
-          fuel = ?,
-          power = ?,
-          color = ?,
-          transmission = ?,
-          body_type = ?,
-          description = ?,
-          needs_sync = 1
-        WHERE id = ?
-      `).run(
-        title,
-        priceAmount,
-        listingVat,
-        mileage,
-        fuel,
-        power,
-        color,
-        transmission,
-        category,
-        description,
-        backup.listing_id,
-      );
-    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

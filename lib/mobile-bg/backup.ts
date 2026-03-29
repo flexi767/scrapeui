@@ -413,7 +413,12 @@ function upsertBackupArtifact(
   detail: ScrapedDetail,
 ): { backupId: number; action: 'created' | 'updated' } {
   const now = new Date().toISOString();
-  const listingRow = db.prepare(`SELECT id FROM listings WHERE mobile_id = ? LIMIT 1`).get(detail.mobileId) as { id?: number } | undefined;
+  const listingRow = db.prepare(`
+    SELECT id, ad_status, kaparo
+    FROM listings
+    WHERE mobile_id = ?
+    LIMIT 1
+  `).get(detail.mobileId) as { id?: number; ad_status?: string | null; kaparo?: number | null } | undefined;
   const existing = db.prepare(`
     SELECT id
     FROM mobilebg_backups
@@ -432,9 +437,7 @@ function upsertBackupArtifact(
     db.prepare(`
       UPDATE mobilebg_backups
       SET
-        run_id = ?, listing_id = ?, source_url = ?, source_title = ?, make = ?, model = ?, title = ?,
-        price_amount = ?, price_currency = ?, vat_included = ?, year = ?, mileage = ?, fuel = ?, power = ?, engine = ?,
-        color = ?, transmission = ?, category = ?, description = ?, phones_json = ?, extras_json = ?, tech_data_json = ?,
+        run_id = ?, listing_id = ?, source_url = ?, source_title = ?, phones_json = ?, extras_json = ?, tech_data_json = ?,
         photo_order_json = ?, image_count = 0, updated_at = ?
       WHERE id = ?
     `).run(
@@ -442,21 +445,6 @@ function upsertBackupArtifact(
       listingRow?.id ?? null,
       detail.url,
       detail.sourceTitle,
-      detail.make,
-      detail.model,
-      detail.title,
-      detail.priceAmount,
-      detail.priceCurrency,
-      detail.vatIncluded == null ? null : detail.vatIncluded ? 1 : 0,
-      detail.year,
-      detail.mileage,
-      detail.fuel,
-      detail.power,
-      detail.engine,
-      detail.color,
-      detail.transmission,
-      detail.category,
-      detail.description,
       JSON.stringify(detail.phones),
       JSON.stringify(detail.extras),
       JSON.stringify(detail.techData),
@@ -473,8 +461,9 @@ function upsertBackupArtifact(
     INSERT INTO mobilebg_backups (
       run_id, dealer_id, listing_id, mobile_id, source_url, source_title, make, model, title,
       price_amount, price_currency, vat_included, year, mileage, fuel, power, engine, color, transmission, category,
-      description, phones_json, extras_json, tech_data_json, photo_order_json, image_count, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      description, ad_status, kaparo, draft_needs_sync, last_mobile_sync_at,
+      phones_json, extras_json, tech_data_json, photo_order_json, image_count, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     runId,
     dealerId,
@@ -497,6 +486,10 @@ function upsertBackupArtifact(
     detail.transmission,
     detail.category,
     detail.description,
+    listingRow?.ad_status ?? 'none',
+    listingRow?.kaparo ?? 0,
+    0,
+    null,
     JSON.stringify(detail.phones),
     JSON.stringify(detail.extras),
     JSON.stringify(detail.techData),
