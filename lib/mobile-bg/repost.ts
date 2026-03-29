@@ -2,7 +2,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
-import { loginMobileBg } from '@/lib/mobile-bg/auth';
+import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
 
@@ -91,6 +91,7 @@ export async function repostBackupFromDb(
 
     await page.goto('https://www.mobile.bg/pcgi/mobile.cgi?pubtype=1&act=6&subact=4&actions=1', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1800);
+    await acceptMobileBgCookies(page);
 
     const selectAndMaybeSubmit = async (fieldName: string, fieldValue: string, submitForm: boolean) => {
       await page.evaluate(({ fieldName: name, fieldValue: value, submitForm: submit }) => {
@@ -182,9 +183,19 @@ export async function repostBackupFromDb(
     });
 
     await page.waitForTimeout(800);
-    await page.locator('#pubButton').click();
+    await acceptMobileBgCookies(page);
+    await page.evaluate(() => {
+      document.getElementById('cookiescript_injected_wrapper')?.remove();
+      document.getElementById('cookiescript_injected')?.remove();
+      const pubForm = (document as Document & { pub?: HTMLFormElement }).pub;
+      if (!pubForm) throw new Error('Publish form not found');
+      const actions = pubForm.querySelector('[name="actions"]') as HTMLInputElement | null;
+      if (actions) actions.value = '2';
+      pubForm.submit();
+    });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
+    await acceptMobileBgCookies(page);
 
     const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
     for (const image of images) {
@@ -197,11 +208,14 @@ export async function repostBackupFromDb(
     const previewScreenshotPath = path.join(repostDir, 'repost-preview.png');
     await page.screenshot({ path: previewScreenshotPath, fullPage: true });
 
+    await acceptMobileBgCookies(page);
     const continueButton = page.locator('a.pubButton, a:has-text("ПРОДЪЛЖИ"), input[value="ПРОДЪЛЖИ"]').first();
     if (await continueButton.count() > 0) {
-      await continueButton.click();
+      await continueButton.click({ force: true });
     } else {
       await page.evaluate(() => {
+        document.getElementById('cookiescript_injected_wrapper')?.remove();
+        document.getElementById('cookiescript_injected')?.remove();
         const steps = (document as Document & { steps?: HTMLFormElement }).steps;
         if (steps) {
           const step = steps.querySelector('[name="step"]') as HTMLInputElement | null;
@@ -226,16 +240,25 @@ export async function repostBackupFromDb(
     if (!targetMobileId) {
       const viewButton = page.locator('a:has-text("Преглед на обявата")').first();
       if (await viewButton.count() > 0) {
-        await viewButton.click();
-        await page.waitForLoadState('domcontentloaded');
-        await page.waitForTimeout(1800);
-        resultUrl = page.url();
-        resultText = (await page.textContent('body').catch(() => '')) || '';
+        const href = await viewButton.getAttribute('href');
         targetMobileId =
-          resultUrl.match(/obiava-(\d+)/)?.[1]
-          || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
-          || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
-          || null;
+          href?.match(/obiava-(\d+)/)?.[1]
+          || targetMobileId;
+        if (href) {
+          resultUrl = href;
+        } else {
+          await acceptMobileBgCookies(page);
+          await viewButton.click({ force: true });
+          await page.waitForLoadState('domcontentloaded');
+          await page.waitForTimeout(1800);
+          resultUrl = page.url();
+          resultText = (await page.textContent('body').catch(() => '')) || '';
+          targetMobileId =
+            resultUrl.match(/obiava-(\d+)/)?.[1]
+            || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
+            || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
+            || null;
+        }
       }
     }
 
