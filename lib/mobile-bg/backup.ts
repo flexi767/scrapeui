@@ -69,6 +69,7 @@ export interface BackupProgressEvent {
   model?: string;
   title?: string;
   url?: string;
+  previewUrl?: string;
   imageCount?: number;
   runId?: number;
   listingsCount?: number;
@@ -581,6 +582,7 @@ export async function backupDealerToDb(
         model: detail.model,
         title: detail.title || detail.sourceTitle,
         url: detail.url,
+        previewUrl: detail.imageUrls[0] || undefined,
         imageCount: savedImages.length,
       });
     }

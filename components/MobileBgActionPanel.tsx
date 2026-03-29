@@ -27,6 +27,7 @@ interface BackupLogEntry {
   model?: string;
   title?: string;
   url?: string;
+  previewUrl?: string;
   imageCount?: number;
   listingsCount?: number;
   imagesCount?: number;
@@ -109,7 +110,6 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
           if (payload.type === 'complete') {
             completed = true;
             toast.success(`Backup completed: ${payload.listingsCount ?? 0} listings, ${payload.imagesCount ?? 0} images`);
-            if (typeof window !== 'undefined') window.location.reload();
           }
         }
       }
@@ -180,25 +180,43 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
             {backupLog.map((entry, index) => (
               entry.type === 'listing' ? (
                 <div key={`${entry.mobileId || index}-${index}`} className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-white">
-                        {[entry.make, entry.model].filter(Boolean).join(' ') || entry.mobileId || 'Listing'}
-                      </div>
-                      <div className="truncate text-xs text-gray-400">{entry.title || entry.mobileId || '—'}</div>
+                  <div className="flex items-start gap-3">
+                    <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md border border-gray-800 bg-gray-950">
+                      {entry.previewUrl ? (
+                        <div
+                          role="img"
+                          aria-label={[entry.make, entry.model].filter(Boolean).join(' ') || entry.mobileId || 'Listing'}
+                          style={{ backgroundImage: `url("${entry.previewUrl}")` }}
+                          className="h-full w-full bg-cover bg-center"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wide text-gray-600">
+                          No image
+                        </div>
+                      )}
                     </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${entry.action === 'created' ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/60 text-amber-200'}`}>
-                      {entry.action === 'created' ? 'new' : 'updated'}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                    <span>{entry.current ?? 0}/{entry.total ?? 0}</span>
-                    <span>{entry.imageCount ?? 0} images</span>
-                    {entry.url ? (
-                      <a href={entry.url} target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200">
-                        open
-                      </a>
-                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-white">
+                            {[entry.make, entry.model].filter(Boolean).join(' ') || entry.mobileId || 'Listing'}
+                          </div>
+                          <div className="truncate text-xs text-gray-400">{entry.title || entry.mobileId || '—'}</div>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${entry.action === 'created' ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/60 text-amber-200'}`}>
+                          {entry.action === 'created' ? 'new' : 'updated'}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                        <span>{entry.current ?? 0}/{entry.total ?? 0}</span>
+                        <span>{entry.imageCount ?? 0} images</span>
+                        {entry.url ? (
+                          <a href={entry.url} target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200">
+                            open
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
