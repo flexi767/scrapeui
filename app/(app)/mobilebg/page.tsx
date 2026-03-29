@@ -1,12 +1,14 @@
 import Link from 'next/link';
-import { getMobileBgBackupRuns, getMobileBgDashboardSummary, getMobileBgEditForms, getMobileBgRepostJobs } from '@/lib/queries';
+import { getAllDealers, getMobileBgBackupRuns, getMobileBgDashboardSummary, getMobileBgEditForms, getMobileBgRepostJobs } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
+import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 
 export default function MobileBgPage() {
   const summary = getMobileBgDashboardSummary();
   const runs = getMobileBgBackupRuns(8);
   const editForms = getMobileBgEditForms(8);
   const reposts = getMobileBgRepostJobs(8);
+  const dealers = getAllDealers().filter((dealer) => dealer.active && dealer.mobile_url);
 
   const cards = [
     { label: 'Backup runs', value: summary.runs },
@@ -33,6 +35,10 @@ export default function MobileBgPage() {
           </div>
         ))}
       </div>
+
+      <MobileBgActionPanel
+        dealers={dealers.map((dealer) => ({ slug: dealer.slug, name: dealer.name }))}
+      />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <section className="rounded-lg border border-gray-700 bg-gray-900/40">

@@ -53,7 +53,7 @@ export interface BackupDealerResult {
   imagesCount: number;
 }
 
-function getStorageRoot(dbPath: string): string {
+export function getStorageRoot(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'mobilebg-backups');
 }
 

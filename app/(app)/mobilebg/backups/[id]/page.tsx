@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getMobileBgBackupById } from '@/lib/queries';
+import { getAllDealers, getMobileBgBackupById } from '@/lib/queries';
 import { formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 
 export default async function MobileBgBackupDetailPage({
   params,
@@ -11,6 +12,7 @@ export default async function MobileBgBackupDetailPage({
   const { id } = await params;
   const backup = getMobileBgBackupById(Number(id));
   if (!backup) notFound();
+  const dealers = getAllDealers().filter((dealer) => dealer.active && dealer.mobile_url);
 
   const phones = parseJson<string[]>(backup.phones_json, []);
   const extras = parseJson<Record<string, Array<{ label: string; alias?: string | null }>>>(backup.extras_json, {});
@@ -23,6 +25,13 @@ export default async function MobileBgBackupDetailPage({
         <h1 className="mt-2 text-2xl font-bold text-white">{backup.make || '—'} {backup.model || ''}</h1>
         <p className="mt-1 text-sm text-gray-400">{backup.title || backup.source_title || backup.mobile_id || '—'}</p>
       </div>
+
+      <MobileBgActionPanel
+        dealers={dealers.map((dealer) => ({ slug: dealer.slug, name: dealer.name }))}
+        defaultDealerSlug={backup.dealer_slug}
+        mobileId={backup.mobile_id}
+        backupId={backup.id}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
         <section className="space-y-6">
