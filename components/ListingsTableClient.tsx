@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { formatPrice, formatMileage, formatDate } from '@/lib/utils';
+import { buildImageList, formatPrice, formatMileage, formatDate, parseJson } from '@/lib/utils';
 import type { CompetitorStats } from '@/lib/queries';
 
 interface ListingRow {
@@ -23,7 +23,9 @@ interface ListingRow {
   last_edit: string;
   is_new: number;
   thumb_keys: string;
+  full_keys: string;
   image_meta: string;
+  images_downloaded: number;
   dealer_name: string;
   dealer_slug: string;
 }
@@ -170,17 +172,16 @@ export default function ListingsTableClient({ rows, competitorStats, currentPara
           </thead>
           <tbody className="divide-y divide-gray-800">
             {rows.map(row => {
-              const images = (() => {
-                try {
-                  const meta = JSON.parse(row.image_meta || '{}');
-                  const keys = JSON.parse(row.thumb_keys || '[]') as string[];
-                  const cdn = meta.cdn ?? 'cdn2.focus.bg';
-                  const shard = meta.shard ?? '2';
-                  return keys.map(k => ({
-                    thumb: `https://${cdn}/thumb/${shard}/${k}`,
-                  }));
-                } catch { return []; }
-              })();
+              const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
+              const fullKeys = parseJson<string[]>(row.full_keys, []);
+              const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
+              const images = buildImageList(
+                row.mobile_id,
+                fullKeys.length ? fullKeys : thumbKeys,
+                thumbKeys,
+                imageMeta,
+                row.images_downloaded === 1,
+              );
               const thumb = images[0]?.thumb ?? null;
               const key = `${row.make}|||${row.model}`;
               const cmptStats = competitorStats[key];
