@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import DealersManager from './DealersManager';
 import ScrapeRunner from './ScrapeRunner';
+import ReparseRunner from './ReparseRunner';
 
 interface Dealer {
   id: number;
@@ -42,6 +43,11 @@ export default function ConfigShell({ initialDealers }: { initialDealers: Dealer
       <section>
         <h2 className="text-lg font-semibold text-white mb-4">Run Scraper</h2>
         <ScrapeRunner initialDealers={dealers} onRunStart={() => setDealersCollapsed(true)} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4">Reparse Make / Model</h2>
+        <ReparseRunner dealers={dealers} />
       </section>
     </>
   );

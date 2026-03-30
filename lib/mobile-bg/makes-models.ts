@@ -9,7 +9,8 @@ export interface ModelEntry { label: string; id: number | null }
 export interface MakeEntry { make: string; makeId: number | null; models: ModelEntry[] }
 export type MakesMap = Map<string, MakeEntry>;
 
-let _makesMap: MakesMap | null = null;
+// Cache per pubtype
+const _cache = new Map<string, MakesMap>();
 
 async function fetchWin1251(url: string): Promise<string> {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
@@ -18,10 +19,11 @@ async function fetchWin1251(url: string): Promise<string> {
   return new TextDecoder('windows-1251').decode(buf);
 }
 
-export async function fetchMakesModels(): Promise<MakesMap> {
-  if (_makesMap) return _makesMap;
+// Raw (unfiltered) parse — cached independently
+let _rawJs: string | null = null;
 
-  // Find versioned cmmvars.js URL from the publish page
+async function fetchCmmVarsJs(): Promise<string> {
+  if (_rawJs) return _rawJs;
   let cmmUrl = 'https://www.mobile.bg/jss/cmmvars.js';
   try {
     const html = await fetchWin1251(
@@ -29,22 +31,39 @@ export async function fetchMakesModels(): Promise<MakesMap> {
     );
     const match = html.match(/\/jss\/cmmvars\.js\?[\d]+/);
     if (match) cmmUrl = 'https://www.mobile.bg' + match[0];
-  } catch { /* fall back to base URL */ }
+  } catch { /* fall back */ }
+  _rawJs = await fetchWin1251(cmmUrl);
+  return _rawJs;
+}
 
-  const js = await fetchWin1251(cmmUrl);
+function parseMm2pt(js: string): Map<string, string> {
+  // mm2pt["Make~Model"]="pubtype"
+  const map = new Map<string, string>();
+  const re = /mm2pt\["([^"]+)"\]\s*=\s*"([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(js)) !== null) map.set(m[1], m[2]);
+  return map;
+}
 
+// mm2pt only contains pubtypes '1' (cars) and '2' (SUVs/jeeps).
+// Everything else in cmm (motorcycles, trucks…) is untagged and must be excluded.
+function parseCmm(js: string, mm2pt: Map<string, string>, pubtypes: string[]): MakesMap {
+  const ptSet = new Set(pubtypes);
   const cmmMatch = js.match(/var cmm\s*=\s*new Array\s*\(([\s\S]*?)\)\s*;/);
   if (!cmmMatch) throw new Error('Could not find cmm array in cmmvars.js');
 
   const map: MakesMap = new Map();
   const block = cmmMatch[1];
-
   const rowRegex = /\[\s*'([^']+)'\s*,\s*'([^']*)'((?:\s*,\s*'[^']*')*)\s*\]/g;
   let m: RegExpExecArray | null;
+
   while ((m = rowRegex.exec(block)) !== null) {
     const make = m[1].trim();
+    if (!make || make.length >= 50) continue;
+
     const makeIdRaw = m[2].trim();
     const tokens = [...m[3].matchAll(/'([^']*)'/g)].map(x => x[1].trim());
+
     const models: ModelEntry[] = [];
     for (let i = 0; i < tokens.length;) {
       const label = tokens[i] || '';
@@ -54,23 +73,41 @@ export async function fetchMakesModels(): Promise<MakesMap> {
       models.push({ label, id: hasPairedId ? Number(nextToken) || null : null });
       i += hasPairedId ? 2 : 1;
     }
-    if (make && make.length < 50) {
-      const key = make.toLowerCase();
-      const makeId = makeIdRaw ? Number(makeIdRaw) || null : null;
-      if (map.has(key)) {
-        const existing = map.get(key)!;
-        const mergedByLabel = new Map(existing.models.map(x => [x.label.toLowerCase(), x]));
-        for (const model of models) {
-          if (!mergedByLabel.has(model.label.toLowerCase())) mergedByLabel.set(model.label.toLowerCase(), model);
-        }
-        map.set(key, { make: existing.make, makeId: existing.makeId ?? makeId, models: [...mergedByLabel.values()] });
-      } else {
-        map.set(key, { make, makeId, models });
+
+    // Only include models that are explicitly tagged in mm2pt for one of our pubtypes.
+    // Untagged entries (motorcycles, trucks, etc.) are excluded entirely.
+    const filtered = models.filter(model => {
+      const mapped = mm2pt.get(`${make}~${model.label}`);
+      return mapped !== undefined && ptSet.has(mapped);
+    });
+
+    if (filtered.length === 0) continue;
+
+    const key = make.toLowerCase();
+    const makeId = makeIdRaw ? Number(makeIdRaw) || null : null;
+    if (map.has(key)) {
+      const existing = map.get(key)!;
+      const mergedByLabel = new Map(existing.models.map(x => [x.label.toLowerCase(), x]));
+      for (const model of filtered) {
+        if (!mergedByLabel.has(model.label.toLowerCase())) mergedByLabel.set(model.label.toLowerCase(), model);
       }
+      map.set(key, { make: existing.make, makeId: existing.makeId ?? makeId, models: [...mergedByLabel.values()] });
+    } else {
+      map.set(key, { make, makeId, models: filtered });
     }
   }
 
-  _makesMap = map;
+  return map;
+}
+
+// pubtype can be a single value '1' or comma-separated '1,2'
+export async function fetchMakesModels(pubtype = '1,2'): Promise<MakesMap> {
+  if (_cache.has(pubtype)) return _cache.get(pubtype)!;
+  const js = await fetchCmmVarsJs();
+  const mm2pt = parseMm2pt(js);
+  const pubtypes = pubtype.split(',').map(s => s.trim());
+  const map = parseCmm(js, mm2pt, pubtypes);
+  _cache.set(pubtype, map);
   return map;
 }
 

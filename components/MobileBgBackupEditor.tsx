@@ -116,9 +116,9 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
         </Field>
         <Field label="VAT">
           <select value={form.vat_included} onChange={(e) => setForm((prev) => ({ ...prev, vat_included: e.target.value }))} className={inputClassName}>
-            <option value="">Unknown</option>
-            <option value="1">Included</option>
-            <option value="0">Not included</option>
+            <option value="">—</option>
+            <option value="1">има</option>
+            <option value="0">няма</option>
           </select>
         </Field>
         <Field label="Year">

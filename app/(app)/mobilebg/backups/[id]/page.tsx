@@ -163,7 +163,7 @@ export default async function MobileBgBackupDetailPage({
               <Meta label="Engine" value={backup.engine || '—'} />
               <Meta label="Power" value={backup.power ? `${backup.power} hp` : '—'} />
               <Meta label="Category" value={backup.category || '—'} />
-              <Meta label="VAT" value={backup.vat_included == null ? '—' : backup.vat_included ? 'included' : 'not included'} />
+              <Meta label="VAT" value={backup.vat_included == null ? '—' : backup.vat_included ? 'има' : 'няма'} />
               <Meta label="Images" value={String(backup.image_count)} />
               <Meta label="Saved" value={formatDate(backup.updated_at || backup.created_at)} />
             </div>
