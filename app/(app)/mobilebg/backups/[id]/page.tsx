@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllDealers, getMobileBgBackupById } from '@/lib/queries';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 import { MobileBgBackupEditor } from '@/components/MobileBgBackupEditor';
@@ -63,11 +64,12 @@ export default async function MobileBgBackupDetailPage({
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {backup.images.map((image) => (
                   <a key={image.id} href={`/api/mobilebg-backup-images/${image.id}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ImageWithFallback
                       src={`/api/mobilebg-backup-images/${image.id}`}
                       alt={image.filename}
                       className="aspect-[4/3] w-full object-cover"
+                      fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
+                      fallbackLabel="Missing"
                     />
                     <div className="px-3 py-2 text-xs text-gray-400">{image.filename}</div>
                   </a>

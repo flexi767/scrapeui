@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { OwnListingRow } from '@/lib/queries';
 import { formatPrice, formatDate, buildImageList, parseJson } from '@/lib/utils';
 
@@ -219,9 +220,22 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 <td className="px-2 py-1.5">
                   {thumbSrc ? (
                     <div className="relative inline-block" style={{ width: 40, height: 30 }}>
-                      <img src={thumbSrc} alt="" className="peer rounded object-cover" style={{ width: 40, height: 30 }} />
+                      <ImageWithFallback
+                        src={thumbSrc}
+                        alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
+                        className="peer rounded object-cover"
+                        style={{ width: 40, height: 30 }}
+                        fallbackClassName="peer rounded bg-gray-800 text-gray-400"
+                        fallbackLabel="Missing"
+                      />
                       <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                        <img src={thumbSrc} alt="" className="w-full rounded shadow-xl" />
+                        <ImageWithFallback
+                          src={thumbSrc}
+                          alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
+                          className="w-full rounded shadow-xl"
+                          fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                          fallbackLabel="Missing"
+                        />
                       </div>
                     </div>
                   ) : (

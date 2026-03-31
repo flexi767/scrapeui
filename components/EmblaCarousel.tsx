@@ -2,6 +2,7 @@
 
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface Image {
   full: string;
@@ -100,11 +101,12 @@ export default function EmblaCarousel({ images, title }: Props) {
         <div className="flex">
           {images.map((img, i) => (
             <div key={i} className="min-w-0 flex-[0_0_100%]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <ImageWithFallback
                 src={img.full}
                 alt={title ? `${title} — photo ${i + 1}` : `Photo ${i + 1}`}
                 className="aspect-[4/3] w-full cursor-zoom-in object-cover"
+                fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
+                fallbackLabel="Missing"
                 onClick={() => setLightbox(img.full)}
               />
             </div>
@@ -143,11 +145,9 @@ export default function EmblaCarousel({ images, title }: Props) {
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
           onClick={() => { if (zoomed) { setZoomed(false); setTranslate({x:0,y:0}); } else { setLightbox(null); } }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ImageWithFallback
             src={lightbox}
             alt=""
-            draggable={false}
             className="max-h-screen max-w-full select-none object-contain p-4"
             style={{
               transformOrigin: zoomOrigin,
@@ -157,6 +157,8 @@ export default function EmblaCarousel({ images, title }: Props) {
               cursor: zoomed ? (dragging ? 'grabbing' : 'grab') : 'zoom-in',
               transition: dragging ? 'none' : 'transform 0.2s',
             }}
+            fallbackClassName="flex max-h-screen max-w-full items-center justify-center bg-gray-900 p-4 text-gray-400"
+            fallbackLabel="Missing"
             onMouseDown={(e) => {
               if (!zoomed) return;
               e.preventDefault();
@@ -254,11 +256,12 @@ export default function EmblaCarousel({ images, title }: Props) {
                   : 'opacity-50 hover:opacity-80'
               }`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <ImageWithFallback
                 src={img.thumb}
                 alt=""
                 className="h-12 w-full object-cover"
+                fallbackClassName="flex h-12 w-full items-center justify-center bg-gray-800 text-gray-400"
+                fallbackLabel="Missing"
               />
             </button>
           ))}

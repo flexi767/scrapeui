@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import RangeFilter from '@/components/RangeFilter';
@@ -224,22 +225,24 @@ export default async function ListingsPage({
                       {thumb ? (
                         <div className="relative inline-block w-16">
                           <Link href={`/listings/${row.mobile_id}`} className="peer block">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <ImageWithFallback
                               src={thumb}
-                              alt=""
+                              alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
                               className="w-16 rounded object-contain"
                               style={{aspectRatio:'4/3'}}
+                              fallbackClassName="w-16 rounded bg-gray-800 text-gray-400"
+                              fallbackLabel="Missing"
                             />
                           </Link>
                           {/* Hover preview — shown via peer-hover, pointer-events-none so it doesn't interfere */}
                           <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <ImageWithFallback
                               src={thumb}
-                              alt=""
+                              alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
                               className="w-full rounded shadow-xl"
                               style={{aspectRatio:'4/3'}}
+                              fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                              fallbackLabel="Missing"
                             />
                           </div>
                         </div>
