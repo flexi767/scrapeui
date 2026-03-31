@@ -19,6 +19,16 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  function loadNotifications() {
+    fetch('/api/notifications')
+      .then((r) => r.json())
+      .then((data) => {
+        setNotifications(data.notifications || []);
+        setUnread(data.unreadCount || 0);
+      })
+      .catch(() => {});
+  }
+
   useEffect(() => {
     loadNotifications();
     const interval = setInterval(loadNotifications, 60000); // poll every 60s
@@ -32,16 +42,6 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
-
-  function loadNotifications() {
-    fetch('/api/notifications')
-      .then((r) => r.json())
-      .then((data) => {
-        setNotifications(data.notifications || []);
-        setUnread(data.unreadCount || 0);
-      })
-      .catch(() => {});
-  }
 
   async function markAllRead() {
     await fetch('/api/notifications', {
@@ -74,7 +74,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
           <div className="flex items-center justify-between border-b border-gray-700 px-4 py-2">
             <span className="text-sm font-medium text-gray-200">Notifications</span>
             {unread > 0 && (
