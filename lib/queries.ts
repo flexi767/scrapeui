@@ -354,14 +354,14 @@ export function getOwnListings(filters: ListingFilters = {}) {
       const ph = nonNull.map(() => '?').join(',');
       clauses.push(`(CASE
         WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'excluded'
+        WHEN b.vat_included = 0 THEN 'exempt'
         ELSE l.vat
       END) IN (${ph})`);
       params.push(...nonNull);
     }
     if (includeNull) clauses.push(`(CASE
       WHEN b.vat_included = 1 THEN 'included'
-      WHEN b.vat_included = 0 THEN 'excluded'
+      WHEN b.vat_included = 0 THEN 'exempt'
       ELSE l.vat
     END) IS NULL`);
     if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
@@ -433,7 +433,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       l.price_change,
       CASE
         WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'excluded'
+        WHEN b.vat_included = 0 THEN 'exempt'
         ELSE l.vat
       END as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
@@ -497,7 +497,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       l.price_change,
       CASE
         WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'excluded'
+        WHEN b.vat_included = 0 THEN 'exempt'
         ELSE l.vat
       END as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
