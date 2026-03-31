@@ -17,10 +17,24 @@
 ```
 app/                 # Next.js App Router
   api/              # API routes (all read-only queries or mutations)
+    dashboard/      # Dashboard stats endpoints
+    listings/       # Listing queries and operations
+    listings/[mobileId]/  # Single listing detail
+    auth/           # NextAuth routes
+    ...             # Other feature endpoints
   (app)/            # Protected routes (require auth)
-  login/            # Auth page
-  editown/          # Own-listing draft editing + Mobile.bg sync UI
+    page.tsx        # Dashboard homepage
+    listings/       # Listings browser
+    editown/        # Own-listing draft editing + Mobile.bg sync
+    mobilebg/       # Mobile.bg sync & workflow UI
+    mapping/        # Brand & model mapping
+    tasks/          # Task management
+    kb/             # Knowledge base browser
+  login/            # Auth page (public)
 components/         # Reusable React components
+  Dashboard.tsx     # Dashboard homepage (stats + quick links)
+  AppSidebar.tsx    # Navigation sidebar
+  TopBar.tsx        # Top navigation bar
   ui/               # shadcn/ui components (auto-generated)
   shared/           # Custom shared components (badges, selectors)
   editor/           # TipTap editor components
@@ -103,12 +117,22 @@ scripts/            # Migration & seed scripts
 
 ### Common Components
 
+- **Dashboard:** homepage with project stats (listing counts, last scraping time) and quick links
 - **AppSidebar:** main navigation with nav items (routes & icons)
 - **TopBar:** header with user menu
 - **SessionProvider:** wraps app for NextAuth context
 - **Editor components:** TipTapEditor, TiptapViewer, TiptapToolbar for rich text
 
 ## API Routes
+
+### Dashboard Endpoints
+- **GET `/api/dashboard/stats`:** returns project overview stats
+  - `totalListings`: all listings in the system
+  - `activeListings`: active (is_active = 1) listings
+  - `lastScrapingAt`: ISO timestamp of last completed backup run
+  - `totalDealers`: count of active dealers
+
+### Route Pattern
 
 ### Route Pattern
 
