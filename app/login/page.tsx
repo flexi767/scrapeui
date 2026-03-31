@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (res?.error) {
         setLoading(false);
       } else {
-        router.push('/');
+        router.push('/dashboard');
         router.refresh();
       }
     });
@@ -46,7 +46,7 @@ export default function LoginPage() {
       setError('Invalid username or password');
       setLoading(false);
     } else {
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     }
   }

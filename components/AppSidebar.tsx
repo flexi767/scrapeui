@@ -8,7 +8,8 @@ import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
-  { href: '/', label: 'Listings', icon: CarIcon },
+  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { href: '/listings', label: 'Listings', icon: CarIcon },
   { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
@@ -37,10 +38,7 @@ export function AppSidebar() {
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {navItems.map((item) => {
-          const active =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
@@ -81,6 +79,14 @@ export function AppSidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function DashboardIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h6.75v6.75H3.75V3.75Zm0 9.75h6.75v6.75H3.75V13.5Zm9.75-9.75h6.75v10.5H13.5V3.75Zm0 13.5h6.75v3H13.5v-3Z" />
+    </svg>
   );
 }
 
