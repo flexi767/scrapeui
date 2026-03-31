@@ -352,31 +352,6 @@ export const mobileBgRepostJobs = sqliteTable('mobilebg_repost_jobs', {
   createdAt: text('created_at'),
 });
 
-export const competitorListings = sqliteTable('competitor_listings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerSlug: text('dealer_slug').notNull(),
-  dealerName: text('dealer_name').notNull(),
-  url: text('url').notNull(),
-  title: text('title'),
-  make: text('make'),
-  model: text('model'),
-  price: integer('price'),
-  currency: text('currency').default('EUR'),
-  vat: text('vat'),
-  adStatus: text('ad_status'),
-  kaparo: integer('kaparo').default(0),
-  isNew: integer('is_new').default(0),
-  lastEdit: text('last_edit'),
-  regMonth: text('reg_month'),
-  regYear: text('reg_year'),
-  mileage: integer('mileage'),
-  fuel: text('fuel'),
-  power: integer('power'),
-  color: text('color'),
-  snapshotDate: text('snapshot_date'),
-  scrapedAt: text('scraped_at'),
-});
-
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;
@@ -389,7 +364,6 @@ export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
 export type MobileBgBackupImage = typeof mobileBgBackupImages.$inferSelect;
 export type MobileBgEditFormSnapshot = typeof mobileBgEditFormSnapshots.$inferSelect;
 export type MobileBgRepostJob = typeof mobileBgRepostJobs.$inferSelect;
-export type CompetitorListing = typeof competitorListings.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type TimeEntry = typeof timeEntries.$inferSelect;
