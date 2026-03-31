@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { getVatFromMobileBgLabel } from '@/lib/vat';
 
 interface NewListingBody {
   dealerId: string;
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     body.transmission || null,
     body.bodyType || null,
     body.description || null,
-    body.vat ? (body.vat.includes('включено') ? 1 : 0) : null,
+    getVatFromMobileBgLabel(body.vat),
     extrasJson,
     techData,
     now,

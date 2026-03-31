@@ -281,7 +281,7 @@ export const mobileBgBackups = sqliteTable('mobilebg_backups', {
   title: text('title'),
   priceAmount: integer('price_amount'),
   priceCurrency: text('price_currency'),
-  vatIncluded: integer('vat_included'),
+  vatIncluded: text('vat_included'),
   year: integer('year'),
   mileage: integer('mileage'),
   fuel: text('fuel'),

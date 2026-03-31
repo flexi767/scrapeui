@@ -101,7 +101,7 @@ export interface MobileBgBackupImageRow {
 }
 
 export interface MobileBgBackupDetailRow extends MobileBgBackupListRow {
-  vat_included: number | null;
+  vat_included: string | null;
   year: number | null;
   mileage: number | null;
   fuel: string | null;
@@ -353,15 +353,17 @@ export function getOwnListings(filters: ListingFilters = {}) {
     if (nonNull.length > 0) {
       const ph = nonNull.map(() => '?').join(',');
       clauses.push(`(CASE
-        WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'exempt'
+        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
+        WHEN b.vat_included IN (1, '1') THEN 'included'
+        WHEN b.vat_included IN (0, '0') THEN 'exempt'
         ELSE l.vat
       END) IN (${ph})`);
       params.push(...nonNull);
     }
     if (includeNull) clauses.push(`(CASE
-      WHEN b.vat_included = 1 THEN 'included'
-      WHEN b.vat_included = 0 THEN 'exempt'
+      WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
+      WHEN b.vat_included IN (1, '1') THEN 'included'
+      WHEN b.vat_included IN (0, '0') THEN 'exempt'
       ELSE l.vat
     END) IS NULL`);
     if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
@@ -432,8 +434,9 @@ export function getOwnListings(filters: ListingFilters = {}) {
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
       CASE
-        WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'exempt'
+        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
+        WHEN b.vat_included IN (1, '1') THEN 'included'
+        WHEN b.vat_included IN (0, '0') THEN 'exempt'
         ELSE l.vat
       END as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
@@ -496,8 +499,9 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
       CASE
-        WHEN b.vat_included = 1 THEN 'included'
-        WHEN b.vat_included = 0 THEN 'exempt'
+        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
+        WHEN b.vat_included IN (1, '1') THEN 'included'
+        WHEN b.vat_included IN (0, '0') THEN 'exempt'
         ELSE l.vat
       END as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,

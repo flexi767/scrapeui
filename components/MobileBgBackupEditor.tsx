@@ -9,7 +9,7 @@ interface Props {
   initialValues: {
     title: string;
     price_amount: number | null;
-    vat_included: number | null;
+    vat_included: string | null;
     year: number | null;
     mileage: number | null;
     fuel: string | null;
@@ -66,7 +66,7 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
       body: JSON.stringify({
         title: form.title,
         price_amount: form.price_amount === '' ? null : Number(form.price_amount),
-        vat_included: form.vat_included === '' ? null : Number(form.vat_included),
+        vat_included: form.vat_included === '' ? null : form.vat_included,
         year: form.year === '' ? null : Number(form.year),
         mileage: form.mileage === '' ? null : Number(form.mileage),
         fuel: form.fuel || null,
@@ -117,8 +117,9 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
         <Field label="VAT">
           <select value={form.vat_included} onChange={(e) => setForm((prev) => ({ ...prev, vat_included: e.target.value }))} className={inputClassName}>
             <option value="">—</option>
-            <option value="1">има</option>
-            <option value="0">няма</option>
+            <option value="included">има</option>
+            <option value="exempt">няма</option>
+            <option value="excluded">+ДДС</option>
           </select>
         </Field>
         <Field label="Year">

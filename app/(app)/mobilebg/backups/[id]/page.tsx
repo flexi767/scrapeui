@@ -5,6 +5,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 import { MobileBgBackupEditor } from '@/components/MobileBgBackupEditor';
+import { getVatBadgeLabel } from '@/lib/vat';
 
 export default async function MobileBgBackupDetailPage({
   params,
@@ -165,7 +166,7 @@ export default async function MobileBgBackupDetailPage({
               <Meta label="Engine" value={backup.engine || '—'} />
               <Meta label="Power" value={backup.power ? `${backup.power} hp` : '—'} />
               <Meta label="Category" value={backup.category || '—'} />
-              <Meta label="VAT" value={backup.vat_included == null ? '—' : backup.vat_included ? 'има' : 'няма'} />
+              <Meta label="VAT" value={getVatBadgeLabel(backup.vat_included)} />
               <Meta label="Images" value={String(backup.image_count)} />
               <Meta label="Saved" value={formatDate(backup.updated_at || backup.created_at)} />
             </div>

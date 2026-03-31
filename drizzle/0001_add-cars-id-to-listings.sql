@@ -62,7 +62,7 @@ CREATE TABLE `mobilebg_backups` (
 	`title` text,
 	`price_amount` integer,
 	`price_currency` text,
-	`vat_included` integer,
+	`vat_included` text,
 	`year` integer,
 	`mileage` integer,
 	`fuel` text,

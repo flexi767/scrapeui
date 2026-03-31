@@ -15,7 +15,7 @@ interface BackupRow {
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
-  vat_included: number | null;
+  vat_included: string | null;
   mileage: number | null;
   fuel: string | null;
   power: number | null;

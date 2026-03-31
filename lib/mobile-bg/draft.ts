@@ -1,10 +1,11 @@
 import type { Page } from 'playwright';
+import { getMobileBgVatLabel } from '@/lib/vat';
 
 export interface MobileBgDraftBackupRow {
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
-  vat_included: number | null;
+  vat_included: string | null;
   mileage: number | null;
   fuel: string | null;
   power: number | null;
@@ -29,12 +30,7 @@ export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Recor
     f17: backup.color || null,
     f21: backup.description || null,
     f30: engineMatch?.[1] || null,
-    f31:
-      backup.vat_included == null
-        ? null
-        : backup.vat_included === 1
-          ? 'Цената е с включено ДДС'
-          : 'Частна продажба. / Освободена от ДДС продажба.',
+    f31: getMobileBgVatLabel(backup.vat_included),
   };
 }
 

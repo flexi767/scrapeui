@@ -5,6 +5,7 @@ import { chromium, type Page } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
+import type { VatValue } from '@/lib/vat';
 
 export interface DealerBackupConfig {
   id: number;
@@ -24,7 +25,7 @@ interface ScrapedDetail {
   title: string;
   priceAmount: number | null;
   priceCurrency: string;
-  vatIncluded: boolean | null;
+  vat: VatValue | null;
   year: number | null;
   mileage: number | null;
   fuel: string | null;
@@ -294,7 +295,7 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     title: parsed.titleRemainder.trim(),
     priceAmount: data.price ? parseFloat(data.price) : null,
     priceCurrency: 'EUR',
-    vatIncluded: data.hasVat ? true : data.noVat ? false : null,
+    vat: data.hasVat ? 'included' : data.noVat ? 'exempt' : null,
     year: data.year ? parseInt(data.year.match(/\d{4}/)?.[0] || '', 10) || null : null,
     mileage: data.mileage ? parseInt(data.mileage, 10) || null : null,
     fuel: data.fuel || null,
@@ -476,7 +477,7 @@ function upsertBackupArtifact(
     detail.title,
     detail.priceAmount,
     detail.priceCurrency,
-    detail.vatIncluded == null ? null : detail.vatIncluded ? 1 : 0,
+    detail.vat,
     detail.year,
     detail.mileage,
     detail.fuel,

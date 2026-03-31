@@ -6,6 +6,7 @@ import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
+import { normalizeVatValue } from '@/lib/vat';
 
 interface BackupRow {
   id: number;
@@ -16,7 +17,7 @@ interface BackupRow {
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
-  vat_included: number | null;
+  vat_included: string | null;
   year: number | null;
   mileage: number | null;
   fuel: string | null;
@@ -296,7 +297,7 @@ async function publishDraftBackupFromDb(
         0,
         now,
         backup.price_amount,
-        backup.vat_included == null ? null : backup.vat_included === 1 ? 'included' : 'exempt',
+        normalizeVatValue(backup.vat_included),
         images.length,
         now,
         now,

@@ -319,6 +319,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       <option value="">—</option>
                       <option value="included">има</option>
                       <option value="exempt">няма</option>
+                      <option value="excluded">+ДДС</option>
                     </select>
                   ) : (
                     <VatBadge vat={row.vat} />

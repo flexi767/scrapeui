@@ -47,7 +47,7 @@ export async function PATCH(
 
     // Validate vat
     const vat = bodyData.vat;
-    const validVatValues = ['', 'included', 'exempt'];
+    const validVatValues = ['', 'included', 'exempt', 'excluded'];
     if (typeof vat !== 'string' || !validVatValues.includes(vat)) {
       return NextResponse.json(
         { error: 'Invalid vat value' },
@@ -119,7 +119,7 @@ export async function PATCH(
       .run(
         trimmedTitle,
         currentPrice,
-        vatForDb === null ? null : vatForDb === 'included' ? 1 : 0,
+        vatForDb,
         kaparo,
         adStatus,
         new Date().toISOString(),

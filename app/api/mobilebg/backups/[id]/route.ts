@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { normalizeVatValue } from '@/lib/vat';
 
 function parseOptionalInteger(value: unknown, label: string): number | null {
   if (value == null) return null;
@@ -40,9 +41,11 @@ export async function PATCH(
     const priceAmount = parseOptionalInteger(payload.price_amount, 'Price');
     const vatIncluded = payload.vat_included == null
       ? null
-      : payload.vat_included === 0 || payload.vat_included === 1
-        ? payload.vat_included
-        : (() => { throw new Error('VAT must be 0, 1, or null'); })();
+      : (() => {
+          const vat = normalizeVatValue(payload.vat_included);
+          if (vat == null) throw new Error('VAT must be included, exempt, excluded, or null');
+          return vat;
+        })();
     const year = parseOptionalInteger(payload.year, 'Year');
     const mileage = parseOptionalInteger(payload.mileage, 'Mileage');
     const fuel = parseOptionalString(payload.fuel, 'Fuel');
