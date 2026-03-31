@@ -1,6 +1,23 @@
 import Link from 'next/link';
+import ReparseRunner from '@/components/ReparseRunner';
+import { raw } from '@/db/client';
 import { getMakeModelMappings } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
+
+interface DealerRow {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+function getDealers(): DealerRow[] {
+  return raw.prepare(`
+    SELECT id, slug, name
+    FROM dealers
+    WHERE active = 1
+    ORDER BY priority DESC, name
+  `).all() as DealerRow[];
+}
 
 function mappingStatus(row: {
   mobile_make_id: number | null;
@@ -16,6 +33,7 @@ function mappingStatus(row: {
 }
 
 export default function MappingPage() {
+  const dealers = getDealers();
   const rows = getMakeModelMappings(1000);
   const unresolvedCount = rows.filter((row) => !row.mobile_make_id || !row.mobile_model_id || !row.cars_make_id || !row.cars_model_id).length;
 
@@ -26,6 +44,28 @@ export default function MappingPage() {
         <p className="mt-1 text-sm text-gray-400">
           Relationship view between mobile.bg and cars.bg make/model pairs, grouped across listings.
         </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        <section className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-5">
+          <h2 className="mb-4 text-lg font-semibold text-white">Reparse Make / Model</h2>
+          <ReparseRunner dealers={dealers} />
+        </section>
+
+        <section className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-5">
+          <h2 className="text-lg font-semibold text-white">Form Config</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Review captured Mobile.bg edit-form snapshots and the live field values used for make/model-dependent reposts and updates.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/mobilebg/edit-forms"
+              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+            >
+              Open Edit Form Config
+            </Link>
+          </div>
+        </section>
       </div>
 
       <div className="rounded-lg border border-gray-700 bg-gray-900/40 px-4 py-3 text-sm text-gray-300">
