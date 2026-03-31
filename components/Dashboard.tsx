@@ -7,10 +7,9 @@ import {
   ArchiveIcon,
   EditIcon,
   MapIcon,
-  TaskIcon,
+  ListTodo,
   BookIcon,
   SettingsIcon,
-  RefreshCw,
   TrendingUp,
   Clock,
 } from 'lucide-react';
@@ -28,7 +27,7 @@ const navigationLinks = [
   { href: '/editown', label: 'Edit Own', icon: EditIcon, description: 'Manage your listings' },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon, description: 'Mobile.bg integrations' },
   { href: '/mapping', label: 'Mapping', icon: MapIcon, description: 'Brand & model mapping' },
-  { href: '/tasks', label: 'Tasks', icon: TaskIcon, description: 'Task management' },
+  { href: '/tasks', label: 'Tasks', icon: ListTodo, description: 'Task management' },
   { href: '/kb', label: 'Knowledge Base', icon: BookIcon, description: 'Documentation' },
   { href: '/config', label: 'Configuration', icon: SettingsIcon, description: 'System settings' },
 ];
