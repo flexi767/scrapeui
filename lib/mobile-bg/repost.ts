@@ -9,11 +9,15 @@ import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDe
 
 interface BackupRow {
   id: number;
+  dealer_id?: number | null;
+  listing_id?: number | null;
   mobile_id: string | null;
+  source_url: string | null;
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
   vat_included: number | null;
+  year: number | null;
   mileage: number | null;
   fuel: string | null;
   power: number | null;
@@ -22,6 +26,10 @@ interface BackupRow {
   transmission: string | null;
   category: string | null;
   description: string | null;
+  make: string | null;
+  model: string | null;
+  extras_json: string | null;
+  tech_data_json: string | null;
 }
 
 interface EditSnapshotRow {
@@ -48,6 +56,295 @@ function createRepostJob(db: Database.Database, dealerId: number, backupId: numb
   return Number(result.lastInsertRowid);
 }
 
+function getPrimaryPubtype(techDataJson: string | null): string {
+  if (!techDataJson) return '1';
+  try {
+    const parsed = JSON.parse(techDataJson) as Record<string, string>;
+    const raw = parsed.pubtype || '1';
+    return raw.split(',').map((part) => part.trim()).find(Boolean) || '1';
+  } catch {
+    return '1';
+  }
+}
+
+function getRegionCityValues(techDataJson: string | null): { region: string | null; city: string | null } {
+  if (!techDataJson) return { region: null, city: null };
+  try {
+    const parsed = JSON.parse(techDataJson) as Record<string, string>;
+    return {
+      region: parsed.region || null,
+      city: parsed.city || null,
+    };
+  } catch {
+    return { region: null, city: null };
+  }
+}
+
+function getExtraLabels(extrasJson: string | null): string[] {
+  if (!extrasJson) return [];
+  try {
+    const parsed = JSON.parse(extrasJson) as Record<string, unknown>;
+    return Object.values(parsed).flatMap((entry) => {
+      if (!Array.isArray(entry)) return [];
+      return entry.flatMap((item) => {
+        if (typeof item === 'string') return [item];
+        if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
+        return [];
+      });
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function applyBlankDraftExtras(page: import('playwright').Page, labels: string[]): Promise<void> {
+  if (labels.length === 0) return;
+  await page.evaluate((desiredLabels) => {
+    const desired = new Set(desiredLabels.map((label) => label.trim()));
+    const inputs = Array.from(document.querySelectorAll('input[type="checkbox"][name^="f"]')) as HTMLInputElement[];
+    for (const input of inputs) {
+      const textBlob = [
+        input.closest('label')?.textContent,
+        input.parentElement?.textContent,
+        input.closest('td')?.textContent,
+        input.nextSibling?.textContent,
+      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (desired.has(textBlob) && !input.checked) {
+        input.click();
+      }
+    }
+  }, labels);
+}
+
+async function publishDraftBackupFromDb(
+  db: Database.Database,
+  dealer: DealerBackupConfig,
+  backup: BackupRow,
+  jobId: number,
+  repostDir: string,
+): Promise<{ jobId: number; targetMobileId: string }> {
+  const images = db.prepare(`
+    SELECT local_path
+    FROM mobilebg_backup_images
+    WHERE backup_id = ?
+    ORDER BY sort_order ASC, id ASC
+  `).all(backup.id) as BackupImageRow[];
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ userAgent: USER_AGENT });
+  const page = await context.newPage();
+  const startedAt = new Date().toISOString();
+  db.prepare(`
+    UPDATE mobilebg_backups
+    SET last_mobile_sync_status = 'running', last_mobile_sync_error = NULL, updated_at = ?
+    WHERE id = ?
+  `).run(startedAt, backup.id);
+
+  try {
+    if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
+      throw new Error(`Login failed for ${dealer.slug}`);
+    }
+
+    const { region, city } = getRegionCityValues(backup.tech_data_json);
+    const fieldOverrides = buildBackupFieldOverrides(backup);
+    const dependentFields = [
+      { name: 'f5', value: backup.make || '' },
+      { name: 'f6', value: backup.model || '' },
+      { name: 'f18', value: region || '' },
+      { name: 'f19', value: city || '' },
+    ].filter((field) => field.value);
+    const editableFields = [
+      { tag: 'input', type: 'text', name: 'f4', value: backup.year ? String(backup.year) : '' },
+      { tag: 'input', type: 'text', name: 'f7', value: fieldOverrides.f7 ? String(fieldOverrides.f7) : '' },
+      { tag: 'select', name: 'f8', value: fieldOverrides.f8 ? String(fieldOverrides.f8) : '' },
+      { tag: 'input', type: 'text', name: 'f9', value: fieldOverrides.f9 != null ? String(fieldOverrides.f9) : '' },
+      { tag: 'select', name: 'f10', value: fieldOverrides.f10 ? String(fieldOverrides.f10) : '' },
+      { tag: 'select', name: 'f11', value: fieldOverrides.f11 ? String(fieldOverrides.f11) : '' },
+      { tag: 'input', type: 'text', name: 'f12', value: fieldOverrides.f12 != null ? String(fieldOverrides.f12) : '' },
+      { tag: 'input', type: 'text', name: 'f16', value: fieldOverrides.f16 != null ? String(fieldOverrides.f16) : '' },
+      { tag: 'select', name: 'f17', value: fieldOverrides.f17 ? String(fieldOverrides.f17) : '' },
+      { tag: 'textarea', type: 'textarea', name: 'f21', value: fieldOverrides.f21 ? String(fieldOverrides.f21) : '' },
+      { tag: 'input', type: 'text', name: 'f30', value: fieldOverrides.f30 != null ? String(fieldOverrides.f30) : '' },
+      { tag: 'select', name: 'f31', value: fieldOverrides.f31 ? String(fieldOverrides.f31) : '' },
+    ].filter((field) => field.value);
+
+    const pubtype = getPrimaryPubtype(backup.tech_data_json);
+    await page.goto(`https://www.mobile.bg/pcgi/mobile.cgi?pubtype=${encodeURIComponent(pubtype)}&act=6&subact=4&actions=1`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1800);
+    await acceptMobileBgCookies(page);
+
+    if (!backup.make || !backup.model) {
+      throw new Error('Draft is missing make/model');
+    }
+    if (!region || !city) {
+      throw new Error('Draft is missing region/city');
+    }
+
+    await selectMobileBgDependentFields(page, dependentFields);
+    await applyCapturedMobileBgDraft(page, editableFields, [], fieldOverrides);
+    await applyBlankDraftExtras(page, getExtraLabels(backup.extras_json));
+    await page.evaluate(() => {
+      const pubForm = (document as Document & { pub?: HTMLFormElement }).pub;
+      if (!pubForm && !document.querySelector('form[name="pub"]')) {
+        throw new Error('Publish form not found');
+      }
+    });
+
+    await page.waitForTimeout(800);
+    await acceptMobileBgCookies(page);
+    await page.evaluate(() => {
+      document.getElementById('cookiescript_injected_wrapper')?.remove();
+      document.getElementById('cookiescript_injected')?.remove();
+      const pubForm = (document as Document & { pub?: HTMLFormElement }).pub || document.querySelector('form[name="pub"]') as HTMLFormElement | null;
+      if (!pubForm) throw new Error('Publish form not found');
+      const actions = pubForm.querySelector('[name="actions"]') as HTMLInputElement | null;
+      if (actions) actions.value = '2';
+      if (!pubForm.querySelector('[name="nup"]')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'nup';
+        hidden.value = '013';
+        pubForm.appendChild(hidden);
+      }
+      pubForm.submit();
+    });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    await acceptMobileBgCookies(page);
+
+    if (images.length > 0) {
+      const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
+      for (const image of images) {
+        const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
+        await uploadInput.setInputFiles(image.local_path);
+        await responsePromise;
+        await page.waitForTimeout(300);
+      }
+    }
+
+    const previewScreenshotPath = path.join(repostDir, 'repost-preview.png');
+    await page.screenshot({ path: previewScreenshotPath, fullPage: true });
+
+    await acceptMobileBgCookies(page);
+    const continueButton = page.locator('a.pubButton, a:has-text("ПРОДЪЛЖИ"), input[value="ПРОДЪЛЖИ"]').first();
+    if (await continueButton.count() > 0) {
+      await continueButton.click({ force: true });
+    } else {
+      await page.evaluate(() => {
+        document.getElementById('cookiescript_injected_wrapper')?.remove();
+        document.getElementById('cookiescript_injected')?.remove();
+        const steps = (document as Document & { steps?: HTMLFormElement }).steps;
+        if (steps) {
+          const step = steps.querySelector('[name="step"]') as HTMLInputElement | null;
+          const actions = steps.querySelector('[name="actions"]') as HTMLInputElement | null;
+          if (step) step.value = '3';
+          if (actions) actions.value = '22';
+          steps.submit();
+        }
+      });
+    }
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2500);
+
+    let resultUrl = page.url();
+    const resultText = (await page.textContent('body').catch(() => '')) || '';
+    let targetMobileId =
+      resultUrl.match(/obiava-(\d+)/)?.[1]
+      || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
+      || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
+      || null;
+
+    if (!targetMobileId) {
+      const viewButton = page.locator('a:has-text("Преглед на обявата")').first();
+      if (await viewButton.count() > 0) {
+        const href = await viewButton.getAttribute('href');
+        targetMobileId = href?.match(/obiava-(\d+)/)?.[1] || targetMobileId;
+        if (href) {
+          resultUrl = href;
+        }
+      }
+    }
+
+    if (!targetMobileId) {
+      throw new Error('Publish completed but no new listing ID was found');
+    }
+
+    const now = new Date().toISOString();
+    let listingId = backup.listing_id ?? null;
+    if (!listingId) {
+      const insertListing = db.prepare(`
+        INSERT INTO listings (
+          mobile_id, dealer_id, url, title, make, model, reg_year,
+          fuel, color, power, mileage, description, ad_status, kaparo, is_new,
+          last_edit, current_price, vat, image_count, first_seen_at, last_seen_at, is_active, body_type, transmission
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      `);
+      const listingResult = insertListing.run(
+        targetMobileId,
+        dealer.id,
+        resultUrl,
+        backup.title || backup.source_title || '',
+        backup.make,
+        backup.model,
+        backup.year ? String(backup.year) : null,
+        backup.fuel,
+        backup.color,
+        backup.power,
+        backup.mileage,
+        backup.description,
+        'none',
+        0,
+        now,
+        backup.price_amount,
+        backup.vat_included == null ? null : backup.vat_included === 1 ? 'included' : 'exempt',
+        images.length,
+        now,
+        now,
+        backup.category,
+        backup.transmission,
+      );
+      listingId = Number(listingResult.lastInsertRowid);
+    }
+
+    db.prepare(`
+      UPDATE mobilebg_backups
+      SET
+        listing_id = COALESCE(listing_id, ?),
+        mobile_id = ?,
+        source_url = ?,
+        draft_needs_sync = 0,
+        last_mobile_sync_status = 'success',
+        last_mobile_sync_error = NULL,
+        last_mobile_sync_at = ?,
+        updated_at = ?
+      WHERE id = ?
+    `).run(listingId, targetMobileId, resultUrl, now, now, backup.id);
+
+    db.prepare(`
+      UPDATE mobilebg_repost_jobs
+      SET status = 'completed', target_mobile_id = ?, preview_screenshot_path = ?, debug_dir = ?, message = ?, finished_at = ?
+      WHERE id = ?
+    `).run(targetMobileId, previewScreenshotPath, repostDir, resultUrl, now, jobId);
+
+    return { jobId, targetMobileId };
+  } catch (error) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE mobilebg_repost_jobs
+      SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
+      WHERE id = ?
+    `).run(error instanceof Error ? error.message : String(error), repostDir, now, jobId);
+    db.prepare(`
+      UPDATE mobilebg_backups
+      SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?
+      WHERE id = ?
+    `).run(error instanceof Error ? error.message : String(error), now, backup.id);
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function repostBackupFromDb(
   db: Database.Database,
   dealer: DealerBackupConfig,
@@ -56,11 +353,12 @@ export async function repostBackupFromDb(
 ): Promise<{ jobId: number; targetMobileId: string }> {
   const backup = db.prepare(`
     SELECT
-      id, listing_id, mobile_id, title, source_title, price_amount, vat_included,
-      mileage, fuel, power, engine, color, transmission, category, description
+      id, dealer_id, listing_id, mobile_id, source_url, title, source_title, price_amount, vat_included,
+      year, mileage, fuel, power, engine, color, transmission, category, description,
+      make, model, extras_json, tech_data_json
     FROM mobilebg_backups
     WHERE id = ?
-  `).get(backupId) as (BackupRow & { listing_id?: number | null }) | undefined;
+  `).get(backupId) as BackupRow | undefined;
 
   if (!backup) throw new Error(`Backup ${backupId} not found`);
 
@@ -71,6 +369,14 @@ export async function repostBackupFromDb(
     ORDER BY created_at DESC, id DESC
     LIMIT 1
   `).get(backupId) as EditSnapshotRow | undefined;
+
+  const jobId = createRepostJob(db, dealer.id, backupId, backup.listing_id ?? null, backup.mobile_id);
+  const repostDir = getRepostDir(dbPath, dealer.slug, backupId);
+  await fsp.mkdir(repostDir, { recursive: true });
+
+  if (!backup.mobile_id) {
+    return publishDraftBackupFromDb(db, dealer, backup, jobId, repostDir);
+  }
 
   if (!editSnapshot?.fields_json) {
     throw new Error(`No edit form snapshot found for backup ${backupId}`);
@@ -94,10 +400,6 @@ export async function repostBackupFromDb(
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ userAgent: USER_AGENT });
   const page = await context.newPage();
-
-  const jobId = createRepostJob(db, dealer.id, backupId, backup.listing_id ?? null, backup.mobile_id);
-  const repostDir = getRepostDir(dbPath, dealer.slug, backupId);
-  await fsp.mkdir(repostDir, { recursive: true });
 
   try {
     if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {

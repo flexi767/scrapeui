@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import type { MakeEntry } from '@/lib/mobile-bg/makes-models';
 import type { Region, City } from '@/lib/mobile-bg/regions';
 
@@ -291,6 +292,7 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
   const [citiesLoading, setCitiesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedBackupId, setSavedBackupId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const set = useCallback((key: keyof Omit<FormState, 'extras'>) => (value: string) =>
@@ -341,6 +343,7 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Грешка при запазване'); return; }
+      setSavedBackupId(typeof data.id === 'number' ? data.id : null);
       setSaved(true);
     } catch (err) {
       setError((err as Error).message);
@@ -353,10 +356,19 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
     return (
       <div className="rounded-lg border border-emerald-700/60 bg-emerald-900/20 p-8 text-center">
         <p className="text-emerald-300 text-lg font-medium">Обявата е запазена!</p>
-        <button onClick={() => { setForm(EMPTY); setSaved(false); }}
-          className="mt-4 text-sm text-gray-400 hover:text-white underline">
-          Нова обява
-        </button>
+        <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+          {savedBackupId ? (
+            <Link href={`/mobilebg/backups/${savedBackupId}`} className="text-blue-300 hover:text-blue-200 underline">
+              Отвори черновата
+            </Link>
+          ) : null}
+          <button
+            onClick={() => { setForm(EMPTY); setSaved(false); setSavedBackupId(null); }}
+            className="text-gray-400 hover:text-white underline"
+          >
+            Нова обява
+          </button>
+        </div>
       </div>
     );
   }

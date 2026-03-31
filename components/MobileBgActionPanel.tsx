@@ -41,6 +41,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
   const [updateRunning, setUpdateRunning] = useState(false);
   const [repostRunning, setRepostRunning] = useState(false);
   const [backupLog, setBackupLog] = useState<BackupLogEntry[]>([]);
+  const isDraftOnly = !mobileId;
 
   async function runAction(
     endpoint: string,
@@ -164,18 +165,23 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
 
         <button
           onClick={() => backupId && runAction('/api/mobilebg/updates', { dealerSlug, backupId }, setUpdateRunning, 'Listing updated on mobile.bg')}
-          disabled={!dealerSlug || !backupId || updateRunning}
+          disabled={!dealerSlug || !backupId || !mobileId || updateRunning}
           className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {updateRunning ? 'Updating…' : 'Update on mobile.bg'}
         </button>
 
         <button
-          onClick={() => backupId && runAction('/api/mobilebg/reposts', { dealerSlug, backupId }, setRepostRunning, 'Repost completed')}
+          onClick={() => backupId && runAction(
+            '/api/mobilebg/reposts',
+            { dealerSlug, backupId },
+            setRepostRunning,
+            isDraftOnly ? 'Listing published to mobile.bg' : 'Repost completed',
+          )}
           disabled={!dealerSlug || !backupId || repostRunning}
           className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {repostRunning ? 'Reposting…' : 'Repost backup'}
+          {repostRunning ? (isDraftOnly ? 'Publishing…' : 'Reposting…') : (isDraftOnly ? 'Publish to mobile.bg' : 'Repost backup')}
         </button>
       </div>
 

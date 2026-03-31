@@ -33,7 +33,13 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   // Save as a mobilebg_backup record (own dealer draft — no mobileId yet)
-  const techData = body.pubtype ? JSON.stringify({ pubtype: body.pubtype }) : null;
+  const techDataPayload: Record<string, string> = {};
+  if (body.pubtype) techDataPayload.pubtype = body.pubtype;
+  if (body.region) techDataPayload.region = body.region;
+  if (body.city) techDataPayload.city = body.city;
+  const techData = Object.keys(techDataPayload).length > 0
+    ? JSON.stringify(techDataPayload)
+    : null;
   const extrasJson = body.extras && Object.keys(body.extras).length > 0
     ? JSON.stringify(body.extras)
     : null;
