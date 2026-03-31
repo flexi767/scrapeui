@@ -256,9 +256,33 @@ scripts/            # Migration & seed scripts
 
 ## Scraping & External Integrations
 
+### Starting the Scraper
+
+1. **Via Dashboard:**
+   - Go to the dashboard (`/`)
+   - Look for "Mobile.bg Scraping" section
+   - Click "Start Scraping" to go to Configuration
+
+2. **Via Configuration Page:**
+   - Navigate to `/config`
+   - In "Scraping" section, select dealers to scrape (filters to "own" dealers by default)
+   - Toggle "Deep crawl" if you want full listing details (slower but more thorough)
+   - Click "Run" to start
+   - Monitor the live log showing listings discovered and changes detected
+
+3. **How it Works:**
+   - Dispatches `POST /api/scrape` with selected dealer slugs and deepCrawl flag
+   - Spawns server-side child process running `scraper/scripts/run-for-ui.ts`
+   - Streams real-time updates via Server-Sent Events (SSE) with JSON log entries
+   - Updates `listings` table with discovered cars
+   - Records `listing_snapshots` for price/status changes
+   - Creates `mobilebg_backup_runs` entry with run status
+
 ### Crawlee Integration
 
-- Used for scrape ingestion and browser automation flows
+- Used for scrape ingestion and browser automation flows via `scraper/scripts/`
+- Main script: `scraper/scripts/run-for-ui.ts` (spawned by API route)
+- Entry script: `scraper/scripts/mobilebg-backup.ts` (core scraping logic)
 - Scrape results populate `listings` as snapshot data
 - Mobile.bg backup/edit/repost/update artifacts belong in the `mobilebg_*` tables
 - Always handle rate limits, cookie banners, and slow transitions defensively

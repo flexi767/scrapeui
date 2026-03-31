@@ -12,6 +12,7 @@ import {
   SettingsIcon,
   TrendingUp,
   Clock,
+  Play,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,16 @@ interface DashboardStats {
   activeListings: number;
   lastScrapingAt: string | null;
   totalDealers: number;
+}
+
+interface Dealer {
+  id: number;
+  slug: string;
+  name: string;
+  own: number;
+  active: number;
+  mobile_url: string | null;
+  priority: number;
 }
 
 const navigationLinks = [
@@ -60,23 +71,32 @@ function formatDate(dateString: string | null): string {
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [dealers, setDealers] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/dashboard/stats');
-        const data = await res.json();
-        setStats(data);
+        const [statsRes, dealersRes] = await Promise.all([
+          fetch('/api/dashboard/stats'),
+          fetch('/api/dealers'),
+        ]);
+        const statsData = await statsRes.json();
+        const dealersData = await dealersRes.json();
+        setStats(statsData);
+        setDealers(dealersData);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, []);
+
+  const activeDealers = dealers.filter(d => d.active);
+  const ownDealers = activeDealers.filter(d => d.own);
 
   return (
     <main className="flex-1 overflow-y-auto">
@@ -162,6 +182,34 @@ export function Dashboard() {
               </div>
               <div className="rounded-lg bg-orange-500/10 p-3">
                 <Clock className="h-6 w-6 text-orange-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scraping Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-white">Mobile.bg Scraping</h2>
+          <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-400 mb-3">
+                  {ownDealers.length > 0
+                    ? `Ready to scrape ${ownDealers.length} own dealer(s): ${ownDealers.map(d => d.name).join(', ')}`
+                    : 'No dealers configured for scraping'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/config"
+                  className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Scraping
+                </Link>
+                <p className="text-xs text-gray-500">
+                  Go to Configuration to select dealers and run the scraper
+                </p>
               </div>
             </div>
           </div>
