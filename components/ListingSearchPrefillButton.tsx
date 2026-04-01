@@ -128,7 +128,12 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   }
 
   function buildFirstSevenFields() {
-    return buildSubmissionFields().filter((field) => !HIDDEN_FIELD_NAMES.has(field.name)).slice(0, 7);
+    const submissionFields = buildSubmissionFields();
+    const hiddenFields = submissionFields.filter((field) => HIDDEN_FIELD_NAMES.has(field.name));
+    const firstSevenVisibleFields = submissionFields
+      .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
+      .slice(0, 7);
+    return [...hiddenFields, ...firstSevenVisibleFields];
   }
 
   function submitToMobileBg(fields = buildSubmissionFields()) {
