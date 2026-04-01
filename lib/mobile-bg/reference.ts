@@ -18,6 +18,7 @@ export interface MobileBgMakeModelSyncOptions {
   searchPath?: string;
   pubtype?: string;
   onlyMake?: string | null;
+  onProgress?: ((event: MobileBgMakeModelSyncProgressEvent) => void) | null;
 }
 
 export interface MobileBgMakeModelSyncResult {
@@ -25,6 +26,17 @@ export interface MobileBgMakeModelSyncResult {
   modelsProcessed: number;
   makeCountsFound: number;
   modelCountsFound: number;
+}
+
+export interface MobileBgMakeModelSyncProgressEvent {
+  type: 'status' | 'make';
+  message: string;
+  make?: string;
+  current?: number;
+  total?: number;
+  modelsProcessed?: number;
+  makeCount?: number | null;
+  modelCountsFound?: number;
 }
 
 function compareModelEntries(a: ModelEntry, b: ModelEntry): number {
@@ -204,10 +216,14 @@ function replaceReferenceRows(
 
 export async function syncMobileBgMakeModelReference(
   db: Database.Database,
-  { searchPath = DEFAULT_MOBILEBG_SEARCH_PATH, pubtype = DEFAULT_MOBILEBG_PUBTYPE, onlyMake = null }: MobileBgMakeModelSyncOptions = {},
+  { searchPath = DEFAULT_MOBILEBG_SEARCH_PATH, pubtype = DEFAULT_MOBILEBG_PUBTYPE, onlyMake = null, onProgress = null }: MobileBgMakeModelSyncOptions = {},
 ): Promise<MobileBgMakeModelSyncResult> {
   const makesMap = await fetchMakesModels(pubtype);
   const normalizedOnlyMake = onlyMake ? normalizeMakeModelLabel(onlyMake) : null;
+  onProgress?.({
+    type: 'status',
+    message: `Loading mobile.bg counts for ${normalizedOnlyMake ? onlyMake : 'all makes'}`,
+  });
   const makeCountsHtml = await fetchWin1251(buildSearchUrl(searchPath, {}));
   const makeCounts = parseMakeCountsFromHtml(makeCountsHtml);
 
@@ -225,7 +241,7 @@ export async function syncMobileBgMakeModelReference(
   let makeCountsFound = 0;
   let modelCountsFound = 0;
 
-  for (const makeEntry of selectedMakes) {
+  for (const [index, makeEntry] of selectedMakes.entries()) {
     const normalizedMake = normalizeMakeModelLabel(makeEntry.make);
     const makeCount = makeCounts.get(normalizedMake) ?? null;
     if (makeCount !== null) makeCountsFound += 1;
@@ -241,10 +257,14 @@ export async function syncMobileBgMakeModelReference(
 
     const modelCountsHtml = await fetchWin1251(buildSearchUrl(searchPath, { marka: makeEntry.make }));
     const modelCounts = parseModelCountsFromHtml(modelCountsHtml);
+    let makeModelCountsFound = 0;
 
     for (const modelEntry of makeEntry.models) {
       const modelCount = modelCounts.get(normalizeMakeModelLabel(modelEntry.label)) ?? null;
-      if (modelCount !== null) modelCountsFound += 1;
+      if (modelCount !== null) {
+        modelCountsFound += 1;
+        makeModelCountsFound += 1;
+      }
 
       rows.push({
         make: makeEntry.make,
@@ -255,8 +275,23 @@ export async function syncMobileBgMakeModelReference(
         modelCount,
       });
     }
+
+    onProgress?.({
+      type: 'make',
+      message: `Synced ${makeEntry.make}`,
+      make: makeEntry.make,
+      current: index + 1,
+      total: selectedMakes.length,
+      modelsProcessed: makeEntry.models.length,
+      makeCount,
+      modelCountsFound: makeModelCountsFound,
+    });
   }
 
+  onProgress?.({
+    type: 'status',
+    message: `Writing ${rows.length.toLocaleString('en-US')} reference rows to the database`,
+  });
   replaceReferenceRows(db, rows, { searchPath, pubtype, onlyMake });
 
   return {

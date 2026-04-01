@@ -7,6 +7,7 @@ import {
   DEFAULT_MOBILEBG_PUBTYPE,
   DEFAULT_MOBILEBG_SEARCH_PATH,
   syncMobileBgMakeModelReference,
+  type MobileBgMakeModelSyncProgressEvent,
 } from '@/lib/mobile-bg/reference';
 
 const args = process.argv.slice(2);
@@ -14,6 +15,10 @@ const args = process.argv.slice(2);
 function getArg(name: string): string | null {
   const idx = args.indexOf(name);
   return idx !== -1 && args[idx + 1] ? args[idx + 1] : null;
+}
+
+function emit(event: Record<string, unknown>) {
+  console.log(JSON.stringify(event));
 }
 
 async function main() {
@@ -28,15 +33,33 @@ async function main() {
   const pubtype = getArg('--pubtype') || DEFAULT_MOBILEBG_PUBTYPE;
 
   try {
-    const result = await syncMobileBgMakeModelReference(db, { onlyMake, searchPath, pubtype });
-    console.log(JSON.stringify({
+    emit({
+      type: 'status',
+      message: `Starting mobile.bg make/model sync${onlyMake ? ` for ${onlyMake}` : ''}`,
+      searchPath,
+      pubtype,
+      onlyMake,
+    });
+
+    const result = await syncMobileBgMakeModelReference(db, {
+      onlyMake,
+      searchPath,
+      pubtype,
+      onProgress(event: MobileBgMakeModelSyncProgressEvent) {
+        emit(event);
+      },
+    });
+
+    emit({
+      type: 'complete',
       ok: true,
       dbPath,
       searchPath,
       pubtype,
       onlyMake,
       ...result,
-    }, null, 2));
+      message: 'Sync completed',
+    });
   } finally {
     db.close();
   }
