@@ -35,6 +35,10 @@ export interface OwnListingRow extends ListingRow {
   last_mobile_sync_status: string | null;
   last_mobile_sync_error: string | null;
   last_mobile_sync_at: string | null;
+  search_checked_at: string | null;
+  search_original_position: number | null;
+  search_price_position: number | null;
+  search_first_result_price: number | null;
 }
 
 export interface MakeModelMappingRow {
@@ -463,6 +467,10 @@ export function getOwnListings(filters: ListingFilters = {}) {
       b.last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,
+      b.search_checked_at,
+      b.search_original_position,
+      b.search_price_position,
+      b.search_first_result_price,
       d.name as dealer_name, d.slug as dealer_slug
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
@@ -529,6 +537,10 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       b.last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,
+      b.search_checked_at,
+      b.search_original_position,
+      b.search_price_position,
+      b.search_first_result_price,
       d.name as dealer_name, d.slug as dealer_slug
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id

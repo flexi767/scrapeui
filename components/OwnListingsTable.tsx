@@ -160,13 +160,16 @@ export default function OwnListingsTable({ initialRows }: Props) {
             <th className="px-3 py-1.5 text-left">Dealer</th>
             <th className="px-2 py-1.5 text-center w-14">Paid</th>
             <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
+            <th className="px-3 py-1.5 text-center">Orig #</th>
+            <th className="px-3 py-1.5 text-center">Price #</th>
+            <th className="px-3 py-1.5 text-right">Lead Price</th>
             <th className="px-3 py-1.5 text-center">VAT</th>
             <th className="px-2 py-1.5 text-center w-14">К</th>
             <th className="px-3 py-1.5 text-right">Last Edit</th>
             <th className="px-2 py-1.5 text-center w-12">New</th>
             <th className="px-3 py-1.5 text-right">Month</th>
             <th className="px-3 py-1.5 text-right">Year</th>
-            <th className="px-3 py-1.5 text-center">Category</th>
+            <th className="px-3 py-1.5 text-center">Body Type</th>
             <th className="px-3 py-1.5 text-center">Fuel</th>
             <th className="px-3 py-1.5 text-right">KM</th>
             <th className="px-2 py-1.5 text-center w-16"></th>
@@ -175,7 +178,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={17} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={20} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -193,7 +196,13 @@ export default function OwnListingsTable({ initialRows }: Props) {
             return (
               <tr
                 key={row.mobile_id}
-                className={`align-middle transition-colors ${editing ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
+                className={`align-middle transition-colors ${
+                  editing
+                    ? 'bg-gray-800'
+                    : row.search_checked_at && row.search_original_position == null
+                    ? 'bg-red-950/20 hover:bg-red-950/30'
+                    : 'hover:bg-gray-800/50'
+                }`}
                 onClick={!editing ? () => startEdit(row) : undefined}
                 style={{ cursor: editing ? 'default' : 'pointer' }}
               >
@@ -313,6 +322,38 @@ export default function OwnListingsTable({ initialRows }: Props) {
                         </div>
                       )}
                     </div>
+                  )}
+                </td>
+
+                <td className="px-2 py-1.5 text-center">
+                  {row.search_original_position != null ? (
+                    <div>
+                      <div className="font-medium text-sky-200">{row.search_original_position}</div>
+                      <div className="text-[10px] text-gray-500">{formatDate(row.search_checked_at)}</div>
+                    </div>
+                  ) : row.search_checked_at ? (
+                    <div>
+                      <div className="text-xs font-medium text-red-300">not found</div>
+                      <div className="text-[10px] text-gray-500">{formatDate(row.search_checked_at)}</div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-600">—</span>
+                  )}
+                </td>
+
+                <td className="px-2 py-1.5 text-center">
+                  {row.search_price_position != null ? (
+                    <span className="font-medium text-emerald-200">{row.search_price_position}</span>
+                  ) : (
+                    <span className="text-gray-600">—</span>
+                  )}
+                </td>
+
+                <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                  {row.search_first_result_price != null ? (
+                    <span className="text-gray-300">{formatPrice(row.search_first_result_price)}</span>
+                  ) : (
+                    <span className="text-gray-600">—</span>
                   )}
                 </td>
 

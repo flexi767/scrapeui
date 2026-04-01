@@ -49,6 +49,10 @@ interface MobileBgSearchResultsPagePayload extends MobileBgSearchResultsPayload 
   next_page_url: string | null;
 }
 
+export interface MobileBgSearchResultsUntilFoundPayload extends MobileBgSearchResultsPayload {
+  found_on_page: number | null;
+}
+
 const FUEL_OPTIONS = new Set([
   'Бензинов',
   'Дизелов',
@@ -276,7 +280,7 @@ async function fetchMobileBgSearchResultsPage(
   submittedFields: MobileBgSearchFieldInput[],
 ): Promise<MobileBgSearchResultsPagePayload> {
   const requestBody = buildWindows1251FormBody(submittedFields);
-  const curlArgs = ['-sS', '-L'];
+  const curlArgs = ['-sS', '-L', '--http1.1'];
 
   if (method.toUpperCase() === 'POST') {
     curlArgs.push(
@@ -397,6 +401,71 @@ export async function fetchMobileBgSearchResultsWithFallback(
   if (relaxedFields.length === submittedFields.length) return initial;
 
   const relaxed = await fetchMobileBgSearchResultsOnce(action, method, relaxedFields, sourceMobileId);
+  if (relaxed.count_on_page === 0) return initial;
+
+  return {
+    ...relaxed,
+    fallback_note: 'No results were returned with engine, gearbox, and body type applied, so those three filters were relaxed for the in-app preview.',
+  };
+}
+
+async function fetchMobileBgSearchResultsUntilFoundOnce(
+  action: string,
+  method: string,
+  submittedFields: MobileBgSearchFieldInput[],
+  sourceMobileId: string,
+): Promise<MobileBgSearchResultsUntilFoundPayload> {
+  const firstPage = await fetchMobileBgSearchResultsPage(action, method, submittedFields);
+  const rows = [...firstPage.rows];
+  let nextPageUrl = firstPage.next_page_url;
+  let hasNextPage = firstPage.has_next_page;
+  let totalPages = firstPage.total_pages;
+  let foundOnPage = rows.some((row) => row.mobile_id === sourceMobileId) ? firstPage.page : null;
+
+  while (!foundOnPage && hasNextPage && nextPageUrl) {
+    const nextPage = await fetchMobileBgSearchResultsPage(nextPageUrl, 'get', submittedFields);
+    const dedupedRows = nextPage.rows
+      .filter((row) => !rows.some((existingRow) => existingRow.mobile_id === row.mobile_id))
+      .map((row) => ({
+        ...row,
+        original_position: rows.length + row.original_position,
+      }));
+
+    rows.push(...dedupedRows);
+    if (dedupedRows.some((row) => row.mobile_id === sourceMobileId)) {
+      foundOnPage = nextPage.page;
+    }
+
+    nextPageUrl = nextPage.next_page_url;
+    hasNextPage = nextPage.has_next_page;
+    totalPages = nextPage.total_pages ?? totalPages;
+  }
+
+  return {
+    submitted_fields: submittedFields,
+    summary_text: firstPage.summary_text,
+    page: firstPage.page,
+    total_pages: totalPages,
+    has_next_page: hasNextPage,
+    count_on_page: rows.length,
+    rows,
+    found_on_page: foundOnPage,
+  };
+}
+
+export async function fetchMobileBgSearchResultsUntilFound(
+  action: string,
+  method: string,
+  submittedFields: MobileBgSearchFieldInput[],
+  sourceMobileId: string,
+): Promise<MobileBgSearchResultsUntilFoundPayload> {
+  const initial = await fetchMobileBgSearchResultsUntilFoundOnce(action, method, submittedFields, sourceMobileId);
+  if (initial.count_on_page > 0) return initial;
+
+  const relaxedFields = submittedFields.filter((field) => !['f12', 'f13', 'f14'].includes(field.name));
+  if (relaxedFields.length === submittedFields.length) return initial;
+
+  const relaxed = await fetchMobileBgSearchResultsUntilFoundOnce(action, method, relaxedFields, sourceMobileId);
   if (relaxed.count_on_page === 0) return initial;
 
   return {
