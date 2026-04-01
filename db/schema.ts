@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ─── Existing tables ──────────────────────────────────────────────
 
@@ -353,6 +353,26 @@ export const mobileBgRepostJobs = sqliteTable('mobilebg_repost_jobs', {
   createdAt: text('created_at'),
 });
 
+export const mobileBgMakeModels = sqliteTable('mobilebg_make_models', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  searchPath: text('search_path').notNull().default('/search/avtomobili-dzhipove'),
+  pubtype: text('pubtype').notNull().default('1,2'),
+  make: text('make').notNull(),
+  model: text('model').notNull().default(''),
+  makeId: integer('make_id'),
+  modelId: integer('model_id'),
+  makeCount: integer('make_count'),
+  modelCount: integer('model_count'),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+  uniqueMakeModel: uniqueIndex('mobilebg_make_models_scope_make_model_idx').on(
+    table.searchPath,
+    table.pubtype,
+    table.make,
+    table.model,
+  ),
+}));
+
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;
@@ -365,6 +385,7 @@ export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
 export type MobileBgBackupImage = typeof mobileBgBackupImages.$inferSelect;
 export type MobileBgEditFormSnapshot = typeof mobileBgEditFormSnapshots.$inferSelect;
 export type MobileBgRepostJob = typeof mobileBgRepostJobs.$inferSelect;
+export type MobileBgMakeModel = typeof mobileBgMakeModels.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type TimeEntry = typeof timeEntries.$inferSelect;

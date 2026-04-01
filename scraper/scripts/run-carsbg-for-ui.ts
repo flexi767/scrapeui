@@ -27,6 +27,7 @@ import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobil
 import { fetchFuelTypes, normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { fetchTransmissionTypes, normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
 import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
+import { loadMobileBgMakesMapFromDb } from '@/lib/mobile-bg/reference';
 import { prepareCarsBgPage } from '@/lib/cars-bg/auth';
 
 // Parse args
@@ -466,7 +467,7 @@ async function main() {
   const db = new Database(process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db'));
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  const makesMap = await fetchMakesModels().catch(() => null);
+  const makesMap = loadMobileBgMakesMapFromDb(db) ?? await fetchMakesModels().catch(() => null);
   const fuelMap = await fetchFuelTypes().catch(() => null);
   const transmissionMap = await fetchTransmissionTypes().catch(() => null);
 

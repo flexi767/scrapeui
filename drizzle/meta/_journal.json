@@ -29,6 +29,13 @@
       "when": 1775008800000,
       "tag": "0003_drop_cars_synced_at",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1775012400000,
+      "tag": "0004_add_mobilebg_make_models",
+      "breakpoints": true
     }
   ]
 }

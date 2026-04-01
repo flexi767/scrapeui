@@ -5,12 +5,16 @@
 
 import { USER_AGENT } from './constants';
 
-export interface ModelEntry { label: string; id: number | null }
-export interface MakeEntry { make: string; makeId: number | null; models: ModelEntry[] }
+export interface ModelEntry { label: string; id: number | null; count?: number | null }
+export interface MakeEntry { make: string; makeId: number | null; count?: number | null; models: ModelEntry[] }
 export type MakesMap = Map<string, MakeEntry>;
 
 // Cache per pubtype
 const _cache = new Map<string, MakesMap>();
+
+export function normalizeMakeModelLabel(value = ''): string {
+  return String(value).toLowerCase().replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+}
 
 async function fetchWin1251(url: string): Promise<string> {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
@@ -83,13 +87,13 @@ function parseCmm(js: string, mm2pt: Map<string, string>, pubtypes: string[]): M
 
     if (filtered.length === 0) continue;
 
-    const key = make.toLowerCase();
+    const key = normalizeMakeModelLabel(make);
     const makeId = makeIdRaw ? Number(makeIdRaw) || null : null;
     if (map.has(key)) {
       const existing = map.get(key)!;
-      const mergedByLabel = new Map(existing.models.map(x => [x.label.toLowerCase(), x]));
+      const mergedByLabel = new Map(existing.models.map(x => [normalizeMakeModelLabel(x.label), x]));
       for (const model of filtered) {
-        if (!mergedByLabel.has(model.label.toLowerCase())) mergedByLabel.set(model.label.toLowerCase(), model);
+        if (!mergedByLabel.has(normalizeMakeModelLabel(model.label))) mergedByLabel.set(normalizeMakeModelLabel(model.label), model);
       }
       map.set(key, { make: existing.make, makeId: existing.makeId ?? makeId, models: [...mergedByLabel.values()] });
     } else {
@@ -127,15 +131,17 @@ export interface ParsedMakeModel {
 
 export function parseMakeModelSync(title: string, map: MakesMap | null): ParsedMakeModel {
   if (!title || !map) return { make: '', model: '', mobileMakeId: null, mobileModelId: null, titleRemainder: title || '' };
-  const titleLower = title.toLowerCase().trim();
-  const sortedMakes = [...map.keys()].sort((a, b) => b.length - a.length);
+  const titleLower = normalizeMakeModelLabel(title);
+  const sortedMakes = [...map.entries()]
+    .sort(([, a], [, b]) => b.make.length - a.make.length || (b.count ?? -1) - (a.count ?? -1))
+    .map(([key]) => key);
   for (const makeLower of sortedMakes) {
     if (titleLower.startsWith(makeLower)) {
       const { make, makeId, models } = map.get(makeLower)!;
       const rest = title.slice(make.length).trim();
-      const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length);
+      const modelsSorted = [...models].sort((a, b) => b.label.length - a.label.length || (b.count ?? -1) - (a.count ?? -1));
       for (const model of modelsSorted) {
-        if (rest.toLowerCase().startsWith(model.label.toLowerCase())) {
+        if (normalizeMakeModelLabel(rest).startsWith(normalizeMakeModelLabel(model.label))) {
           return { make, model: model.label, mobileMakeId: makeId, mobileModelId: model.id, titleRemainder: stripParsedPrefix(title, make, model.label) };
         }
       }

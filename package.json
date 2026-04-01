@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:mobilebg-makes-models": "tsx scraper/scripts/sync-mobilebg-makes-models.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
