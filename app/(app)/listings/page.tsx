@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
+import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import RangeFilter from '@/components/RangeFilter';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -162,7 +162,7 @@ export default async function ListingsPage({
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-                <th className="w-16 px-3 py-1.5 text-left">Img</th>
+                <th className="w-24 px-3 py-1.5 text-left">Img</th>
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
                 <th className="px-3 py-1.5 text-left">
@@ -223,33 +223,35 @@ export default async function ListingsPage({
                   >
                     {/* Thumbnail */}
                     <td className="px-3 py-1">
-                      {thumb ? (
-                        <div className="relative inline-block w-16">
-                          <Link href={`/listings/${listingSlug}`} className="peer block">
-                            <ImageWithFallback
-                              src={thumb}
-                              alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
-                              className="w-16 rounded object-contain"
-                              style={{aspectRatio:'4/3'}}
-                              fallbackClassName="w-16 rounded bg-gray-800 text-gray-400"
-                              fallbackLabel="Missing"
-                            />
-                          </Link>
-                          {/* Hover preview — shown via peer-hover, pointer-events-none so it doesn't interfere */}
-                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                            <ImageWithFallback
-                              src={thumb}
-                              alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
-                              className="w-full rounded shadow-xl"
-                              style={{aspectRatio:'4/3'}}
-                              fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
-                              fallbackLabel="Missing"
-                            />
+                      <div className="flex items-start gap-2">
+                        <ListingSearchPrefillButton listingId={row.id} />
+                        {thumb ? (
+                          <div className="relative inline-block w-16">
+                            <Link href={`/listings/${listingSlug}`} className="peer block">
+                              <ImageWithFallback
+                                src={thumb}
+                                alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
+                                className="w-16 rounded object-contain"
+                                style={{aspectRatio:'4/3'}}
+                                fallbackClassName="w-16 rounded bg-gray-800 text-gray-400"
+                                fallbackLabel="Missing"
+                              />
+                            </Link>
+                            <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
+                              <ImageWithFallback
+                                src={thumb}
+                                alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
+                                className="w-full rounded shadow-xl"
+                                style={{aspectRatio:'4/3'}}
+                                fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                                fallbackLabel="Missing"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="h-10 w-14 rounded bg-gray-700" />
-                      )}
+                        ) : (
+                          <div className="h-10 w-14 rounded bg-gray-700" />
+                        )}
+                      </div>
                     </td>
 
                     {/* Make + Model */}
