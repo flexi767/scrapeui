@@ -153,7 +153,7 @@ export async function GET(
   const fields: SearchField[] = [
     { name: 'topmenu', label: 'Top menu', value: '1', source: 'default' },
     { name: 'rub', label: 'Rubric', value: '1', source: 'default' },
-    { name: 'act', label: 'Action', value: '2', source: 'default' },
+    { name: 'act', label: 'Action', value: '3', source: 'default' },
     { name: 'rub_pub_save', label: 'Saved rubric', value: '1', source: 'default' },
     { name: 'pubtype', label: 'Category', value: '1', source: 'default' },
     { name: 'f20', label: 'Сортиране според', value: '3', source: 'default' },

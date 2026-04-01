@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { SearchIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
+import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
 
 interface SearchField {
   name: string;
@@ -37,6 +39,10 @@ interface SearchPrefillResponse {
   omitted: string[];
 }
 
+interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
+  fallback_note?: string | null;
+}
+
 const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
 const ENGINE_OPTIONS = ['', 'Бензинов', 'Дизелов', 'Електрически', 'Хибриден', 'Plug-in хибрид', 'Газ', 'Водород'];
 const TRANSMISSION_OPTIONS = ['', 'Ръчна', 'Автоматична', 'Полуавтоматична'];
@@ -50,6 +56,9 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   const [error, setError] = useState('');
   const [data, setData] = useState<SearchPrefillResponse | null>(null);
   const [editableFields, setEditableFields] = useState<SearchField[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsError, setResultsError] = useState('');
+  const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
 
   function syncEditableFields(nextData: SearchPrefillResponse) {
     setEditableFields(nextData.form.fields.map((field) => ({ ...field })));
@@ -142,6 +151,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
     form.method = data.form.method;
     form.action = data.form.action;
     form.target = '_blank';
+    form.acceptCharset = 'windows-1251';
 
     for (const field of fields) {
       const input = document.createElement('input');
@@ -154,6 +164,34 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
     document.body.appendChild(form);
     form.submit();
     form.remove();
+  }
+
+  async function showResultsHere() {
+    if (!data) return;
+    setResultsLoading(true);
+    setResultsError('');
+
+    try {
+      const res = await fetch('/api/mobile-bg/search-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: data.form.action,
+          method: data.form.method,
+          fields: buildSubmissionFields(),
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((payload as { error?: string }).error || 'Failed to load mobile.bg results');
+      }
+      setResults(payload as MobileBgSearchResultsResponse);
+    } catch (err: unknown) {
+      setResultsError(err instanceof Error ? err.message : 'Failed to load mobile.bg results');
+      setResults(null);
+    } finally {
+      setResultsLoading(false);
+    }
   }
 
   return (
@@ -338,6 +376,35 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                   ))}
                 </div>
               )}
+
+              {resultsLoading && (
+                <div className="rounded-lg border border-slate-500/70 bg-slate-800/80 px-4 py-8 text-center text-sm text-slate-100/85">
+                  Loading mobile.bg results…
+                </div>
+              )}
+
+              {resultsError && (
+                <div className="rounded-lg border border-red-700/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+                  {resultsError}
+                </div>
+              )}
+
+              {results && !resultsLoading && !resultsError && (
+                <div className="space-y-3">
+                  {results.fallback_note && (
+                    <div className="rounded-lg border border-amber-700/30 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+                      {results.fallback_note}
+                    </div>
+                  )}
+                  <MobileBgSearchResultsTable
+                    rows={results.rows}
+                    summaryText={results.summary_text}
+                    page={results.page}
+                    totalPages={results.total_pages}
+                    hasNextPage={results.has_next_page}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -347,6 +414,9 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
             </Button>
             <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
               Submit all
+            </Button>
+            <Button onClick={showResultsHere} disabled={!data || loading || Boolean(error) || resultsLoading}>
+              Show results here
             </Button>
             <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
               Submit first 7
