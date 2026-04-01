@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatMileage, formatPrice } from '@/lib/utils';
 import type { MobileBgSearchResultRow } from '@/lib/mobile-bg/search-results';
@@ -17,41 +18,130 @@ function AdStatusBadge({ status }: { status: string }) {
   return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
 }
 
+function truncateDealerLabel(value: string, maxLength = 20) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
+function getEffectiveSortPrice(row: MobileBgSearchResultRow) {
+  if (row.current_price == null) return null;
+  if (row.vat_status === 'excluded') {
+    return row.current_price * 1.2;
+  }
+  return row.current_price;
+}
+
+function formatVatStatus(row: MobileBgSearchResultRow) {
+  if (row.vat_status === 'included') return 'Incl. VAT';
+  if (row.vat_status === 'excluded') return 'No VAT';
+  return 'VAT ?';
+}
+
 export function MobileBgSearchResultsTable({
   rows,
   summaryText,
   page,
   totalPages,
   hasNextPage,
+  sourceMobileId,
 }: {
   rows: MobileBgSearchResultRow[];
   summaryText: string | null;
   page: number;
   totalPages: number | null;
   hasNextPage: boolean;
+  sourceMobileId: string | null;
 }) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sortedRows = [...rows].sort((left, right) => {
+    const leftPrice = getEffectiveSortPrice(left);
+    const rightPrice = getEffectiveSortPrice(right);
+    if (leftPrice == null && rightPrice == null) {
+      return left.original_position - right.original_position;
+    }
+    if (leftPrice == null) return 1;
+    if (rightPrice == null) return -1;
+    if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+    return left.original_position - right.original_position;
+  });
+
+  const matchedRow = sourceMobileId
+    ? rows.find((row) => row.mobile_id === sourceMobileId) ?? null
+    : null;
+  const matchedPosition = matchedRow?.original_position ?? null;
+  const matchedSortedIndex = sourceMobileId
+    ? sortedRows.findIndex((row) => row.mobile_id === sourceMobileId)
+    : -1;
+  const matchedSortedPosition = matchedSortedIndex >= 0 ? matchedSortedIndex + 1 : null;
+
+  function renderDealerName(row: MobileBgSearchResultRow) {
+    const fullLabel = row.dealer_name ?? 'Частно лице';
+    const shortLabel = truncateDealerLabel(fullLabel);
+    if (row.dealer_url) {
+      return (
+        <a href={row.dealer_url} target="_blank" rel="noreferrer" className="text-white hover:text-white" title={fullLabel}>
+          {shortLabel}
+        </a>
+      );
+    }
+    return <span className="text-slate-200/80" title={fullLabel}>{shortLabel}</span>;
+  }
+
   return (
     <div className="rounded-lg border border-slate-500/70 bg-slate-800/85">
       <div className="border-b border-slate-500/60 px-4 py-3">
         <div className="text-sm font-medium text-white">Mobile.bg search results</div>
-        <div className="mt-1 text-xs text-slate-200/75">
-          {summaryText || 'First page of mobile.bg search results'}
+        {sourceMobileId && (
+          <div className="mt-1 text-xs text-sky-200/90">
+            {matchedPosition
+              ? `Source listing ${sourceMobileId} is at original position ${matchedPosition}${matchedSortedPosition ? ` and local price-sort position ${matchedSortedPosition}` : ''} on this results page`
+              : `Source listing ${sourceMobileId} is not on this results page`}
+          </div>
+        )}
+        {summaryText && (
+          <div className="mt-1 text-xs text-slate-200/75">
+            {summaryText}
+          </div>
+        )}
+        <div className="mt-1 text-xs text-slate-200/60">
+          {rows.length > 0
+            ? `Showing ${rows.length} result${rows.length === 1 ? '' : 's'} from the current mobile.bg search, locally sorted by effective price`
+            : 'No results returned for the current mobile.bg search'}
         </div>
         <div className="mt-1 text-xs text-slate-200/60">
           Page {page}{totalPages ? ` of ${totalPages}` : ''}{hasNextPage ? ' • more pages available' : ''}
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div
+        ref={scrollContainerRef}
+        className="max-h-[28rem] overflow-y-auto overflow-x-auto overscroll-contain"
+        onWheelCapture={(event) => {
+          const container = scrollContainerRef.current;
+          if (!container) return;
+          const canScroll = container.scrollHeight > container.clientHeight;
+          if (!canScroll) return;
+
+          const scrollingDown = event.deltaY > 0;
+          const atTop = container.scrollTop <= 0;
+          const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+
+          if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) {
+            event.stopPropagation();
+          }
+        }}
+      >
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-slate-500/60 bg-slate-700/70 text-xs font-medium uppercase tracking-wider text-slate-200/70">
               <th className="w-24 px-3 py-1.5 text-left">Img</th>
+              <th className="px-3 py-1.5 text-right">Orig #</th>
               <th className="px-3 py-1.5 text-left">Make / Model</th>
               <th className="px-3 py-1.5 text-left">Title</th>
               <th className="px-3 py-1.5 text-left">Dealer</th>
               <th className="px-2 py-1.5 text-center w-14">Paid</th>
               <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
+              <th className="px-3 py-1.5 text-center">VAT</th>
               <th className="px-3 py-1.5 text-right">Month</th>
               <th className="px-3 py-1.5 text-right">Year</th>
               <th className="px-3 py-1.5 text-center">Body Type</th>
@@ -62,14 +152,21 @@ export function MobileBgSearchResultsTable({
           <tbody className="divide-y divide-slate-500/40">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={11} className="py-10 text-center text-slate-200/60">
+                <td colSpan={13} className="py-10 text-center text-slate-200/60">
                   No mobile.bg results found.
                 </td>
               </tr>
             )}
 
-            {rows.map((row) => (
-              <tr key={`${row.mobile_id}-${row.url}`} className="transition-colors hover:bg-slate-700/50">
+            {sortedRows.map((row, index) => {
+              const isSourceListing = sourceMobileId != null && row.mobile_id === sourceMobileId;
+              return (
+              <tr
+                key={`${row.mobile_id}-${row.url}`}
+                className={isSourceListing
+                  ? 'border-l-4 border-l-sky-400 bg-sky-950/35 transition-colors hover:bg-sky-900/35'
+                  : 'transition-colors hover:bg-slate-700/50'}
+              >
                 <td className="px-3 py-1">
                   {row.thumb ? (
                     <div className="relative inline-block w-16">
@@ -88,7 +185,6 @@ export function MobileBgSearchResultsTable({
                           src={row.thumb}
                           alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
                           className="w-full rounded shadow-xl"
-                          style={{ aspectRatio: '4/3' }}
                           fallbackClassName="w-full rounded bg-slate-900 text-slate-300 shadow-xl"
                           fallbackLabel="Missing"
                         />
@@ -99,8 +195,19 @@ export function MobileBgSearchResultsTable({
                   )}
                 </td>
 
+                <td className="px-3 py-1 text-right text-slate-200/80">
+                  {row.original_position}
+                </td>
+
                 <td className="px-3 py-1">
-                  <div className="font-medium text-white">{row.make || '—'}</div>
+                  <div className="flex items-center gap-2 font-medium text-white">
+                    <span>{row.make || '—'}</span>
+                    {isSourceListing && (
+                      <span className="rounded-full border border-sky-400/60 bg-sky-950/70 px-2 py-0.5 text-[11px] font-semibold text-sky-200">
+                        #{index + 1}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-slate-200/65">{row.model || '—'}</div>
                 </td>
 
@@ -111,13 +218,7 @@ export function MobileBgSearchResultsTable({
                 </td>
 
                 <td className="px-3 py-1">
-                  {row.dealer_url ? (
-                    <a href={row.dealer_url} target="_blank" rel="noreferrer" className="text-white hover:text-white">
-                      {row.dealer_name ?? '—'}
-                    </a>
-                  ) : (
-                    <span className="text-slate-200/80">{row.dealer_name ?? '—'}</span>
-                  )}
+                  {renderDealerName(row)}
                 </td>
 
                 <td className="px-2 py-1 text-center">
@@ -126,6 +227,10 @@ export function MobileBgSearchResultsTable({
 
                 <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
                   {formatPrice(row.current_price)}
+                </td>
+
+                <td className="px-3 py-1 text-center text-xs text-slate-200/80" title={row.vat_status === 'excluded' && row.current_price != null ? `Sorts as ${formatPrice(getEffectiveSortPrice(row))}` : undefined}>
+                  {formatVatStatus(row)}
                 </td>
 
                 <td className="px-3 py-1 text-right text-slate-200/80">
@@ -148,7 +253,8 @@ export function MobileBgSearchResultsTable({
                   {formatMileage(row.mileage)}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

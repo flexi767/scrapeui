@@ -17,6 +17,7 @@ interface SearchField {
 interface SearchPrefillResponse {
   listing: {
     id: number;
+    mobile_id: string | null;
     title: string | null;
     make: string | null;
     model: string | null;
@@ -232,6 +233,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                   <div className="font-medium text-white">
                     {[data.listing.make, data.listing.model].filter(Boolean).join(' ') || 'Listing'}
                   </div>
+                  {data.listing.mobile_id && (
+                    <div className="rounded-full border border-sky-500/40 bg-sky-950/40 px-2 py-0.5 text-[11px] font-medium text-sky-200">
+                      {data.listing.mobile_id}
+                    </div>
+                  )}
                   {data.listing.title && (
                     <div className="text-xs text-slate-100/75">
                       {data.listing.title}
@@ -402,6 +408,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                     page={results.page}
                     totalPages={results.total_pages}
                     hasNextPage={results.has_next_page}
+                    sourceMobileId={data.listing.mobile_id}
                   />
                 </div>
               )}
@@ -412,15 +419,17 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
             <Button variant="outline" onClick={() => setOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
-              Submit all
-            </Button>
-            <Button onClick={showResultsHere} disabled={!data || loading || Boolean(error) || resultsLoading}>
-              Show results here
-            </Button>
-            <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
-              Submit first 7
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
+                Submit all
+              </Button>
+              <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
+                Submit first 7
+              </Button>
+              <Button onClick={showResultsHere} disabled={!data || loading || Boolean(error) || resultsLoading}>
+                Show results here
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,10 @@
-import { load } from 'cheerio';
+import { load, type Cheerio } from 'cheerio';
+import type { Element } from 'domhandler';
+import { execFile } from 'child_process';
 import iconv from 'iconv-lite';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 export interface MobileBgSearchFieldInput {
   name: string;
@@ -8,6 +13,7 @@ export interface MobileBgSearchFieldInput {
 
 export interface MobileBgSearchResultRow {
   mobile_id: string;
+  original_position: number;
   url: string;
   thumb: string | null;
   title: string;
@@ -16,6 +22,7 @@ export interface MobileBgSearchResultRow {
   dealer_name: string | null;
   dealer_url: string | null;
   current_price: number | null;
+  vat_status: 'included' | 'excluded' | 'unknown';
   ad_status: string;
   reg_month: string | null;
   reg_year: string | null;
@@ -74,18 +81,6 @@ function absoluteMobileBgUrl(url: string | undefined | null) {
   return url;
 }
 
-function repairSuspiciousMojibake(value: string | null) {
-  if (!value) return value;
-  if (!/[РС][\u0400-\u04FF]/.test(value)) return value;
-
-  try {
-    const repaired = iconv.decode(iconv.encode(value, 'windows-1251'), 'utf8');
-    return repaired || value;
-  } catch {
-    return value;
-  }
-}
-
 function encodeFormComponentWin1251(value: string) {
   const bytes = iconv.encode(value, 'windows-1251');
   let result = '';
@@ -112,10 +107,27 @@ function buildWindows1251FormBody(fields: MobileBgSearchFieldInput[]) {
     .join('&');
 }
 
+function decodeMobileBgHtml(raw: Buffer | Uint8Array | ArrayBuffer) {
+  if (raw instanceof ArrayBuffer) return iconv.decode(Buffer.from(raw), 'windows-1251');
+  return iconv.decode(Buffer.from(raw), 'windows-1251');
+}
+
 function parsePrice(priceText: string) {
-  const match = priceText.replace(/\s+/g, '').match(/(\d[\d.,]*)€/);
+  const match = priceText.match(/([\d\s.,]+)€/);
   if (!match) return null;
-  return Number.parseInt(match[1].replace(/[.,]/g, ''), 10) || null;
+  const normalized = match[1]
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/,(?=\d{2}$)/, '.')
+    .replace(/,/g, '');
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseVatStatus(priceText: string): 'included' | 'excluded' | 'unknown' {
+  if (priceText.includes('Не се начислява ДДС')) return 'excluded';
+  if (priceText.includes('с включено ДДС')) return 'included';
+  return 'unknown';
 }
 
 function parseYearAndMonth(raw: string) {
@@ -161,6 +173,31 @@ function deriveMakeModel(title: string, submittedMake: string | null, submittedM
   return { make, model };
 }
 
+function extractDealerName(item: Cheerio<Element>) {
+  const dealerLink = item.find('.seller .name a').first();
+  const linkedName = dealerLink.text().trim();
+  if (linkedName) {
+    return {
+      dealer_name: linkedName,
+      dealer_url: absoluteMobileBgUrl(dealerLink.attr('href') || '') || null,
+    };
+  }
+
+  const logoAlt = item.find('.seller .logo img').first().attr('alt')?.trim() || '';
+  const normalizedLogoName = logoAlt.replace(/^лого\s+/i, '').trim();
+  if (normalizedLogoName && normalizedLogoName !== 'Регион:') {
+    return {
+      dealer_name: normalizedLogoName,
+      dealer_url: null,
+    };
+  }
+
+  return {
+    dealer_name: null,
+    dealer_url: null,
+  };
+}
+
 export async function fetchMobileBgSearchResults(
   action: string,
   method: string,
@@ -175,27 +212,30 @@ async function fetchMobileBgSearchResultsOnce(
   submittedFields: MobileBgSearchFieldInput[],
 ): Promise<MobileBgSearchResultsPayload> {
   const requestBody = buildWindows1251FormBody(submittedFields);
-
-  const response = await fetch(action, {
-    method: method.toUpperCase(),
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=windows-1251',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-    },
-    body: requestBody,
+  const { stdout } = await execFileAsync('curl', [
+    '-sS',
+    '-L',
+    '-X',
+    method.toUpperCase(),
+    action,
+    '-H',
+    'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
+    '-H',
+    'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    '--data-binary',
+    requestBody,
+  ], {
+    encoding: 'buffer',
+    maxBuffer: 10 * 1024 * 1024,
   });
 
-  if (!response.ok) {
-    throw new Error(`mobile.bg search failed with status ${response.status}`);
-  }
-
-  const html = new TextDecoder('windows-1251').decode(await response.arrayBuffer());
+  const html = decodeMobileBgHtml(stdout);
   const $ = load(html);
 
   const submittedMake = submittedFields.find((field) => field.name === 'marka')?.value || null;
   const submittedModel = submittedFields.find((field) => field.name === 'model')?.value || null;
 
-  const rows: MobileBgSearchResultRow[] = $('.ads2023 .item').map((_, element) => {
+  const rows: MobileBgSearchResultRow[] = $('.ads2023 .item').map((index, element) => {
     const item = $(element);
     const titleLink = item.find('.zaglavie a.title').first();
     const rawUrl = titleLink.attr('href') || item.find('a.image').first().attr('href') || '';
@@ -205,9 +245,7 @@ async function fetchMobileBgSearchResultsOnce(
     const priceText = item.find('.zaglavie .price').first().text();
     const params = item.find('.params span').map((__, span) => $(span).text().trim()).get().filter(Boolean);
     const thumb = absoluteMobileBgUrl(item.find('.photo .big img.pic').attr('src') || item.find('.photo .big img').last().attr('src') || '');
-    const dealerLink = item.find('.seller .name a').first();
-    const dealerUrl = absoluteMobileBgUrl(dealerLink.attr('href') || '');
-    const dealerName = dealerLink.text().trim() || item.find('.seller .name').text().trim() || null;
+    const dealer = extractDealerName(item);
     const status = item.hasClass('TOP') ? 'TOP' : item.hasClass('VIP') ? 'VIP' : 'none';
     const yearMonth = parseYearAndMonth(params[0] || '');
     const mileage = params.map(parseMileage).find((value) => value != null) ?? null;
@@ -219,14 +257,16 @@ async function fetchMobileBgSearchResultsOnce(
 
     return {
       mobile_id: mobileId,
+      original_position: index + 1,
       url,
       thumb: thumb || null,
-      title: repairSuspiciousMojibake(title) || title,
+      title,
       make: makeModel.make,
       model: makeModel.model,
-      dealer_name: repairSuspiciousMojibake(dealerName),
-      dealer_url: dealerUrl || null,
+      dealer_name: dealer.dealer_name,
+      dealer_url: dealer.dealer_url,
       current_price: parsePrice(priceText),
+      vat_status: parseVatStatus(priceText),
       ad_status: status,
       reg_month: yearMonth.reg_month,
       reg_year: yearMonth.reg_year,
@@ -236,7 +276,13 @@ async function fetchMobileBgSearchResultsOnce(
       transmission,
       power,
     };
-  }).get();
+  }).get().filter((row) => {
+    return Boolean(
+      row.mobile_id &&
+      row.url.includes('/obiava-') &&
+      row.title.trim(),
+    );
+  });
 
   const currentPage = Number.parseInt($('.pagination .selected').first().text().trim(), 10) || 1;
   const numericPages = $('.pagination a, .pagination div')
@@ -253,7 +299,7 @@ async function fetchMobileBgSearchResultsOnce(
 
   return {
     submitted_fields: submittedFields,
-    summary_text: repairSuspiciousMojibake($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null),
+    summary_text: $('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null,
     page: currentPage,
     total_pages: totalPages,
     has_next_page: hasNextPage,

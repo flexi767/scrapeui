@@ -5,6 +5,7 @@ export const runtime = 'nodejs';
 
 interface ListingSearchRow {
   id: number;
+  mobile_id: string | null;
   title: string | null;
   make: string | null;
   model: string | null;
@@ -97,6 +98,7 @@ export async function GET(
   const listing = raw.prepare(`
     SELECT
       id,
+      mobile_id,
       title,
       make,
       model,
@@ -237,6 +239,7 @@ export async function GET(
   return NextResponse.json({
     listing: {
       id: listing.id,
+      mobile_id: listing.mobile_id,
       title: listing.title,
       make: listing.make,
       model: listing.model,
