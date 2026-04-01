@@ -144,7 +144,28 @@ function parseSpecsString(specs: string) {
   return { year, mileage, power, fuel, transmission, bodyType, color };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseCarsBgPriceToEur(value: string | null | undefined): number | null {
+  if (!value) return null;
+
+  const normalized = value.replace(/\u00a0/g, ' ').trim();
+  const firstLineWithDigits = normalized
+    .split('\n')
+    .map((part) => part.trim())
+    .find((part) => /\d/.test(part));
+  const raw = firstLineWithDigits?.match(/[\d][\d ,.]*/)?.[0]
+    ?? normalized.match(/[\d][\d ,.]*/)?.[0]
+    ?? null;
+
+  if (!raw) return null;
+
+  const integerPart = raw.replace(/[^\d]/g, '');
+
+  if (!integerPart) return null;
+
+  const parsed = Number.parseInt(integerPart, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function checkDuplicate(db: Database.Database, dealerId: number, make: string | null, model: string | null, price: number | null): boolean {
   if (!make || !model || !price) return false;
   const row = db.prepare(
@@ -160,7 +181,8 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
   if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '' };
 
   const rawTitle = listing.title || '';
-  const { make, model, mobileMakeId, mobileModelId } = parseMakeModelSync(rawTitle, makesMap);
+  const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
+  const normalizedTitle = (titleRemainder || '').trim();
 
   // Normalize fuel/body/transmission through our mappings
   const fuelRaw = normCarsBgFuel(listing.fuel);
@@ -178,7 +200,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
 
   if (existing) {
     const priceChanged = price !== null && price !== existing.current_price;
-    const titleChanged = rawTitle !== (existing.title || '');
+    const titleChanged = normalizedTitle !== (existing.title || '');
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
 
@@ -192,12 +214,12 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
         null, null,
         adStatusChanged ? (listing.adStatus || 'none') : null,
         kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
-        titleChanged ? rawTitle : null,
+        titleChanged ? normalizedTitle : null,
         null, now,
       );
       emit({
         type: 'change', carsId, make, model,
-        title: existing.title || rawTitle,
+        title: existing.title || normalizedTitle,
         url: listing.url || existing.url,
         dealer: listing.dealer || null, thumb: listing.thumb || null, price,
         priceChanged, oldPrice: priceChanged ? existing.current_price : null, newPrice: priceChanged ? price : null,
@@ -224,7 +246,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
         last_seen_at = ?, is_active = 1, duplicate = ?
       WHERE id = ?
     `).run(
-      dealerId, listing.url, rawTitle, make, model, mobileMakeId, mobileModelId,
+      dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
       fuel || existing.fuel, bodyType || existing.body_type, transmission || existing.transmission,
       listing.color || existing.color, listing.power || existing.power, listing.mileage || existing.mileage,
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
@@ -233,7 +255,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       ...imageValues,
       now, isDuplicate, existing.id
     );
-    return { action: 'updated' as const, snapshot: priceChanged, title: rawTitle, make, model };
+    return { action: 'updated' as const, snapshot: priceChanged, title: normalizedTitle, make, model };
   }
 
   // Insert new
@@ -246,7 +268,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       first_seen_at, last_seen_at, is_active, source, duplicate
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
   `).run(
-    carsId, dealerId, listing.url, rawTitle, make, model, mobileMakeId, mobileModelId,
+    carsId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.adStatus || 'none', listing.kaparo ? 1 : 0,
     price, listing.year || null,
@@ -254,7 +276,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     listing.images ? JSON.stringify(listing.images) : null,
     now, now, isDuplicate
   );
-  return { action: 'inserted' as const, snapshot: false, title: rawTitle, make, model };
+  return { action: 'inserted' as const, snapshot: false, title: normalizedTitle, make, model };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -310,24 +332,18 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               const title = h5?.textContent?.trim() || '';
               if (!title) continue;
 
-              // Price from second <h6> (first h6 is the date line)
-              const h6s = a.querySelectorAll('h6');
-              let priceText = '';
-              for (const h6 of h6s) {
-                const text = h6.textContent?.trim() || '';
-                if (text.includes('EUR') || text.includes('€')) {
-                  priceText = text;
-                  break;
-                }
-              }
+              // Price block contains both EUR and BGN; take the whole text and parse EUR later.
+              const priceNode = a.querySelector('.price');
+              const priceText = priceNode?.textContent?.trim() || '';
 
               // Specs from first <p> (second <p> is description snippet)
               const firstP = a.querySelector('p');
               const specsText = firstP?.textContent?.trim() || '';
 
-              // Thumbnail: <img> inside the card
-              const img = a.querySelector('img');
-              const thumb = (img as HTMLImageElement)?.src || img?.getAttribute('data-src') || '';
+              // List cards use a CSS background-image rather than an <img>.
+              const media = a.querySelector('.mdc-card__media') as HTMLElement | null;
+              const bg = media?.style.backgroundImage || '';
+              const thumb = bg.match(/url\(["']?(.*?)["']?\)/)?.[1] || '';
 
               results.push({ url: href, title, priceText, specsText, thumb });
             }
@@ -338,9 +354,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           emit({ type: 'log', message: `Found ${cards.length} listing cards on ${url}` });
 
           for (const card of cards) {
-            // Parse price: "38,500 EUR / 75,299.46 BGN" → 38500
-            const priceMatch = card.priceText.match(/([\d,]+)\s*EUR/i);
-            const priceEur = priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : null;
+            const priceEur = parseCarsBgPriceToEur(card.priceText);
 
             // Parse specs string
             const specs = parseSpecsString(card.specsText);
@@ -396,17 +410,8 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           // Price: find text containing EUR and BGN amounts
           // The price block renders as "38,500\n75,299.46\nEUR\nBGN" in innerText
           const body = document.body.innerText;
-          let priceEur: number | null = null;
-          // Pattern: number with commas, then number with dots, then EUR, then BGN
-          const priceMatch = body.match(/([\d,]+)\n[\d,.]+\nEUR\nBGN/);
-          if (priceMatch) {
-            priceEur = parseInt(priceMatch[1].replace(/,/g, ''));
-          }
-          // Fallback: "XX,XXX EUR"
-          if (!priceEur) {
-            const fallback = body.match(/([\d,]+)\s*EUR/);
-            if (fallback) priceEur = parseInt(fallback[1].replace(/,/g, ''));
-          }
+          const priceNode = document.querySelector('.offer-price');
+          const priceText = priceNode?.textContent?.trim() || '';
 
           // Specs: comma-separated line with year, fuel, mileage etc.
           // Look for the line that starts with a Bulgarian month or a 4-digit year and contains "км"
@@ -414,23 +419,26 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           const specsLine = specsMatch ? specsMatch[1].trim() : '';
 
           // Images: on g1-bg.cars.bg CDN
+          const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
           const images = [...document.querySelectorAll('img')]
             .map(img => img.src)
             .filter(s => s && s.includes('g1-bg.cars.bg') && s.match(/\/20\d{2}/));
 
-          return { title, priceEur, specsLine, images };
+          return { title, priceText, specsLine, ogImage, images };
         });
 
+        const priceEur = parseCarsBgPriceToEur(data.priceText);
+        const images = [...new Set([data.ogImage, ...data.images].filter(Boolean))];
         const specs = parseSpecsString(data.specsLine);
 
         const listing = {
           url, title: data.title,
-          adStatus: 'none', kaparo: false, thumb: data.images[0] || '',
-          price: { amount: data.priceEur, currency: 'EUR' },
+          adStatus: 'none', kaparo: false, thumb: images[0] || '',
+          price: { amount: priceEur, currency: 'EUR' },
           year: specs.year, mileage: specs.mileage, power: specs.power,
           fuel: specs.fuel, transmission: specs.transmission, bodyType: specs.bodyType,
           color: specs.color,
-          images: data.images.slice(0, 15),
+          images: images.slice(0, 15),
           dealer: dealer.slug,
         };
         const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
@@ -438,8 +446,8 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
         emit({
           type: 'listing', dealer: dealer.slug,
           make: result.make, model: result.model, title: result.title,
-          price: data.priceEur, url, thumb: data.images[0] || '',
-          newListing: result.action === 'inserted', imageCount: data.images.length,
+          price: priceEur, url, thumb: images[0] || '',
+          newListing: result.action === 'inserted', imageCount: images.length,
         });
       }
     },
