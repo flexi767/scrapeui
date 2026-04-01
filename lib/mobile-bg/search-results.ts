@@ -1,3 +1,4 @@
+import { getVatFromMobileBgLabel, type VatValue } from '@/lib/vat';
 import { load, type Cheerio } from 'cheerio';
 import type { Element } from 'domhandler';
 import { execFile } from 'child_process';
@@ -22,7 +23,7 @@ export interface MobileBgSearchResultRow {
   dealer_name: string | null;
   dealer_url: string | null;
   current_price: number | null;
-  vat_status: 'included' | 'excluded' | 'unknown';
+  vat_status: VatValue | null;
   ad_status: string;
   reg_month: string | null;
   reg_year: string | null;
@@ -124,10 +125,14 @@ function parsePrice(priceText: string) {
   return Number.isFinite(value) ? value : null;
 }
 
-function parseVatStatus(priceText: string): 'included' | 'excluded' | 'unknown' {
-  if (priceText.includes('Не се начислява ДДС')) return 'excluded';
-  if (priceText.includes('с включено ДДС')) return 'included';
-  return 'unknown';
+function parseVatStatus(priceText: string, dealerName: string | null): VatValue | null {
+  if (priceText.includes('Не се начислява ДДС')) return 'exempt';
+  if (priceText.includes('Цената е без ДДС') || priceText.includes('без ДДС')) return 'excluded';
+  if (priceText.includes('Цената е с включено ДДС')) return 'included';
+  const vat = getVatFromMobileBgLabel(priceText);
+  if (vat) return vat;
+  if (!dealerName) return 'exempt';
+  return null;
 }
 
 function parseYearAndMonth(raw: string) {
@@ -266,7 +271,7 @@ async function fetchMobileBgSearchResultsOnce(
       dealer_name: dealer.dealer_name,
       dealer_url: dealer.dealer_url,
       current_price: parsePrice(priceText),
-      vat_status: parseVatStatus(priceText),
+      vat_status: parseVatStatus(priceText, dealer.dealer_name),
       ad_status: status,
       reg_month: yearMonth.reg_month,
       reg_year: yearMonth.reg_year,

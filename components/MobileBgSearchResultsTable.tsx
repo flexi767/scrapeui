@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatMileage, formatPrice } from '@/lib/utils';
+import { getVatBadgeLabel } from '@/lib/vat';
 import type { MobileBgSearchResultRow } from '@/lib/mobile-bg/search-results';
 
 function AdStatusBadge({ status }: { status: string }) {
@@ -31,10 +32,17 @@ function getEffectiveSortPrice(row: MobileBgSearchResultRow) {
   return row.current_price;
 }
 
-function formatVatStatus(row: MobileBgSearchResultRow) {
-  if (row.vat_status === 'included') return 'Incl. VAT';
-  if (row.vat_status === 'excluded') return 'No VAT';
-  return 'VAT ?';
+function VatBadge({ vat }: { vat: MobileBgSearchResultRow['vat_status'] }) {
+  if (vat === 'included') {
+    return <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>;
+  }
+  if (vat === 'exempt') {
+    return <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>;
+  }
+  if (vat === 'excluded') {
+    return <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>;
+  }
+  return <span className="text-gray-600">—</span>;
 }
 
 export function MobileBgSearchResultsTable({
@@ -100,12 +108,12 @@ export function MobileBgSearchResultsTable({
         )}
         {summaryText && (
           <div className="mt-1 text-xs text-slate-200/75">
-            {summaryText}
+            mobile.bg says: {summaryText}
           </div>
         )}
         <div className="mt-1 text-xs text-slate-200/60">
           {rows.length > 0
-            ? `Showing ${rows.length} result${rows.length === 1 ? '' : 's'} from the current mobile.bg search, locally sorted by effective price`
+            ? `Showing ${rows.length} result${rows.length === 1 ? '' : 's'} from the current mobile.bg search, displayed locally by effective price`
             : 'No results returned for the current mobile.bg search'}
         </div>
         <div className="mt-1 text-xs text-slate-200/60">
@@ -115,20 +123,18 @@ export function MobileBgSearchResultsTable({
 
       <div
         ref={scrollContainerRef}
-        className="max-h-[28rem] overflow-y-auto overflow-x-auto overscroll-contain"
-        onWheelCapture={(event) => {
+        className="h-[32rem] min-h-[32rem] overflow-x-auto overflow-y-scroll overscroll-contain [scrollbar-color:#64748b_#0f172a] [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-slate-900/80"
+        style={{ scrollbarGutter: 'stable both-edges', scrollbarWidth: 'thin' }}
+        onWheel={(event) => {
           const container = scrollContainerRef.current;
           if (!container) return;
           const canScroll = container.scrollHeight > container.clientHeight;
           if (!canScroll) return;
 
-          const scrollingDown = event.deltaY > 0;
-          const atTop = container.scrollTop <= 0;
-          const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+          event.preventDefault();
+          event.stopPropagation();
 
-          if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) {
-            event.stopPropagation();
-          }
+          container.scrollTop += event.deltaY;
         }}
       >
         <table className="w-full min-w-[900px] text-sm">
@@ -229,8 +235,13 @@ export function MobileBgSearchResultsTable({
                   {formatPrice(row.current_price)}
                 </td>
 
-                <td className="px-3 py-1 text-center text-xs text-slate-200/80" title={row.vat_status === 'excluded' && row.current_price != null ? `Sorts as ${formatPrice(getEffectiveSortPrice(row))}` : undefined}>
-                  {formatVatStatus(row)}
+                <td
+                  className="px-3 py-1 text-center text-xs text-slate-200/80"
+                  title={row.vat_status === 'excluded' && row.current_price != null
+                    ? `${getVatBadgeLabel(row.vat_status)} • sorts as ${formatPrice(getEffectiveSortPrice(row))}`
+                    : undefined}
+                >
+                  <VatBadge vat={row.vat_status} />
                 </td>
 
                 <td className="px-3 py-1 text-right text-slate-200/80">

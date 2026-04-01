@@ -167,7 +167,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
     form.remove();
   }
 
-  async function showResultsHere() {
+  async function showResultsHere(fields = buildSubmissionFields()) {
     if (!data) return;
     setResultsLoading(true);
     setResultsError('');
@@ -179,7 +179,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
         body: JSON.stringify({
           action: data.form.action,
           method: data.form.method,
-          fields: buildSubmissionFields(),
+          fields,
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -209,7 +209,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(72vw,960px)] max-w-[min(72vw,960px)] sm:w-[min(72vw,960px)] sm:max-w-[min(72vw,960px)] border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
+        <DialogContent className="h-[min(92vh,1100px)] w-[min(94vw,1480px)] max-w-[min(94vw,1480px)] sm:h-[min(92vh,1100px)] sm:w-[min(94vw,1480px)] sm:max-w-[min(94vw,1480px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
           <DialogHeader>
             <DialogTitle>Prefilled Mobile.bg Search</DialogTitle>
           </DialogHeader>
@@ -227,7 +227,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
           )}
 
           {data && !loading && !error && (
-            <div className="space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col space-y-4">
               <div className="rounded-lg border border-slate-500/70 bg-slate-800/85 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <div className="font-medium text-white">
@@ -396,7 +396,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
               )}
 
               {results && !resultsLoading && !resultsError && (
-                <div className="space-y-3">
+                <div className="min-h-0 flex-1 space-y-3">
                   {results.fallback_note && (
                     <div className="rounded-lg border border-amber-700/30 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
                       {results.fallback_note}
@@ -426,8 +426,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
               <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
                 Submit first 7
               </Button>
-              <Button onClick={showResultsHere} disabled={!data || loading || Boolean(error) || resultsLoading}>
-                Show results here
+              <Button onClick={() => showResultsHere(buildFirstSevenFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
+                Show results for first 7 filters
+              </Button>
+              <Button onClick={() => showResultsHere(buildSubmissionFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
+                Show results for all filters
               </Button>
             </div>
           </DialogFooter>
