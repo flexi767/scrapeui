@@ -23,6 +23,27 @@ function truncateDealerLabel(value: string, maxLength = 20) {
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
+function getDisplayTitle(row: MobileBgSearchResultRow) {
+  const title = row.title.trim();
+  const make = row.make?.trim();
+  const model = row.model?.trim();
+  const combined = [make, model].filter(Boolean).join(' ').trim();
+
+  if (combined) {
+    const escapedCombined = combined.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const withoutCombined = title.replace(new RegExp(`^${escapedCombined}(?:\\s+|/|$)`, 'iu'), '').trim();
+    if (withoutCombined) return withoutCombined.replace(/^\/+/, '').trim();
+  }
+
+  if (make) {
+    const escapedMake = make.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const withoutMake = title.replace(new RegExp(`^${escapedMake}(?:\\s+|/|$)`, 'iu'), '').trim();
+    if (withoutMake) return withoutMake.replace(/^\/+/, '').trim();
+  }
+
+  return title;
+}
+
 function getEffectiveSortPrice(row: MobileBgSearchResultRow) {
   if (row.current_price == null) return null;
   if (row.vat_status === 'excluded') {
@@ -205,10 +226,10 @@ export function MobileBgSearchResultsTable({
                     target="_blank"
                     rel="noreferrer"
                     className={isSourceListing
-                      ? 'line-clamp-2 font-semibold text-amber-300 hover:text-amber-200'
+                      ? 'line-clamp-2 font-semibold text-yellow-300 hover:text-yellow-200'
                       : 'line-clamp-2 text-white hover:text-white'}
                   >
-                    {row.title}
+                    {getDisplayTitle(row)}
                   </a>
                 </td>
 
@@ -220,8 +241,15 @@ export function MobileBgSearchResultsTable({
                   <AdStatusBadge status={row.ad_status} />
                 </td>
 
-                <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
-                  {formatPrice(row.current_price)}
+                <td className="pl-1 pr-3 py-1 text-right">
+                  <div className="font-semibold text-green-400">
+                    {formatPrice(row.current_price)}
+                  </div>
+                  {row.vat_status === 'excluded' && getEffectiveSortPrice(row) != null && (
+                    <div className="text-xs text-emerald-200/85">
+                      {formatPrice(getEffectiveSortPrice(row))}
+                    </div>
+                  )}
                 </td>
 
                 <td

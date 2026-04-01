@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { formatDate, formatPrice } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
@@ -88,8 +89,15 @@ export default async function PriceHistoryPage({ params }: Props) {
                       <td className="px-4 py-3 text-gray-300">
                         {formatDate(snap.recorded_at)}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-green-400">
-                        {formatPrice(snap.price)}
+                      <td className="px-4 py-3 text-right">
+                        <div className="font-semibold text-green-400">
+                          {formatPrice(snap.price)}
+                        </div>
+                        {getPriceWithVat(snap.price, snap.vat) != null && (
+                          <div className="text-xs text-emerald-200/85">
+                            {formatPrice(getPriceWithVat(snap.price, snap.vat))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {snap.vat === 'included' ? (
@@ -188,6 +196,12 @@ export default async function PriceHistoryPage({ params }: Props) {
                           {/* Tooltip */}
                           <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block whitespace-nowrap">
                             {formatPrice(snap.price)}
+                            {getPriceWithVat(snap.price, snap.vat) != null && (
+                              <>
+                                <br />
+                                {formatPrice(getPriceWithVat(snap.price, snap.vat))}
+                              </>
+                            )}
                             <br />
                             {formatDate(snap.recorded_at)}
                           </div>

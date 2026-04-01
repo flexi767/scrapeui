@@ -58,7 +58,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
 .mobile-bg-results-scroll {
-  scrollbar-color: #e2e8f0 #475569;
+  scrollbar-color: #ffffff #cbd5e1;
   scrollbar-width: auto;
 }
 
@@ -68,17 +68,17 @@ body {
 }
 
 .mobile-bg-results-scroll::-webkit-scrollbar-track {
-  background: #475569;
+  background: #cbd5e1;
 }
 
 .mobile-bg-results-scroll::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: #ffffff;
   border-radius: 9999px;
-  border: 2px solid #475569;
+  border: 2px solid #cbd5e1;
 }
 
 .mobile-bg-results-scroll::-webkit-scrollbar-thumb:hover {
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 a {

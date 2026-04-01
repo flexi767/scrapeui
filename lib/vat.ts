@@ -31,3 +31,10 @@ export function getVatFromMobileBgLabel(value: string | null | undefined): VatVa
   if (value.includes('Освободена') || value.includes('Частна')) return 'exempt';
   return null;
 }
+
+export function getPriceWithVat(price: number | null | undefined, value: unknown): number | null {
+  const vat = normalizeVatValue(value);
+  if (price == null) return null;
+  if (vat !== 'excluded') return null;
+  return price * 1.2;
+}

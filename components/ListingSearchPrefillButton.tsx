@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from 'react';
 import { SearchIcon, SearchCheckIcon } from 'lucide-react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
 import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
@@ -36,6 +36,11 @@ interface SearchPrefillResponse {
   options: {
     makes: Array<{ value: string; count: number | null }>;
     modelsByMake: Record<string, Array<{ value: string; count: number | null }>>;
+    locations: Array<{ value: string; label: string }>;
+    subLocations: {
+      label: string;
+      options: Array<{ value: string; label: string }>;
+    };
   };
   omitted: string[];
 }
@@ -45,6 +50,7 @@ interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
 }
 
 const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
+const ALWAYS_INCLUDED_FIELD_NAMES = new Set(['f17']);
 const ENGINE_OPTIONS = ['', 'Бензинов', 'Дизелов', 'Електрически', 'Хибриден', 'Plug-in хибрид', 'Газ', 'Водород'];
 const TRANSMISSION_OPTIONS = ['', 'Ръчна', 'Автоматична', 'Полуавтоматична'];
 const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'];
@@ -59,6 +65,9 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   const [error, setError] = useState('');
   const [data, setData] = useState<SearchPrefillResponse | null>(null);
   const [editableFields, setEditableFields] = useState<SearchField[]>([]);
+  const [subLocationLabel, setSubLocationLabel] = useState('Населено място');
+  const [subLocationOptions, setSubLocationOptions] = useState<Array<{ value: string; label: string }>>([{ value: '', label: 'всички' }]);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState('');
@@ -67,6 +76,8 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
 
   function syncEditableFields(nextData: SearchPrefillResponse) {
     setEditableFields(nextData.form.fields.map((field) => ({ ...field })));
+    setSubLocationLabel(nextData.options.subLocations.label);
+    setSubLocationOptions(nextData.options.subLocations.options);
   }
 
   async function load(action: PendingAction = 'open') {
@@ -136,6 +147,41 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
     });
   }
 
+  async function updateLocation(value: string) {
+    updateField('f17', value);
+    setLocationLoading(true);
+    setSubLocationLabel('Населено място');
+    setSubLocationOptions([{ value: '', label: 'всички' }]);
+    setEditableFields((prev) => prev.map((field) => {
+      if (field.name === 'f17') return { ...field, value };
+      if (field.name === 'f18') return { ...field, value: '', label: 'Населено място', source: 'default' };
+      return field;
+    }));
+
+    try {
+      const params = new URLSearchParams();
+      if (value) params.set('location', value);
+      const res = await fetch(`/api/mobile-bg/location-options?${params.toString()}`);
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+
+      const nextLabel = typeof payload.label === 'string' && payload.label ? payload.label : 'Населено място';
+      const nextOptions = Array.isArray(payload.options) && payload.options.length > 0
+        ? payload.options as Array<{ value: string; label: string }>
+        : [{ value: '', label: 'всички' }];
+
+      setSubLocationLabel(nextLabel);
+      setSubLocationOptions(nextOptions);
+      setEditableFields((prev) => prev.map((field) => (
+        field.name === 'f18' ? { ...field, label: nextLabel, value: '' } : field
+      )));
+    } catch {
+      // Keep the safe default dropdown if the lookup fails.
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
   function nudgeField(name: string, delta: number) {
     setEditableFields((prev) => prev.map((field) => {
       if (field.name !== name) return field;
@@ -160,10 +206,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   function buildFirstSevenFields() {
     const submissionFields = buildSubmissionFields();
     const hiddenFields = submissionFields.filter((field) => HIDDEN_FIELD_NAMES.has(field.name));
+    const alwaysIncludedFields = submissionFields.filter((field) => ALWAYS_INCLUDED_FIELD_NAMES.has(field.name));
     const firstSevenVisibleFields = submissionFields
-      .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
+      .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name) && !ALWAYS_INCLUDED_FIELD_NAMES.has(field.name))
       .slice(0, 7);
-    return [...hiddenFields, ...firstSevenVisibleFields];
+    return [...hiddenFields, ...alwaysIncludedFields, ...firstSevenVisibleFields];
   }
 
   function submitToMobileBg(fields = buildSubmissionFields()) {
@@ -251,13 +298,12 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="h-[min(94vh,1100px)] w-[min(98vw,1680px)] max-w-[min(98vw,1680px)] sm:h-[min(94vh,1100px)] sm:w-[min(98vw,1680px)] sm:max-w-[min(98vw,1680px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>Prefilled Mobile.bg Search</DialogTitle>
-          </DialogHeader>
-
           {loading && (
             <div className="rounded-lg border border-slate-500/70 bg-slate-800/80 px-4 py-8 text-center text-sm text-slate-100/85">
-              Loading mobile.bg search fields…
+              <div className="flex items-center justify-center gap-3">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-sky-300" />
+                <span>Loading mobile.bg search fields…</span>
+              </div>
             </div>
           )}
 
@@ -303,7 +349,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                           .map((field) => (
                           <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-slate-500/60 bg-slate-700/90 px-3 py-2">
                             <div className="min-w-0">
-                              <div className="text-sm text-slate-50">{field.label}</div>
+                              <div className="text-sm text-slate-50">{field.name === 'f18' ? subLocationLabel : field.label}</div>
                               <div className="text-xs uppercase tracking-wide text-slate-200/60">{field.name}</div>
                             </div>
                             <div className="min-w-0">
@@ -352,10 +398,43 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                                 >
                                   {CATEGORY_OPTIONS.map((option) => (
                                     <option key={option || 'all-categories'} value={option}>
-                                      {option || 'всички категории'}
+                                    {option || 'всички категории'}
+                                  </option>
+                                ))}
+                              </select>
+                              ) : field.name === 'f17' ? (
+                                <select
+                                  value={field.value}
+                                  onChange={(event) => void updateLocation(event.target.value)}
+                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                >
+                                  {data.options.locations.map((option) => (
+                                    <option key={`${option.value || 'all-locations'}-${option.label}`} value={option.value}>
+                                      {option.label}
                                     </option>
                                   ))}
                                 </select>
+                              ) : field.name === 'f18' ? (
+                                <div className="relative">
+                                  <select
+                                    value={field.value}
+                                    onChange={(event) => updateField(field.name, event.target.value)}
+                                    disabled={locationLoading}
+                                    className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 pr-10 text-sm text-slate-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait disabled:bg-slate-200"
+                                  >
+                                    <option value="">всички</option>
+                                    {subLocationOptions
+                                      .filter((option) => option.value !== '')
+                                      .map((option) => (
+                                      <option key={`${option.value || 'all-sub-locations'}-${option.label}`} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {locationLoading && (
+                                    <span className="pointer-events-none absolute right-3 top-1/2 inline-block h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-slate-500 border-t-sky-500" />
+                                  )}
+                                </div>
                               ) : field.name === 'model' ? (
                                 <select
                                   value={field.value}
@@ -428,7 +507,10 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
 
               {resultsLoading && (
                 <div className="rounded-lg border border-slate-500/70 bg-slate-800/80 px-4 py-8 text-center text-sm text-slate-100/85">
-                  Loading mobile.bg results…
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-sky-300" />
+                    <span>Loading mobile.bg results…</span>
+                  </div>
                 </div>
               )}
 

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { OwnListingRow } from '@/lib/queries';
 import { formatPrice, formatDate, buildImageList, parseJson } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   initialRows: OwnListingRow[];
@@ -304,7 +305,14 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       className="w-24 bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm text-right"
                     />
                   ) : (
-                    <span className="text-green-400 font-medium">{formatPrice(row.current_price)}</span>
+                    <div>
+                      <span className="text-green-400 font-medium">{formatPrice(row.current_price)}</span>
+                      {getPriceWithVat(row.current_price, row.vat) != null && (
+                        <div className="text-xs text-emerald-200/85">
+                          {formatPrice(getPriceWithVat(row.current_price, row.vat))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </td>
 

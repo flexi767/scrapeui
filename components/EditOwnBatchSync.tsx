@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatPrice, formatDate } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   initialRows: EditOwnSyncRow[];
@@ -207,8 +208,15 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                     <div className="text-[11px] text-gray-500">mobile.bg #{row.mobile_id}</div>
                   </td>
                   <td className="px-3 py-3 text-gray-300">{row.dealer_name ?? '—'}</td>
-                  <td className="px-3 py-3 text-right font-medium text-green-400">
-                    {formatPrice(row.current_price)}
+                  <td className="px-3 py-3 text-right">
+                    <div className="font-medium text-green-400">
+                      {formatPrice(row.current_price)}
+                    </div>
+                    {getPriceWithVat(row.current_price, row.vat) != null && (
+                      <div className="text-xs text-emerald-200/85">
+                        {formatPrice(getPriceWithVat(row.current_price, row.vat))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right text-xs text-gray-400">
                     {row.completedAt ? formatDate(row.completedAt) : '—'}

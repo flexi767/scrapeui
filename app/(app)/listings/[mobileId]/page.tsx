@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import EmblaCarousel from '@/components/EmblaCarousel';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
@@ -105,6 +106,11 @@ export default async function ListingDetailPage({ params }: Props) {
                 <span className="text-3xl font-bold text-green-400">
                   {formatPrice(listing.current_price)}
                 </span>
+                {getPriceWithVat(listing.current_price, listing.vat) != null && (
+                  <span className="text-lg font-semibold text-emerald-200">
+                    {formatPrice(getPriceWithVat(listing.current_price, listing.vat))}
+                  </span>
+                )}
                 {listing.vat === 'included' && (
                   <span className="rounded-full bg-blue-900/70 px-2.5 py-1 text-xs text-blue-200">има</span>
                 )}

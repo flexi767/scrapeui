@@ -5,6 +5,7 @@ import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton'
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
   make?: string;
@@ -315,8 +316,8 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Price */}
-                    <td className="pl-1 pr-3 py-1 text-right font-semibold text-green-400">
-                      <span className="flex items-center justify-end gap-1">
+                    <td className="pl-1 pr-3 py-1 text-right">
+                      <span className="flex items-center justify-end gap-1 font-semibold text-green-400">
                         {row.price_change != null && (
                           <Link href={`/listings/${row.mobile_id}/history`} title={`${row.price_change > 0 ? '+' : ''}${row.price_change}`} className="text-sm">
                             <span className={row.price_change < 0 ? 'text-green-400' : 'text-red-400'}>
@@ -326,6 +327,11 @@ export default async function ListingsPage({
                         )}
                         {formatPrice(row.current_price)}
                       </span>
+                      {getPriceWithVat(row.current_price, row.vat) != null && (
+                        <div className="text-xs text-emerald-200/85">
+                          {formatPrice(getPriceWithVat(row.current_price, row.vat))}
+                        </div>
+                      )}
                     </td>
 
                     {/* VAT */}

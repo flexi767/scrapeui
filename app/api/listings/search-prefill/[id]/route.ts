@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { load } from 'cheerio';
+import iconv from 'iconv-lite';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +37,13 @@ interface ReferenceOption {
   count: number | null;
 }
 
+interface LabeledOption {
+  value: string;
+  label: string;
+}
+
 const SEARCH_ACTION = 'https://www.mobile.bg/pcgi/mobile.cgi';
+const SEARCH_PAGE_URL = 'https://www.mobile.bg/search/avtomobili-dzhipove';
 const ALLOWED_FUELS = new Set([
   'Бензинов',
   'Дизелов',
@@ -62,6 +70,86 @@ const ALLOWED_CATEGORIES = new Set([
   'Стреч лимузина',
   'Хечбек',
 ]);
+const LOCATION_OPTIONS: LabeledOption[] = [
+  { value: '', label: 'всички' },
+  { value: 'България', label: 'България' },
+  { value: 'Извън страната', label: 'Извън страната' },
+  { value: 'Благоевград', label: 'обл. Благоевград' },
+  { value: 'Бургас', label: 'обл. Бургас' },
+  { value: 'Варна', label: 'обл. Варна' },
+  { value: 'Велико Търново', label: 'обл. Велико Търново' },
+  { value: 'Видин', label: 'обл. Видин' },
+  { value: 'Враца', label: 'обл. Враца' },
+  { value: 'Габрово', label: 'обл. Габрово' },
+  { value: 'Добрич', label: 'обл. Добрич' },
+  { value: 'Дупница', label: 'общ. Дупница' },
+  { value: 'Кърджали', label: 'обл. Кърджали' },
+  { value: 'Кюстендил', label: 'обл. Кюстендил' },
+  { value: 'Ловеч', label: 'обл. Ловеч' },
+  { value: 'Монтана', label: 'обл. Монтана' },
+  { value: 'Пазарджик', label: 'обл. Пазарджик' },
+  { value: 'Перник', label: 'обл. Перник' },
+  { value: 'Плевен', label: 'обл. Плевен' },
+  { value: 'Пловдив', label: 'обл. Пловдив' },
+  { value: 'Разград', label: 'обл. Разград' },
+  { value: 'Русе', label: 'обл. Русе' },
+  { value: 'Силистра', label: 'обл. Силистра' },
+  { value: 'Сливен', label: 'обл. Сливен' },
+  { value: 'Смолян', label: 'обл. Смолян' },
+  { value: 'София', label: 'обл. София' },
+  { value: 'Стара Загора', label: 'обл. Стара Загора' },
+  { value: 'Търговище', label: 'обл. Търговище' },
+  { value: 'Хасково', label: 'обл. Хасково' },
+  { value: 'Шумен', label: 'обл. Шумен' },
+  { value: 'Ямбол', label: 'обл. Ямбол' },
+];
+
+function encodeSearchParamWin1251(value: string) {
+  const bytes = iconv.encode(value, 'windows-1251');
+  let result = '';
+  for (const byte of bytes) {
+    const isAlphaNum =
+      (byte >= 0x30 && byte <= 0x39) ||
+      (byte >= 0x41 && byte <= 0x5a) ||
+      (byte >= 0x61 && byte <= 0x7a);
+    const isSafe = byte === 0x2d || byte === 0x2e || byte === 0x5f || byte === 0x7e;
+    if (isAlphaNum || isSafe) {
+      result += String.fromCharCode(byte);
+    } else {
+      result += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+  }
+  return result;
+}
+
+async function fetchSubLocationOptions(location: string) {
+  const url = location
+    ? `${SEARCH_PAGE_URL}?sort=3&f17=${encodeSearchParamWin1251(location)}`
+    : `${SEARCH_PAGE_URL}?sort=3`;
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    },
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load location options: ${response.status}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const html = iconv.decode(buffer, 'windows-1251');
+  const $ = load(html);
+  const label = $('select[name="f18"]').closest('item').find('title').first().text().trim() || 'Населено място';
+  const options = $('select[name="f18"] option').toArray().map((option) => ({
+    value: ($(option).attr('value') || '').trim(),
+    label: $(option).text().trim() || 'всички',
+  }));
+
+  return {
+    label,
+    options: options.length > 0 ? options : [{ value: '', label: 'всички' }],
+  };
+}
 
 function toMileageBucket(value: number | null): string | null {
   if (!value || value <= 0) return null;
@@ -151,6 +239,7 @@ export async function GET(
     acc[row.make].push({ value: row.value, count: row.count });
     return acc;
   }, {});
+  const subLocations = await fetchSubLocationOptions('България');
 
   const fields: SearchField[] = [
     { name: 'topmenu', label: 'Top menu', value: '1', source: 'default' },
@@ -203,6 +292,19 @@ export async function GET(
   if (listing.body_type && !ALLOWED_CATEGORIES.has(listing.body_type)) {
     omitted.push(`Body type "${listing.body_type}" does not match a supported mobile.bg category.`);
   }
+
+  visibleFields.push({
+    name: 'f17',
+    label: 'Намира се в',
+    value: 'България',
+    source: 'default',
+  });
+  visibleFields.push({
+    name: 'f18',
+    label: subLocations.label,
+    value: '',
+    source: 'default',
+  });
 
   if (listing.power != null && listing.power > 0) {
     addField(visibleFields, 'f25', 'Мощност от [к.с.]', String(Math.max(0, listing.power - 5)), 'derived');
@@ -264,6 +366,8 @@ export async function GET(
     options: {
       makes: makeOptions,
       modelsByMake,
+      locations: LOCATION_OPTIONS,
+      subLocations,
     },
     omitted,
   });

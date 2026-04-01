@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
 
 interface ListingSummary {
   id: number;
@@ -10,6 +11,7 @@ interface ListingSummary {
   make: string;
   model: string;
   current_price: number | null;
+  vat: string | null;
 }
 
 export function LinkedCarsSelector({
@@ -56,8 +58,13 @@ export function LinkedCarsSelector({
                 <span className="truncate">
                   {l.make} {l.model}
                 </span>
-                <span className="ml-auto shrink-0 text-xs text-gray-400">
-                  {formatPrice(l.current_price)}
+                <span className="ml-auto shrink-0 text-right text-xs text-gray-400">
+                  <span className="block">{formatPrice(l.current_price)}</span>
+                  {getPriceWithVat(l.current_price, l.vat) != null && (
+                    <span className="block text-[10px] text-emerald-300/85">
+                      {formatPrice(getPriceWithVat(l.current_price, l.vat))}
+                    </span>
+                  )}
                 </span>
               </label>
             ))}

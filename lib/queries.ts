@@ -177,6 +177,7 @@ export interface EditOwnSyncRow {
   model: string | null;
   title: string | null;
   current_price: number | null;
+  vat: string | null;
   needs_sync: number;
   last_mobile_sync_status: string | null;
   last_mobile_sync_error: string | null;
@@ -723,11 +724,12 @@ export interface ListingSummary {
   model: string;
   reg_year: string;
   current_price: number;
+  vat: string | null;
 }
 
 export function getListingSummaries(): ListingSummary[] {
   return raw.prepare(`
-    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
+    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price, l.vat
     FROM listings l
     JOIN dealers d ON l.dealer_id = d.id
     WHERE l.is_active = 1 AND d.own = 1 AND (l.duplicate = 0 OR l.duplicate IS NULL)
@@ -1284,6 +1286,7 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
       COALESCE(b.model, l.model) as model,
       COALESCE(b.title, l.title) as title,
       COALESCE(b.price_amount, l.current_price) as current_price,
+      COALESCE(b.vat_included, l.vat) as vat,
       COALESCE(b.draft_needs_sync, 0) as needs_sync,
       b.last_mobile_sync_status,
       b.last_mobile_sync_error,
