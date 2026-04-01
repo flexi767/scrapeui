@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { SearchIcon } from 'lucide-react';
+import { useEffect, useEffectEvent, useState } from 'react';
+import { SearchIcon, SearchCheckIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
@@ -51,6 +51,8 @@ const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби'
 const STEPPER_FIELDS = new Set(['f10', 'f11', 'f25', 'f26']);
 const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
 
+type PendingAction = 'open' | 'show-first-7' | null;
+
 export default function ListingSearchPrefillButton({ listingId }: { listingId: number }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,18 +62,21 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState('');
   const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   function syncEditableFields(nextData: SearchPrefillResponse) {
     setEditableFields(nextData.form.fields.map((field) => ({ ...field })));
   }
 
-  async function load() {
+  async function load(action: PendingAction = 'open') {
     if (data || loading) {
+      if (action) setPendingAction(action);
       setOpen(true);
       return;
     }
     setLoading(true);
     setError('');
+    if (action) setPendingAction(action);
     setOpen(true);
 
     try {
@@ -89,6 +94,18 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
       setLoading(false);
     }
   }
+
+  const runPendingAction = useEffectEvent(async (action: PendingAction) => {
+    if (action === 'show-first-7') {
+      await showResultsHere(buildFirstSevenFields());
+    }
+  });
+
+  useEffect(() => {
+    if (!data || loading || resultsLoading || pendingAction == null) return;
+    if (pendingAction === 'show-first-7') void runPendingAction(pendingAction);
+    setPendingAction(null);
+  }, [data, loading, pendingAction, resultsLoading]);
 
   function updateField(name: string, value: string) {
     setEditableFields((prev) => prev.map((field) => (
@@ -197,16 +214,28 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-xs"
-        className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-        onClick={load}
-        aria-label="Show prefilled mobile.bg search fields"
-      >
-        <SearchIcon />
-      </Button>
+      <div className="flex flex-col items-center gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-xs"
+          className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
+          onClick={() => void load('open')}
+          aria-label="Show prefilled mobile.bg search fields"
+        >
+          <SearchIcon />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-xs"
+          className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
+          onClick={() => void load('show-first-7')}
+          aria-label="Show mobile.bg results for first 7 filters"
+        >
+          <SearchCheckIcon />
+        </Button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="h-[min(92vh,1100px)] w-[min(94vw,1480px)] max-w-[min(94vw,1480px)] sm:h-[min(92vh,1100px)] sm:w-[min(94vw,1480px)] sm:max-w-[min(94vw,1480px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
@@ -426,11 +455,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
               <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
                 Submit first 7
               </Button>
-              <Button onClick={() => showResultsHere(buildFirstSevenFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
-                Show results for first 7 filters
-              </Button>
               <Button onClick={() => showResultsHere(buildSubmissionFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
                 Show results for all filters
+              </Button>
+              <Button onClick={() => showResultsHere(buildFirstSevenFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
+                Show results for first 7 filters
               </Button>
             </div>
           </DialogFooter>

@@ -74,6 +74,15 @@ const BODY_TYPE_OPTIONS = new Set([
   'Хечбек',
 ]);
 
+const SORT_LABELS: Record<string, string> = {
+  '1': 'Марка/Модел/Цена',
+  '3': 'Цена',
+  '4': 'Дата на производство',
+  '5': 'Пробег',
+  '6': 'Най-новите обяви',
+  '7': 'Най-новите обяви от посл. 2 дни',
+};
+
 function absoluteMobileBgUrl(url: string | undefined | null) {
   if (!url) return '';
   if (url.startsWith('//')) return `https:${url}`;
@@ -203,6 +212,14 @@ function extractDealerName(item: Cheerio<Element>) {
   };
 }
 
+function normalizeSummaryText(summaryText: string | null, submittedFields: MobileBgSearchFieldInput[]) {
+  if (!summaryText) return null;
+  const sortValue = submittedFields.find((field) => field.name === 'f20')?.value;
+  const sortLabel = sortValue ? SORT_LABELS[sortValue] : null;
+  if (!sortLabel) return summaryText;
+  return summaryText.replace(/Подредени по:\s*[^,]+$/u, `Подредени по: ${sortLabel}`);
+}
+
 export async function fetchMobileBgSearchResults(
   action: string,
   method: string,
@@ -304,7 +321,7 @@ async function fetchMobileBgSearchResultsOnce(
 
   return {
     submitted_fields: submittedFields,
-    summary_text: $('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null,
+    summary_text: normalizeSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, submittedFields),
     page: currentPage,
     total_pages: totalPages,
     has_next_page: hasNextPage,

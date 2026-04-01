@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatMileage, formatPrice } from '@/lib/utils';
 import { getVatBadgeLabel } from '@/lib/vat';
@@ -61,6 +61,7 @@ export function MobileBgSearchResultsTable({
   sourceMobileId: string | null;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollMetrics, setScrollMetrics] = useState({ visible: false, thumbHeight: 0, thumbTop: 0 });
   const sortedRows = [...rows].sort((left, right) => {
     const leftPrice = getEffectiveSortPrice(left);
     const rightPrice = getEffectiveSortPrice(right);
@@ -95,6 +96,36 @@ export function MobileBgSearchResultsTable({
     return <span className="text-slate-200/80" title={fullLabel}>{shortLabel}</span>;
   }
 
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    function syncScrollMetrics() {
+      const { scrollHeight, clientHeight, scrollTop } = container;
+      if (scrollHeight <= clientHeight + 1) {
+        setScrollMetrics({ visible: false, thumbHeight: 0, thumbTop: 0 });
+        return;
+      }
+
+      const trackHeight = clientHeight;
+      const thumbHeight = Math.max(36, (clientHeight / scrollHeight) * trackHeight);
+      const maxThumbTop = trackHeight - thumbHeight;
+      const maxScrollTop = scrollHeight - clientHeight;
+      const thumbTop = maxScrollTop <= 0 ? 0 : (scrollTop / maxScrollTop) * maxThumbTop;
+
+      setScrollMetrics({ visible: true, thumbHeight, thumbTop });
+    }
+
+    syncScrollMetrics();
+    container.addEventListener('scroll', syncScrollMetrics, { passive: true });
+    window.addEventListener('resize', syncScrollMetrics);
+
+    return () => {
+      container.removeEventListener('scroll', syncScrollMetrics);
+      window.removeEventListener('resize', syncScrollMetrics);
+    };
+  }, [rows]);
+
   return (
     <div className="rounded-lg border border-slate-500/70 bg-slate-800/85">
       <div className="border-b border-slate-500/60 px-4 py-3">
@@ -121,9 +152,10 @@ export function MobileBgSearchResultsTable({
         </div>
       </div>
 
+      <div className="relative">
       <div
         ref={scrollContainerRef}
-        className="h-[32rem] min-h-[32rem] overflow-x-auto overflow-y-scroll overscroll-contain [scrollbar-color:#64748b_#0f172a] [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-slate-900/80"
+        className="h-[32rem] min-h-[32rem] overflow-x-auto overflow-y-scroll overscroll-contain pr-4 [scrollbar-color:#64748b_#0f172a] [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-slate-900/80"
         style={{ scrollbarGutter: 'stable both-edges', scrollbarWidth: 'thin' }}
         onWheel={(event) => {
           const container = scrollContainerRef.current;
@@ -268,6 +300,15 @@ export function MobileBgSearchResultsTable({
             })}
           </tbody>
         </table>
+      </div>
+      {scrollMetrics.visible && (
+        <div className="pointer-events-none absolute inset-y-0 right-1 w-2 rounded-full bg-slate-950/80">
+          <div
+            className="absolute left-0 right-0 rounded-full bg-slate-400/90"
+            style={{ top: scrollMetrics.thumbTop, height: scrollMetrics.thumbHeight }}
+          />
+        </div>
+      )}
       </div>
     </div>
   );
