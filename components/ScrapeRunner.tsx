@@ -37,6 +37,7 @@ interface Dealer {
   slug: string;
   name: string;
   mobile_url: string | null;
+  cars_url: string | null;
   own: number;
   active: number;
 }
@@ -47,8 +48,9 @@ function formatPrice(price: number | null | undefined) {
 }
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: Dealer[]; onRunStart?: () => void }) {
-  const activeDealers = initialDealers.filter(c => c.active);
-  const [selectedDealers, setSelectedDealers] = useState<string[]>(activeDealers.filter(d => d.own).map(d => d.slug));
+  const [source, setSource] = useState<'mobile' | 'carsbg'>('mobile');
+  const activeDealers = initialDealers.filter(c => c.active && (source === 'mobile' ? c.mobile_url : c.cars_url));
+  const [selectedDealers, setSelectedDealers] = useState<string[]>(initialDealers.filter(d => d.active && d.own && d.mobile_url).map(d => d.slug));
 
   // Effective selection: only keep slugs that are still active
   const activeSlugs = new Set(activeDealers.map(d => d.slug));
@@ -103,7 +105,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       res = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealers: effectiveSelected, deepCrawl }),
+        body: JSON.stringify({ dealers: effectiveSelected, deepCrawl, source }),
       });
     } catch (err) {
       setLog([{ type: 'error', message: String(err) }]);
@@ -153,6 +155,24 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     <div className="space-y-6">
       {/* Controls */}
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
+        {/* Source toggle */}
+        <div className="flex items-center gap-1 rounded-lg bg-gray-900/60 p-1 w-fit">
+          <button
+            onClick={() => { if (!running) { setSource('mobile'); setSelectedDealers(initialDealers.filter(d => d.active && d.own && d.mobile_url).map(d => d.slug)); } }}
+            disabled={running}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${source === 'mobile' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+          >
+            mobile.bg
+          </button>
+          <button
+            onClick={() => { if (!running) { setSource('carsbg'); setSelectedDealers(initialDealers.filter(d => d.active && d.own && d.cars_url).map(d => d.slug)); } }}
+            disabled={running}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${source === 'carsbg' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+          >
+            cars.bg
+          </button>
+        </div>
+
         {/* Dealers */}
         <div>
           <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">

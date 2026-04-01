@@ -76,6 +76,10 @@ export function buildImageList(
   if (!fullKeys.length) return [];
 
   return fullKeys.map((key, i) => {
+    // Cars.bg listings store full URLs directly as keys
+    if (key.startsWith('http')) {
+      return { full: key, thumb: thumbKeys[i]?.startsWith('http') ? thumbKeys[i] : key };
+    }
     if (imagesDownloaded) {
       return {
         full: getLocalImageUrl(mobileId, 'full', i),

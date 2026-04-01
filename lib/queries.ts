@@ -3,6 +3,7 @@ import { raw } from '@/db/client';
 export interface ListingRow {
   id: number;
   mobile_id: string;
+  cars_id: string | null;
   title: string;
   make: string;
   model: string;
@@ -24,6 +25,7 @@ export interface ListingRow {
   dealer_name: string;
   dealer_slug: string;
   is_active: number;
+  source: string;
 }
 
 export interface OwnListingRow extends ListingRow {
@@ -193,6 +195,7 @@ export interface ListingFilters {
   priceChangeMin?: number | null;
   priceChangeMax?: number | null;
   kaparo?: string;
+  source?: string;
   sort?: string;
   order?: string;
   search?: string;
@@ -225,6 +228,7 @@ export function getListings(filters: ListingFilters = {}) {
     priceChangeMin = null,
     priceChangeMax = null,
     kaparo = '',
+    source = '',
     sort = 'last_edit',
     order = 'desc',
     search = '',
@@ -232,7 +236,7 @@ export function getListings(filters: ListingFilters = {}) {
     limit = 25,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 1', 'd.active = 1'];
+  const wheres: string[] = ['l.is_active = 1', 'd.active = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
   const params: (string | number)[] = [];
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
@@ -285,6 +289,7 @@ export function getListings(filters: ListingFilters = {}) {
     wheres.push(`d.slug IN (${ph})`);
     params.push(...dealerSlugs);
   }
+  if (source) { wheres.push('l.source = ?'); params.push(source); }
 
   const where = `WHERE ${wheres.join(' AND ')}`;
   const sortCol = VALID_SORT[sort] ?? 'l.last_edit';
@@ -293,9 +298,10 @@ export function getListings(filters: ListingFilters = {}) {
 
   const rows = raw.prepare(`
     SELECT
-      l.id, l.mobile_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel,
+      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel,
       l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
+      COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
@@ -335,7 +341,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     limit = 25,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 1', 'd.active = 1', 'd.own = 1'];
+  const wheres: string[] = ['l.is_active = 1', 'd.active = 1', 'd.own = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
   const params: (string | number)[] = [];
 
   if (make) { wheres.push('COALESCE(b.make, l.make) = ?'); params.push(make); }
@@ -523,6 +529,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
 export interface DetailListing {
   id: number;
   mobile_id: string;
+  cars_id: string | null;
   title: string;
   make: string;
   model: string;
@@ -544,6 +551,7 @@ export interface DetailListing {
   image_meta: string;
   images_downloaded: number;
   is_active: number;
+  source: string;
   dealer_name: string;
   dealer_slug: string;
   dealer_own: number;
@@ -551,13 +559,25 @@ export interface DetailListing {
 }
 
 export function getListingByMobileId(mobileId: string): DetailListing | null {
-  return raw.prepare(`
+  const byMobile = raw.prepare(`
     SELECT
-      l.*, d.name as dealer_name, d.slug as dealer_slug,
+      l.*, COALESCE(l.source, 'm') as source,
+      d.name as dealer_name, d.slug as dealer_slug,
       d.own as dealer_own, d.mobile_url as dealer_url
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.mobile_id = ?
+  `).get(mobileId) as DetailListing | null;
+  if (byMobile) return byMobile;
+  // Fallback: try cars_id for cars.bg-sourced listings
+  return raw.prepare(`
+    SELECT
+      l.*, COALESCE(l.source, 'm') as source,
+      d.name as dealer_name, d.slug as dealer_slug,
+      d.own as dealer_own, COALESCE(d.cars_url, d.mobile_url) as dealer_url
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    WHERE l.cars_id = ?
   `).get(mobileId) as DetailListing | null;
 }
 
@@ -589,7 +609,7 @@ export interface MakeModel {
 
 export function getMakeModels(): Record<string, string[]> {
   const rows = raw.prepare(`
-    SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL ORDER BY make, model
+    SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY make, model
   `).all() as MakeModel[];
   const result: Record<string, string[]> = {};
   for (const r of rows) {
@@ -623,14 +643,14 @@ export function getAllDealers(): DealerRow[] {
 
 export function getDistinctYears(): string[] {
   const rows = raw.prepare(
-    `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL ORDER BY reg_year DESC`
+    `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY reg_year DESC`
   ).all() as { reg_year: string }[];
   return rows.map(r => r.reg_year);
 }
 
 export function getPriceRange(): { min: number; max: number } | null {
   const row = raw.prepare(
-    `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL`
+    `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`
   ).get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
   return { min: row.min, max: row.max };
@@ -638,7 +658,7 @@ export function getPriceRange(): { min: number; max: number } | null {
 
 export function getPriceChangeRange(): { min: number; max: number } | null {
   const row = raw.prepare(
-    `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL`
+    `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`
   ).get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
   return { min: row.min, max: row.max };
@@ -646,7 +666,7 @@ export function getPriceChangeRange(): { min: number; max: number } | null {
 
 export function getDistinctFuels(): string[] {
   const rows = raw.prepare(
-    `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL ORDER BY fuel`
+    `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY fuel`
   ).all() as { fuel: string }[];
   return rows.map(r => r.fuel);
 }
@@ -693,7 +713,7 @@ export function getListingSummaries(): ListingSummary[] {
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
     FROM listings l
     JOIN dealers d ON l.dealer_id = d.id
-    WHERE l.is_active = 1 AND d.own = 1
+    WHERE l.is_active = 1 AND d.own = 1 AND (l.duplicate = 0 OR l.duplicate IS NULL)
     ORDER BY l.make, l.model, l.reg_year
   `).all() as ListingSummary[];
 }

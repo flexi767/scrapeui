@@ -5,10 +5,14 @@ import path from 'path';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const { dealers, deepCrawl } = await req.json();
+  const { dealers, deepCrawl, source } = await req.json();
 
   const scriptArgs = ['--dealers', (dealers as string[]).join(',')];
   if (deepCrawl) scriptArgs.push('--deep');
+
+  const scriptName = source === 'carsbg'
+    ? 'scraper/scripts/run-carsbg-for-ui.ts'
+    : 'scraper/scripts/run-for-ui.ts';
 
   const stream = new ReadableStream({
     start(controller) {
@@ -19,7 +23,7 @@ export async function POST(req: NextRequest) {
       };
 
       const child = spawn(path.join(process.cwd(), 'node_modules/.bin/tsx'), [
-        path.join(process.cwd(), 'scraper/scripts/run-for-ui.ts'),
+        path.join(process.cwd(), scriptName),
         ...scriptArgs,
       ], {
         env: {

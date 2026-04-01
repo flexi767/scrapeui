@@ -66,6 +66,9 @@ export default async function ListingDetailPage({ params }: Props) {
           </Link>
           <span className="text-gray-600">/</span>
           <span className="truncate text-sm text-gray-300">{listing.title}</span>
+          {listing.source === 'c' && (
+            <span className="rounded bg-purple-900/70 px-1.5 py-0.5 text-[10px] text-purple-200">cars.bg</span>
+          )}
           {!listing.is_active && (
             <span className="ml-2 rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] text-red-300">
               Inactive
@@ -129,7 +132,7 @@ export default async function ListingDetailPage({ params }: Props) {
               {/* History link */}
               {snapshots.length > 0 && (
                 <Link
-                  href={`/listings/${listing.mobile_id}/history`}
+                  href={`/listings/${listing.mobile_id || listing.cars_id}/history`}
                   className="mt-3 block text-xs text-blue-400 hover:text-blue-300 hover:underline"
                 >
                   View history ({snapshots.length} snapshots) →
@@ -144,7 +147,7 @@ export default async function ListingDetailPage({ params }: Props) {
                   rel="noopener noreferrer"
                   className="mt-2 block text-xs text-gray-400 hover:text-white"
                 >
-                  View on mobile.bg ↗
+                  View on {listing.source === 'c' ? 'cars.bg' : 'mobile.bg'} ↗
                 </a>
               )}
             </div>

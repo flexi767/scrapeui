@@ -215,16 +215,17 @@ export default async function ListingsPage({
                 );
                 const thumb = images[0]?.thumb ?? null;
 
+                const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
                   <tr
-                    key={row.mobile_id}
+                    key={listingSlug}
                     className="group transition-colors hover:bg-gray-800/40"
                   >
                     {/* Thumbnail */}
                     <td className="px-3 py-1">
                       {thumb ? (
                         <div className="relative inline-block w-16">
-                          <Link href={`/listings/${row.mobile_id}`} className="peer block">
+                          <Link href={`/listings/${listingSlug}`} className="peer block">
                             <ImageWithFallback
                               src={thumb}
                               alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
@@ -274,7 +275,7 @@ export default async function ListingsPage({
                     {/* Title */}
                     <td className="max-w-xs px-3 py-1">
                       <Link
-                        href={`/listings/${row.mobile_id}`}
+                        href={`/listings/${listingSlug}`}
                         className="line-clamp-2 text-white no-underline hover:text-white hover:no-underline"
                       >
                         {row.title}
@@ -283,14 +284,19 @@ export default async function ListingsPage({
 
                     {/* Dealer */}
                     <td className="px-3 py-1">
-                      {row.dealer_slug ? (
-                        <Link
-                          href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
-                          className="text-white no-underline hover:text-white hover:no-underline"
-                        >
-                          {row.dealer_name ?? '—'}
-                        </Link>
-                      ) : <span className="text-gray-300">{row.dealer_name ?? '—'}</span>}
+                      <div className="flex items-center gap-1.5">
+                        {row.dealer_slug ? (
+                          <Link
+                            href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
+                            className="text-white no-underline hover:text-white hover:no-underline"
+                          >
+                            {row.dealer_name ?? '—'}
+                          </Link>
+                        ) : <span className="text-gray-300">{row.dealer_name ?? '—'}</span>}
+                        {row.source === 'c' && (
+                          <span className="rounded bg-purple-900/70 px-1 py-0.5 text-[10px] text-purple-200">cars</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Ad Status */}
