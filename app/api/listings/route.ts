@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const make = sp.get('make') ?? '';
   const model = sp.get('model') ?? '';
   const dealerSlugs = sp.getAll('dealer');
-  const sort = sp.get('sort') ?? 'last_edit';
+  const sort = sp.get('sort') ?? 'price';
   const order = sp.get('order') ?? 'desc';
   const search = sp.get('search') ?? '';
   const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10));

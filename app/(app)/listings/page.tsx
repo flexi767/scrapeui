@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 
 interface SearchParams {
@@ -11,6 +11,7 @@ interface SearchParams {
   model?: string;
   dealer?: string | string[];
   year?: string | string[];
+  category?: string | string[];
   status?: string | string[];
   vat?: string | string[];
   fuel?: string | string[];
@@ -83,6 +84,7 @@ export default async function ListingsPage({
       : [sp.dealer]
     : [];
   const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
+  const categories = sp.category ? (Array.isArray(sp.category) ? sp.category : [sp.category]) : [];
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
@@ -91,7 +93,7 @@ export default async function ListingsPage({
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
   const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
   const kaparo = sp.kaparo ?? '';
-  const sort = sp.sort ?? 'dealer';
+  const sort = sp.sort ?? 'price';
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
   const page = parseInt(sp.page ?? '1', 10);
@@ -101,6 +103,7 @@ export default async function ListingsPage({
     model,
     dealerSlugs,
     years,
+    categories,
     statuses,
     vatValues,
     fuels,
@@ -124,6 +127,7 @@ export default async function ListingsPage({
   const currentParams = new URLSearchParams();
   for (const s of statuses) currentParams.append('status', s);
   for (const v of vatValues) currentParams.append('vat', v);
+  for (const c of categories) currentParams.append('category', c);
   for (const f of fuels) currentParams.append('fuel', f);
   if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
@@ -147,6 +151,7 @@ export default async function ListingsPage({
               makeModels={makeModels}
               allDealers={allDealers}
               allYears={getDistinctYears()}
+              allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
               total={total}
               priceChangeRange={getPriceChangeRange()}
@@ -186,6 +191,7 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
+                <th className="px-3 py-1.5 text-center">Category</th>
                 <th className="px-3 py-1.5 text-center">
                   <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -197,7 +203,7 @@ export default async function ListingsPage({
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={14} className="py-16 text-center text-gray-500">
+                  <td colSpan={15} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
@@ -372,6 +378,15 @@ export default async function ListingsPage({
                       {row.reg_year ? (
                         <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-300 hover:text-white">
                           {row.reg_year}
+                        </Link>
+                      ) : <span className="text-gray-600">—</span>}
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-3 py-1 text-center">
+                      {row.body_type ? (
+                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'category'), ['category', row.body_type]]).toString()}`}>
+                          <span className="text-xs text-gray-300 hover:text-white">{row.body_type}</span>
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
                     </td>

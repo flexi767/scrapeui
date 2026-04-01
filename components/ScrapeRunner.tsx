@@ -49,12 +49,14 @@ function formatPrice(price: number | null | undefined) {
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: Dealer[]; onRunStart?: () => void }) {
   const [source, setSource] = useState<'mobile' | 'carsbg'>('mobile');
-  const activeDealers = initialDealers.filter(c => c.active && (source === 'mobile' ? c.mobile_url : c.cars_url));
+  const activeDealers = initialDealers.filter((dealer) => dealer.active);
+  const availableDealers = activeDealers.filter((dealer) => source === 'mobile' ? dealer.mobile_url : dealer.cars_url);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(initialDealers.filter(d => d.active && d.own && d.mobile_url).map(d => d.slug));
 
   // Effective selection: only keep slugs that are still active
-  const activeSlugs = new Set(activeDealers.map(d => d.slug));
+  const activeSlugs = new Set(availableDealers.map(d => d.slug));
   const effectiveSelected = selectedDealers.filter(slug => activeSlugs.has(slug));
+  const allActiveSelected = availableDealers.length > 0 && effectiveSelected.length === availableDealers.length;
 
   useEffect(() => {
     const nextActiveSlugs = new Set(activeDealers.map(d => d.slug));
@@ -66,15 +68,25 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
 
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [done, setDone] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const changesRef = useRef<HTMLDivElement>(null);
+  const runAbortRef = useRef<AbortController | null>(null);
 
   const toggleDealer = (slug: string) => {
     setSelectedDealers(prev =>
       prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
     );
+  };
+
+  const toggleSelectAllDealers = () => {
+    setSelectedDealers((prev) => {
+      const inactiveSelections = prev.filter((slug) => !activeSlugs.has(slug));
+      if (allActiveSelected) return inactiveSelections;
+      return [...inactiveSelections, ...availableDealers.map((dealer) => dealer.slug)];
+    });
   };
 
   const scrollToBottom = () => {
@@ -97,8 +109,12 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     if (effectiveSelected.length === 0) return;
     onRunStart?.();
     setRunning(true);
+    setStopping(false);
     setDone(false);
     setLog([]);
+
+    const abortController = new AbortController();
+    runAbortRef.current = abortController;
 
     let res: Response;
     try {
@@ -106,16 +122,34 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealers: effectiveSelected, deepCrawl, source }),
+        signal: abortController.signal,
       });
     } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        setRunning(false);
+        setStopping(false);
+        runAbortRef.current = null;
+        return;
+      }
       setLog([{ type: 'error', message: String(err) }]);
       setRunning(false);
+      setStopping(false);
+      runAbortRef.current = null;
       return;
     }
 
     if (!res.ok || !res.body) {
-      setLog([{ type: 'error', message: 'Failed to start scraper' }]);
+      let message = 'Failed to start scraper';
+      try {
+        const data = await res.json();
+        message = data.error || message;
+      } catch {
+        // ignore JSON parse failure
+      }
+      setLog([{ type: 'error', message }]);
       setRunning(false);
+      setStopping(false);
+      runAbortRef.current = null;
       return;
     }
 
@@ -139,6 +173,8 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
             if (obj.type === 'complete') {
               setDone(true);
               setRunning(false);
+              setStopping(false);
+              runAbortRef.current = null;
             }
             scrollToBottom();
           } catch {
@@ -146,9 +182,29 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
           }
         }
       }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setLog((prev) => [...prev, { type: 'error', message: String(err) }]);
+      }
     } finally {
       setRunning(false);
+      setStopping(false);
+      runAbortRef.current = null;
     }
+  };
+
+  const stop = async () => {
+    if (!running || stopping) return;
+    setStopping(true);
+    try {
+      await fetch('/api/scrape', { method: 'DELETE' });
+    } catch (err) {
+      setLog((prev) => [...prev, { type: 'error', message: `Failed to stop scraper: ${String(err)}` }]);
+      setStopping(false);
+      return;
+    }
+
+    runAbortRef.current?.abort();
   };
 
   return (
@@ -167,7 +223,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
           <button
             onClick={() => { if (!running) { setSource('carsbg'); setSelectedDealers(initialDealers.filter(d => d.active && d.own && d.cars_url).map(d => d.slug)); } }}
             disabled={running}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${source === 'carsbg' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${source === 'carsbg' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-orange-300'} disabled:opacity-50`}
           >
             cars.bg
           </button>
@@ -178,37 +234,49 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
           <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
             <span>Dealers</span>
             <span className="text-xs text-gray-500">({effectiveSelected.length} selected)</span>
+            <button
+              type="button"
+              onClick={toggleSelectAllDealers}
+              disabled={running || availableDealers.length === 0}
+              className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:text-gray-600"
+            >
+              {allActiveSelected ? 'Deselect all' : 'Select all'}
+            </button>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {activeDealers.map(d => (
-              <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
+            {activeDealers.map(d => {
+              const isAvailableForSource = Boolean(source === 'mobile' ? d.mobile_url : d.cars_url);
+              return (
+              <label key={d.slug} className={`flex items-center gap-2 select-none ${isAvailableForSource ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
                 <input
                   type="checkbox"
                   checked={effectiveSelected.includes(d.slug)}
                   onChange={() => toggleDealer(d.slug)}
-                  disabled={running}
+                  disabled={running || !isAvailableForSource}
                   className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
                 />
-                <span className="text-sm text-gray-200">{d.name}</span>
+                <span className={`text-sm ${isAvailableForSource ? 'text-gray-200' : 'text-gray-500'}`}>{d.name}</span>
               </label>
-            ))}
+            );})}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           {/* Run button */}
           <button
-            onClick={run}
-            disabled={running || effectiveSelected.length === 0}
-            className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={running ? stop : run}
+            disabled={(!running && effectiveSelected.length === 0) || stopping}
+            className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
+              running ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
+            }`}
           >
-            {running && (
+            {(running || stopping) && (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             )}
-            {running ? 'Running…' : 'Run'}
+            {stopping ? 'Stopping…' : running ? 'Stop' : 'Run'}
           </button>
 
           {/* Deep crawl toggle */}

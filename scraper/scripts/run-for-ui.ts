@@ -22,6 +22,7 @@ const dealersIdx = args.indexOf('--dealers');
 const dealerArg = dealersIdx !== -1 && args[dealersIdx + 1] ? args[dealersIdx + 1] : '';
 const deepCrawl = args.includes('--deep');
 const requestedSlugs = dealerArg ? dealerArg.split(',').map(s => s.trim()) : [];
+const HOMEPAGE_CATEGORY_OPTIONS = new Set(['Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек']);
 
 function emit(obj: object) {
   process.stdout.write(JSON.stringify(obj) + '\n');
@@ -144,7 +145,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       isDeep ? regMonth : existing.reg_month,
       isDeep ? regYear : existing.reg_year,
       isDeep ? (fuel || null) : existing.fuel,
-      isDeep ? (bodyType || null) : existing.body_type,
+      isDeep ? (bodyType || null) : (existing.body_type || bodyType || null),
       isDeep ? (transmission || null) : existing.transmission,
       isDeep ? (listing.color || null) : existing.color,
       isDeep ? (listing.power || null) : existing.power,
@@ -203,6 +204,11 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const item = a.closest('[class*="item"]') || card?.closest('[class*="item"]');
             const itemClass = item?.className || '';
             const priceEl = card?.querySelector('.price');
+            const params = Array.from(item?.querySelectorAll('.params span') || [])
+              .map(span => span.textContent?.trim() || '')
+              .filter(Boolean);
+            const transmissionOptions = ['Ръчна', 'Автоматична', 'Полуавтоматична'];
+            const transmissionIndex = params.findIndex(value => transmissionOptions.includes(value));
             const adStatus = /\bTOP\b/i.test(itemClass) ? 'TOP' : /\bVIP\b/i.test(itemClass) ? 'VIP' : 'none';
             const kaparo = !!(a.closest('.kaparo') || item?.querySelector('.kaparo') || item?.classList?.contains('kaparo'));
             const allImgs = Array.from(item?.querySelectorAll('img') || []);
@@ -215,6 +221,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               title: a.textContent?.trim() || '',
               priceText: priceEl?.textContent?.trim() || '',
               adStatus, kaparo,
+              bodyType: transmissionIndex !== -1 ? (params[transmissionIndex + 1] || null) : null,
               thumb: thumbImg?.src || thumbImg?.getAttribute('data-src') || '',
             };
           }).filter(c => c.url.includes('/obiava-'))
@@ -228,8 +235,10 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           for (const card of cards) {
             const priceMatch = card.priceText.replace(/\s/g, '').match(/([\d.,]+)€/);
             const priceAmount = priceMatch ? Math.round(parseFloat(priceMatch[1].replace(',', ''))) : null;
+            const bodyType = card.bodyType && HOMEPAGE_CATEGORY_OPTIONS.has(card.bodyType) ? card.bodyType : null;
             const listing = {
               url: card.url, title: card.title, adStatus: card.adStatus, kaparo: card.kaparo,
+              bodyType,
               thumb: card.thumb || '', price: { amount: priceAmount, currency: 'EUR' },
               vat: null, lastEdit: null, isNew: false, imageCount: 0,
               images: { meta: null, thumbKeys: [], fullKeys: [] },
@@ -343,7 +352,6 @@ async function main() {
   const fuelMap = await fetchFuelTypes().catch(() => null);
   const transmissionMap = await fetchTransmissionTypes().catch(() => null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dealers = db.prepare(`
     SELECT id, slug, name, mobile_url as mobileBg, own, active,
            mobile_user, mobile_password, cars_url, cars_user, cars_password

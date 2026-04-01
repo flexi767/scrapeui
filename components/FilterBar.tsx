@@ -10,6 +10,7 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
+  allCategories: string[];
   allFuels: string[];
   total: number;
   priceChangeRange?: { min: number; max: number } | null;
@@ -17,7 +18,7 @@ interface Props {
   basePath?: string;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allFuels, total, priceChangeRange, priceRange, basePath = '/listings' }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories, allFuels, total, priceChangeRange, priceRange, basePath = '/listings' }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -25,10 +26,13 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const currentModel = searchParams.get('model') ?? '';
   const currentDealers = searchParams.getAll('dealer');
   const currentYears = searchParams.getAll('year');
+  const currentCategories = searchParams.getAll('category');
   const currentStatuses = searchParams.getAll('status');
   const currentVat = searchParams.getAll('vat');
   const currentFuels = searchParams.getAll('fuel');
   const currentSearch = searchParams.get('search') ?? '';
+  const currentSort = searchParams.get('sort') ?? 'price';
+  const currentOrder = searchParams.get('order') ?? 'desc';
 
   const [dealerOpen, setDealerOpen] = useState(false);
   const dealerRef = useRef<HTMLDivElement>(null);
@@ -47,15 +51,13 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
     const p = new URLSearchParams();
-    const keep = ['sort', 'order'];
-    for (const k of keep) {
-      const v = searchParams.get(k);
-      if (v) p.set(k, v);
-    }
+    p.set('sort', currentSort);
+    p.set('order', currentOrder);
     if (currentMake) p.set('make', currentMake);
     if (currentModel) p.set('model', currentModel);
     for (const d of currentDealers) p.append('dealer', d);
     for (const y of currentYears) p.append('year', y);
+    for (const c of currentCategories) p.append('category', c);
     for (const s of currentStatuses) p.append('status', s);
     for (const v of currentVat) p.append('vat', v);
     for (const f of currentFuels) p.append('fuel', f);
@@ -96,10 +98,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
   function onClearAll() {
     const p = new URLSearchParams();
-    const sort = searchParams.get('sort');
-    const order = searchParams.get('order');
-    if (sort) p.set('sort', sort);
-    if (order) p.set('order', order);
+    p.set('sort', currentSort);
+    p.set('order', currentOrder);
     router.push(`${basePath}?${p.toString()}`);
   }
 
@@ -123,10 +123,13 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   const [statusOpen, setStatusOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false);
+      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) setCategoryOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -135,6 +138,13 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   function onStatusToggle(s: string) {
     const next = currentStatuses.includes(s) ? currentStatuses.filter(x => x !== s) : [...currentStatuses, s];
     router.push(`${basePath}?${buildParams({ status: next })}`);
+  }
+
+  function onCategoryToggle(category: string) {
+    const next = currentCategories.includes(category)
+      ? currentCategories.filter(x => x !== category)
+      : [...currentCategories, category];
+    router.push(`${basePath}?${buildParams({ category: next })}`);
   }
 
   const STATUS_OPTIONS = [
@@ -180,7 +190,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     router.push(`${basePath}?${buildParams({ fuel: next })}`);
   }
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentCategories.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
 
 
 
@@ -249,6 +259,33 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             {currentDealers.length > 0 && (
               <button onClick={() => { onDealerToggle(''); router.push(`${basePath}?${buildParams({ dealer: [] })}`); setDealerOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
                 Clear dealers
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="relative" ref={categoryRef}>
+        <button
+          onClick={() => setCategoryOpen(o => !o)}
+          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+            currentCategories.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+          }`}
+        >
+          {currentCategories.length === 0 ? 'Category' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} categories`}
+          <span className="text-gray-400">{categoryOpen ? '▲' : '▼'}</span>
+        </button>
+        {categoryOpen && (
+          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+            {allCategories.map(category => (
+              <label key={category} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                <input type="checkbox" checked={currentCategories.includes(category)} onChange={() => onCategoryToggle(category)} className="accent-blue-500" />
+                <span>{category}</span>
+              </label>
+            ))}
+            {currentCategories.length > 0 && (
+              <button onClick={() => { router.push(`${basePath}?${buildParams({ category: [] })}`); setCategoryOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                Clear category
               </button>
             )}
           </div>

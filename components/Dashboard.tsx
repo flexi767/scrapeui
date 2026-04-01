@@ -75,7 +75,10 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let cancelled = false;
+
+    const fetchData = async (showLoading = false) => {
+      if (showLoading) setLoading(true);
       try {
         const [statsRes, dealersRes] = await Promise.all([
           fetch('/api/dashboard/stats'),
@@ -83,16 +86,33 @@ export function Dashboard() {
         ]);
         const statsData = await statsRes.json();
         const dealersData = await dealersRes.json();
+        if (cancelled) return;
         setStats(statsData);
         setDealers(dealersData);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchData();
+    fetchData(true);
+
+    const intervalId = window.setInterval(() => {
+      fetchData(false);
+    }, 30000);
+
+    const onFocus = () => {
+      fetchData(false);
+    };
+
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const activeDealers = dealers.filter(d => d.active);

@@ -26,17 +26,26 @@ export function GET() {
   stats.totalListings = listingsCount.total;
   stats.activeListings = listingsCount.active;
 
-  // Get last scraping time (most recent backup run that finished)
+  // Get last scraping time from listing sync activity.
   const lastScrape = raw.prepare(`
-    SELECT finished_at
-    FROM mobilebg_backup_runs
-    WHERE status = 'completed' AND finished_at IS NOT NULL
-    ORDER BY finished_at DESC
-    LIMIT 1
-  `).get() as { finished_at: string } | undefined;
+    SELECT MAX(last_seen_at) as last_seen_at
+    FROM listings
+    WHERE last_seen_at IS NOT NULL
+  `).get() as { last_seen_at: string | null } | undefined;
 
-  if (lastScrape) {
-    stats.lastScrapingAt = lastScrape.finished_at;
+  if (lastScrape?.last_seen_at) {
+    stats.lastScrapingAt = lastScrape.last_seen_at;
+  } else {
+    const fallbackScrape = raw.prepare(`
+      SELECT MAX(first_seen_at) as first_seen_at
+      FROM listings
+      WHERE first_seen_at IS NOT NULL
+    LIMIT 1
+    `).get() as { first_seen_at: string | null } | undefined;
+
+    if (fallbackScrape?.first_seen_at) {
+      stats.lastScrapingAt = fallbackScrape.first_seen_at;
+    }
   }
 
   // Get total dealers

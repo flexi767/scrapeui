@@ -12,6 +12,7 @@ interface ListingSearchRow {
   fuel: string | null;
   transmission: string | null;
   body_type: string | null;
+  power: number | null;
   mileage: number | null;
   current_price: number | null;
 }
@@ -26,6 +27,11 @@ interface SearchField {
   label: string;
   value: string;
   source: 'default' | 'listing' | 'derived';
+}
+
+interface ReferenceOption {
+  value: string;
+  count: number | null;
 }
 
 const SEARCH_ACTION = 'https://www.mobile.bg/pcgi/mobile.cgi';
@@ -98,6 +104,7 @@ export async function GET(
       fuel,
       transmission,
       body_type,
+      power,
       mileage,
       current_price
     FROM listings
@@ -123,12 +130,33 @@ export async function GET(
     LIMIT 1
   `).get(listing.make ?? '', listing.model ?? '') as ReferenceRow | undefined;
 
+  const makeOptions = raw.prepare(`
+    SELECT make as value, make_count as count
+    FROM mobilebg_make_models
+    WHERE model = ''
+    ORDER BY make
+  `).all() as ReferenceOption[];
+
+  const modelRows = raw.prepare(`
+    SELECT make, model as value, model_count as count
+    FROM mobilebg_make_models
+    WHERE model != ''
+    ORDER BY make, model
+  `).all() as Array<ReferenceOption & { make: string }>;
+
+  const modelsByMake = modelRows.reduce<Record<string, ReferenceOption[]>>((acc, row) => {
+    if (!acc[row.make]) acc[row.make] = [];
+    acc[row.make].push({ value: row.value, count: row.count });
+    return acc;
+  }, {});
+
   const fields: SearchField[] = [
     { name: 'topmenu', label: 'Top menu', value: '1', source: 'default' },
     { name: 'rub', label: 'Rubric', value: '1', source: 'default' },
     { name: 'act', label: 'Action', value: '2', source: 'default' },
     { name: 'rub_pub_save', label: 'Saved rubric', value: '1', source: 'default' },
     { name: 'pubtype', label: 'Category', value: '1', source: 'default' },
+    { name: 'f20', label: 'Сортиране според', value: '3', source: 'default' },
   ];
   const visibleFields: SearchField[] = [];
   const omitted: string[] = [];
@@ -137,28 +165,64 @@ export async function GET(
   addField(visibleFields, 'model', 'Модел', listing.model, 'listing');
 
   if (listing.reg_year && /^\d{4}$/.test(listing.reg_year)) {
-    addField(visibleFields, 'f10', 'Година от', listing.reg_year, 'listing');
-    addField(visibleFields, 'f11', 'Година до', listing.reg_year, 'listing');
+    const year = Number.parseInt(listing.reg_year, 10);
+    addField(visibleFields, 'f10', 'Година от', String(year - 1), 'derived');
+    addField(visibleFields, 'f11', 'Година до', String(year + 1), 'derived');
   } else {
     omitted.push('Year was missing or invalid.');
   }
 
-  if (listing.fuel && ALLOWED_FUELS.has(listing.fuel)) {
-    addField(visibleFields, 'f12', 'Двигател', listing.fuel, 'listing');
-  } else if (listing.fuel) {
+  visibleFields.push({
+    name: 'f12',
+    label: 'Двигател',
+    value: listing.fuel && ALLOWED_FUELS.has(listing.fuel) ? listing.fuel : '',
+    source: listing.fuel && ALLOWED_FUELS.has(listing.fuel) ? 'listing' : 'default',
+  });
+  if (listing.fuel && !ALLOWED_FUELS.has(listing.fuel)) {
     omitted.push(`Fuel "${listing.fuel}" does not match a known mobile.bg search option.`);
   }
 
-  if (listing.transmission && ALLOWED_TRANSMISSIONS.has(listing.transmission)) {
-    addField(visibleFields, 'f13', 'Скоростна кутия', listing.transmission, 'listing');
-  } else if (listing.transmission) {
+  visibleFields.push({
+    name: 'f13',
+    label: 'Скоростна кутия',
+    value: listing.transmission && ALLOWED_TRANSMISSIONS.has(listing.transmission) ? listing.transmission : '',
+    source: listing.transmission && ALLOWED_TRANSMISSIONS.has(listing.transmission) ? 'listing' : 'default',
+  });
+  if (listing.transmission && !ALLOWED_TRANSMISSIONS.has(listing.transmission)) {
     omitted.push(`Transmission "${listing.transmission}" does not match a known mobile.bg search option.`);
   }
 
-  if (listing.body_type && ALLOWED_CATEGORIES.has(listing.body_type)) {
-    addField(visibleFields, 'f14', 'Категория', listing.body_type, 'listing');
-  } else if (listing.body_type) {
+  visibleFields.push({
+    name: 'f14',
+    label: 'Категория',
+    value: listing.body_type && ALLOWED_CATEGORIES.has(listing.body_type) ? listing.body_type : '',
+    source: listing.body_type && ALLOWED_CATEGORIES.has(listing.body_type) ? 'listing' : 'default',
+  });
+  if (listing.body_type && !ALLOWED_CATEGORIES.has(listing.body_type)) {
     omitted.push(`Body type "${listing.body_type}" does not match a supported mobile.bg category.`);
+  }
+
+  if (listing.power != null && listing.power > 0) {
+    addField(visibleFields, 'f25', 'Мощност от [к.с.]', String(Math.max(0, listing.power - 5)), 'derived');
+    addField(visibleFields, 'f26', 'Мощност до [к.с.]', String(listing.power + 5), 'derived');
+  }
+
+  if (listing.current_price != null && listing.current_price > 0) {
+    addField(
+      visibleFields,
+      'f7',
+      'Цена от',
+      String(Math.max(0, Math.floor(listing.current_price * 0.9))),
+      'derived',
+    );
+    addField(
+      visibleFields,
+      'f8',
+      'Цена до',
+      String(Math.ceil(listing.current_price * 1.1)),
+      'derived',
+    );
+    addField(visibleFields, 'f9', 'Валута', 'EUR', 'default');
   }
 
   const mileageBucket = toMileageBucket(listing.mileage);
@@ -180,6 +244,7 @@ export async function GET(
       fuel: listing.fuel,
       transmission: listing.transmission,
       bodyType: listing.body_type,
+      power: listing.power,
       mileage: listing.mileage,
       currentPrice: listing.current_price,
     },
@@ -192,6 +257,10 @@ export async function GET(
     reference: {
       makeCount: modelReference?.make_count ?? makeReference?.make_count ?? null,
       modelCount: modelReference?.model_count ?? null,
+    },
+    options: {
+      makes: makeOptions,
+      modelsByMake,
     },
     omitted,
   });

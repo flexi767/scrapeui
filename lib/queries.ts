@@ -11,6 +11,7 @@ export interface ListingRow {
   reg_year: string;
   mileage: number;
   fuel: string | null;
+  body_type: string | null;
   current_price: number;
   price_change: number | null;
   vat: string | null;
@@ -187,6 +188,7 @@ export interface ListingFilters {
   model?: string;
   dealerSlugs?: string[];
   years?: string[];
+  categories?: string[];
   statuses?: string[];
   vatValues?: string[];
   fuels?: string[];
@@ -220,6 +222,7 @@ export function getListings(filters: ListingFilters = {}) {
     model = '',
     dealerSlugs = [],
     years = [],
+    categories = [],
     statuses = [],
     vatValues = [],
     fuels = [],
@@ -229,7 +232,7 @@ export function getListings(filters: ListingFilters = {}) {
     priceChangeMax = null,
     kaparo = '',
     source = '',
-    sort = 'last_edit',
+    sort = 'price',
     order = 'desc',
     search = '',
     page = 1,
@@ -241,6 +244,11 @@ export function getListings(filters: ListingFilters = {}) {
 
   if (make) { wheres.push('l.make = ?'); params.push(make); }
   if (model) { wheres.push('l.model = ?'); params.push(model); }
+  if (categories.length > 0) {
+    const ph = categories.map(() => '?').join(',');
+    wheres.push(`l.body_type IN (${ph})`);
+    params.push(...categories);
+  }
 
   if (statuses.length > 0) {
     const ph = statuses.map(() => '?').join(',');
@@ -298,7 +306,7 @@ export function getListings(filters: ListingFilters = {}) {
 
   const rows = raw.prepare(`
     SELECT
-      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel,
+      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(l.source, 'm') as source,
@@ -669,6 +677,13 @@ export function getDistinctFuels(): string[] {
     `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY fuel`
   ).all() as { fuel: string }[];
   return rows.map(r => r.fuel);
+}
+
+export function getDistinctCategories(): string[] {
+  const rows = raw.prepare(
+    `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY body_type`
+  ).all() as { body_type: string }[];
+  return rows.map(r => r.body_type);
 }
 
 // ─── Users ────────────────────────────────────────────────────────
