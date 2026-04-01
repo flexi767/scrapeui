@@ -12,7 +12,7 @@ export interface MobileBgDraftBackupRow {
   engine: string | null;
   color: string | null;
   transmission: string | null;
-  category: string | null;
+  body_type: string | null;
   description: string | null;
 }
 
@@ -24,7 +24,7 @@ export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Recor
     f8: backup.fuel || null,
     f9: backup.power ?? null,
     f10: backup.transmission || null,
-    f11: backup.category || null,
+    f11: backup.body_type || null,
     f12: backup.price_amount ?? null,
     f16: backup.mileage ?? null,
     f17: backup.color || null,

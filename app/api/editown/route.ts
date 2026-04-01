@@ -7,7 +7,8 @@ interface NewListingBody {
   pubtype: string;
   make: string;
   model: string;
-  bodyType: string;
+  body_type?: string;
+  bodyType?: string;
   fuel: string;
   transmission: string;
   year: string;
@@ -26,6 +27,7 @@ interface NewListingBody {
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as NewListingBody;
+  const bodyType = body.body_type ?? body.bodyType ?? '';
 
   if (!body.dealerId) return NextResponse.json({ error: 'dealerId required' }, { status: 400 });
   if (!body.make)     return NextResponse.json({ error: 'make required' }, { status: 400 });
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
     body.engineCc ? `${body.engineCc} куб.см` : null,
     body.color || null,
     body.transmission || null,
-    body.bodyType || null,
+    bodyType || null,
     body.description || null,
     getVatFromMobileBgLabel(body.vat),
     extrasJson,

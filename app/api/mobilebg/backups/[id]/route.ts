@@ -53,7 +53,8 @@ export async function PATCH(
     const engine = parseOptionalString(payload.engine, 'Engine');
     const color = parseOptionalString(payload.color, 'Color');
     const transmission = parseOptionalString(payload.transmission, 'Transmission');
-    const category = parseOptionalString(payload.category, 'Category');
+    const bodyTypeValue = payload.body_type ?? payload.category;
+    const bodyType = parseOptionalString(bodyTypeValue, 'Body type');
     const description = parseOptionalString(payload.description, 'Description');
 
     const backup = raw.prepare(`
@@ -100,7 +101,7 @@ export async function PATCH(
       engine,
       color,
       transmission,
-      category,
+      bodyType,
       description,
       now,
       backupId,

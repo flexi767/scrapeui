@@ -50,7 +50,7 @@ export default async function MobileBgBackupDetailPage({
           engine: backup.engine,
           color: backup.color,
           transmission: backup.transmission,
-          category: backup.category,
+          body_type: backup.body_type,
           description: backup.description,
         }}
       />
@@ -165,7 +165,7 @@ export default async function MobileBgBackupDetailPage({
               <Meta label="Color" value={backup.color || '—'} />
               <Meta label="Engine" value={backup.engine || '—'} />
               <Meta label="Power" value={backup.power ? `${backup.power} hp` : '—'} />
-              <Meta label="Category" value={backup.category || '—'} />
+              <Meta label="Body Type" value={backup.body_type || '—'} />
               <Meta label="VAT" value={getVatBadgeLabel(backup.vat_included)} />
               <Meta label="Images" value={String(backup.image_count)} />
               <Meta label="Saved" value={formatDate(backup.updated_at || backup.created_at)} />

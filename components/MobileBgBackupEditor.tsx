@@ -17,7 +17,7 @@ interface Props {
     engine: string | null;
     color: string | null;
     transmission: string | null;
-    category: string | null;
+    body_type: string | null;
     description: string | null;
   };
 }
@@ -33,7 +33,7 @@ interface FormState {
   engine: string;
   color: string;
   transmission: string;
-  category: string;
+  body_type: string;
   description: string;
 }
 
@@ -49,7 +49,7 @@ function toFormState(initialValues: Props['initialValues']): FormState {
     engine: initialValues.engine || '',
     color: initialValues.color || '',
     transmission: initialValues.transmission || '',
-    category: initialValues.category || '',
+    body_type: initialValues.body_type || '',
     description: initialValues.description || '',
   };
 }
@@ -74,7 +74,7 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
         engine: form.engine || null,
         color: form.color || null,
         transmission: form.transmission || null,
-        category: form.category || null,
+        body_type: form.body_type || null,
         description: form.description || null,
       }),
     });
@@ -143,8 +143,8 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
         <Field label="Color">
           <input value={form.color} onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))} className={inputClassName} />
         </Field>
-        <Field label="Category">
-          <input value={form.category} onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))} className={inputClassName} />
+        <Field label="Body Type">
+          <input value={form.body_type} onChange={(e) => setForm((prev) => ({ ...prev, body_type: e.target.value }))} className={inputClassName} />
         </Field>
       </div>
 

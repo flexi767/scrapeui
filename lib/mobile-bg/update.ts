@@ -22,7 +22,7 @@ interface BackupRow {
   engine: string | null;
   color: string | null;
   transmission: string | null;
-  category: string | null;
+  body_type: string | null;
   description: string | null;
 }
 
@@ -61,7 +61,7 @@ export async function updateBackupOnMobileBg(
   const backup = db.prepare(`
     SELECT
       id, listing_id, mobile_id, title, source_title, price_amount, vat_included,
-      mileage, fuel, power, engine, color, transmission, category, description
+      mileage, fuel, power, engine, color, transmission, category as body_type, description
     FROM mobilebg_backups
     WHERE id = ?
   `).get(backupId) as BackupRow | undefined;

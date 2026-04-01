@@ -243,7 +243,7 @@ export async function GET(
       regYear: listing.reg_year,
       fuel: listing.fuel,
       transmission: listing.transmission,
-      bodyType: listing.body_type,
+      body_type: listing.body_type,
       power: listing.power,
       mileage: listing.mileage,
       currentPrice: listing.current_price,

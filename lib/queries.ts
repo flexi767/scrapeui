@@ -112,7 +112,7 @@ export interface MobileBgBackupDetailRow extends MobileBgBackupListRow {
   engine: string | null;
   color: string | null;
   transmission: string | null;
-  category: string | null;
+  body_type: string | null;
   description: string | null;
   ad_status: string | null;
   kaparo: number | null;
@@ -444,6 +444,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       COALESCE(b.model, l.model) as model,
       l.reg_month, l.reg_year,
       COALESCE(b.mileage, l.mileage) as mileage,
+      COALESCE(b.category, l.body_type) as body_type,
       COALESCE(b.fuel, l.fuel) as fuel,
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
@@ -509,6 +510,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       COALESCE(b.model, l.model) as model,
       l.reg_month, l.reg_year,
       COALESCE(b.mileage, l.mileage) as mileage,
+      COALESCE(b.category, l.body_type) as body_type,
       COALESCE(b.fuel, l.fuel) as fuel,
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
@@ -1240,7 +1242,7 @@ export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { 
       b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.vat_included,
       b.year, b.mileage, b.fuel, b.power, b.engine, b.color, b.transmission,
-      b.category, b.description, b.phones_json, b.extras_json, b.tech_data_json, b.photo_order_json,
+      b.category as body_type, b.description, b.phones_json, b.extras_json, b.tech_data_json, b.photo_order_json,
       b.ad_status, b.kaparo, COALESCE(b.draft_needs_sync, 0) as draft_needs_sync,
       b.last_mobile_sync_status, b.last_mobile_sync_error, b.last_mobile_sync_at,
       b.image_count, b.created_at, b.updated_at,

@@ -165,6 +165,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
             <th className="px-2 py-1.5 text-center w-12">New</th>
             <th className="px-3 py-1.5 text-right">Month</th>
             <th className="px-3 py-1.5 text-right">Year</th>
+            <th className="px-3 py-1.5 text-center">Category</th>
             <th className="px-3 py-1.5 text-center">Fuel</th>
             <th className="px-3 py-1.5 text-right">KM</th>
             <th className="px-2 py-1.5 text-center w-16"></th>
@@ -173,7 +174,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={16} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={17} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -363,6 +364,11 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 {/* Year */}
                 <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
                   {row.reg_year ?? '—'}
+                </td>
+
+                {/* Category */}
+                <td className="px-2 py-1.5 text-gray-400 text-xs">
+                  {row.body_type ?? '—'}
                 </td>
 
                 {/* Fuel */}
