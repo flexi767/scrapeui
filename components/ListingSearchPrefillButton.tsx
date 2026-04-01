@@ -59,6 +59,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   const [error, setError] = useState('');
   const [data, setData] = useState<SearchPrefillResponse | null>(null);
   const [editableFields, setEditableFields] = useState<SearchField[]>([]);
+  const [filtersVisible, setFiltersVisible] = useState(true);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState('');
   const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
@@ -71,12 +72,14 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   async function load(action: PendingAction = 'open') {
     if (data || loading) {
       if (action) setPendingAction(action);
+      if (action === 'open') setFiltersVisible(true);
       setOpen(true);
       return;
     }
     setLoading(true);
     setError('');
     if (action) setPendingAction(action);
+    if (action === 'open') setFiltersVisible(true);
     setOpen(true);
 
     try {
@@ -184,8 +187,16 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
     form.remove();
   }
 
+  function showFilters() {
+    setFiltersVisible(true);
+    setResults(null);
+    setResultsError('');
+    setResultsLoading(false);
+  }
+
   async function showResultsHere(fields = buildSubmissionFields()) {
     if (!data) return;
+    setFiltersVisible(false);
     setResultsLoading(true);
     setResultsError('');
 
@@ -197,6 +208,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
           action: data.form.action,
           method: data.form.method,
           fields,
+          sourceMobileId: data.listing.mobile_id,
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -238,7 +250,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="h-[min(92vh,1100px)] w-[min(94vw,1480px)] max-w-[min(94vw,1480px)] sm:h-[min(92vh,1100px)] sm:w-[min(94vw,1480px)] sm:max-w-[min(94vw,1480px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
+        <DialogContent className="h-[min(94vh,1100px)] w-[min(98vw,1680px)] max-w-[min(98vw,1680px)] sm:h-[min(94vh,1100px)] sm:w-[min(98vw,1680px)] sm:max-w-[min(98vw,1680px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
           <DialogHeader>
             <DialogTitle>Prefilled Mobile.bg Search</DialogTitle>
           </DialogHeader>
@@ -279,130 +291,132 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-500/70 bg-slate-800/85">
-                <div className="max-h-[32rem] overflow-y-auto px-4 py-3">
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {(() => {
-                      const selectedMake = getFieldValue('marka');
-                      const modelOptions = data.options.modelsByMake[selectedMake] ?? [];
-                      return editableFields
-                        .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
-                        .map((field) => (
-                        <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-slate-500/60 bg-slate-700/90 px-3 py-2">
-                          <div className="min-w-0">
-                            <div className="text-sm text-slate-50">{field.label}</div>
-                            <div className="text-xs uppercase tracking-wide text-slate-200/60">{field.name}</div>
-                          </div>
-                          <div className="min-w-0">
-                            {field.name === 'marka' ? (
-                              <select
-                                value={field.value}
-                                onChange={(event) => updateMake(event.target.value)}
-                                className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                              >
-                                <option value="">Select make</option>
-                                {data.options.makes.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : field.name === 'f12' ? (
-                              <select
-                                value={field.value}
-                                onChange={(event) => updateField(field.name, event.target.value)}
-                                className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                              >
-                                {ENGINE_OPTIONS.map((option) => (
-                                  <option key={option || 'all-engines'} value={option}>
-                                    {option || 'Всички типове'}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : field.name === 'f13' ? (
-                              <select
-                                value={field.value}
-                                onChange={(event) => updateField(field.name, event.target.value)}
-                                className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                              >
-                                {TRANSMISSION_OPTIONS.map((option) => (
-                                  <option key={option || 'all-transmissions'} value={option}>
-                                    {option || 'Без значение'}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : field.name === 'f14' ? (
-                              <select
-                                value={field.value}
-                                onChange={(event) => updateField(field.name, event.target.value)}
-                                className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                              >
-                                {CATEGORY_OPTIONS.map((option) => (
-                                  <option key={option || 'all-categories'} value={option}>
-                                    {option || 'всички категории'}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : field.name === 'model' ? (
-                              <select
-                                value={field.value}
-                                onChange={(event) => updateField(field.name, event.target.value)}
-                                className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                              >
-                                <option value="">Select model</option>
-                                {modelOptions.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <div className="flex items-stretch gap-2">
-                                <input
+              {filtersVisible && (
+                <div className="rounded-lg border border-slate-500/70 bg-slate-800/85">
+                  <div className="max-h-[32rem] overflow-y-auto px-4 py-3">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {(() => {
+                        const selectedMake = getFieldValue('marka');
+                        const modelOptions = data.options.modelsByMake[selectedMake] ?? [];
+                        return editableFields
+                          .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
+                          .map((field) => (
+                          <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-slate-500/60 bg-slate-700/90 px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="text-sm text-slate-50">{field.label}</div>
+                              <div className="text-xs uppercase tracking-wide text-slate-200/60">{field.name}</div>
+                            </div>
+                            <div className="min-w-0">
+                              {field.name === 'marka' ? (
+                                <select
+                                  value={field.value}
+                                  onChange={(event) => updateMake(event.target.value)}
+                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                >
+                                  <option value="">Select make</option>
+                                  {data.options.makes.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : field.name === 'f12' ? (
+                                <select
                                   value={field.value}
                                   onChange={(event) => updateField(field.name, event.target.value)}
                                   className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                                />
-                                {STEPPER_FIELDS.has(field.name) && (
-                                  <div className="flex shrink-0 flex-col overflow-hidden rounded border border-slate-400/70">
+                                >
+                                  {ENGINE_OPTIONS.map((option) => (
+                                    <option key={option || 'all-engines'} value={option}>
+                                      {option || 'Всички типове'}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : field.name === 'f13' ? (
+                                <select
+                                  value={field.value}
+                                  onChange={(event) => updateField(field.name, event.target.value)}
+                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                >
+                                  {TRANSMISSION_OPTIONS.map((option) => (
+                                    <option key={option || 'all-transmissions'} value={option}>
+                                      {option || 'Без значение'}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : field.name === 'f14' ? (
+                                <select
+                                  value={field.value}
+                                  onChange={(event) => updateField(field.name, event.target.value)}
+                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                >
+                                  {CATEGORY_OPTIONS.map((option) => (
+                                    <option key={option || 'all-categories'} value={option}>
+                                      {option || 'всички категории'}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : field.name === 'model' ? (
+                                <select
+                                  value={field.value}
+                                  onChange={(event) => updateField(field.name, event.target.value)}
+                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                >
+                                  <option value="">Select model</option>
+                                  {modelOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <div className="flex items-stretch gap-2">
+                                  <input
+                                    value={field.value}
+                                    onChange={(event) => updateField(field.name, event.target.value)}
+                                    className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                  />
+                                  {STEPPER_FIELDS.has(field.name) && (
+                                    <div className="flex shrink-0 flex-col overflow-hidden rounded border border-slate-400/70">
+                                      <button
+                                        type="button"
+                                        onClick={() => nudgeField(field.name, -1)}
+                                        className="h-5 w-7 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
+                                        aria-label={`Decrease ${field.label}`}
+                                      >
+                                        -
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => nudgeField(field.name, 1)}
+                                        className="h-5 w-7 border-t border-slate-400/70 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
+                                        aria-label={`Increase ${field.label}`}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  )}
+                                  {CLEARABLE_FIELDS.has(field.name) && (
                                     <button
                                       type="button"
-                                      onClick={() => nudgeField(field.name, -1)}
-                                      className="h-5 w-7 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
-                                      aria-label={`Decrease ${field.label}`}
+                                      onClick={() => clearField(field.name)}
+                                      className="shrink-0 rounded border border-slate-400/70 bg-slate-200 px-2 text-sm font-semibold text-slate-950 hover:bg-slate-300"
+                                      aria-label={`Clear ${field.label}`}
                                     >
-                                      -
+                                      x
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => nudgeField(field.name, 1)}
-                                      className="h-5 w-7 border-t border-slate-400/70 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
-                                      aria-label={`Increase ${field.label}`}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                )}
-                                {CLEARABLE_FIELDS.has(field.name) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => clearField(field.name)}
-                                    className="shrink-0 rounded border border-slate-400/70 bg-slate-200 px-2 text-sm font-semibold text-slate-950 hover:bg-slate-300"
-                                    aria-label={`Clear ${field.label}`}
-                                  >
-                                    x
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                            <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-200/60">{field.source}</div>
+                                  )}
+                                </div>
+                              )}
+                              <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-200/60">{field.source}</div>
+                            </div>
                           </div>
-                        </div>
-                      ));
-                    })()}
+                        ));
+                      })()}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {data.omitted.length > 0 && (
                 <div className="rounded-lg border border-amber-700/30 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
@@ -448,6 +462,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
             <Button variant="outline" onClick={() => setOpen(false)}>
               Close
             </Button>
+            {!filtersVisible && (
+              <Button variant="outline" onClick={showFilters}>
+                Show filters
+              </Button>
+            )}
             <div className="ml-auto flex items-center gap-2">
               <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
                 Submit all

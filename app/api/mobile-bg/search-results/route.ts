@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       action?: string;
       method?: string;
       fields?: MobileBgSearchFieldInput[];
+      sourceMobileId?: string | null;
     } | null;
 
     if (!payload?.action || !payload?.method || !Array.isArray(payload.fields)) {
@@ -26,7 +27,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least one field is required' }, { status: 400 });
     }
 
-    const results = await fetchMobileBgSearchResultsWithFallback(payload.action, payload.method, fields);
+    const results = await fetchMobileBgSearchResultsWithFallback(
+      payload.action,
+      payload.method,
+      fields,
+      typeof payload.sourceMobileId === 'string' ? payload.sourceMobileId : null,
+    );
     return NextResponse.json(results);
   } catch (error) {
     return NextResponse.json(

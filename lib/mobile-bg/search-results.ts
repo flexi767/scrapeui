@@ -45,6 +45,10 @@ export interface MobileBgSearchResultsPayload {
   fallback_note?: string | null;
 }
 
+interface MobileBgSearchResultsPagePayload extends MobileBgSearchResultsPayload {
+  next_page_url: string | null;
+}
+
 const FUEL_OPTIONS = new Set([
   'Бензинов',
   'Дизелов',
@@ -216,37 +220,85 @@ function normalizeSummaryText(summaryText: string | null, submittedFields: Mobil
   if (!summaryText) return null;
   const sortValue = submittedFields.find((field) => field.name === 'f20')?.value;
   const sortLabel = sortValue ? SORT_LABELS[sortValue] : null;
-  if (!sortLabel) return summaryText;
-  return summaryText.replace(/Подредени по:\s*[^,]+$/u, `Подредени по: ${sortLabel}`);
+  const normalizedSummary = summaryText
+    .replace(/Година на производство от:\s*/gu, 'Год.: ')
+    .replace(/Година на производство до:\s*/gu, 'Год. до: ');
+  if (!sortLabel) return normalizedSummary;
+  return normalizedSummary.replace(/Подредени по:\s*[^,]+$/u, `Подредени по: ${sortLabel}`);
 }
 
 export async function fetchMobileBgSearchResults(
   action: string,
   method: string,
   submittedFields: MobileBgSearchFieldInput[],
+  sourceMobileId?: string | null,
 ): Promise<MobileBgSearchResultsPayload> {
-  return fetchMobileBgSearchResultsOnce(action, method, submittedFields);
+  return fetchMobileBgSearchResultsOnce(action, method, submittedFields, sourceMobileId);
 }
 
 async function fetchMobileBgSearchResultsOnce(
   action: string,
   method: string,
   submittedFields: MobileBgSearchFieldInput[],
+  sourceMobileId?: string | null,
 ): Promise<MobileBgSearchResultsPayload> {
+  const initial = await fetchMobileBgSearchResultsPage(action, method, submittedFields);
+
+  if (
+    sourceMobileId &&
+    initial.has_next_page &&
+    initial.next_page_url &&
+    !initial.rows.some((row) => row.mobile_id === sourceMobileId)
+  ) {
+    const secondPage = await fetchMobileBgSearchResultsPage(initial.next_page_url, 'get', submittedFields);
+    const dedupedSecondRows = secondPage.rows.filter(
+      (row) => !initial.rows.some((existingRow) => existingRow.mobile_id === row.mobile_id),
+    );
+
+    return {
+      ...initial,
+      has_next_page: secondPage.has_next_page,
+      total_pages: secondPage.total_pages ?? initial.total_pages,
+      count_on_page: initial.count_on_page + dedupedSecondRows.length,
+      rows: [...initial.rows, ...dedupedSecondRows.map((row) => ({
+        ...row,
+        original_position: initial.rows.length + row.original_position,
+      }))],
+    };
+  }
+
+  return initial;
+}
+
+async function fetchMobileBgSearchResultsPage(
+  action: string,
+  method: string,
+  submittedFields: MobileBgSearchFieldInput[],
+): Promise<MobileBgSearchResultsPagePayload> {
   const requestBody = buildWindows1251FormBody(submittedFields);
-  const { stdout } = await execFileAsync('curl', [
-    '-sS',
-    '-L',
-    '-X',
-    method.toUpperCase(),
-    action,
-    '-H',
-    'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
-    '-H',
-    'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-    '--data-binary',
-    requestBody,
-  ], {
+  const curlArgs = ['-sS', '-L'];
+
+  if (method.toUpperCase() === 'POST') {
+    curlArgs.push(
+      '-X',
+      'POST',
+      action,
+      '-H',
+      'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
+      '-H',
+      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+      '--data-binary',
+      requestBody,
+    );
+  } else {
+    curlArgs.push(
+      action,
+      '-H',
+      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    );
+  }
+
+  const { stdout } = await execFileAsync('curl', curlArgs, {
     encoding: 'buffer',
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -317,7 +369,8 @@ async function fetchMobileBgSearchResultsOnce(
     .filter((value): value is number => value != null);
 
   const totalPages = numericPages.length > 0 ? Math.max(...numericPages) : null;
-  const hasNextPage = $('.pagination a.next').length > 0;
+  const nextPageLink = $('.pagination a.next').first().attr('href') || null;
+  const hasNextPage = Boolean(nextPageLink);
 
   return {
     submitted_fields: submittedFields,
@@ -327,6 +380,7 @@ async function fetchMobileBgSearchResultsOnce(
     has_next_page: hasNextPage,
     count_on_page: rows.length,
     rows,
+    next_page_url: absoluteMobileBgUrl(nextPageLink),
   };
 }
 
@@ -334,14 +388,15 @@ export async function fetchMobileBgSearchResultsWithFallback(
   action: string,
   method: string,
   submittedFields: MobileBgSearchFieldInput[],
+  sourceMobileId?: string | null,
 ): Promise<MobileBgSearchResultsPayload> {
-  const initial = await fetchMobileBgSearchResultsOnce(action, method, submittedFields);
+  const initial = await fetchMobileBgSearchResultsOnce(action, method, submittedFields, sourceMobileId);
   if (initial.count_on_page > 0) return initial;
 
   const relaxedFields = submittedFields.filter((field) => !['f12', 'f13', 'f14'].includes(field.name));
   if (relaxedFields.length === submittedFields.length) return initial;
 
-  const relaxed = await fetchMobileBgSearchResultsOnce(action, method, relaxedFields);
+  const relaxed = await fetchMobileBgSearchResultsOnce(action, method, relaxedFields, sourceMobileId);
   if (relaxed.count_on_page === 0) return initial;
 
   return {

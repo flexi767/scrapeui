@@ -57,6 +57,30 @@ body {
 ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
+.mobile-bg-results-scroll {
+  scrollbar-color: #e2e8f0 #475569;
+  scrollbar-width: auto;
+}
+
+.mobile-bg-results-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.mobile-bg-results-scroll::-webkit-scrollbar-track {
+  background: #475569;
+}
+
+.mobile-bg-results-scroll::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 9999px;
+  border: 2px solid #475569;
+}
+
+.mobile-bg-results-scroll::-webkit-scrollbar-thumb:hover {
+  background: #f8fafc;
+}
+
 a {
   color: white;
   text-decoration: none;
