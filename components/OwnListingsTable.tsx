@@ -327,15 +327,9 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
                 <td className="px-2 py-1.5 text-center">
                   {row.search_original_position != null ? (
-                    <div>
-                      <div className="font-medium text-sky-200">{row.search_original_position}</div>
-                      <div className="text-[10px] text-gray-500">{formatDate(row.search_checked_at)}</div>
-                    </div>
+                    <span className="font-medium text-sky-200">{row.search_original_position}</span>
                   ) : row.search_checked_at ? (
-                    <div>
-                      <div className="text-xs font-medium text-red-300">not found</div>
-                      <div className="text-[10px] text-gray-500">{formatDate(row.search_checked_at)}</div>
-                    </div>
+                    <span className="text-xs font-medium text-red-300">not found</span>
                   ) : (
                     <span className="text-gray-600">—</span>
                   )}

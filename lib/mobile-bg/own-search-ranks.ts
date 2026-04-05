@@ -11,6 +11,35 @@ interface OwnSearchRankTarget {
   model: string | null;
 }
 
+export interface OwnSearchRankProgressStats {
+  total: number;
+  checked: number;
+  found: number;
+  notFound: number;
+}
+
+export type OwnSearchRankProgressEvent =
+  | {
+      type: 'start';
+      stats: OwnSearchRankProgressStats;
+      missingOnly: boolean;
+    }
+  | {
+      type: 'checking';
+      stats: OwnSearchRankProgressStats;
+      target: OwnSearchRankTarget;
+    }
+  | {
+      type: 'result';
+      stats: OwnSearchRankProgressStats;
+      row: OwnSearchRankRunRow;
+    }
+  | {
+      type: 'complete';
+      stats: OwnSearchRankProgressStats;
+      rows: OwnSearchRankRunRow[];
+    };
+
 export interface OwnSearchRankRunRow {
   backup_id: number;
   listing_id: number;
@@ -30,6 +59,11 @@ export interface OwnSearchRankRunSummary {
   found: number;
   notFound: number;
   rows: OwnSearchRankRunRow[];
+}
+
+interface RunOwnSearchRankChecksOptions {
+  missingOnly?: boolean;
+  onProgress?: (event: OwnSearchRankProgressEvent) => void;
 }
 
 function getOwnSearchRankTargets(missingOnly: boolean) {
@@ -112,16 +146,41 @@ function saveOwnSearchRankResult(row: OwnSearchRankRunRow) {
   );
 }
 
-export async function runOwnSearchRankChecks(options: { missingOnly?: boolean } = {}): Promise<OwnSearchRankRunSummary> {
-  const { missingOnly = false } = options;
+function buildProgressStats(total: number, rows: OwnSearchRankRunRow[]): OwnSearchRankProgressStats {
+  const found = rows.filter((row) => row.found).length;
+  return {
+    total,
+    checked: rows.length,
+    found,
+    notFound: rows.length - found,
+  };
+}
+
+export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOptions = {}): Promise<OwnSearchRankRunSummary> {
+  const { missingOnly = false, onProgress } = options;
   const targets = getOwnSearchRankTargets(missingOnly);
   const rows: OwnSearchRankRunRow[] = [];
+  const total = targets.length;
+
+  onProgress?.({
+    type: 'start',
+    stats: buildProgressStats(total, rows),
+    missingOnly,
+  });
 
   for (const target of targets) {
     const checkedAt = new Date().toISOString();
 
+    onProgress?.({
+      type: 'checking',
+      stats: buildProgressStats(total, rows),
+      target,
+    });
+
+    let result: OwnSearchRankRunRow;
+
     if (!target.mobile_id) {
-      const result: OwnSearchRankRunRow = {
+      result = {
         backup_id: target.backup_id,
         listing_id: target.listing_id,
         mobile_id: target.mobile_id,
@@ -134,45 +193,69 @@ export async function runOwnSearchRankChecks(options: { missingOnly?: boolean } 
         first_result_price: null,
         found: false,
       };
-      saveOwnSearchRankResult(result);
-      rows.push(result);
-      continue;
+    } else {
+      const prefill = await getListingSearchPrefill(target.listing_id, { includeLocationOptions: false });
+
+      if (!prefill) {
+        result = {
+          backup_id: target.backup_id,
+          listing_id: target.listing_id,
+          mobile_id: target.mobile_id,
+          title: target.title,
+          make: target.make,
+          model: target.model,
+          checked_at: checkedAt,
+          original_position: null,
+          price_position: null,
+          first_result_price: null,
+          found: false,
+        };
+      } else {
+        const searchFields = buildFirstSevenSearchFields(prefill.form.fields);
+        const results = await fetchMobileBgSearchResultsUntilFound(
+          prefill.form.action,
+          prefill.form.method,
+          searchFields,
+          target.mobile_id,
+        );
+
+        const matchedRow = results.rows.find((row) => row.mobile_id === target.mobile_id) ?? null;
+        result = {
+          backup_id: target.backup_id,
+          listing_id: target.listing_id,
+          mobile_id: target.mobile_id,
+          title: target.title,
+          make: target.make,
+          model: target.model,
+          checked_at: checkedAt,
+          original_position: matchedRow?.original_position ?? null,
+          price_position: matchedRow ? getPriceSortedPosition(results.rows, target.mobile_id) : null,
+          first_result_price: results.rows[0]?.current_price ?? null,
+          found: matchedRow != null,
+        };
+      }
     }
-
-    const prefill = await getListingSearchPrefill(target.listing_id, { includeLocationOptions: false });
-    if (!prefill) continue;
-
-    const searchFields = buildFirstSevenSearchFields(prefill.form.fields);
-    const results = await fetchMobileBgSearchResultsUntilFound(
-      prefill.form.action,
-      prefill.form.method,
-      searchFields,
-      target.mobile_id,
-    );
-
-    const matchedRow = results.rows.find((row) => row.mobile_id === target.mobile_id) ?? null;
-    const result: OwnSearchRankRunRow = {
-      backup_id: target.backup_id,
-      listing_id: target.listing_id,
-      mobile_id: target.mobile_id,
-      title: target.title,
-      make: target.make,
-      model: target.model,
-      checked_at: checkedAt,
-      original_position: matchedRow?.original_position ?? null,
-      price_position: matchedRow ? getPriceSortedPosition(results.rows, target.mobile_id) : null,
-      first_result_price: results.rows[0]?.current_price ?? null,
-      found: matchedRow != null,
-    };
 
     saveOwnSearchRankResult(result);
     rows.push(result);
+    onProgress?.({
+      type: 'result',
+      stats: buildProgressStats(total, rows),
+      row: result,
+    });
   }
+
+  const stats = buildProgressStats(total, rows);
+  onProgress?.({
+    type: 'complete',
+    stats,
+    rows,
+  });
 
   return {
     total: rows.length,
-    found: rows.filter((row) => row.found).length,
-    notFound: rows.filter((row) => !row.found).length,
+    found: stats.found,
+    notFound: stats.notFound,
     rows,
   };
 }
