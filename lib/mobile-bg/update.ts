@@ -34,6 +34,10 @@ interface EditSnapshotRow {
   checked_boxes_json: string | null;
 }
 
+interface UpdateBackupOptions {
+  log?: (message: string) => void;
+}
+
 function getLatestEditSnapshot(
   db: Database.Database,
   backupId: number,
@@ -57,7 +61,9 @@ export async function updateBackupOnMobileBg(
   dealer: DealerBackupConfig,
   backupId: number,
   dbPath: string,
+  options?: UpdateBackupOptions,
 ): Promise<{ mobileId: string }> {
+  const log = options?.log ?? (() => {});
   const backup = db.prepare(`
     SELECT
       id, listing_id, mobile_id, title, source_title, price_amount, vat_included,
@@ -70,9 +76,11 @@ export async function updateBackupOnMobileBg(
     throw new Error(`Backup ${backupId} not found or missing mobile ID`);
   }
 
+  log(`Preparing sync for mobile.bg #${backup.mobile_id}`);
   let editSnapshot = getLatestEditSnapshot(db, backupId, backup.mobile_id);
 
   if (!editSnapshot?.listing_token || !editSnapshot.fields_json) {
+    log('No saved edit snapshot found. Capturing one first…');
     await captureEditFormSnapshot(db, dealer, backup.mobile_id, dbPath);
     editSnapshot = getLatestEditSnapshot(db, backupId, backup.mobile_id);
   }
@@ -85,6 +93,7 @@ export async function updateBackupOnMobileBg(
   const checkedBoxes = JSON.parse(editSnapshot.checked_boxes_json || '[]').map((x: { name: string; value: string }) => `${x.name}::${x.value}`);
   const fieldOverrides = buildBackupFieldOverrides(backup);
 
+  log('Launching browser session…');
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ userAgent: USER_AGENT });
   const page = await context.newPage();
@@ -98,10 +107,12 @@ export async function updateBackupOnMobileBg(
   `).run(startedAt, backup.id);
 
   try {
+    log(`Logging into mobile.bg as ${dealer.slug}…`);
     if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
       throw new Error(`Login failed for ${dealer.slug}`);
     }
 
+    log('Opening listing edit form…');
     await page.goto(
       editSnapshot.source_url || 'https://www.mobile.bg/pcgi/mobile.cgi?act=6&subact=4&actions=23',
       { waitUntil: 'domcontentloaded' },
@@ -109,15 +120,18 @@ export async function updateBackupOnMobileBg(
     await page.waitForTimeout(1500);
     await acceptMobileBgCookies(page);
 
+    log('Loading the saved listing draft…');
     await submitMyAdsEditForm(page, backup.mobile_id, editSnapshot.listing_token);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1800);
     await acceptMobileBgCookies(page);
 
+    log('Reapplying dependent fields and saved values…');
     await selectMobileBgDependentFields(page, fields);
     await applyCapturedMobileBgDraft(page, fields, checkedBoxes, fieldOverrides);
 
     const beforeSubmitPath = path.join(updateDir, 'before-submit.png');
+    log('Captured pre-submit screenshot.');
     await page.screenshot({ path: beforeSubmitPath, fullPage: true });
 
     await acceptMobileBgCookies(page);
@@ -126,12 +140,14 @@ export async function updateBackupOnMobileBg(
       throw new Error('Could not find mobile.bg save button');
     }
 
+    log('Submitting updated listing to mobile.bg…');
     await submitButton.click({ force: true });
     await page.waitForLoadState('domcontentloaded').catch(() => {});
     await page.waitForTimeout(2500);
     await acceptMobileBgCookies(page);
 
     const afterSubmitPath = path.join(updateDir, 'after-submit.png');
+    log('Captured post-submit screenshot.');
     await page.screenshot({ path: afterSubmitPath, fullPage: true });
 
     const bodyText = (await page.textContent('body').catch(() => '')) || '';
@@ -167,10 +183,12 @@ export async function updateBackupOnMobileBg(
       WHERE id = ?
     `).run(now, now, backup.id);
 
+    log(`Sync finished successfully for mobile.bg #${backup.mobile_id}`);
     return { mobileId: backup.mobile_id };
   } catch (error) {
     const debugPath = path.join(updateDir, 'error.png');
     await page.screenshot({ path: debugPath, fullPage: true }).catch(() => {});
+    log(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
     db.prepare(`
       UPDATE mobilebg_backups
       SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?

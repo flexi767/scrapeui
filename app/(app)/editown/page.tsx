@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import EditOwnSearchRankButton from '@/components/EditOwnSearchRankButton';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import OwnListingsTable from '@/components/OwnListingsTable';
 
@@ -22,36 +21,6 @@ interface SearchParams {
   order?: string;
   search?: string;
   page?: string;
-}
-
-function SortLink({
-  label,
-  sortKey,
-  currentSort,
-  currentOrder,
-  params,
-}: {
-  label: string;
-  sortKey: string;
-  currentSort: string;
-  currentOrder: string;
-  params: URLSearchParams;
-}) {
-  const p = new URLSearchParams(params.toString());
-  p.delete('page');
-  if (currentSort === sortKey) {
-    p.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-  } else {
-    p.set('sort', sortKey);
-    p.set('order', 'desc');
-  }
-  const arrow =
-    currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
-  return (
-    <Link href={`/editown?${p.toString()}`} className="hover:text-white">
-      {label}{arrow}
-    </Link>
-  );
 }
 
 export default async function EditOwnPage({
@@ -153,25 +122,17 @@ export default async function EditOwnPage({
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-4">
-        {/* Sort bar */}
-        <div className="mb-3 flex flex-wrap gap-3 text-xs text-gray-400">
-          <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
-          <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
-          <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
-          <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
-          <div className="ml-auto flex items-center gap-2">
-            <EditOwnSearchRankButton />
-            <Link
-              href={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
-              className={`rounded border px-3 py-1.5 text-xs font-medium ${
-                dirtyCount > 0
-                  ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/15'
-                  : 'border-gray-700 text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              Sync all{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
-            </Link>
-          </div>
+        <div className="mb-3 flex justify-end gap-2">
+          <Link
+            href={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
+            className={`rounded border px-3 py-1.5 text-xs font-medium ${
+              dirtyCount > 0
+                ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/15'
+                : 'border-gray-700 text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            Sync all{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
+          </Link>
         </div>
 
         <OwnListingsTable key={currentParams.toString()} initialRows={rows} />

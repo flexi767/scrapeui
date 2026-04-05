@@ -157,6 +157,7 @@ export default async function ListingsPage({
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
+              showPageLinks={false}
             />
           </Suspense>
         </div>

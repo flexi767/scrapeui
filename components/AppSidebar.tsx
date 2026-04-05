@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/listings', label: 'Listings', icon: CarIcon },
   { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
+  { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
   { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },

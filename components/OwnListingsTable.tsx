@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { SearchIcon } from 'lucide-react';
+import { Check, Clock3, RefreshCw, SearchIcon, X } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { OwnListingRow } from '@/lib/queries';
@@ -12,6 +13,48 @@ import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   initialRows: OwnListingRow[];
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: string;
+  align?: 'left' | 'center' | 'right';
+}) {
+  const searchParams = useSearchParams();
+  const currentSort = searchParams.get('sort') ?? 'last_edit';
+  const currentOrder = searchParams.get('order') ?? 'desc';
+  const params = new URLSearchParams(searchParams.toString());
+  params.delete('page');
+
+  if (currentSort === sortKey) {
+    params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+  } else {
+    params.set('sort', sortKey);
+    params.set('order', 'desc');
+  }
+
+  const arrow =
+    currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
+  const alignClass =
+    align === 'center'
+      ? 'justify-center'
+      : align === 'right'
+      ? 'justify-end'
+      : 'justify-start';
+
+  return (
+    <Link
+      href={`/editown?${params.toString()}`}
+      className={`flex w-full items-center ${alignClass} hover:text-white`}
+    >
+      {label}
+      {arrow}
+    </Link>
+  );
 }
 
 function AdStatusBadge({ status }: { status: string }) {
@@ -38,7 +81,27 @@ function KaparoBadge({ kaparo }: { kaparo: number }) {
   return <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-xs text-orange-200">К</span>;
 }
 
+function StatusSymbol({
+  title,
+  className,
+  children,
+}: {
+  title: string;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default function OwnListingsTable({ initialRows }: Props) {
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
@@ -56,6 +119,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
     ad_status: 'none',
   });
   const [saving, setSaving] = useState(false);
+  const tableKey = searchParams.toString();
 
   function startEdit(row: OwnListingRow) {
     if (saving) return;
@@ -152,28 +216,42 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-700/60">
-      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+      <table key={tableKey} className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
             <th className="px-2 py-1.5 text-left w-28">Sync</th>
             <th className="w-16 px-3 py-1.5 text-left">Img</th>
             <th className="px-3 py-1.5 text-left">Make / Model</th>
             <th className="px-3 py-1.5 text-left">Title</th>
-            <th className="px-3 py-1.5 text-left">Dealer</th>
-            <th className="px-2 py-1.5 text-center w-14">Paid</th>
-            <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
+            <th className="px-3 py-1.5 text-left">
+              <SortHeader label="Dealer" sortKey="dealer" />
+            </th>
+            <th className="px-2 py-1.5 text-center w-14">
+              <SortHeader label="Paid" sortKey="ad_status" align="center" />
+            </th>
+            <th className="pl-1 pr-3 py-1.5 text-right">
+              <SortHeader label="Price" sortKey="price" align="right" />
+            </th>
             <th className="px-3 py-1.5 text-center">Orig #</th>
             <th className="px-3 py-1.5 text-center">Price #</th>
             <th className="px-3 py-1.5 text-right">Lead Price</th>
             <th className="px-3 py-1.5 text-center">VAT</th>
             <th className="px-2 py-1.5 text-center w-14">К</th>
-            <th className="px-3 py-1.5 text-right">Last Edit</th>
+            <th className="px-3 py-1.5 text-right">
+              <SortHeader label="Last Edit" sortKey="last_edit" align="right" />
+            </th>
             <th className="px-2 py-1.5 text-center w-12">New</th>
             <th className="px-3 py-1.5 text-right">Month</th>
-            <th className="px-3 py-1.5 text-right">Year</th>
+            <th className="px-3 py-1.5 text-right">
+              <SortHeader label="Year" sortKey="reg_year" align="right" />
+            </th>
             <th className="px-3 py-1.5 text-center">Body Type</th>
-            <th className="px-3 py-1.5 text-center">Fuel</th>
-            <th className="px-3 py-1.5 text-right">KM</th>
+            <th className="px-3 py-1.5 text-center">
+              <SortHeader label="Fuel" sortKey="fuel" align="center" />
+            </th>
+            <th className="px-3 py-1.5 text-right">
+              <SortHeader label="KM" sortKey="mileage" align="right" />
+            </th>
             <th className="px-2 py-1.5 text-center w-16"></th>
           </tr>
         </thead>
@@ -220,7 +298,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
                         {syncingIds[row.backup_id] ? 'Syncing…' : 'Sync'}
                       </button>
                     ) : (
-                      <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-500">Up to date</span>
+                      <StatusSymbol
+                        title="Up to date"
+                        className="border-gray-700 text-gray-400"
+                      >
+                        <Check className="h-3 w-3" />
+                      </StatusSymbol>
                     )}
                     <SyncStatusBadge
                       status={row.last_mobile_sync_status}
@@ -276,7 +359,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       className="w-full bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
                     />
                   ) : (
-                    <span className="text-gray-200 truncate block">{row.title}</span>
+                    <span className="block whitespace-normal break-words text-gray-200">{row.title}</span>
                   )}
                 </td>
 
@@ -490,20 +573,32 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
 function SyncStatusBadge({ status, error }: { status: string | null; error: string | null }) {
   if (status === 'running') {
-    return <span className="text-[10px] text-amber-300">running</span>;
+    return (
+      <StatusSymbol title="Sync running" className="border-amber-500/50 text-amber-300">
+        <RefreshCw className="h-3 w-3 animate-spin" />
+      </StatusSymbol>
+    );
   }
   if (status === 'success') {
-    return <span className="text-[10px] text-emerald-300">success</span>;
+    return (
+      <StatusSymbol title="Last sync succeeded" className="border-emerald-500/50 text-emerald-300">
+        <Check className="h-3 w-3" />
+      </StatusSymbol>
+    );
   }
   if (status === 'failed') {
     return (
-      <span className="max-w-28 truncate text-[10px] text-red-300" title={error || 'failed'}>
-        failed
-      </span>
+      <StatusSymbol title={error || 'Last sync failed'} className="border-red-500/50 text-red-300">
+        <X className="h-3 w-3" />
+      </StatusSymbol>
     );
   }
   if (status === 'pending') {
-    return <span className="text-[10px] text-amber-300">pending</span>;
+    return (
+      <StatusSymbol title="Sync pending" className="border-amber-500/50 text-amber-300">
+        <Clock3 className="h-3 w-3" />
+      </StatusSymbol>
+    );
   }
   return null;
 }

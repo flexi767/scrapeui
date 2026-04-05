@@ -303,6 +303,17 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           const m = raw.bodyText.match(new RegExp(label + '\\s*\\n\\s*(.+)'));
           return m ? m[1].trim() : null;
         };
+        
+        // Extract with additional validation to prevent capturing multiple fields
+        const extractSingleWord = (label: string) => {
+          const raw_value = extract(label);
+          if (!raw_value) return null;
+          // For single-word fields like body type, only keep the first word and reject if it contains digits or brackets
+          const firstWord = raw_value.split(/[\s\[\](\n]/)[0];
+          if (!firstWord || /\d/.test(firstWord)) return null;
+          return firstWord;
+        };
+        
         const mileageRaw = extract('Пробег \\[км\\]');
         const powerRaw = extract('Мощност');
 
@@ -325,7 +336,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           year: extract('Дата на производство'),
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'), fuel: extract('Двигател'),
-          bodyType: extract('Категория'), transmission: extract('Скоростна кутия'),
+          bodyType: extractSingleWord('Категория'), transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           description: cleanDescription(raw.description),
           imageCount: raw.thumbKeys.length,

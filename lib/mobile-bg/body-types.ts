@@ -5,8 +5,16 @@
 
 export const CANONICAL_BODY_TYPES = [
   'Седан', 'Хечбек', 'Комби', 'Купе', 'Кабриолет',
-  'Джип', 'Пикап', 'Ван', 'Минибус', 'Лифтбек', 'Родстер', 'Фургон',
+  'Джип', 'Пикап', 'Ван', 'Минибус', 'Лифтбек', 'Родстер', 'Фургон', 'Стреч лимузина',
 ] as const;
+
+const BODY_TYPE_ALIASES: Record<string, (typeof CANONICAL_BODY_TYPES)[number]> = {
+  'suv': 'Джип',
+  'миниван': 'Минибус',
+  'кабрио': 'Кабриолет',
+  'стреч лимузина': 'Стреч лимузина',
+  'лимузина': 'Стреч лимузина',
+};
 
 let _bodyTypeMap: Map<string, string> | null = null;
 
@@ -24,6 +32,7 @@ export function normalizeBodyTypeSync(rawBodyType: string | null | undefined, ma
   if (!text) return null;
   const m = map ?? getBodyTypeMap();
   const lower = text.toLowerCase();
+  if (BODY_TYPE_ALIASES[lower]) return BODY_TYPE_ALIASES[lower];
   if (m.has(lower)) return m.get(lower)!;
   for (const [key, canonical] of m) {
     if (lower.includes(key) || key.includes(lower)) return canonical;

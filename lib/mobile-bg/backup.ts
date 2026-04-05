@@ -215,7 +215,9 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     const power = extract(/Мощност\s+([\d]+)/);
     const engine = extract(/Кубатура[^)]*\)\s*([\d]+)/);
     const transmission = extract(/Скоростна кутия\s+(\S+)/);
-    const category = extract(/Категория\s+(\S+(?:\s+\S+)?)/);
+    const categoryRaw = extract(/Категория\s+(\S+(?:\s+\S+)?)/);
+    // Validate category to avoid capturing mileage/other fields - only keep single words without digits
+    const category = categoryRaw && !/\d/.test(categoryRaw) ? categoryRaw.split(/\s/)[0] : categoryRaw?.split(/\s/)[0] || null;
     const mileageMatch = body.match(/Пробег[\s\[\]км]*?([\d\s]+)\s*км/);
     const mileage = mileageMatch ? mileageMatch[1].replace(/\s/g, '').trim() : null;
     const color = extract(/Цвят\s+(\S+(?:\s+\S+)?)/);
@@ -284,15 +286,16 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
 
   const imageUrls = await scrapeAllImages(page);
   const mobileId = url.match(/obiava-(\d+)/)?.[1] || data.listingId || String(Date.now());
-  const parsed = parseMakeModelSync(data.title, makesMap);
+  const cleanedTitle = data.title.replace(/\s*Обява:\s*\d+\s*$/i, '').trim();
+  const parsed = parseMakeModelSync(cleanedTitle, makesMap);
 
   return {
     mobileId,
     url,
-    sourceTitle: data.title.replace(/\s*Обява:.*$/, '').trim(),
+    sourceTitle: cleanedTitle,
     make: parsed.make,
     model: parsed.model,
-    title: parsed.titleRemainder.trim(),
+    title: parsed.titleRemainder.replace(/\s*Обява:\s*\d+\s*$/i, '').trim(),
     priceAmount: data.price ? parseFloat(data.price) : null,
     priceCurrency: 'EUR',
     vat: data.hasVat ? 'included' : data.noVat ? 'exempt' : null,

@@ -424,7 +424,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         disabled={!hasFilters}
         className="h-8 rounded border border-gray-600 px-3 text-xs text-gray-400 hover:border-gray-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
       >
-        ✕ Clear all
+        ✕ Clear
       </button>
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
