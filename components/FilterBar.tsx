@@ -272,7 +272,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             currentCategories.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentCategories.length === 0 ? 'Category' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} categories`}
+          {currentCategories.length === 0 ? 'Body Type' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
           <span className="text-gray-400">{categoryOpen ? '▲' : '▼'}</span>
         </button>
         {categoryOpen && (
@@ -285,7 +285,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             ))}
             {currentCategories.length > 0 && (
               <button onClick={() => { router.push(`${basePath}?${buildParams({ category: [] })}`); setCategoryOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear category
+                Clear body type
               </button>
             )}
           </div>

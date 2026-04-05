@@ -192,7 +192,7 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-center">Category</th>
+                <th className="px-3 py-1.5 text-center">Body Type</th>
                 <th className="px-3 py-1.5 text-center">
                   <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
