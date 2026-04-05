@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from 'react';
 import { SearchIcon, SearchCheckIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
@@ -11,7 +12,7 @@ interface SearchField {
   name: string;
   label: string;
   value: string;
-  source: 'default' | 'listing' | 'derived';
+  source: 'default' | 'listing' | 'derived' | 'saved';
 }
 
 interface SearchPrefillResponse {
@@ -43,6 +44,10 @@ interface SearchPrefillResponse {
     };
   };
   omitted: string[];
+  savedSearch: {
+    enabled: boolean;
+    updatedAt: string | null;
+  };
 }
 
 interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
@@ -59,7 +64,13 @@ const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
 
 type PendingAction = 'open' | 'show-first-7' | null;
 
-export default function ListingSearchPrefillButton({ listingId }: { listingId: number }) {
+export default function ListingSearchPrefillButton({
+  listingId,
+  showQuickResultsButton = true,
+}: {
+  listingId: number;
+  showQuickResultsButton?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,11 +84,71 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
   const [resultsError, setResultsError] = useState('');
   const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   function syncEditableFields(nextData: SearchPrefillResponse) {
     setEditableFields(nextData.form.fields.map((field) => ({ ...field })));
     setSubLocationLabel(nextData.options.subLocations.label);
     setSubLocationOptions(nextData.options.subLocations.options);
+  }
+
+  async function saveSearchProfile() {
+    setProfileSaving(true);
+    try {
+      const fields = buildSubmissionFields();
+      const res = await fetch(`/api/listing-search-profiles/${listingId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((payload as { error?: string }).error || 'Failed to save search values');
+      }
+
+      const refresh = await fetch(`/api/listings/search-prefill/${listingId}`);
+      const refreshPayload = await refresh.json().catch(() => ({}));
+      if (!refresh.ok) {
+        throw new Error((refreshPayload as { error?: string }).error || 'Failed to reload saved search values');
+      }
+
+      const nextData = refreshPayload as SearchPrefillResponse;
+      setData(nextData);
+      syncEditableFields(nextData);
+      toast.success('Saved custom search values');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save search values');
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  async function resetSearchProfile() {
+    setProfileSaving(true);
+    try {
+      const res = await fetch(`/api/listing-search-profiles/${listingId}`, {
+        method: 'DELETE',
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((payload as { error?: string }).error || 'Failed to reset saved search values');
+      }
+
+      const refresh = await fetch(`/api/listings/search-prefill/${listingId}`);
+      const refreshPayload = await refresh.json().catch(() => ({}));
+      if (!refresh.ok) {
+        throw new Error((refreshPayload as { error?: string }).error || 'Failed to reload default search values');
+      }
+
+      const nextData = refreshPayload as SearchPrefillResponse;
+      setData(nextData);
+      syncEditableFields(nextData);
+      toast.success('Reset to default search values');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reset saved search values');
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   async function load(action: PendingAction = 'open') {
@@ -255,6 +326,7 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
           action: data.form.action,
           method: data.form.method,
           fields,
+          sourceListingId: listingId,
           sourceMobileId: data.listing.mobile_id,
         }),
       });
@@ -284,16 +356,18 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
         >
           <SearchIcon />
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-xs"
-          className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
-          onClick={() => void load('show-first-7')}
-          aria-label="Show mobile.bg results for first 7 filters"
-        >
-          <SearchCheckIcon />
-        </Button>
+        {showQuickResultsButton && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
+            onClick={() => void load('show-first-7')}
+            aria-label="Show mobile.bg results for first 7 filters"
+          >
+            <SearchCheckIcon />
+          </Button>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -334,6 +408,11 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                 <div className="mt-1 text-xs text-slate-100/75">
                   {data.reference.makeCount != null ? `${data.reference.makeCount.toLocaleString('en-US')} listings for make` : 'No make count in reference data'}
                   {data.reference.modelCount != null ? ` • ${data.reference.modelCount.toLocaleString('en-US')} for model` : ''}
+                </div>
+                <div className="mt-1 text-xs text-slate-100/65">
+                  {data.savedSearch.enabled
+                    ? `Using saved custom search values${data.savedSearch.updatedAt ? ` • updated ${data.savedSearch.updatedAt}` : ''}`
+                    : 'Using generated default search values'}
                 </div>
               </div>
 
@@ -459,19 +538,19 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                                     <div className="flex shrink-0 flex-col overflow-hidden rounded border border-slate-400/70">
                                       <button
                                         type="button"
-                                        onClick={() => nudgeField(field.name, -1)}
-                                        className="h-5 w-7 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
-                                        aria-label={`Decrease ${field.label}`}
-                                      >
-                                        -
-                                      </button>
-                                      <button
-                                        type="button"
                                         onClick={() => nudgeField(field.name, 1)}
-                                        className="h-5 w-7 border-t border-slate-400/70 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
+                                        className="h-5 w-7 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
                                         aria-label={`Increase ${field.label}`}
                                       >
                                         +
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => nudgeField(field.name, -1)}
+                                        className="h-5 w-7 border-t border-slate-400/70 bg-slate-200 text-xs font-semibold text-slate-950 hover:bg-slate-300"
+                                        aria-label={`Decrease ${field.label}`}
+                                      >
+                                        -
                                       </button>
                                     </div>
                                   )}
@@ -533,6 +612,9 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
                     page={results.page}
                     totalPages={results.total_pages}
                     hasNextPage={results.has_next_page}
+                    loadedUntilPage={results.loaded_until_page}
+                    sourceListingId={listingId}
+                    initialIgnoredResultIds={results.ignored_search_result_ids ?? []}
                     sourceMobileId={data.listing.mobile_id}
                   />
                 </div>
@@ -550,6 +632,12 @@ export default function ListingSearchPrefillButton({ listingId }: { listingId: n
               </Button>
             )}
             <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" onClick={() => void saveSearchProfile()} disabled={!data || loading || profileSaving || Boolean(error)}>
+                {profileSaving ? 'Saving…' : 'Save search values'}
+              </Button>
+              <Button variant="outline" onClick={() => void resetSearchProfile()} disabled={!data || loading || profileSaving || Boolean(error) || !data.savedSearch.enabled}>
+                Reset saved
+              </Button>
               <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
                 Submit all
               </Button>

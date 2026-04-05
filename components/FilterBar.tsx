@@ -10,15 +10,16 @@ interface Props {
   makeModels: Record<string, string[]>;
   allDealers: { slug: string; name: string; own: number }[];
   allYears: string[];
-  allCategories: string[];
-  allFuels: string[];
+  allCategories?: string[];
+  allFuels?: string[];
   total: number;
   priceChangeRange?: { min: number; max: number } | null;
   priceRange?: { min: number; max: number } | null;
   basePath?: string;
+  showPageLinks?: boolean;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories, allFuels, total, priceChangeRange, priceRange, basePath = '/listings' }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -200,10 +201,10 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <input
         key={currentSearch}
         type="search"
-        placeholder="Search listings…"
+        placeholder="Search…"
         defaultValue={currentSearch}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="h-8 w-48 rounded border border-gray-600 bg-gray-800 px-3 text-sm text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+        className="h-8 w-28 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
       />
 
       {/* Make */}
@@ -272,7 +273,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             currentCategories.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
           }`}
         >
-          {currentCategories.length === 0 ? 'Body Type' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
+          {currentCategories.length === 0 ? 'Body' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
           <span className="text-gray-400">{categoryOpen ? '▲' : '▼'}</span>
         </button>
         {categoryOpen && (
@@ -285,7 +286,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
             ))}
             {currentCategories.length > 0 && (
               <button onClick={() => { router.push(`${basePath}?${buildParams({ category: [] })}`); setCategoryOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear body type
+                Clear body
               </button>
             )}
           </div>
@@ -428,8 +429,12 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
         <span>{total.toLocaleString()} ad{total !== 1 ? 's' : ''}</span>
-        <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Edit Own</a>
-        <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</a>
+        {showPageLinks && (
+          <>
+            <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Edit Own</a>
+            <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</a>
+          </>
+        )}
       </div>
     </div>
   );

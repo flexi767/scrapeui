@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import EditOwnSearchRankButton from '@/components/EditOwnSearchRankButton';
-import { getAllDealers, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import OwnListingsTable from '@/components/OwnListingsTable';
 
 interface SearchParams {
@@ -140,11 +140,13 @@ export default async function EditOwnPage({
               makeModels={makeModels}
               allDealers={allOwnDealers}
               allYears={getDistinctYears()}
+              allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
               basePath="/editown"
+              showPageLinks={false}
             />
           </Suspense>
         </div>

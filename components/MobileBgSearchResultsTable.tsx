@@ -1,7 +1,14 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatMileage, formatPrice } from '@/lib/utils';
+import {
+  getEffectiveSortPrice,
+  getOriginalPositionIgnoring,
+  getPriceSortedPositionIgnoring,
+  sortRowsByEffectivePrice,
+} from '@/lib/mobile-bg/search-ranking';
 import { getVatBadgeLabel } from '@/lib/vat';
 import type { MobileBgSearchResultRow } from '@/lib/mobile-bg/search-results';
 
@@ -44,14 +51,6 @@ function getDisplayTitle(row: MobileBgSearchResultRow) {
   return title;
 }
 
-function getEffectiveSortPrice(row: MobileBgSearchResultRow) {
-  if (row.current_price == null) return null;
-  if (row.vat_status === 'excluded') {
-    return row.current_price * 1.2;
-  }
-  return row.current_price;
-}
-
 function VatBadge({ vat }: { vat: MobileBgSearchResultRow['vat_status'] }) {
   if (vat === 'included') {
     return <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>;
@@ -71,6 +70,9 @@ export function MobileBgSearchResultsTable({
   page,
   totalPages,
   hasNextPage,
+  loadedUntilPage,
+  sourceListingId,
+  initialIgnoredResultIds,
   sourceMobileId,
 }: {
   rows: MobileBgSearchResultRow[];
@@ -78,28 +80,45 @@ export function MobileBgSearchResultsTable({
   page: number;
   totalPages: number | null;
   hasNextPage: boolean;
+  loadedUntilPage?: number | null;
+  sourceListingId?: number | null;
+  initialIgnoredResultIds?: string[];
   sourceMobileId: string | null;
 }) {
-  const sortedRows = [...rows].sort((left, right) => {
-    const leftPrice = getEffectiveSortPrice(left);
-    const rightPrice = getEffectiveSortPrice(right);
-    if (leftPrice == null && rightPrice == null) {
-      return left.original_position - right.original_position;
-    }
-    if (leftPrice == null) return 1;
-    if (rightPrice == null) return -1;
-    if (leftPrice !== rightPrice) return leftPrice - rightPrice;
-    return left.original_position - right.original_position;
-  });
+  const [ignoredResultIds, setIgnoredResultIds] = useState<string[]>(initialIgnoredResultIds ?? []);
+  const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
 
-  const matchedRow = sourceMobileId
-    ? rows.find((row) => row.mobile_id === sourceMobileId) ?? null
-    : null;
-  const matchedPosition = matchedRow?.original_position ?? null;
-  const matchedSortedIndex = sourceMobileId
-    ? sortedRows.findIndex((row) => row.mobile_id === sourceMobileId)
-    : -1;
-  const matchedSortedPosition = matchedSortedIndex >= 0 ? matchedSortedIndex + 1 : null;
+  const ignoredIdSet = useMemo(() => new Set(ignoredResultIds), [ignoredResultIds]);
+  const sortedRows = sortRowsByEffectivePrice(rows);
+
+  const matchedPosition = sourceMobileId ? getOriginalPositionIgnoring(rows, sourceMobileId, ignoredIdSet) : null;
+  const matchedSortedPosition = sourceMobileId ? getPriceSortedPositionIgnoring(rows, sourceMobileId, ignoredIdSet) : null;
+  const highestLoadedPage = loadedUntilPage != null && loadedUntilPage > page ? loadedUntilPage : page;
+
+  async function toggleIgnored(mobileId: string, nextIgnored: boolean) {
+    if (!sourceListingId || savingIds[mobileId]) return;
+    setSavingIds((prev) => ({ ...prev, [mobileId]: true }));
+
+    try {
+      const res = await fetch(`/api/listings/by-id/${sourceListingId}/ignored-search-results`, {
+        method: nextIgnored ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ignoredMobileId: mobileId }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((payload as { error?: string }).error || 'Failed to update ignored search result');
+      }
+
+      setIgnoredResultIds((prev) => (
+        nextIgnored ? [...new Set([...prev, mobileId])] : prev.filter((id) => id !== mobileId)
+      ));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingIds((prev) => ({ ...prev, [mobileId]: false }));
+    }
+  }
 
   function renderDealerName(row: MobileBgSearchResultRow) {
     const fullLabel = row.dealer_name ?? 'Частно лице';
@@ -135,7 +154,9 @@ export function MobileBgSearchResultsTable({
             : 'No results returned for the current mobile.bg search'}
         </div>
         <div className="mt-1 text-xs text-slate-200/60">
-          Page {page}{totalPages ? ` of ${totalPages}` : ''}{hasNextPage ? ' • more pages available' : ''}
+          {highestLoadedPage > page
+            ? `Pages ${page}-${highestLoadedPage}${totalPages ? ` of ${totalPages}` : ''}${hasNextPage ? ' • more pages available' : ''}`
+            : `Page ${page}${totalPages ? ` of ${totalPages}` : ''}${hasNextPage ? ' • more pages available' : ''}`}
         </div>
       </div>
 
@@ -169,11 +190,15 @@ export function MobileBgSearchResultsTable({
 
             {sortedRows.map((row, index) => {
               const isSourceListing = sourceMobileId != null && row.mobile_id === sourceMobileId;
+              const isIgnored = ignoredIdSet.has(row.mobile_id);
+              const effectiveSortedPosition = getPriceSortedPositionIgnoring(rows, row.mobile_id, ignoredIdSet);
               return (
               <tr
                 key={`${row.mobile_id}-${row.url}`}
                 className={isSourceListing
                   ? 'border-l-4 border-l-sky-400 bg-sky-950/35 transition-colors hover:bg-sky-900/35'
+                  : isIgnored
+                  ? 'bg-slate-900/60 opacity-65 transition-colors hover:bg-slate-800/60'
                   : 'transition-colors hover:bg-slate-700/50'}
               >
                 <td className="px-3 py-1">
@@ -205,7 +230,25 @@ export function MobileBgSearchResultsTable({
                 </td>
 
                 <td className="px-3 py-1 text-right text-slate-200/80">
-                  {row.original_position}
+                  <div className="flex items-center justify-end gap-2">
+                    {!isSourceListing && (
+                      <button
+                        type="button"
+                        onClick={() => void toggleIgnored(row.mobile_id, !isIgnored)}
+                        disabled={!sourceListingId || savingIds[row.mobile_id]}
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded border text-[11px] font-semibold leading-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isIgnored
+                            ? 'border-amber-500/60 bg-amber-950/30 text-amber-200 hover:bg-amber-950/40'
+                            : 'border-slate-500/60 bg-slate-900/40 text-slate-300 hover:bg-slate-700/60'
+                        }`}
+                        title={isIgnored ? 'Unignore result' : 'Ignore result'}
+                        aria-label={isIgnored ? 'Unignore result' : 'Ignore result'}
+                      >
+                        {savingIds[row.mobile_id] ? '…' : '×'}
+                      </button>
+                    )}
+                    <span>{row.original_position}</span>
+                  </div>
                 </td>
 
                 <td className="px-3 py-1">
@@ -213,7 +256,7 @@ export function MobileBgSearchResultsTable({
                     <span>{row.make || '—'}</span>
                     {isSourceListing && (
                       <span className="rounded-full border border-sky-400/60 bg-sky-950/70 px-2 py-0.5 text-[11px] font-semibold text-sky-200">
-                        #{index + 1}
+                        #{effectiveSortedPosition ?? index + 1}
                       </span>
                     )}
                   </div>
@@ -221,16 +264,21 @@ export function MobileBgSearchResultsTable({
                 </td>
 
                 <td className="max-w-xs px-3 py-1">
-                  <a
-                    href={row.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={isSourceListing
-                      ? 'line-clamp-2 font-semibold text-yellow-300 hover:text-yellow-200'
-                      : 'line-clamp-2 text-white hover:text-white'}
-                  >
-                    {getDisplayTitle(row)}
-                  </a>
+                  <div>
+                    <a
+                      href={row.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={isSourceListing
+                        ? 'line-clamp-2 font-semibold text-yellow-300 hover:text-yellow-200'
+                        : 'line-clamp-2 text-white hover:text-white'}
+                    >
+                      {getDisplayTitle(row)}
+                    </a>
+                    {isIgnored && (
+                      <div className="mt-1 text-[11px] uppercase tracking-wide text-amber-300/80">Ignored for ranking</div>
+                    )}
+                  </div>
                 </td>
 
                 <td className="px-3 py-1">

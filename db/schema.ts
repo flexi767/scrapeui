@@ -373,6 +373,27 @@ export const mobileBgMakeModels = sqliteTable('mobilebg_make_models', {
   ),
 }));
 
+export const listingSearchResultIgnores = sqliteTable('listing_search_result_ignores', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  ignoredMobileId: text('ignored_mobile_id').notNull(),
+  createdAt: text('created_at'),
+}, (table) => ({
+  uniqueListingMobile: uniqueIndex('listing_search_result_ignores_listing_mobile_idx').on(
+    table.listingId,
+    table.ignoredMobileId,
+  ),
+}));
+
+export const listingSearchProfiles = sqliteTable('listing_search_profiles', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  fieldsJson: text('fields_json').notNull(),
+  updatedAt: text('updated_at'),
+}, (table) => ({
+  uniqueListing: uniqueIndex('listing_search_profiles_listing_idx').on(table.listingId),
+}));
+
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;

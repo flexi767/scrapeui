@@ -30,12 +30,11 @@ function progressMessage(event: OwnSearchRankProgressEvent) {
   }
 
   if (event.type === 'result') {
-    const prefix = event.row.found ? 'Found' : 'Not found';
     const title = [event.row.make, event.row.model, event.row.title].filter(Boolean).join(' ');
     const positions = event.row.found
       ? `orig #${event.row.original_position ?? '—'} • price #${event.row.price_position ?? '—'}`
       : 'not found in search results';
-    return `${prefix}: ${title || event.row.mobile_id || `listing ${event.row.listing_id}`} • ${positions}`;
+    return `${title || event.row.mobile_id || `listing ${event.row.listing_id}`} • ${positions}`;
   }
 
   return `Completed ${event.stats.checked}/${event.stats.total} checks`;

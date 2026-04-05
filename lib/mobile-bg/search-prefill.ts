@@ -1,6 +1,7 @@
 import { raw } from '@/db/client';
 import { load } from 'cheerio';
 import iconv from 'iconv-lite';
+import { getSavedSearchProfile } from '@/lib/mobile-bg/search-profiles';
 
 interface ListingSearchRow {
   id: number;
@@ -26,7 +27,7 @@ export interface SearchField {
   name: string;
   label: string;
   value: string;
-  source: 'default' | 'listing' | 'derived';
+  source: 'default' | 'listing' | 'derived' | 'saved';
 }
 
 interface ReferenceOption {
@@ -74,6 +75,10 @@ export interface SearchPrefillData {
     };
   };
   omitted: string[];
+  savedSearch: {
+    enabled: boolean;
+    updatedAt: string | null;
+  };
 }
 
 export const SEARCH_ACTION = 'https://www.mobile.bg/pcgi/mobile.cgi';
@@ -274,8 +279,12 @@ export async function getListingSearchPrefill(
     return acc;
   }, {});
 
+  const savedProfile = getSavedSearchProfile(listing.id);
+  const savedFieldMap = new Map(savedProfile?.fields.map((field) => [field.name, field]) ?? []);
+  const preferredLocation = savedFieldMap.get('f17')?.value || 'България';
+
   const subLocations = includeLocationOptions
-    ? await fetchSubLocationOptions('България')
+    ? await fetchSubLocationOptions(preferredLocation)
     : { label: 'Населено място', options: [{ value: '', label: 'всички' }] };
 
   const fields: SearchField[] = [
@@ -373,8 +382,20 @@ export async function getListingSearchPrefill(
     omitted.push('Mileage was outside the supported mobile.bg buckets.');
   }
 
-  fields.push(...visibleFields);
+  const applySavedOverrides = (fieldList: SearchField[]) => fieldList.map((field) => {
+    const saved = savedFieldMap.get(field.name);
+    if (!saved) return field;
+    return {
+      ...field,
+      value: saved.value,
+      source: 'saved' as const,
+    };
+  });
 
+  const savedVisibleFields = applySavedOverrides(visibleFields);
+  fields.push(...savedVisibleFields);
+
+  const finalFields = applySavedOverrides(fields);
   return {
     listing: {
       id: listing.id,
@@ -393,8 +414,8 @@ export async function getListingSearchPrefill(
     form: {
       action: SEARCH_ACTION,
       method: 'POST',
-      fields,
-      visibleFields,
+      fields: finalFields,
+      visibleFields: savedVisibleFields,
     },
     reference: {
       makeCount: modelReference?.make_count ?? makeReference?.make_count ?? null,
@@ -407,6 +428,10 @@ export async function getListingSearchPrefill(
       subLocations,
     },
     omitted,
+    savedSearch: {
+      enabled: savedProfile != null,
+      updatedAt: savedProfile?.updatedAt ?? null,
+    },
   };
 }
 

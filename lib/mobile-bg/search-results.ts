@@ -41,6 +41,8 @@ export interface MobileBgSearchResultsPayload {
   total_pages: number | null;
   has_next_page: boolean;
   count_on_page: number;
+  loaded_until_page: number;
+  ignored_search_result_ids?: string[];
   rows: MobileBgSearchResultRow[];
   fallback_note?: string | null;
 }
@@ -264,6 +266,7 @@ async function fetchMobileBgSearchResultsOnce(
       has_next_page: secondPage.has_next_page,
       total_pages: secondPage.total_pages ?? initial.total_pages,
       count_on_page: initial.count_on_page + dedupedSecondRows.length,
+      loaded_until_page: secondPage.page,
       rows: [...initial.rows, ...dedupedSecondRows.map((row) => ({
         ...row,
         original_position: initial.rows.length + row.original_position,
@@ -383,6 +386,7 @@ async function fetchMobileBgSearchResultsPage(
     total_pages: totalPages,
     has_next_page: hasNextPage,
     count_on_page: rows.length,
+    loaded_until_page: currentPage,
     rows,
     next_page_url: absoluteMobileBgUrl(nextPageLink),
   };
@@ -448,6 +452,7 @@ async function fetchMobileBgSearchResultsUntilFoundOnce(
     total_pages: totalPages,
     has_next_page: hasNextPage,
     count_on_page: rows.length,
+    loaded_until_page: foundOnPage ?? firstPage.page,
     rows,
     found_on_page: foundOnPage,
   };

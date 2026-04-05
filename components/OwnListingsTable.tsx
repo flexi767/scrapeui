@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { SearchIcon } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
+import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { OwnListingRow } from '@/lib/queries';
 import { formatPrice, formatDate, buildImageList, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
@@ -228,30 +230,33 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 </td>
 
                 {/* Img */}
-                <td className="px-2 py-1.5">
-                  {thumbSrc ? (
-                    <div className="relative inline-block" style={{ width: 40, height: 30 }}>
-                      <ImageWithFallback
-                        src={thumbSrc}
-                        alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
-                        className="peer rounded object-cover"
-                        style={{ width: 40, height: 30 }}
-                        fallbackClassName="peer rounded bg-gray-800 text-gray-400"
-                        fallbackLabel="Missing"
-                      />
-                      <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
+                <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-start gap-2">
+                    <ListingSearchPrefillButton listingId={row.id} />
+                    {thumbSrc ? (
+                      <div className="relative inline-block" style={{ width: 40, height: 30 }}>
                         <ImageWithFallback
                           src={thumbSrc}
-                          alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
-                          className="w-full rounded shadow-xl"
-                          fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                          alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
+                          className="peer rounded object-cover"
+                          style={{ width: 40, height: 30 }}
+                          fallbackClassName="peer rounded bg-gray-800 text-gray-400"
                           fallbackLabel="Missing"
                         />
+                        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
+                          <ImageWithFallback
+                            src={thumbSrc}
+                            alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
+                            className="w-full rounded shadow-xl"
+                            fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                            fallbackLabel="Missing"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ width: 40, height: 30 }} className="rounded bg-gray-700" />
-                  )}
+                    ) : (
+                      <div style={{ width: 40, height: 30 }} className="rounded bg-gray-700" />
+                    )}
+                  </div>
                 </td>
 
                 {/* Make / Model */}
@@ -326,13 +331,23 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 </td>
 
                 <td className="px-2 py-1.5 text-center">
-                  {row.search_original_position != null ? (
-                    <span className="font-medium text-sky-200">{row.search_original_position}</span>
-                  ) : row.search_checked_at ? (
-                    <span className="text-xs font-medium text-red-300">not found</span>
-                  ) : (
-                    <span className="text-gray-600">—</span>
-                  )}
+                  <div className="flex items-center justify-center gap-1.5">
+                    {row.search_original_position != null ? (
+                      <span className="font-medium text-sky-200">{row.search_original_position}</span>
+                    ) : row.search_checked_at ? (
+                      <span className="text-xs font-medium text-red-300">not found</span>
+                    ) : (
+                      <span className="text-gray-600">—</span>
+                    )}
+                    {row.has_saved_search_profile === 1 && (
+                      <span
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-500/50 bg-amber-950/40 text-amber-200"
+                        title="Uses saved custom search values for search-position checks"
+                      >
+                        <SearchIcon className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 <td className="px-2 py-1.5 text-center">

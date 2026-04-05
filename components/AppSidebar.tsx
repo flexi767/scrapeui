@@ -12,6 +12,7 @@ const navItems = [
   { href: '/listings', label: 'Listings', icon: CarIcon },
   { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
+  { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
   { href: '/mobilebg/backups', label: 'Backups', icon: ArchiveIcon, indent: true },
   { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon, indent: true },
@@ -193,6 +194,14 @@ function EditIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931ZM19.5 7.125 16.875 4.5" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35m1.6-5.15a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0Z" />
     </svg>
   );
 }

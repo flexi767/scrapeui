@@ -32,6 +32,7 @@ export interface ListingRow {
 export interface OwnListingRow extends ListingRow {
   needs_sync: number;
   backup_id: number;
+  has_saved_search_profile: number;
   last_mobile_sync_status: string | null;
   last_mobile_sync_error: string | null;
   last_mobile_sync_at: string | null;
@@ -464,6 +465,11 @@ export function getOwnListings(filters: ListingFilters = {}) {
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM listing_search_profiles sp
+        WHERE sp.listing_id = l.id
+      ) THEN 1 ELSE 0 END as has_saved_search_profile,
       b.last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,
@@ -534,6 +540,11 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM listing_search_profiles sp
+        WHERE sp.listing_id = l.id
+      ) THEN 1 ELSE 0 END as has_saved_search_profile,
       b.last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,

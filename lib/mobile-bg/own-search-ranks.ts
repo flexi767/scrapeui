@@ -1,6 +1,9 @@
 import { raw } from '@/db/client';
-import { type MobileBgSearchResultRow, fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
+import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
+import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
+import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
 import { buildFirstSevenSearchFields, getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
+import { buildImageList, parseJson, type ImageMeta } from '@/lib/utils';
 
 interface OwnSearchRankTarget {
   backup_id: number;
@@ -9,6 +12,8 @@ interface OwnSearchRankTarget {
   title: string | null;
   make: string | null;
   model: string | null;
+  thumb_url: string | null;
+  listing_url: string | null;
 }
 
 export interface OwnSearchRankProgressStats {
@@ -52,6 +57,8 @@ export interface OwnSearchRankRunRow {
   price_position: number | null;
   first_result_price: number | null;
   found: boolean;
+  thumb_url: string | null;
+  listing_url: string | null;
 }
 
 export interface OwnSearchRankRunSummary {
@@ -90,7 +97,11 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
       l.mobile_id,
       COALESCE(b.title, l.title) as title,
       COALESCE(b.make, l.make) as make,
-      COALESCE(b.model, l.model) as model
+      COALESCE(b.model, l.model) as model,
+      l.thumb_keys,
+      l.full_keys,
+      l.image_meta,
+      l.images_downloaded
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
     JOIN dealers d ON d.id = b.dealer_id
@@ -103,27 +114,45 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
       AND l.mobile_id IS NOT NULL
       ${whereExtras}
     ORDER BY d.priority DESC, d.name, COALESCE(b.make, l.make), COALESCE(b.model, l.model), l.mobile_id
-  `).all() as OwnSearchRankTarget[];
+  `).all() as Array<OwnSearchRankTarget & {
+    thumb_keys: string | null;
+    full_keys: string | null;
+    image_meta: string | null;
+    images_downloaded: number | null;
+  }>;
 }
 
-function getEffectiveSortPrice(row: MobileBgSearchResultRow) {
-  if (row.current_price == null) return null;
-  if (row.vat_status === 'excluded') return row.current_price * 1.2;
-  return row.current_price;
-}
+function withPreview(targets: Array<OwnSearchRankTarget & {
+  thumb_keys: string | null;
+  full_keys: string | null;
+  image_meta: string | null;
+  images_downloaded: number | null;
+}>): OwnSearchRankTarget[] {
+  return targets.map((target) => {
+    const thumbKeys = parseJson<string[]>(target.thumb_keys, []);
+    const fullKeys = parseJson<string[]>(target.full_keys, []);
+    const imageMeta = parseJson<ImageMeta | null>(target.image_meta, null);
+    const images = target.mobile_id
+      ? buildImageList(
+          target.mobile_id,
+          fullKeys.length ? fullKeys : thumbKeys,
+          thumbKeys,
+          imageMeta,
+          target.images_downloaded === 1,
+        )
+      : [];
 
-function getPriceSortedPosition(rows: MobileBgSearchResultRow[], mobileId: string) {
-  const sortedRows = [...rows].sort((left, right) => {
-    const leftPrice = getEffectiveSortPrice(left);
-    const rightPrice = getEffectiveSortPrice(right);
-    if (leftPrice == null && rightPrice == null) return left.original_position - right.original_position;
-    if (leftPrice == null) return 1;
-    if (rightPrice == null) return -1;
-    if (leftPrice !== rightPrice) return leftPrice - rightPrice;
-    return left.original_position - right.original_position;
+    return {
+      backup_id: target.backup_id,
+      listing_id: target.listing_id,
+      mobile_id: target.mobile_id,
+      title: target.title,
+      make: target.make,
+      model: target.model,
+      thumb_url: images[0]?.thumb || null,
+      listing_url: target.mobile_id ? `/listings/${target.mobile_id}` : null,
+    };
   });
-  const index = sortedRows.findIndex((row) => row.mobile_id === mobileId);
-  return index >= 0 ? index + 1 : null;
 }
 
 function saveOwnSearchRankResult(row: OwnSearchRankRunRow) {
@@ -158,7 +187,7 @@ function buildProgressStats(total: number, rows: OwnSearchRankRunRow[]): OwnSear
 
 export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOptions = {}): Promise<OwnSearchRankRunSummary> {
   const { missingOnly = false, onProgress } = options;
-  const targets = getOwnSearchRankTargets(missingOnly);
+  const targets = withPreview(getOwnSearchRankTargets(missingOnly));
   const rows: OwnSearchRankRunRow[] = [];
   const total = targets.length;
 
@@ -192,6 +221,8 @@ export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOpti
         price_position: null,
         first_result_price: null,
         found: false,
+        thumb_url: target.thumb_url,
+        listing_url: target.listing_url,
       };
     } else {
       const prefill = await getListingSearchPrefill(target.listing_id, { includeLocationOptions: false });
@@ -209,6 +240,8 @@ export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOpti
           price_position: null,
           first_result_price: null,
           found: false,
+          thumb_url: target.thumb_url,
+          listing_url: target.listing_url,
         };
       } else {
         const searchFields = buildFirstSevenSearchFields(prefill.form.fields);
@@ -218,6 +251,7 @@ export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOpti
           searchFields,
           target.mobile_id,
         );
+        const ignoredMobileIds = getIgnoredSearchResultMobileIds(target.listing_id);
 
         const matchedRow = results.rows.find((row) => row.mobile_id === target.mobile_id) ?? null;
         result = {
@@ -228,10 +262,12 @@ export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOpti
           make: target.make,
           model: target.model,
           checked_at: checkedAt,
-          original_position: matchedRow?.original_position ?? null,
-          price_position: matchedRow ? getPriceSortedPosition(results.rows, target.mobile_id) : null,
-          first_result_price: results.rows[0]?.current_price ?? null,
+          original_position: matchedRow ? getOriginalPositionIgnoring(results.rows, target.mobile_id, ignoredMobileIds) : null,
+          price_position: matchedRow ? getPriceSortedPositionIgnoring(results.rows, target.mobile_id, ignoredMobileIds) : null,
+          first_result_price: getFirstNonIgnoredResultPrice(results.rows, ignoredMobileIds),
           found: matchedRow != null,
+          thumb_url: target.thumb_url,
+          listing_url: target.listing_url,
         };
       }
     }
