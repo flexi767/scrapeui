@@ -482,9 +482,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
                           placeholder="cars.bg title"
                           className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white"
                         />
-                        <div className="mt-1 text-right text-[10px] text-gray-500">
-                          {editForm.carsbg_title.length}/15
-                        </div>
                       </div>
                     </div>
                   ) : (
@@ -501,9 +498,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
                 {/* Dealer */}
                 <td className="px-2 py-1.5 text-gray-400">
-                  <div className="whitespace-nowrap">{row.dealer_name}</div>
                   {editing && (
                     <div className="text-[10px] text-gray-500">{editForm.title.length}</div>
+                  )}
+                  <div className="whitespace-nowrap">{row.dealer_name}</div>
+                  {editing && (
+                    <div className="text-[10px] text-gray-500">{editForm.carsbg_title.length}/15</div>
                   )}
                 </td>
 

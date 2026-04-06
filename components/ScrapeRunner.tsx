@@ -14,6 +14,7 @@ interface LogEntry {
   thumb?: string;
   imageCount?: number;
   views?: number | null;
+  mobilePrice?: number | null;
   uniqueMatch?: boolean;
   syncNeeded?: boolean;
   count?: number;
@@ -446,7 +447,9 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                         <span className="rounded-full bg-emerald-900/70 px-1.5 py-0.5 text-[10px] text-emerald-200">unique</span>
                       )}
                       {entry.syncNeeded && (
-                        <span className="rounded-full bg-amber-900/70 px-1.5 py-0.5 text-[10px] text-amber-200">sync</span>
+                        <span className="rounded-full bg-amber-900/70 px-1.5 py-0.5 text-[10px] text-amber-200">
+                          sync{entry.mobilePrice != null ? ` ${formatPrice(entry.mobilePrice)}` : ''}
+                        </span>
                       )}
                       {!!entry.imageCount && (
                         <span className="text-gray-500">

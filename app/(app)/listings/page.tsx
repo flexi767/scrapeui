@@ -345,6 +345,11 @@ export default async function ListingsPage({
                           {formatPrice(getPriceWithVat(row.current_price, row.vat))}
                         </div>
                       )}
+                      {row.cars_price != null && row.cars_price !== row.current_price && (
+                        <div className="text-xs text-orange-200/85">
+                          cars {formatPrice(row.cars_price)}
+                        </div>
+                      )}
                     </td>
 
                     {/* VAT */}
