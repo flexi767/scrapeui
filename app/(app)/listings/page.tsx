@@ -146,6 +146,7 @@ export default async function ListingsPage({
   currentParams.set('order', order);
 
   const totalPages = Math.ceil(total / 50);
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   return (
     <div className="min-h-screen bg-[#111827]">
@@ -442,18 +443,33 @@ export default async function ListingsPage({
                 href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page - 1) }).toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
-                ← Prev
+                Prev
               </Link>
             )}
-            <span className="text-gray-400">
-              Page {page} of {totalPages}
-            </span>
+            {pageNumbers.map((pageNumber) => (
+              pageNumber === page ? (
+                <span
+                  key={pageNumber}
+                  className="min-w-9 cursor-default rounded border border-blue-500 bg-blue-500/15 px-3 py-1.5 text-center text-white"
+                >
+                  {pageNumber}
+                </span>
+              ) : (
+                <Link
+                  key={pageNumber}
+                  href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(pageNumber) }).toString()}`}
+                  className="min-w-9 rounded border border-gray-600 px-3 py-1.5 text-center text-gray-300 hover:border-gray-400 hover:text-white"
+                >
+                  {pageNumber}
+                </Link>
+              )
+            ))}
             {page < totalPages && (
               <Link
                 href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page + 1) }).toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
-                Next →
+                Next
               </Link>
             )}
           </div>
