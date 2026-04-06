@@ -193,11 +193,15 @@ export default async function ListingsPage({
                 <th className="px-2 py-1.5 text-center w-14">
                   <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-right">Views</th>
+                <th className="px-3 py-1.5 text-right">
+                  <SortLink label="Views" sortKey="views" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-right">cars.bg created</th>
+                <th className="px-3 py-1.5 text-right">
+                  <SortLink label="cars.bg created" sortKey="carsbg_created_date" currentSort={sort} currentOrder={order} params={currentParams} />
+                </th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
                 <th className="px-3 py-1.5 text-right">Month</th>
                 <th className="px-3 py-1.5 text-right">
@@ -380,7 +384,12 @@ export default async function ListingsPage({
 
                     {/* Views */}
                     <td className="px-3 py-1 text-right text-xs text-gray-300">
-                      {row.views != null ? row.views.toLocaleString('en-US') : '—'}
+                      <div>{row.views != null ? row.views.toLocaleString('en-US') : '—'}</div>
+                      {row.cars_total_views != null && (
+                        <div className="text-[11px] text-orange-200/85">
+                          {row.cars_total_views.toLocaleString('en-US')}
+                        </div>
+                      )}
                     </td>
 
                     {/* Last Edit */}
