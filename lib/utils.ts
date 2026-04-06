@@ -61,6 +61,15 @@ export function getLocalImageUrl(
   return `/api/images/${mobileId}/${type}/${filename}`;
 }
 
+export function getThumbProxyUrl(
+  mobileId: string,
+  fallbackUrl: string | null | undefined,
+): string {
+  const params = new URLSearchParams();
+  if (fallbackUrl) params.set('fallback', fallbackUrl);
+  return `/api/thumbs/${encodeURIComponent(mobileId)}${params.toString() ? `?${params.toString()}` : ''}`;
+}
+
 export interface ListingImage {
   full: string;
   thumb: string;
@@ -78,7 +87,8 @@ export function buildImageList(
   return fullKeys.map((key, i) => {
     // Cars.bg listings store full URLs directly as keys
     if (key.startsWith('http')) {
-      return { full: key, thumb: thumbKeys[i]?.startsWith('http') ? thumbKeys[i] : key };
+      const remoteThumb = thumbKeys[i]?.startsWith('http') ? thumbKeys[i] : key;
+      return { full: key, thumb: getThumbProxyUrl(mobileId, remoteThumb) };
     }
     if (imagesDownloaded) {
       return {
@@ -87,9 +97,10 @@ export function buildImageList(
       };
     }
     if (!imageMeta) return { full: '', thumb: '' };
+    const remoteThumb = getCdnImageUrl(mobileId, thumbKeys[i] ?? key, imageMeta, 'thumb');
     return {
       full: getCdnImageUrl(mobileId, key, imageMeta, 'full'),
-      thumb: getCdnImageUrl(mobileId, thumbKeys[i] ?? key, imageMeta, 'thumb'),
+      thumb: getThumbProxyUrl(mobileId, remoteThumb),
     };
   });
 }

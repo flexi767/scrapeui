@@ -200,6 +200,10 @@ export default async function ListingDetailPage({ params }: Props) {
                 value={listing.power ? `${listing.power} hp` : null}
               />
               <SpecRow label="Mileage" value={formatMileage(listing.mileage)} />
+              <SpecRow
+                label="Views"
+                value={listing.views != null ? listing.views.toLocaleString('en-US') : null}
+              />
               <SpecRow label="Last Edit" value={formatDate(listing.last_edit)} />
             </div>
           </div>

@@ -331,6 +331,8 @@ export default function OwnListingsTable({ initialRows }: Props) {
             <th className="px-3 py-1.5 text-right">Lead Price</th>
             <th className="px-3 py-1.5 text-center">VAT</th>
             <th className="px-2 py-1.5 text-center w-14">К</th>
+            <th className="px-3 py-1.5 text-right">W</th>
+            <th className="px-3 py-1.5 text-right">Views</th>
             <th className="px-3 py-1.5 text-right">
               <SortHeader label="Last Edit" sortKey="last_edit" align="right" />
             </th>
@@ -351,7 +353,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={18} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={20} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -611,6 +613,16 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   ) : (
                     <KaparoBadge kaparo={row.kaparo} />
                   )}
+                </td>
+
+                {/* Watching */}
+                <td className="px-3 py-1.5 text-right text-xs text-gray-300">
+                  {row.watching != null ? row.watching.toLocaleString('en-US') : '—'}
+                </td>
+
+                {/* Views */}
+                <td className="px-3 py-1.5 text-right text-xs text-gray-300">
+                  {row.views != null ? row.views.toLocaleString('en-US') : '—'}
                 </td>
 
                 {/* Last Edit */}

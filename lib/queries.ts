@@ -12,6 +12,7 @@ export interface ListingRow {
   mileage: number;
   fuel: string | null;
   body_type: string | null;
+  vin?: string | null;
   current_price: number;
   price_change: number | null;
   vat: string | null;
@@ -346,7 +347,7 @@ export function getListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
+      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
@@ -457,7 +458,7 @@ export function getDeletedListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
+      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active, l.deleted_at,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
@@ -711,6 +712,7 @@ export interface DetailListing {
   reg_year: string;
   fuel: string;
   color: string;
+  vin: string | null;
   power: number;
   mileage: number;
   current_price: number;

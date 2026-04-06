@@ -16,6 +16,7 @@ import { fetchFuelTypes, normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { fetchTransmissionTypes, normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
 import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
 import { reconcileDeletedMobileBgListings } from '@/lib/mobile-bg/reconcile-deleted';
+import { saveListingThumb } from '@/lib/listing-thumbs';
 
 // Parse args
 const args = process.argv.slice(2);
@@ -47,6 +48,18 @@ function formatError(err: unknown): string {
 function extractMobileId(url: string): string | null {
   const m = url?.match(/obiava-(\d+)/);
   return m ? m[1] : null;
+}
+
+function normalizeMobileDetailUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith('.mobile.bg') && parsed.hostname !== 'www.mobile.bg') {
+      parsed.hostname = 'www.mobile.bg';
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 function parseReg(yearStr: string | null): { regMonth: string | null; regYear: string | null } {
@@ -84,12 +97,21 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   const fuel = normalizeFuelSync(listing.fuel, fuelMap);
   const bodyType = normalizeBodyTypeSync(listing.bodyType, getBodyTypeMap());
   const transmission = normalizeTransmissionSync(listing.transmission, transmissionMap);
+  const vin: string | null = listing.vin ?? null;
   const price: number | null = listing.price?.amount ?? null;
   const vat: string | null = listing.vat ?? null;
   const views: number | null = listing.views ?? null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId) as Record<string, any> | undefined;
+  let thumbSaved = existing?.thumb_saved === 1;
+  if (!thumbSaved && listing.thumb) {
+    try {
+      thumbSaved = Boolean(await saveListingThumb(mobileId, listing.thumb));
+    } catch {
+      thumbSaved = false;
+    }
+  }
   const isDeep = (listing.images?.meta && listing.images?.thumbKeys?.length > 0) || !!listing.lastEdit || !!listing.description;
 
   if (existing) {
@@ -141,9 +163,9 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     db.prepare(`
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
-        fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
+        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
-        last_seen_at = ?, is_active = 1, deleted_at = NULL
+        last_seen_at = ?, is_active = 1, deleted_at = NULL, thumb_saved = ?
       WHERE id = ?
     `).run(
       dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
@@ -153,6 +175,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       isDeep ? (bodyType || null) : (existing.body_type || bodyType || null),
       isDeep ? (transmission || null) : existing.transmission,
       isDeep ? (listing.color || null) : existing.color,
+      isDeep ? vin : (existing.vin ?? null),
       isDeep ? (listing.power || null) : existing.power,
       isDeep ? (listing.mileage || null) : existing.mileage,
       isDeep ? (listing.description || null) : existing.description,
@@ -161,7 +184,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       isDeep ? (listing.lastEdit || null) : existing.last_edit,
       isDeep ? views : (existing.views ?? null),
       price, isDeep ? vat : (existing.vat ?? null), priceChangeDelta,
-      ...imageValues, now, existing.id
+      ...imageValues, now, thumbSaved ? 1 : (existing.thumb_saved ?? 0), existing.id
     );
     return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle, make, model };
   }
@@ -169,19 +192,19 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   db.prepare(`
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
-      fuel, body_type, transmission, color, power, mileage, description, ad_status, kaparo, is_new,
+      fuel, body_type, transmission, color, vin, power, mileage, description, ad_status, kaparo, is_new,
       last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
-      images_downloaded, first_seen_at, last_seen_at, is_active, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, NULL)
+      images_downloaded, thumb_saved, first_seen_at, last_seen_at, is_active, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
-    fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
+    fuel || null, bodyType || null, transmission || null, listing.color || null, vin, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, views, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
     listing.images?.thumbKeys ? JSON.stringify(listing.images.thumbKeys) : null,
     listing.images?.fullKeys ? JSON.stringify(listing.images.fullKeys) : null,
-    now, now
+    thumbSaved ? 1 : 0, now, now
   );
   return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }
@@ -241,7 +264,14 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
 
         if (deepCrawl) {
           for (const card of cards) {
-            await crawler.addRequests([{ url: card.url, label: 'DETAIL', userData: card }]);
+            await crawler.addRequests([{
+              url: normalizeMobileDetailUrl(card.url),
+              label: 'DETAIL',
+              userData: {
+                ...card,
+                originalUrl: card.url,
+              },
+            }]);
           }
         } else {
           for (const card of cards) {
@@ -328,6 +358,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         
         const mileageRaw = extract('Пробег \\[км\\]');
         const powerRaw = extract('Мощност');
+        const vinRaw = extract('VIN номер');
 
         let lastEdit: string | null = null;
         let views: number | null = null;
@@ -345,12 +376,13 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         }
 
         const listing = {
-          url, title: request.userData?.title || '', adStatus: request.userData?.adStatus || 'none',
+          url: request.userData?.originalUrl || url, title: request.userData?.title || '', adStatus: request.userData?.adStatus || 'none',
           kaparo: request.userData?.kaparo || false, thumb: raw.firstThumbUrl || request.userData?.thumb || '',
           price: { amount: priceAmount, currency: 'EUR' }, vat, lastEdit, views, isNew,
           year: extract('Дата на производство'),
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'), fuel: extract('Двигател'),
+          vin: vinRaw ? vinRaw.split(/\s+/)[0] : null,
           bodyType: extractSingleWord('Категория'), transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           description: cleanDescription(raw.description),

@@ -185,6 +185,7 @@ export default async function ListingsPage({
                 <th className="px-2 py-1.5 text-center w-14">
                   <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
+                <th className="px-3 py-1.5 text-right">Views</th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -205,7 +206,7 @@ export default async function ListingsPage({
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={15} className="py-16 text-center text-gray-500">
+                  <td colSpan={16} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
@@ -359,6 +360,11 @@ export default async function ListingsPage({
                           <span className="text-gray-600">—</span>
                         )}
                       </Link>
+                    </td>
+
+                    {/* Views */}
+                    <td className="px-3 py-1 text-right text-xs text-gray-300">
+                      {row.views != null ? row.views.toLocaleString('en-US') : '—'}
                     </td>
 
                     {/* Last Edit */}
