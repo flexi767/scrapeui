@@ -8,7 +8,7 @@ import { Check, RefreshCw, SearchIcon, X } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { OwnListingRow } from '@/lib/queries';
-import { formatPrice, formatDate, buildImageList, parseJson } from '@/lib/utils';
+import { formatPrice, formatDate, buildImageList, getThumbProxyUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
@@ -362,7 +362,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
             const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
             const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
             const images = buildImageList(row.mobile_id, thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
-            const thumbSrc = images[0]?.thumb ?? null;
+            const thumbSrc = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
 
             const kmFormatted = row.mileage != null
               ? row.mileage.toLocaleString('en-US')

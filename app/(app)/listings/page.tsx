@@ -4,7 +4,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -16,6 +16,7 @@ interface SearchParams {
   status?: string | string[];
   vat?: string | string[];
   fuel?: string | string[];
+  extra?: string | string[];
   kaparo?: string;
   p_min?: string;
   p_max?: string;
@@ -26,6 +27,8 @@ interface SearchParams {
   search?: string;
   page?: string;
 }
+
+const EXTRA_OPTIONS = ['4x4', 'С регистрация', 'Нов внос', 'Кожен салон'];
 
 function AdStatusBadge({ status }: { status: string }) {
   if (!status || status === 'none') {
@@ -89,6 +92,7 @@ export default async function ListingsPage({
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
+  const extras = sp.extra ? (Array.isArray(sp.extra) ? sp.extra : [sp.extra]) : [];
   const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
   const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
@@ -108,6 +112,7 @@ export default async function ListingsPage({
     statuses,
     vatValues,
     fuels,
+    extras,
     priceMin,
     priceMax,
     priceChangeMin,
@@ -130,6 +135,7 @@ export default async function ListingsPage({
   for (const v of vatValues) currentParams.append('vat', v);
   for (const c of categories) currentParams.append('category', c);
   for (const f of fuels) currentParams.append('fuel', f);
+  for (const e of extras) currentParams.append('extra', e);
   if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
@@ -154,6 +160,7 @@ export default async function ListingsPage({
               allYears={getDistinctYears()}
               allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
+              allExtras={EXTRA_OPTIONS}
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
@@ -194,8 +201,8 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-3 py-1.5 text-center">Body Type</th>
-                <th className="px-3 py-1.5 text-center">
+                <th className="px-2 py-1.5 text-left">Body Type</th>
+                <th className="w-20 px-2 py-1.5 text-left">
                   <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
@@ -222,7 +229,7 @@ export default async function ListingsPage({
                   imageMeta,
                   row.images_downloaded === 1,
                 );
-                const thumb = images[0]?.thumb ?? null;
+                const thumb = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
 
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
@@ -398,21 +405,21 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Category */}
-                    <td className="px-3 py-1 text-center">
+                    <td className="px-2 py-1.5 text-gray-400 text-xs">
                       {row.body_type ? (
                         <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'category'), ['category', row.body_type]]).toString()}`}>
-                          <span className="text-xs text-gray-300 hover:text-white">{row.body_type}</span>
+                          <span className="text-xs text-gray-400 hover:text-gray-400">{row.body_type}</span>
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
                     </td>
 
                     {/* Fuel */}
-                    <td className="px-3 py-1 text-center">
+                    <td className="w-20 px-2 py-1.5 text-xs text-gray-400">
                       {row.fuel ? (
                         <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'fuel'), ['fuel', row.fuel]]).toString()}`}>
-                          <span className="text-xs text-gray-300 hover:text-white">{row.fuel}</span>
+                          <span className="block whitespace-normal break-words leading-tight text-xs text-gray-400 hover:text-gray-400">{row.fuel}</span>
                         </Link>
-                      ) : null}
+                      ) : <span className="text-gray-600">—</span>}
                     </td>
                     {/* Mileage */}
                     <td className="px-2 py-1.5 text-right text-gray-400 text-xs whitespace-nowrap">

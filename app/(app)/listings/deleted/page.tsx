@@ -4,7 +4,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -16,6 +16,7 @@ interface SearchParams {
   status?: string | string[];
   vat?: string | string[];
   fuel?: string | string[];
+  extra?: string | string[];
   kaparo?: string;
   p_min?: string;
   p_max?: string;
@@ -26,6 +27,8 @@ interface SearchParams {
   search?: string;
   page?: string;
 }
+
+const EXTRA_OPTIONS = ['4x4', 'С регистрация', 'Нов внос', 'Кожен салон'];
 
 function AdStatusBadge({ status }: { status: string }) {
   if (!status || status === 'none') return <span className="text-gray-600">—</span>;
@@ -73,6 +76,7 @@ export default async function DeletedListingsPage({
   const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
   const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
   const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
+  const extras = sp.extra ? (Array.isArray(sp.extra) ? sp.extra : [sp.extra]) : [];
   const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
   const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
@@ -85,7 +89,7 @@ export default async function DeletedListingsPage({
 
   const { data: rows, total } = getDeletedListings({
     make, model, dealerSlugs, years, categories, statuses, vatValues, fuels,
-    priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, limit: 50,
+    extras, priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, limit: 50,
   });
 
   const makeModels = getMakeModels();
@@ -96,6 +100,7 @@ export default async function DeletedListingsPage({
   for (const v of vatValues) currentParams.append('vat', v);
   for (const c of categories) currentParams.append('category', c);
   for (const f of fuels) currentParams.append('fuel', f);
+  for (const e of extras) currentParams.append('extra', e);
   if (kaparo) currentParams.set('kaparo', kaparo);
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
@@ -119,6 +124,7 @@ export default async function DeletedListingsPage({
               allYears={getDistinctYears()}
               allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
+              allExtras={EXTRA_OPTIONS}
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
@@ -162,7 +168,7 @@ export default async function DeletedListingsPage({
                 const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
                 const fullKeys = parseJson<string[]>(row.full_keys, []);
                 const images = buildImageList(row.mobile_id, fullKeys.length ? fullKeys : thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
-                const thumb = images[0]?.thumb ?? null;
+                const thumb = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
                   <tr key={listingSlug} className="group bg-red-950/10 transition-colors hover:bg-red-950/20">

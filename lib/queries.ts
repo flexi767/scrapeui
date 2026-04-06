@@ -25,6 +25,7 @@ export interface ListingRow {
   full_keys: string;
   image_meta: string;
   images_downloaded: number;
+  thumb_saved?: number;
   dealer_name: string;
   dealer_slug: string;
   is_active: number;
@@ -210,6 +211,7 @@ export interface ListingFilters {
   statuses?: string[];
   vatValues?: string[];
   fuels?: string[];
+  extras?: string[];
   priceMin?: number | null;
   priceMax?: number | null;
   priceChangeMin?: number | null;
@@ -266,6 +268,7 @@ export function getListings(filters: ListingFilters = {}) {
     statuses = [],
     vatValues = [],
     fuels = [],
+    extras = [],
     priceMin = null,
     priceMax = null,
     priceChangeMin = null,
@@ -312,6 +315,11 @@ export function getListings(filters: ListingFilters = {}) {
     wheres.push(`l.fuel IN (${ph})`);
     params.push(...fuels);
   }
+  if (extras.length > 0) {
+    const clauses = extras.map(() => 'l.extras_json LIKE ?');
+    wheres.push(`(${clauses.join(' OR ')})`);
+    params.push(...extras.map((extra) => `%${extra}%`));
+  }
   if (priceMin !== null) { wheres.push('l.current_price >= ?'); params.push(priceMin); }
   if (priceMax !== null) { wheres.push('l.current_price <= ?'); params.push(priceMax); }
   if (priceChangeMin !== null || priceChangeMax !== null) {
@@ -348,7 +356,7 @@ export function getListings(filters: ListingFilters = {}) {
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
@@ -378,6 +386,7 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     statuses = [],
     vatValues = [],
     fuels = [],
+    extras = [],
     priceMin = null,
     priceMax = null,
     priceChangeMin = null,
@@ -423,6 +432,11 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     wheres.push(`l.fuel IN (${ph})`);
     params.push(...fuels);
   }
+  if (extras.length > 0) {
+    const clauses = extras.map(() => 'l.extras_json LIKE ?');
+    wheres.push(`(${clauses.join(' OR ')})`);
+    params.push(...extras.map((extra) => `%${extra}%`));
+  }
   if (priceMin !== null) { wheres.push('l.current_price >= ?'); params.push(priceMin); }
   if (priceMax !== null) { wheres.push('l.current_price <= ?'); params.push(priceMax); }
   if (priceChangeMin !== null || priceChangeMax !== null) {
@@ -459,7 +473,7 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active, l.deleted_at,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active, l.deleted_at,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
@@ -488,6 +502,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     statuses = [],
     vatValues = [],
     fuels = [],
+    extras = [],
     priceMin = null,
     priceMax = null,
     priceChangeMin = null,
@@ -537,6 +552,11 @@ export function getOwnListings(filters: ListingFilters = {}) {
     const ph = fuels.map(() => '?').join(',');
     wheres.push(`COALESCE(b.fuel, l.fuel) IN (${ph})`);
     params.push(...fuels);
+  }
+  if (extras.length > 0) {
+    const clauses = extras.map(() => 'COALESCE(b.extras_json, l.extras_json) LIKE ?');
+    wheres.push(`(${clauses.join(' OR ')})`);
+    params.push(...extras.map((extra) => `%${extra}%`));
   }
   if (priceMin !== null) { wheres.push('COALESCE(b.price_amount, l.current_price) >= ?'); params.push(priceMin); }
   if (priceMax !== null) { wheres.push('COALESCE(b.price_amount, l.current_price) <= ?'); params.push(priceMax); }
@@ -603,7 +623,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
@@ -676,7 +696,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1

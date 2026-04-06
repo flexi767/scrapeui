@@ -41,6 +41,7 @@ export const listings = sqliteTable('listings', {
   power: integer('power'),
   mileage: integer('mileage'),
   description: text('description'),
+  extrasJson: text('extras_json'),
   adStatus: text('ad_status'),
   kaparo: integer('kaparo'),
   isNew: integer('is_new'),

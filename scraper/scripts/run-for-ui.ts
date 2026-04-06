@@ -98,9 +98,11 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   const bodyType = normalizeBodyTypeSync(listing.bodyType, getBodyTypeMap());
   const transmission = normalizeTransmissionSync(listing.transmission, transmissionMap);
   const vin: string | null = listing.vin ?? null;
+  const extrasJson: string | null = listing.extras ? JSON.stringify(listing.extras) : null;
   const price: number | null = listing.price?.amount ?? null;
   const vat: string | null = listing.vat ?? null;
   const views: number | null = listing.views ?? null;
+  const hasOverviewSpecs = Boolean(listing.year || listing.mileage != null || listing.fuel || listing.bodyType || listing.transmission || listing.vat);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId) as Record<string, any> | undefined;
@@ -116,7 +118,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
 
   if (existing) {
     const priceChanged = price !== null && price !== existing.current_price;
-    const vatChanged = isDeep ? (vat !== existing.vat) : false;
+    const vatChanged = vat != null ? (vat !== existing.vat) : false;
     const lastEditChanged = isDeep ? ((listing.lastEdit || null) !== (existing.last_edit || null)) : false;
     const viewsChanged = isDeep ? (views !== (existing.views ?? null)) : false;
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
@@ -163,27 +165,28 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     db.prepare(`
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
-        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
+        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, power = ?, mileage = ?, description = ?, extras_json = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1, deleted_at = NULL, thumb_saved = ?
       WHERE id = ?
     `).run(
       dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
-      isDeep ? regMonth : existing.reg_month,
-      isDeep ? regYear : existing.reg_year,
-      isDeep ? (fuel || null) : existing.fuel,
-      isDeep ? (bodyType || null) : (existing.body_type || bodyType || null),
-      isDeep ? (transmission || null) : existing.transmission,
+      (isDeep || hasOverviewSpecs) && regMonth ? regMonth : existing.reg_month,
+      (isDeep || hasOverviewSpecs) && regYear ? regYear : existing.reg_year,
+      (isDeep || hasOverviewSpecs) && fuel ? fuel : existing.fuel,
+      (isDeep || hasOverviewSpecs) && bodyType ? bodyType : (existing.body_type || bodyType || null),
+      (isDeep || hasOverviewSpecs) && transmission ? transmission : existing.transmission,
       isDeep ? (listing.color || null) : existing.color,
       isDeep ? vin : (existing.vin ?? null),
       isDeep ? (listing.power || null) : existing.power,
-      isDeep ? (listing.mileage || null) : existing.mileage,
+      (isDeep || hasOverviewSpecs) && listing.mileage != null ? listing.mileage : existing.mileage,
       isDeep ? (listing.description || null) : existing.description,
+      isDeep ? extrasJson : (existing.extras_json ?? null),
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
       isDeep ? (listing.isNew ? 1 : 0) : existing.is_new,
       isDeep ? (listing.lastEdit || null) : existing.last_edit,
       isDeep ? views : (existing.views ?? null),
-      price, isDeep ? vat : (existing.vat ?? null), priceChangeDelta,
+      price, vat != null ? vat : (existing.vat ?? null), priceChangeDelta,
       ...imageValues, now, thumbSaved ? 1 : (existing.thumb_saved ?? 0), existing.id
     );
     return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle, make, model };
@@ -192,14 +195,14 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   db.prepare(`
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
-      fuel, body_type, transmission, color, vin, power, mileage, description, ad_status, kaparo, is_new,
+      fuel, body_type, transmission, color, vin, power, mileage, description, extras_json, ad_status, kaparo, is_new,
       last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, thumb_saved, first_seen_at, last_seen_at, is_active, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
     fuel || null, bodyType || null, transmission || null, listing.color || null, vin, listing.power || null, listing.mileage || null,
-    listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
+    listing.description || null, extrasJson, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, views, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
     listing.images?.thumbKeys ? JSON.stringify(listing.images.thumbKeys) : null,
@@ -234,25 +237,51 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const item = a.closest('[class*="item"]') || card?.closest('[class*="item"]');
             const itemClass = item?.className || '';
             const priceEl = card?.querySelector('.price');
+            const priceWrapText = (priceEl?.parentElement?.textContent || item?.textContent || '').trim();
             const params = Array.from(item?.querySelectorAll('.params span') || [])
               .map(span => span.textContent?.trim() || '')
               .filter(Boolean);
             const transmissionOptions = ['Ръчна', 'Автоматична', 'Полуавтоматична'];
             const transmissionIndex = params.findIndex(value => transmissionOptions.includes(value));
+            const year = params.find(value => /\d{4}/.test(value)) || null;
+            const mileage = params.find(value => /км/i.test(value)) || null;
+            const fuel = params.find(value => /(бенз|дизел|electric|електр|хибрид|газ|метан)/i.test(value)) || null;
+            const transmission = transmissionIndex !== -1 ? params[transmissionIndex] : null;
+            const bodyType = params.find(value => ['Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'].includes(value)) || (transmissionIndex !== -1 ? (params[transmissionIndex + 1] || null) : null);
+            const vatText = /без ддс/i.test(priceWrapText)
+              ? 'без ДДС'
+              : /с включено ддс|с ддс|вкл\.?\s*ддс/i.test(priceWrapText)
+              ? 'с ДДС'
+              : /не се начислява ддс|частно лице|освободена/i.test(priceWrapText)
+              ? 'не се начислява ДДС'
+              : null;
             const adStatus = /\bTOP\b/i.test(itemClass) ? 'TOP' : /\bVIP\b/i.test(itemClass) ? 'VIP' : 'none';
             const kaparo = !!(a.closest('.kaparo') || item?.querySelector('.kaparo') || item?.classList?.contains('kaparo'));
             const allImgs = Array.from(item?.querySelectorAll('img') || []);
             const thumbImg = allImgs.find(i => {
-              const src = (i as HTMLImageElement).src || i.getAttribute('data-src') || '';
+              const src = (i as HTMLImageElement).currentSrc || (i as HTMLImageElement).src || i.getAttribute('data-src') || i.getAttribute('data-lazy') || i.getAttribute('data-srcset') || i.getAttribute('srcset') || '';
               return src && !src.endsWith('.svg') && src.includes('photosorg');
             }) as HTMLImageElement | undefined;
+            const thumb =
+              thumbImg?.currentSrc ||
+              thumbImg?.src ||
+              thumbImg?.getAttribute('data-src') ||
+              thumbImg?.getAttribute('data-lazy') ||
+              thumbImg?.getAttribute('data-srcset')?.split(',')[0]?.trim().split(' ')[0] ||
+              thumbImg?.getAttribute('srcset')?.split(',')[0]?.trim().split(' ')[0] ||
+              '';
             return {
               url: (a as HTMLAnchorElement).href,
               title: a.textContent?.trim() || '',
               priceText: priceEl?.textContent?.trim() || '',
+              vatText,
+              year,
+              mileage,
+              fuel,
+              transmission,
               adStatus, kaparo,
-              bodyType: transmissionIndex !== -1 ? (params[transmissionIndex + 1] || null) : null,
-              thumb: thumbImg?.src || thumbImg?.getAttribute('data-src') || '',
+              bodyType,
+              thumb,
             };
           }).filter(c => c.url.includes('/obiava-'))
         );
@@ -278,11 +307,20 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const priceMatch = card.priceText.replace(/\s/g, '').match(/([\d.,]+)€/);
             const priceAmount = priceMatch ? Math.round(parseFloat(priceMatch[1].replace(',', ''))) : null;
             const bodyType = card.bodyType && HOMEPAGE_CATEGORY_OPTIONS.has(card.bodyType) ? card.bodyType : null;
+            const vatLower = (card.vatText || '').toLowerCase();
+            let vat: string | null = null;
+            if (vatLower.includes('не се начислява') || vatLower.includes('частно лице') || vatLower.includes('освободена')) vat = 'exempt';
+            else if (vatLower.includes('с ддс') || vatLower.includes('вкл')) vat = 'included';
+            else if (vatLower.includes('без ддс')) vat = 'excluded';
             const listing = {
               url: card.url, title: card.title, adStatus: card.adStatus, kaparo: card.kaparo,
               bodyType,
+              year: card.year || null,
+              mileage: card.mileage ? parseInt(String(card.mileage).replace(/\D/g, ''), 10) || null : null,
+              fuel: card.fuel || null,
+              transmission: card.transmission || null,
               thumb: card.thumb || '', price: { amount: priceAmount, currency: 'EUR' },
-              vat: null, lastEdit: null, isNew: false, imageCount: 0,
+              vat, lastEdit: null, isNew: false, imageCount: 0,
               images: { meta: null, thumbKeys: [], fullKeys: [] },
               scrapedAt: new Date().toISOString(), source: 'mobile.bg', dealer: dealer.slug, snapshotDate,
             };
@@ -359,6 +397,9 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         const mileageRaw = extract('Пробег \\[км\\]');
         const powerRaw = extract('Мощност');
         const vinRaw = extract('VIN номер');
+        const extras = Array.from(document.querySelectorAll('.carExtri .items div'))
+          .map((el) => el.textContent?.trim() || '')
+          .filter(Boolean);
 
         let lastEdit: string | null = null;
         let views: number | null = null;
@@ -383,6 +424,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'), fuel: extract('Двигател'),
           vin: vinRaw ? vinRaw.split(/\s+/)[0] : null,
+          extras,
           bodyType: extractSingleWord('Категория'), transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           description: cleanDescription(raw.description),

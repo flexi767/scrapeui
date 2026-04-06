@@ -12,6 +12,7 @@ interface Props {
   allYears: string[];
   allCategories?: string[];
   allFuels?: string[];
+  allExtras?: string[];
   total: number;
   priceChangeRange?: { min: number; max: number } | null;
   priceRange?: { min: number; max: number } | null;
@@ -22,7 +23,7 @@ interface Props {
   syncActive?: boolean;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel = 'Sync', syncActive = false }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], allExtras = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel = 'Sync', syncActive = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -34,6 +35,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const currentStatuses = searchParams.getAll('status');
   const currentVat = searchParams.getAll('vat');
   const currentFuels = searchParams.getAll('fuel');
+  const currentExtras = searchParams.getAll('extra');
   const currentSearch = searchParams.get('search') ?? '';
   const currentSort = searchParams.get('sort') ?? 'price';
   const currentOrder = searchParams.get('order') ?? 'desc';
@@ -65,6 +67,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     for (const s of currentStatuses) p.append('status', s);
     for (const v of currentVat) p.append('vat', v);
     for (const f of currentFuels) p.append('fuel', f);
+    for (const e of currentExtras) p.append('extra', e);
     if (currentSearch) p.set('search', currentSearch);
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -180,10 +183,13 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   ];
 
   const [fuelOpen, setFuelOpen] = useState(false);
+  const [extrasOpen, setExtrasOpen] = useState(false);
   const fuelRef = useRef<HTMLDivElement>(null);
+  const extrasRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (fuelRef.current && !fuelRef.current.contains(e.target as Node)) setFuelOpen(false);
+      if (extrasRef.current && !extrasRef.current.contains(e.target as Node)) setExtrasOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -194,7 +200,12 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     router.push(`${basePath}?${buildParams({ fuel: next })}`);
   }
 
-  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentCategories.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
+  function onExtraToggle(extra: string) {
+    const next = currentExtras.includes(extra) ? currentExtras.filter(x => x !== extra) : [...currentExtras, extra];
+    router.push(`${basePath}?${buildParams({ extra: next })}`);
+  }
+
+  const hasFilters = currentMake || currentModel || currentDealers.length > 0 || currentYears.length > 0 || currentCategories.length > 0 || currentStatuses.length > 0 || currentVat.length > 0 || currentFuels.length > 0 || currentExtras.length > 0 || currentSearch || searchParams.get('p_min') || searchParams.get('p_max') || searchParams.get('pc_min') || searchParams.get('pc_max');
 
 
 
@@ -385,6 +396,36 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
           </div>
         )}
       </div>
+
+      {/* Extras multi-select dropdown */}
+      {allExtras.length > 0 && (
+        <div className="relative" ref={extrasRef}>
+          <button
+            onClick={() => setExtrasOpen(o => !o)}
+            className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
+              currentExtras.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+            }`}
+          >
+            {currentExtras.length === 0 ? 'Extras' : `Extras (${currentExtras.length})`}
+            <span className="text-gray-400">{extrasOpen ? '▲' : '▼'}</span>
+          </button>
+          {extrasOpen && (
+            <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
+              {allExtras.map(extra => (
+                <label key={extra} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
+                  <input type="checkbox" checked={currentExtras.includes(extra)} onChange={() => onExtraToggle(extra)} className="accent-blue-500" />
+                  <span>{extra}</span>
+                </label>
+              ))}
+              {currentExtras.length > 0 && (
+                <button onClick={() => { router.push(`${basePath}?${buildParams({ extra: [] })}`); setExtrasOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
+                  Clear extras
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Year multi-select dropdown */}
       <div className="relative" ref={yearRef}>
