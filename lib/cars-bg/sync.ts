@@ -844,15 +844,15 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
       && match.price.amount != null
       && Number(mobileListing.price.amount) !== Number(match.price.amount);
     const targetTitle = getCarsBgTitleValue(mobileListing);
+    const currentCarsTitle = getCarsBgTitleValue(match);
     const titleDiff = Boolean(
       targetTitle &&
-      normalizeLabel(targetTitle) !== normalizeLabel(match.title),
+      normalizeLabel(targetTitle) !== normalizeLabel(currentCarsTitle),
     );
     const targetDescription = normalizeCompareText(mobileListing.description);
     const currentDescription = normalizeCompareText(match.description);
     const descriptionDiff = Boolean(
       targetDescription &&
-      currentDescription &&
       targetDescription !== currentDescription,
     );
 

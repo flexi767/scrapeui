@@ -31,6 +31,7 @@ interface BackupLogEntry {
   imageCount?: number;
   views?: number | null;
   watching?: number | null;
+  adStatus?: 'TOP' | 'VIP' | 'none';
   listingsCount?: number;
   imagesCount?: number;
 }
@@ -244,6 +245,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                         <span>{entry.current ?? 0}/{entry.total ?? 0}</span>
                         <span>{entry.imageCount ?? 0} images</span>
+                        {entry.adStatus && entry.adStatus !== 'none' ? <span>{entry.adStatus}</span> : null}
                         {entry.views != null ? <span>{entry.views} views</span> : null}
                         {entry.watching != null ? <span>{entry.watching} watching</span> : null}
                         {entry.url ? (

@@ -77,6 +77,7 @@ export interface BackupProgressEvent {
   imageCount?: number;
   views?: number | null;
   watching?: number | null;
+  adStatus?: 'TOP' | 'VIP' | 'none';
   runId?: number;
   listingsCount?: number;
   imagesCount?: number;
@@ -605,7 +606,7 @@ export async function backupDealerToDb(
       const { backupId, action } = upsertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
-      let engagement: { views: number | null; watching: number | null } | null = null;
+      let engagement: { views: number | null; watching: number | null; adStatus: 'TOP' | 'VIP' | 'none' } | null = null;
       try {
         engagement = await captureEditFormSnapshotWithPage(db, dealer, detail.mobileId, dbPath, page, {
           backupId,
@@ -635,6 +636,7 @@ export async function backupDealerToDb(
         imageCount: savedImages.length,
         views: engagement?.views ?? null,
         watching: engagement?.watching ?? null,
+        adStatus: engagement?.adStatus ?? 'none',
       });
     }
 

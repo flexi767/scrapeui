@@ -317,9 +317,9 @@ export async function updateBackupOnMobileBg(
     if (backup.listing_id != null) {
       db.prepare(`
         UPDATE listings
-        SET ad_status = ?, updated_at = ?
+        SET ad_status = ?
         WHERE id = ?
-      `).run(effectiveAdStatus, now, backup.listing_id);
+      `).run(effectiveAdStatus, backup.listing_id);
     }
 
     log(`Sync finished successfully for mobile.bg #${backup.mobile_id}`);

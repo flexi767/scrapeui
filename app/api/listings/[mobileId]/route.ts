@@ -102,7 +102,7 @@ export async function PATCH(
     }
 
     const sourceListing = raw.prepare(`
-      SELECT id, title, current_price, vat, kaparo, ad_status, carsbg_title
+      SELECT id, title, current_price, vat, kaparo, ad_status, carsbg_title, is_active
       FROM listings
       WHERE mobile_id = ?
       LIMIT 1
@@ -114,6 +114,7 @@ export async function PATCH(
       kaparo: number | null;
       ad_status: string | null;
       carsbg_title: string | null;
+      is_active: number | null;
     } | undefined;
 
     if (!sourceListing) {
@@ -124,8 +125,9 @@ export async function PATCH(
     }
 
     const sourceAdStatus = sourceListing.ad_status ?? 'none';
+    const sourceIsLiveOnMobile = (sourceListing.is_active ?? 0) === 1;
     const effectiveAdStatus =
-      adStatus === 'none' && sourceAdStatus !== 'none'
+      adStatus === 'none' && sourceAdStatus !== 'none' && sourceIsLiveOnMobile
         ? sourceAdStatus
         : adStatus;
 
