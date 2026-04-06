@@ -202,6 +202,14 @@ function parseCarsBgCreatedDateFromImageUrl(value: string | null | undefined): s
   return match ? match[1] : null;
 }
 
+function parseCarsBgEditedDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = String(value).match(/\b(\d{2})\.(\d{2})\.(\d{2}|\d{4})\b/);
+  if (!match) return null;
+  const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+  return `${year}-${match[2]}-${match[1]}`;
+}
+
 function normalizeCompareText(value: string | null | undefined): string {
   return String(value || '')
     .toLowerCase()
@@ -292,7 +300,9 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
   const transmission = normalizeTransmissionSync(transRaw, transmissionMap);
 
   const price: number | null = listing.price?.amount ?? null;
+  const carsbgTitle: string | null = normalizedTitle || null;
   const carsbgCreatedDate: string | null = listing.carsbgCreatedDate ?? null;
+  const carsbgEditedDate: string | null = listing.carsbgEditedDate ?? null;
   const matchingMobile = findMatchingMobileListing(db, dealerId, listing, make, model);
   const isDuplicate = matchingMobile ? 1 : 0;
   const syncNeeded = Boolean(
@@ -350,7 +360,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?,
         fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?,
         ad_status = ?, kaparo = ?, current_price = ?, price_change = ?,
-        reg_year = ?, carsbg_created_date = ?, ${imageFields}
+        reg_year = ?, carsbg_title = ?, carsbg_created_date = ?, carsbg_edited_date = ?, ${imageFields}
         last_seen_at = ?, is_active = 1, duplicate = ?
       WHERE id = ?
     `).run(
@@ -360,7 +370,9 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
       price, priceChangeDelta,
       listing.year || existing.reg_year,
+      carsbgTitle || existing.carsbg_title || null,
       carsbgCreatedDate || existing.carsbg_created_date || null,
+      carsbgEditedDate || existing.carsbg_edited_date || null,
       ...imageValues,
       now, isDuplicate, existing.id
     );
@@ -372,15 +384,15 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     INSERT INTO listings (
       cars_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id,
       fuel, body_type, transmission, color, power, mileage,
-      ad_status, kaparo, current_price, reg_year, carsbg_created_date,
+      ad_status, kaparo, current_price, reg_year, carsbg_title, carsbg_created_date, carsbg_edited_date,
       image_count, full_keys,
       first_seen_at, last_seen_at, is_active, source, duplicate
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
   `).run(
     carsId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.adStatus || 'none', listing.kaparo ? 1 : 0,
-    price, listing.year || null, carsbgCreatedDate,
+    price, listing.year || null, carsbgTitle, carsbgCreatedDate, carsbgEditedDate,
     listing.images?.length || 0,
     listing.images ? JSON.stringify(listing.images) : null,
     now, now, isDuplicate
@@ -434,7 +446,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           // Each card: <a href="/offer/HEX"> containing <h5> title, <h6> price, <p> specs
           const cards = await page.evaluate(() => {
             const results: {
-              url: string; title: string; priceText: string; specsText: string; thumb: string;
+              url: string; title: string; dateText: string; priceText: string; specsText: string; thumb: string;
             }[] = [];
 
             const offerLinks = document.querySelectorAll('#listContainer a[href*="/offer/"]');
@@ -450,6 +462,9 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               const title = h5?.textContent?.trim() || '';
               if (!title) continue;
 
+              const h6s = a.querySelectorAll('h6');
+              const dateText = h6s[0]?.textContent?.trim() || '';
+
               // Price block contains both EUR and BGN; take the whole text and parse EUR later.
               const priceNode = a.querySelector('.price');
               const priceText = priceNode?.textContent?.trim() || '';
@@ -463,7 +478,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               const bg = media?.style.backgroundImage || '';
               const thumb = bg.match(/url\(["']?(.*?)["']?\)/)?.[1] || '';
 
-              results.push({ url: href, title, priceText, specsText, thumb });
+              results.push({ url: href, title, dateText, priceText, specsText, thumb });
             }
 
             return results;
@@ -481,6 +496,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               url: card.url, title: card.title,
               adStatus: 'none', kaparo: false,
               thumb: card.thumb,
+              carsbgEditedDate: parseCarsBgEditedDate(card.dateText),
               carsbgCreatedDate: parseCarsBgCreatedDateFromImageUrl(card.thumb),
               price: { amount: priceEur, currency: 'EUR' },
               year: specs.year, mileage: specs.mileage, power: specs.power,
@@ -563,6 +579,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
         const listing = {
           url, title: data.title,
           adStatus: 'none', kaparo: false, thumb: images[0] || '',
+          carsbgEditedDate: null,
           carsbgCreatedDate: parseCarsBgCreatedDateFromImageUrl(images[0] || ''),
           price: { amount: priceEur, currency: 'EUR' },
           year: specs.year, mileage: specs.mileage, power: specs.power,
