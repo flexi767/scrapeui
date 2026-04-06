@@ -55,6 +55,7 @@ interface SyncListingRow {
   image_meta: string | null;
   full_keys: string | null;
   images_downloaded: number | null;
+  latest_backup_id?: number | null;
 }
 
 interface CarsBgSelectedExtra {
@@ -632,7 +633,27 @@ async function uploadImages(page: Page, files: string[]): Promise<void> {
   }
 }
 
-function parseListingImageSources(row: SyncListingRow): string[] {
+function getBackupOrderedImages(db: Database.Database, backupId: number | null | undefined): string[] {
+  if (!backupId) return [];
+  const rows = db.prepare(`
+    SELECT local_path, source_url
+    FROM mobilebg_backup_images
+    WHERE backup_id = ?
+    ORDER BY sort_order ASC, id ASC
+  `).all(backupId) as Array<{ local_path: string | null; source_url: string | null }>;
+
+  return rows
+    .map((row) => {
+      if (row.local_path && fs.existsSync(row.local_path)) return row.local_path;
+      return row.source_url;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+function parseListingImageSources(db: Database.Database, row: SyncListingRow): string[] {
+  const backupOrdered = getBackupOrderedImages(db, row.latest_backup_id);
+  if (backupOrdered.length) return backupOrdered;
+
   const fullKeys = parseJson<string[]>(row.full_keys, []);
   if (!fullKeys.length || !row.mobile_id) return [];
 
@@ -657,7 +678,7 @@ function makeFullTitle(row: SyncListingRow): string {
   return [row.make, row.model, row.title].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 }
 
-function mapRowToSyncListing(row: SyncListingRow): CarsBgSyncListing {
+function mapRowToSyncListing(db: Database.Database, row: SyncListingRow): CarsBgSyncListing {
   const title = row.title || '';
   return {
     id: row.id,
@@ -681,7 +702,7 @@ function mapRowToSyncListing(row: SyncListingRow): CarsBgSyncListing {
     kaparo: row.kaparo === 1,
     vat: row.vat,
     price: { amount: row.current_price, currency: 'EUR' },
-    images: parseListingImageSources(row),
+    images: parseListingImageSources(db, row),
     carsBgExtras: parseJson<CarsBgExtrasPayload | null>(row.extras_json, null),
   };
 }
@@ -691,7 +712,14 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
     SELECT
       id, mobile_id, cars_id, dealer_id, url, title, make, model, reg_month, reg_year, fuel,
       body_type, transmission, color, power, mileage, description, extras_json,
-      ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded
+      ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded,
+      (
+        SELECT b.id
+        FROM mobilebg_backups b
+        WHERE b.listing_id = listings.id
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+        LIMIT 1
+      ) as latest_backup_id
     FROM listings
     WHERE dealer_id = ?
       AND source = 'm'
@@ -699,7 +727,7 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
       AND (duplicate = 0 OR duplicate IS NULL)
   `).all(dealerId) as SyncListingRow[];
 
-  return rows.map(mapRowToSyncListing);
+  return rows.map((row) => mapRowToSyncListing(db, row));
 }
 
 function loadDealerCarsListings(db: Database.Database, dealerId: number): CarsBgSyncListing[] {
@@ -714,7 +742,7 @@ function loadDealerCarsListings(db: Database.Database, dealerId: number): CarsBg
       AND is_active = 1
   `).all(dealerId) as SyncListingRow[];
 
-  return rows.map(mapRowToSyncListing);
+  return rows.map((row) => mapRowToSyncListing(db, row));
 }
 
 function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[]): CarsBgSyncPlan {

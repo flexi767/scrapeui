@@ -13,6 +13,7 @@ const navItems = [
   { href: '/listings/deleted', label: 'Deleted Listings', icon: TrashIcon, indent: true },
   { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
   { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon, indent: true },
+  { href: '/editown/carsbg-sync', label: 'Cars.bg Sync', icon: UploadIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
   { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
