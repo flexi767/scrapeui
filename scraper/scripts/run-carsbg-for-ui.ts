@@ -247,38 +247,55 @@ function findMatchingMobileListing(
 
   for (const row of candidates) {
     let score = 0;
+    let strongMatches = 0;
+    let comparedFields = 0;
 
     if (listing.year && row.reg_year) {
+      comparedFields++;
       if (String(listing.year) !== String(row.reg_year)) continue;
       score += 4;
+      strongMatches++;
     }
 
     if (listing.mileage != null && row.mileage != null) {
+      comparedFields++;
       const diff = Math.abs(Number(listing.mileage) - Number(row.mileage));
-      if (diff === 0) score += 5;
-      else if (diff <= 1000) score += 4;
-      else if (diff <= 5000) score += 2;
+      if (diff === 0) {
+        score += 5;
+        strongMatches++;
+      } else if (diff <= 1000) {
+        score += 4;
+        strongMatches++;
+      } else if (diff <= 5000) score += 2;
       else continue;
     }
 
     if (listing.fuel && row.fuel) {
+      comparedFields++;
       if (String(listing.fuel) === String(row.fuel)) score += 2;
       else continue;
     }
 
     if (listing.bodyType && row.body_type) {
+      comparedFields++;
       if (String(listing.bodyType) === String(row.body_type)) score += 1;
     }
 
-    score += Math.min(3, titleOverlapScore(listing.title, row.title));
+    if (listing.title && row.title) {
+      score += Math.min(2, titleOverlapScore(listing.title, row.title));
+    }
 
     if (best == null || score > best.score) {
+      best = { row, score };
+    }
+
+    if (strongMatches >= 2 && comparedFields >= 2 && (!best || score >= best.score)) {
       best = { row, score };
     }
   }
 
   if (!best) return null;
-  return best.score >= 6 ? best.row : null;
+  return best.score >= 5 ? best.row : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -360,7 +377,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?,
         fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?,
         ad_status = ?, kaparo = ?, current_price = ?, price_change = ?,
-        reg_year = ?, carsbg_title = ?, carsbg_created_date = ?, carsbg_edited_date = ?, ${imageFields}
+        reg_year = ?, last_edit = ?, carsbg_title = ?, carsbg_created_date = ?, carsbg_edited_date = ?, ${imageFields}
         last_seen_at = ?, is_active = 1, duplicate = ?
       WHERE id = ?
     `).run(
@@ -370,6 +387,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
       price, priceChangeDelta,
       listing.year || existing.reg_year,
+      carsbgEditedDate || existing.last_edit || existing.carsbg_edited_date || null,
       carsbgTitle || existing.carsbg_title || null,
       carsbgCreatedDate || existing.carsbg_created_date || null,
       carsbgEditedDate || existing.carsbg_edited_date || null,
@@ -384,15 +402,15 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     INSERT INTO listings (
       cars_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id,
       fuel, body_type, transmission, color, power, mileage,
-      ad_status, kaparo, current_price, reg_year, carsbg_title, carsbg_created_date, carsbg_edited_date,
+      ad_status, kaparo, current_price, reg_year, last_edit, carsbg_title, carsbg_created_date, carsbg_edited_date,
       image_count, full_keys,
       first_seen_at, last_seen_at, is_active, source, duplicate
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
   `).run(
     carsId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.adStatus || 'none', listing.kaparo ? 1 : 0,
-    price, listing.year || null, carsbgTitle, carsbgCreatedDate, carsbgEditedDate,
+    price, listing.year || null, carsbgEditedDate, carsbgTitle, carsbgCreatedDate, carsbgEditedDate,
     listing.images?.length || 0,
     listing.images ? JSON.stringify(listing.images) : null,
     now, now, isDuplicate
@@ -443,16 +461,20 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           }
         } else {
           // Shallow mode: extract from the card structure
-          // Each card: <a href="/offer/HEX"> containing <h5> title, <h6> price, <p> specs
+          // Each card is an outer .offer cell with:
+          // - overline date line above the link
+          // - <a href="/offer/..."> containing media + price + make/model + specs/description divs
           const cards = await page.evaluate(() => {
             const results: {
               url: string; title: string; dateText: string; priceText: string; specsText: string; thumb: string;
             }[] = [];
 
-            const offerLinks = document.querySelectorAll('#listContainer a[href*="/offer/"]');
+            const offerCards = document.querySelectorAll('#listContainer .offer');
             const seen = new Set<string>();
 
-            for (const a of offerLinks) {
+            for (const card of offerCards) {
+              const a = card.querySelector('a[href*="/offer/"]');
+              if (!a) continue;
               const href = (a as HTMLAnchorElement).href;
               if (seen.has(href) || !href.includes('/offer/')) continue;
               seen.add(href);
@@ -462,21 +484,64 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               const title = h5?.textContent?.trim() || '';
               if (!title) continue;
 
-              const h6s = a.querySelectorAll('h6');
-              const dateText = h6s[0]?.textContent?.trim() || '';
+              const dateNode = card.querySelector('.card__subtitle');
+              const dateText = dateNode?.textContent?.replace(/\s+/g, ' ').trim() || '';
 
               // Price block contains both EUR and BGN; take the whole text and parse EUR later.
               const priceNode = a.querySelector('.price');
               const priceText = priceNode?.textContent?.trim() || '';
 
-              // Specs from first <p> (second <p> is description snippet)
-              const firstP = a.querySelector('p');
-              const specsText = firstP?.textContent?.trim() || '';
+              // Specs are in the first body1 secondary block; body2 is the description snippet.
+              const specsNode = a.querySelector('.card__secondary.mdc-typography--body1');
+              const specsText = specsNode?.textContent?.replace(/\s+/g, ' ').trim() || '';
 
-              // List cards use a CSS background-image rather than an <img>.
-              const media = a.querySelector('.mdc-card__media') as HTMLElement | null;
-              const bg = media?.style.backgroundImage || '';
-              const thumb = bg.match(/url\(["']?(.*?)["']?\)/)?.[1] || '';
+              let thumb = '';
+              const img = a.querySelector('img') as HTMLImageElement | null;
+              const imgCandidates = [
+                img?.currentSrc,
+                img?.src,
+                img?.getAttribute('src'),
+                img?.getAttribute('data-src'),
+                img?.getAttribute('data-lazy'),
+                img?.getAttribute('data-original'),
+              ];
+              for (const candidate of imgCandidates) {
+                if (!candidate) continue;
+                try {
+                  thumb = new URL(candidate, location.href).href;
+                } catch {
+                  thumb = candidate;
+                }
+                if (thumb) break;
+              }
+
+              if (!thumb) {
+                const bgElements = [
+                  a.querySelector('.mdc-card__media') as HTMLElement | null,
+                  a.querySelector('[style*="background-image"]') as HTMLElement | null,
+                  a as HTMLElement,
+                ].filter(Boolean) as HTMLElement[];
+
+                for (const element of bgElements) {
+                  const bgCandidates = [
+                    element.style.backgroundImage,
+                    element.getAttribute('style') || '',
+                    getComputedStyle(element).backgroundImage,
+                  ];
+                  for (const candidate of bgCandidates) {
+                    const match = candidate.match(/url\(["']?(.*?)["']?\)/i);
+                    const raw = match?.[1];
+                    if (!raw) continue;
+                    try {
+                      thumb = new URL(raw, location.href).href;
+                    } catch {
+                      thumb = raw;
+                    }
+                    if (thumb) break;
+                  }
+                  if (thumb) break;
+                }
+              }
 
               results.push({ url: href, title, dateText, priceText, specsText, thumb });
             }

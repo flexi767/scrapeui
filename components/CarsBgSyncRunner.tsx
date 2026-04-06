@@ -10,7 +10,7 @@ type StreamEntry =
   | { type: 'dealer'; dealer: string; message?: string }
   | { type: 'summary'; dealer: string; missing: number; diffs: number; stale: number; dryRun: boolean }
   | { type: 'listing'; dealer: string; action: 'missing'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; price: number | null; url: string | null }
-  | { type: 'diff'; dealer: string; action: 'price'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; oldPrice: number | null; newPrice: number | null; url: string | null }
+  | { type: 'diff'; dealer: string; action: 'price'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; oldPrice: number | null; newPrice: number | null; priceDiff?: boolean; titleDiff?: boolean; descriptionDiff?: boolean; url: string | null }
   | { type: 'stale'; dealer: string; carsId: string | null }
   | { type: 'done'; dealer: string; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number }
   | { type: 'end'; dryRun: boolean; missing: number; diffs: number; stale: number; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number; message?: string }
@@ -38,6 +38,9 @@ interface DiffItem {
   title: string | null;
   oldPrice: number | null;
   newPrice: number | null;
+  priceDiff?: boolean;
+  titleDiff?: boolean;
+  descriptionDiff?: boolean;
   url: string | null;
 }
 
@@ -236,6 +239,9 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 title: event.title,
                 oldPrice: event.oldPrice,
                 newPrice: event.newPrice,
+                priceDiff: event.priceDiff,
+                titleDiff: event.titleDiff,
+                descriptionDiff: event.descriptionDiff,
                 url: event.url,
               }]);
               continue;
@@ -510,12 +516,25 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                     {item.dealer}
                     {item.mobileId ? ` • mobile.bg #${item.mobileId}` : ''}
                   </div>
-                  <div className="mt-1 text-xs">
-                    <span className="text-gray-500">cars.bg:</span>{' '}
-                    <span className="text-gray-300">{formatPrice(item.oldPrice)}</span>
-                    <span className="mx-1 text-gray-600">→</span>
-                    <span className="text-white">{formatPrice(item.newPrice)}</span>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
+                    {item.priceDiff && (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">price</span>
+                    )}
+                    {item.titleDiff && (
+                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-200">title</span>
+                    )}
+                    {item.descriptionDiff && (
+                      <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-violet-200">description</span>
+                    )}
                   </div>
+                  {item.priceDiff && (
+                    <div className="mt-1 text-xs">
+                      <span className="text-gray-500">cars.bg:</span>{' '}
+                      <span className="text-gray-300">{formatPrice(item.oldPrice)}</span>
+                      <span className="mx-1 text-gray-600">→</span>
+                      <span className="text-white">{formatPrice(item.newPrice)}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

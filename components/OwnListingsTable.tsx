@@ -181,12 +181,14 @@ export default function OwnListingsTable({ initialRows }: Props) {
   const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
   const [editForm, setEditForm] = useState<{
     title: string;
+    carsbg_title: string;
     current_price: number;
     vat: string;
     kaparo: number;
     ad_status: string;
   }>({
     title: '',
+    carsbg_title: '',
     current_price: 0,
     vat: '',
     kaparo: 0,
@@ -208,6 +210,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
     clearPriceSaveTimeout();
     setEditForm({
       title: row.title ?? '',
+      carsbg_title: row.carsbg_title ?? '',
       current_price: row.current_price ?? 0,
       vat: row.vat ?? '',
       kaparo: row.kaparo ?? 0,
@@ -232,6 +235,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formToSave.title,
+          carsbg_title: formToSave.carsbg_title,
           current_price: formToSave.current_price,
           vat: formToSave.vat,
           kaparo: formToSave.kaparo,
@@ -447,18 +451,44 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 {/* Title */}
                 <td className="px-2 py-1.5 max-w-[200px]">
                   {editing ? (
-                    <textarea
-                      rows={2}
-                      value={editForm.title}
-                      onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      onClick={stopEditorPointerPropagation}
-                      onMouseDown={stopEditorPointerPropagation}
-                      onPointerDown={stopEditorPointerPropagation}
-                      onKeyDown={handleEditorKeyDown}
-                      className="min-h-12 w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white resize-y"
-                    />
+                    <div className="space-y-2">
+                      <textarea
+                        rows={2}
+                        value={editForm.title}
+                        onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                        onClick={stopEditorPointerPropagation}
+                        onMouseDown={stopEditorPointerPropagation}
+                        onPointerDown={stopEditorPointerPropagation}
+                        onKeyDown={handleEditorKeyDown}
+                        className="min-h-12 w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white resize-y"
+                      />
+                      <div>
+                        <input
+                          type="text"
+                          maxLength={15}
+                          value={editForm.carsbg_title}
+                          onChange={e => setEditForm(f => ({ ...f, carsbg_title: e.target.value.slice(0, 15) }))}
+                          onClick={stopEditorPointerPropagation}
+                          onMouseDown={stopEditorPointerPropagation}
+                          onPointerDown={stopEditorPointerPropagation}
+                          onKeyDown={handleEditorKeyDown}
+                          placeholder="cars.bg title"
+                          className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white"
+                        />
+                        <div className="mt-1 text-right text-[10px] text-gray-500">
+                          {editForm.carsbg_title.length}/15
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <span className="block whitespace-normal break-words text-xs text-gray-400">{row.title}</span>
+                    <div>
+                      <span className="block whitespace-normal break-words text-xs text-gray-400">{row.title}</span>
+                      {row.carsbg_title && (
+                        <span className="mt-1 block whitespace-normal break-words text-[11px] text-gray-500">
+                          {row.carsbg_title}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </td>
 

@@ -35,6 +35,7 @@ interface SyncListingRow {
   dealer_id: number;
   url: string | null;
   title: string | null;
+  carsbg_title: string | null;
   make: string | null;
   model: string | null;
   reg_month: string | null;
@@ -78,6 +79,7 @@ export interface CarsBgSyncListing {
   carsId: string | null;
   url: string;
   title: string;
+  carsbgTitle: string | null;
   fullTitle: string;
   make: string | null;
   model: string | null;
@@ -102,6 +104,8 @@ interface CarsBgDiff {
   mobileBg: CarsBgSyncListing;
   carsBg: CarsBgSyncListing;
   priceDiff: boolean;
+  titleDiff: boolean;
+  descriptionDiff: boolean;
 }
 
 interface CarsBgSyncPlan {
@@ -686,6 +690,7 @@ function mapRowToSyncListing(db: Database.Database, row: SyncListingRow): CarsBg
     carsId: row.cars_id,
     url: row.url || '',
     title,
+    carsbgTitle: row.carsbg_title || null,
     fullTitle: makeFullTitle(row) || title,
     make: row.make,
     model: row.model,
@@ -711,6 +716,7 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
   const rows = db.prepare(`
     SELECT
       id, mobile_id, cars_id, dealer_id, url, title, make, model, reg_month, reg_year, fuel,
+      carsbg_title,
       body_type, transmission, color, power, mileage, description, extras_json,
       ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded,
       (
@@ -734,6 +740,7 @@ function loadDealerCarsListings(db: Database.Database, dealerId: number): CarsBg
   const rows = db.prepare(`
     SELECT
       id, mobile_id, cars_id, dealer_id, url, title, make, model, reg_month, reg_year, fuel,
+      carsbg_title,
       body_type, transmission, color, power, mileage, description, extras_json,
       ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded
     FROM listings
@@ -788,11 +795,10 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
         }
 
         if (mobileListing.price.amount != null && carsListing.price.amount != null) {
-          if (Number(mobileListing.price.amount) === Number(carsListing.price.amount)) score += 4;
+          if (Number(mobileListing.price.amount) === Number(carsListing.price.amount)) score += 2;
           else {
             const priceDiff = Math.abs(Number(mobileListing.price.amount) - Number(carsListing.price.amount));
-            if (priceDiff <= 500) score += 3;
-            else if (priceDiff <= 2000) score += 1;
+            if (priceDiff <= 500) score += 1;
           }
         }
 
@@ -818,12 +824,12 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
           if (mobileListing.category === carsListing.category) score += 1;
         }
 
-        score += Math.min(3, titleOverlapScore(mobileListing.fullTitle, carsListing.fullTitle));
+        score += Math.min(1, titleOverlapScore(mobileListing.fullTitle, carsListing.fullTitle));
 
         if (!best || score > best.score) best = { listing: carsListing, score };
       }
 
-      if (best && best.score >= 5) {
+      if (best && best.score >= 4) {
         match = best.listing;
         matchedCars.add(match.id);
       }
@@ -837,8 +843,22 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
     const priceDiff = mobileListing.price.amount != null
       && match.price.amount != null
       && Number(mobileListing.price.amount) !== Number(match.price.amount);
+    const targetTitle = getCarsBgTitleValue(mobileListing);
+    const titleDiff = Boolean(
+      targetTitle &&
+      normalizeLabel(targetTitle) !== normalizeLabel(match.title),
+    );
+    const targetDescription = normalizeCompareText(mobileListing.description);
+    const currentDescription = normalizeCompareText(match.description);
+    const descriptionDiff = Boolean(
+      targetDescription &&
+      currentDescription &&
+      targetDescription !== currentDescription,
+    );
 
-    if (priceDiff) diffs.push({ mobileBg: mobileListing, carsBg: match, priceDiff });
+    if (priceDiff || titleDiff || descriptionDiff) {
+      diffs.push({ mobileBg: mobileListing, carsBg: match, priceDiff, titleDiff, descriptionDiff });
+    }
   }
 
   return {
@@ -913,6 +933,71 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
   return !errorText && (persistedValue === String(newPrice) || bodyText.includes(String(newPrice)) || navigatedAway);
 }
 
+function getCarsBgTitleValue(listing: CarsBgSyncListing): string {
+  return (listing.carsbgTitle || listing.title || listing.fullTitle || '').trim();
+}
+
+export async function updateListingContent(page: Page, offerUrlOrId: string, listing: CarsBgSyncListing): Promise<boolean> {
+  const offerId = extractOfferId(offerUrlOrId);
+  if (!offerId) return false;
+
+  await page.goto(buildCarsBgEditUrl(offerId), { waitUntil: 'domcontentloaded' });
+  await prepareCarsBgPage(page);
+
+  const targetTitle = getCarsBgTitleValue(listing);
+  const notes = listing.description || listing.fullTitle;
+
+  const titleInput = page.locator('#engine, input[name="engine"], input[id*="engine"]').first();
+  if (targetTitle && await titleInput.count()) {
+    await titleInput.fill('');
+    await titleInput.type(targetTitle, { delay: 20 });
+  }
+
+  const notesInput = page.locator('#notes, textarea[name="notes"], textarea[id*="notes"]').first();
+  if (notes && await notesInput.count()) {
+    await notesInput.fill('');
+    await notesInput.type(notes.slice(0, 32000), { delay: 5 });
+  }
+
+  const submitSelectors = [
+    '#publishBtn',
+    'button[type="submit"]',
+    'input[type="submit"]',
+    'a.btn-thick',
+    'button:has-text("Запази")',
+    'button:has-text("Промени")',
+  ];
+
+  let clicked = false;
+  for (const selector of submitSelectors) {
+    const button = page.locator(selector).first();
+    if (await button.count()) {
+      await button.click().catch(() => {});
+      clicked = true;
+      break;
+    }
+  }
+
+  if (!clicked) {
+    await page.locator('form').first().evaluate((form) => form.submit()).catch(() => {});
+  }
+
+  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.waitForTimeout(1500);
+
+  const errorText = await page.$$eval('.error', (nodes) => nodes.map((node) => node.textContent?.trim()).filter(Boolean).join(' | ')).catch(() => '');
+  const persistedTitle = await titleInput.inputValue().catch(() => '');
+  const persistedNotes = await notesInput.inputValue().catch(() => '');
+  const bodyText = await page.textContent('body').catch(() => '');
+  const navigatedAway = !page.url().includes('editcar.php');
+
+  return !errorText && (
+    navigatedAway ||
+    (targetTitle ? normalizeLabel(persistedTitle) === normalizeLabel(targetTitle) : true) &&
+    (notes ? normalizeCompareText(persistedNotes).includes(normalizeCompareText(notes).slice(0, 32)) || normalizeCompareText(bodyText).includes(normalizeCompareText(notes).slice(0, 32)) : true)
+  );
+}
+
 export async function createListing(page: Page, listing: CarsBgSyncListing, dealerSlug: string): Promise<{ success: boolean; url?: string; offerId?: string | null }> {
   if (!optionSets) return { success: false };
   if (!listing.price.amount) return { success: false };
@@ -942,8 +1027,7 @@ export async function createListing(page: Page, listing: CarsBgSyncListing, deal
   const category = mapCategory(listing.category);
   if (category) await selectRadio(page, 'categoryId', category.id);
 
-  const modificationHint = listing.fullTitle.split(' ').slice(1, 3).join(' ');
-  await fillInput(page, '#engine', modificationHint);
+  await fillInput(page, '#engine', getCarsBgTitleValue(listing));
   await fillInput(page, '#price', listing.price.amount);
   await selectRadio(page, 'currencyId', currencyIdFromCode(listing.price.currency));
 
@@ -1025,7 +1109,7 @@ export async function syncCarsBgDealer(
   const logger = options?.logger ?? (() => {});
   const plan = await planCarsBgDealerSync(db, dealer);
 
-  logger(`Cars.bg sync plan for ${dealer.slug}: ${plan.missing.length} missing, ${plan.diffs.length} price diffs, ${plan.staleCarsIds.length} stale`);
+  logger(`Cars.bg sync plan for ${dealer.slug}: ${plan.missing.length} missing, ${plan.diffs.length} diffs, ${plan.staleCarsIds.length} stale`);
 
   const result: CarsBgSyncDealerResult = {
     ...plan,
@@ -1056,13 +1140,26 @@ export async function syncCarsBgDealer(
 
     for (const diff of plan.diffs) {
       const targetId = diff.mobileBg.carsId || diff.carsBg.carsId || extractOfferId(diff.carsBg.url);
-      if (!targetId || diff.mobileBg.price.amount == null) {
+      if (!targetId) {
         result.failedUpdates++;
         continue;
       }
-      logger(`Updating cars.bg price for ${diff.mobileBg.fullTitle} -> €${diff.mobileBg.price.amount}`);
-      const updated = await updateListingPrice(page, targetId, diff.mobileBg.price.amount);
-      if (updated) {
+      const updateParts: string[] = [];
+      let ok = true;
+      if (diff.priceDiff && diff.mobileBg.price.amount != null) {
+        updateParts.push(`price €${diff.carsBg.price.amount ?? '—'} -> €${diff.mobileBg.price.amount}`);
+        ok = ok && await updateListingPrice(page, targetId, diff.mobileBg.price.amount);
+      }
+      if (diff.titleDiff || diff.descriptionDiff) {
+        const changedFields = [
+          diff.titleDiff ? 'title' : null,
+          diff.descriptionDiff ? 'description' : null,
+        ].filter(Boolean).join('/');
+        updateParts.push(changedFields);
+        ok = ok && await updateListingContent(page, targetId, diff.mobileBg);
+      }
+      logger(`Updating cars.bg ${updateParts.join(', ')} for ${diff.mobileBg.fullTitle}`);
+      if (ok) {
         result.updated++;
       } else {
         result.failedUpdates++;

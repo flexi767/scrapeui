@@ -32,6 +32,22 @@ export async function PATCH(
     }
     const trimmedTitle = title.trim();
 
+    const carsbgTitleRaw = bodyData.carsbg_title;
+    if (typeof carsbgTitleRaw !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid cars.bg title value' },
+        { status: 400 }
+      );
+    }
+    const trimmedCarsbgTitle = carsbgTitleRaw.trim();
+    if (trimmedCarsbgTitle.length > 15) {
+      return NextResponse.json(
+        { error: 'cars.bg title must be 15 characters or fewer' },
+        { status: 400 }
+      );
+    }
+    const carsbgTitleForDb = trimmedCarsbgTitle || null;
+
     // Validate current_price
     const currentPrice = bodyData.current_price;
     if (
@@ -103,6 +119,7 @@ export async function PATCH(
 
     const nothingChanged =
       trimmedTitle === (listing.title ?? '').trim() &&
+      carsbgTitleForDb === (listing.carsbg_title ?? null) &&
       currentPrice === (listing.current_price ?? 0) &&
       vatForDb === (listing.vat ?? null) &&
       kaparo === (listing.kaparo ?? 0) &&
@@ -110,6 +127,28 @@ export async function PATCH(
 
     if (nothingChanged) {
       return NextResponse.json(listing);
+    }
+
+    if (carsbgTitleForDb !== (listing.carsbg_title ?? null)) {
+      raw
+        .prepare(
+          `UPDATE listings
+           SET carsbg_title = ?
+           WHERE mobile_id = ?`
+        )
+        .run(carsbgTitleForDb, mobileId);
+    }
+
+    const mobileFieldsChanged =
+      trimmedTitle !== (listing.title ?? '').trim() ||
+      currentPrice !== (listing.current_price ?? 0) ||
+      vatForDb !== (listing.vat ?? null) ||
+      kaparo !== (listing.kaparo ?? 0) ||
+      adStatus !== (listing.ad_status ?? 'none');
+
+    if (!mobileFieldsChanged) {
+      const updatedListing = getOwnListingByMobileId(mobileId);
+      return NextResponse.json(updatedListing);
     }
 
     raw

@@ -131,6 +131,9 @@ async function main() {
           title: diff.mobileBg.title,
           oldPrice: diff.carsBg.price.amount,
           newPrice: diff.mobileBg.price.amount,
+          priceDiff: diff.priceDiff,
+          titleDiff: diff.titleDiff,
+          descriptionDiff: diff.descriptionDiff,
           url: diff.carsBg.url || diff.mobileBg.url,
         });
       }
