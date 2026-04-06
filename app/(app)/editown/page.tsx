@@ -116,25 +116,15 @@ export default async function EditOwnPage({
               priceRange={getPriceRange()}
               basePath="/editown"
               showPageLinks={false}
+              syncHref={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
+              syncLabel={dirtyCount > 0 ? `Sync (${dirtyCount})` : 'Sync'}
+              syncActive={dirtyCount > 0}
             />
           </Suspense>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-4">
-        <div className="mb-3 flex justify-end gap-2">
-          <Link
-            href={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
-            className={`rounded border px-3 py-1.5 text-xs font-medium ${
-              dirtyCount > 0
-                ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/15'
-                : 'border-gray-700 text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            Sync all{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
-          </Link>
-        </div>
-
         <OwnListingsTable key={currentParams.toString()} initialRows={rows} />
 
         {/* Pagination */}

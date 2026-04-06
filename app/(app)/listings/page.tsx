@@ -4,7 +4,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -263,7 +263,7 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Make + Model */}
-                    <td className="px-3 py-1">
+                    <td className="px-2 py-1.5 whitespace-nowrap">
                       {row.make ? (
                         <Link
                           href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make]]).toString()}`}
@@ -271,7 +271,7 @@ export default async function ListingsPage({
                         >
                           {row.make}
                         </Link>
-                      ) : <div className="font-medium text-gray-200">—</div>}
+                      ) : <div className="font-medium text-white">—</div>}
                       {row.model ? (
                         <Link
                           href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make ?? ''], ['model', row.model]]).toString()}`}
@@ -283,26 +283,26 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Title */}
-                    <td className="max-w-xs px-3 py-1">
+                    <td className="max-w-[200px] px-2 py-1.5">
                       <Link
                         href={`/listings/${listingSlug}`}
-                        className="line-clamp-2 text-white no-underline hover:text-white hover:no-underline"
+                        className="block whitespace-normal break-words text-xs text-gray-400 no-underline hover:text-gray-400 hover:no-underline"
                       >
                         {row.title}
                       </Link>
                     </td>
 
                     {/* Dealer */}
-                    <td className="px-3 py-1">
+                    <td className="px-2 py-1.5 text-gray-400">
                       <div className="flex items-center gap-1.5">
                         {row.dealer_slug ? (
                           <Link
                             href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
-                            className="text-white no-underline hover:text-white hover:no-underline"
+                            className="whitespace-nowrap text-gray-400 no-underline hover:text-white hover:no-underline"
                           >
                             {row.dealer_name ?? '—'}
                           </Link>
-                        ) : <span className="text-gray-300">{row.dealer_name ?? '—'}</span>}
+                        ) : <span className="whitespace-nowrap text-gray-400">{row.dealer_name ?? '—'}</span>}
                         {row.source === 'c' && (
                           <span className="rounded bg-purple-900/70 px-1 py-0.5 text-[10px] text-purple-200">cars</span>
                         )}
@@ -362,8 +362,10 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Last Edit */}
-                    <td className="px-3 py-1 text-right text-xs text-gray-400">
-                      {formatDate(row.last_edit)}
+                    <td className="w-20 px-2 py-1 text-right text-xs text-gray-400">
+                      <span className="inline-block whitespace-pre-line leading-tight">
+                        {formatDate(row.last_edit).replace(/,\s+/, '\n')}
+                      </span>
                     </td>
 
                     {/* New */}
@@ -407,8 +409,8 @@ export default async function ListingsPage({
                       ) : null}
                     </td>
                     {/* Mileage */}
-                    <td className="px-3 py-1 text-right text-gray-300">
-                      {formatMileage(row.mileage)}
+                    <td className="px-2 py-1.5 text-right text-gray-400 text-xs whitespace-nowrap">
+                      {row.mileage != null ? row.mileage.toLocaleString('en-US') : '—'}
                     </td>
                   </tr>
                 );

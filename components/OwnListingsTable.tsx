@@ -614,8 +614,10 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 </td>
 
                 {/* Last Edit */}
-                <td className="px-2 py-1.5 text-gray-400 whitespace-nowrap text-xs">
-                  {formatDate(row.last_edit)}
+                <td className="w-20 px-2 py-1.5 text-right text-xs text-gray-400">
+                  <span className="inline-block whitespace-pre-line leading-tight">
+                    {formatDate(row.last_edit).replace(/,\s+/, '\n')}
+                  </span>
                 </td>
 
                 {/* New */}

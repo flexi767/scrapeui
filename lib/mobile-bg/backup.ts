@@ -5,6 +5,7 @@ import { chromium, type Page } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
+import { captureEditFormSnapshotWithPage } from '@/lib/mobile-bg/edit-form-capture';
 import type { VatValue } from '@/lib/vat';
 
 export interface DealerBackupConfig {
@@ -199,6 +200,14 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
   await page.waitForTimeout(1200);
 
   const data = await page.evaluate(() => {
+    const normalizeCategoryValue = (value: string | null) => {
+      if (!value) return null;
+      return value
+        .split(/\r?\n/)[0]
+        .replace(/\s+(Пробег|Цвят|Скоростна кутия|Двигател|Мощност|Кубатура).*$/i, '')
+        .trim() || null;
+    };
+
     const body = document.body.innerText;
     const title = document.querySelector('h1')?.textContent?.trim() || '';
     const priceMatch = body.match(/([\d\s.,]+)\s*€/);
@@ -228,12 +237,7 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     const transmission = extract(/Скоростна кутия\s+(\S+)/);
     const categoryFromTechData = readTechDataValue('Категория');
     const categoryRaw = categoryFromTechData || extract(/Категория\s+(.+?)(?:\n|Пробег|Цвят|$)/);
-    const category = categoryRaw
-      ? categoryRaw
-        .replace(/\s+Пробег.*$/i, '')
-        .replace(/\s+Цвят.*$/i, '')
-        .trim()
-      : null;
+    const category = normalizeCategoryValue(categoryRaw);
     const mileageFromTechData = readTechDataValue('Пробег');
     const mileageMatch = (mileageFromTechData || body).match(/([\d\s]+)\s*км/);
     const mileage = mileageMatch ? mileageMatch[1].replace(/\s/g, '').trim() : null;
@@ -583,6 +587,18 @@ export async function backupDealerToDb(
       const { backupId, action } = upsertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
+      try {
+        await captureEditFormSnapshotWithPage(db, dealer, detail.mobileId, dbPath, page, {
+          backupId,
+        });
+      } catch (error) {
+        onProgress?.({
+          type: 'status',
+          dealer: dealer.name,
+          runId,
+          message: `Could not capture edit-form values for ${detail.mobileId}: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
       imageCount += savedImages.length;
       onProgress?.({
         type: 'listing',

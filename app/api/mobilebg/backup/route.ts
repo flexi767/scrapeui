@@ -14,22 +14,27 @@ interface DealerRow {
 }
 
 export async function POST(req: NextRequest) {
-  const { dealerSlug } = await req.json() as { dealerSlug?: string };
-  if (!dealerSlug) return NextResponse.json({ error: 'dealerSlug required' }, { status: 400 });
-
-  const dealer = raw.prepare(`
-    SELECT id, slug, name, mobile_url, mobile_user, mobile_password
-    FROM dealers
-    WHERE slug = ?
-  `).get(dealerSlug) as DealerRow | undefined;
-
-  if (!dealer || !dealer.mobile_url || !dealer.mobile_user || !dealer.mobile_password) {
-    return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
+  const body = await req.json() as { dealerSlug?: string; dealerSlugs?: string[] };
+  const requestedSlugs = Array.isArray(body.dealerSlugs)
+    ? body.dealerSlugs.filter(Boolean)
+    : (body.dealerSlug ? [body.dealerSlug] : []);
+  if (requestedSlugs.length === 0) {
+    return NextResponse.json({ error: 'dealerSlug or dealerSlugs required' }, { status: 400 });
   }
 
-  const mobileUrl = dealer.mobile_url;
-  const mobileUser = dealer.mobile_user;
-  const mobilePassword = dealer.mobile_password;
+  const slugsUnique = Array.from(new Set(requestedSlugs));
+  const placeholders = slugsUnique.map(() => '?').join(',');
+  const dealers = raw.prepare(`
+    SELECT id, slug, name, mobile_url, mobile_user, mobile_password
+    FROM dealers
+    WHERE slug IN (${placeholders})
+    ORDER BY name
+  `).all(...slugsUnique) as DealerRow[];
+
+  const validDealers = dealers.filter((dealer) => dealer.mobile_url && dealer.mobile_user && dealer.mobile_password);
+  if (validDealers.length === 0) {
+    return NextResponse.json({ error: 'No selected dealers with mobile.bg credentials' }, { status: 400 });
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -40,14 +45,27 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        await backupDealerToDb(raw, {
-          id: dealer.id,
-          slug: dealer.slug,
-          name: dealer.name,
-          mobileUrl,
-          mobileUser,
-          mobilePassword,
-        }, raw.name, (event) => send(event));
+        for (let i = 0; i < validDealers.length; i += 1) {
+          const dealer = validDealers[i];
+          send({ type: 'status', message: `Starting ${dealer.name} (${i + 1}/${validDealers.length})`, dealer: dealer.slug });
+          try {
+            await backupDealerToDb(raw, {
+              id: dealer.id,
+              slug: dealer.slug,
+              name: dealer.name,
+              mobileUrl: dealer.mobile_url!,
+              mobileUser: dealer.mobile_user!,
+              mobilePassword: dealer.mobile_password!,
+            }, raw.name, (event) => send(event));
+          } catch (error) {
+            send({
+              type: 'error',
+              message: `${dealer.name}: ${error instanceof Error ? error.message : String(error)}`,
+              dealer: dealer.slug,
+            });
+          }
+        }
+        send({ type: 'status', message: `Finished ${validDealers.length} dealer backup run(s)` });
       } catch (error) {
         send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
       } finally {

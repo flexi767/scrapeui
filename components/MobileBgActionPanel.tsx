@@ -35,13 +35,20 @@ interface BackupLogEntry {
 
 export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, backupId }: Props) {
   const initialDealer = useMemo(() => defaultDealerSlug || dealers[0]?.slug || '', [defaultDealerSlug, dealers]);
-  const [dealerSlug, setDealerSlug] = useState(initialDealer);
+  const [selectedDealerSlugs, setSelectedDealerSlugs] = useState<string[]>(initialDealer ? [initialDealer] : []);
   const [backupRunning, setBackupRunning] = useState(false);
   const [editRunning, setEditRunning] = useState(false);
   const [updateRunning, setUpdateRunning] = useState(false);
   const [repostRunning, setRepostRunning] = useState(false);
   const [backupLog, setBackupLog] = useState<BackupLogEntry[]>([]);
   const isDraftOnly = !mobileId;
+  const dealerSlug = selectedDealerSlugs[0] ?? '';
+
+  function toggleDealer(slug: string) {
+    setSelectedDealerSlugs((prev) => (
+      prev.includes(slug) ? prev.filter((value) => value !== slug) : [...prev, slug]
+    ));
+  }
 
   async function runAction(
     endpoint: string,
@@ -78,7 +85,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
       const res = await fetch('/api/mobilebg/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealerSlug }),
+        body: JSON.stringify({ dealerSlugs: selectedDealerSlugs }),
       });
 
       if (!res.ok || !res.body) {
@@ -135,21 +142,31 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
 
       <div className="space-y-2">
         <label className="block text-xs uppercase tracking-wide text-gray-500">Dealer</label>
-        <select
-          value={dealerSlug}
-          onChange={(e) => setDealerSlug(e.target.value)}
-          className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-        >
-          {dealers.map((dealer) => (
-            <option key={dealer.slug} value={dealer.slug}>{dealer.name}</option>
-          ))}
-        </select>
+        <div className="max-h-40 space-y-1 overflow-y-auto rounded border border-gray-600 bg-gray-800 px-3 py-2">
+          {dealers.map((dealer) => {
+            const checked = selectedDealerSlugs.includes(dealer.slug);
+            return (
+              <label key={dealer.slug} className="flex cursor-pointer items-center gap-2 text-sm text-gray-200">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleDealer(dealer.slug)}
+                  className="accent-blue-500"
+                />
+                <span>{dealer.name}</span>
+              </label>
+            );
+          })}
+        </div>
+        {selectedDealerSlugs.length > 1 ? (
+          <p className="text-xs text-amber-300">Capture/Update/Repost use a single dealer. Leave only one checked for those actions.</p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button
           onClick={runBackup}
-          disabled={!dealerSlug || backupRunning}
+          disabled={selectedDealerSlugs.length === 0 || backupRunning}
           className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {backupRunning ? 'Running backup…' : 'Run backup'}
@@ -157,7 +174,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
 
         <button
           onClick={() => mobileId && runAction('/api/mobilebg/edit-forms', { dealerSlug, mobileId }, setEditRunning, 'Edit form captured')}
-          disabled={!dealerSlug || !mobileId || editRunning}
+          disabled={!dealerSlug || selectedDealerSlugs.length !== 1 || !mobileId || editRunning}
           className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {editRunning ? 'Capturing…' : 'Capture edit form'}
@@ -165,7 +182,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
 
         <button
           onClick={() => backupId && runAction('/api/mobilebg/updates', { dealerSlug, backupId }, setUpdateRunning, 'Listing updated on mobile.bg')}
-          disabled={!dealerSlug || !backupId || !mobileId || updateRunning}
+          disabled={!dealerSlug || selectedDealerSlugs.length !== 1 || !backupId || !mobileId || updateRunning}
           className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {updateRunning ? 'Updating…' : 'Update on mobile.bg'}
@@ -178,7 +195,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
             setRepostRunning,
             isDraftOnly ? 'Listing published to mobile.bg' : 'Repost completed',
           )}
-          disabled={!dealerSlug || !backupId || repostRunning}
+          disabled={!dealerSlug || selectedDealerSlugs.length !== 1 || !backupId || repostRunning}
           className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {repostRunning ? (isDraftOnly ? 'Publishing…' : 'Reposting…') : (isDraftOnly ? 'Publish to mobile.bg' : 'Repost backup')}

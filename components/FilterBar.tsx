@@ -17,9 +17,12 @@ interface Props {
   priceRange?: { min: number; max: number } | null;
   basePath?: string;
   showPageLinks?: boolean;
+  syncHref?: string;
+  syncLabel?: string;
+  syncActive?: boolean;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel = 'Sync', syncActive = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -429,6 +432,18 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
         <span>{total.toLocaleString()} ad{total !== 1 ? 's' : ''}</span>
+        {syncHref && (
+          <a
+            href={syncHref}
+            className={`rounded border px-3 py-1.5 text-xs font-medium ${
+              syncActive
+                ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/15'
+                : 'border-gray-700 text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {syncLabel}
+          </a>
+        )}
         {showPageLinks && (
           <>
             <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Edit Own</a>

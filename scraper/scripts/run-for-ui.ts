@@ -85,6 +85,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   const transmission = normalizeTransmissionSync(listing.transmission, transmissionMap);
   const price: number | null = listing.price?.amount ?? null;
   const vat: string | null = listing.vat ?? null;
+  const views: number | null = listing.views ?? null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId) as Record<string, any> | undefined;
@@ -94,20 +95,22 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     const priceChanged = price !== null && price !== existing.current_price;
     const vatChanged = isDeep ? (vat !== existing.vat) : false;
     const lastEditChanged = isDeep ? ((listing.lastEdit || null) !== (existing.last_edit || null)) : false;
+    const viewsChanged = isDeep ? (views !== (existing.views ?? null)) : false;
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
     const titleChanged = normalizedTitle !== (existing.title || '');
     const descriptionChanged = isDeep ? ((listing.description || '') !== (existing.description || '')) : false;
 
-    if (priceChanged || vatChanged || lastEditChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged) {
+    if (priceChanged || vatChanged || lastEditChanged || viewsChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged) {
       db.prepare(`
-        INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         existing.id,
         (priceChanged || vatChanged) ? existing.current_price : null,
         (priceChanged || vatChanged) ? existing.vat : null,
         lastEditChanged ? (listing.lastEdit || null) : null,
+        viewsChanged ? views : null,
         adStatusChanged ? (listing.adStatus || 'none') : null,
         kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
         titleChanged ? (normalizedTitle || null) : null,
@@ -121,6 +124,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
         dealer: listing.dealer || null, thumb: listing.thumb || null, price,
         priceChanged, oldPrice: priceChanged ? existing.current_price : null, newPrice: priceChanged ? price : null,
         vatChanged, oldVat: vatChanged ? existing.vat : null, newVat: vatChanged ? (isDeep ? vat : existing.vat) : null,
+        viewsChanged, oldViews: viewsChanged ? (existing.views ?? null) : null, newViews: viewsChanged ? views : null,
         adStatusChanged, oldStatus: adStatusChanged ? existing.ad_status : null, newStatus: adStatusChanged ? (listing.adStatus || 'none') : null,
         kaparoChanged, titleChanged, descriptionChanged,
       });
@@ -137,7 +141,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
         fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
-        is_new = ?, last_edit = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
+        is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1
       WHERE id = ?
     `).run(
@@ -154,6 +158,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
       isDeep ? (listing.isNew ? 1 : 0) : existing.is_new,
       isDeep ? (listing.lastEdit || null) : existing.last_edit,
+      isDeep ? views : (existing.views ?? null),
       price, isDeep ? vat : (existing.vat ?? null), priceChangeDelta,
       ...imageValues, now, existing.id
     );
@@ -164,14 +169,14 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
       fuel, body_type, transmission, color, power, mileage, description, ad_status, kaparo, is_new,
-      last_edit, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
+      last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, first_seen_at, last_seen_at, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.description || null, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
-    listing.lastEdit || null, price, vat, listing.imageCount || 0,
+    listing.lastEdit || null, views, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
     listing.images?.thumbKeys ? JSON.stringify(listing.images.thumbKeys) : null,
     listing.images?.fullKeys ? JSON.stringify(listing.images.fullKeys) : null,
@@ -318,21 +323,24 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         const powerRaw = extract('Мощност');
 
         let lastEdit: string | null = null;
+        let views: number | null = null;
         let isNew = false;
         if (raw.statistikiText) {
           isNew = !raw.statistikiText.startsWith('Редактирана');
           const dateMatch = raw.statistikiText.match(/(\d{2})\.(\d{2})\.(\d{4})/);
           const timeMatch = raw.statistikiText.match(/(\d{2}:\d{2})/);
+          const viewsMatch = raw.statistikiText.match(/Прегледана:\s*(\d+)/i);
           if (dateMatch) {
             const [, dd, mm, yyyy] = dateMatch;
             lastEdit = `${yyyy}-${mm}-${dd} ${timeMatch ? timeMatch[1] : '00:00'}`;
           }
+          views = viewsMatch ? parseInt(viewsMatch[1], 10) || null : null;
         }
 
         const listing = {
           url, title: request.userData?.title || '', adStatus: request.userData?.adStatus || 'none',
           kaparo: request.userData?.kaparo || false, thumb: raw.firstThumbUrl || request.userData?.thumb || '',
-          price: { amount: priceAmount, currency: 'EUR' }, vat, lastEdit, isNew,
+          price: { amount: priceAmount, currency: 'EUR' }, vat, lastEdit, views, isNew,
           year: extract('Дата на производство'),
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'), fuel: extract('Двигател'),
