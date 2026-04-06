@@ -652,7 +652,7 @@ export async function backupDealerToDb(
         model: detail.model,
         title: detail.title || detail.sourceTitle,
         url: detail.url,
-        previewUrl: detail.imageUrls[0] || undefined,
+        previewUrl: detail.photoThumbUrls[0] || detail.imageUrls[0] || undefined,
         imageCount: savedImages.length,
         views: engagement?.views ?? null,
         watching: engagement?.watching ?? null,

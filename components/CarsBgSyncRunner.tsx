@@ -372,30 +372,30 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-6">
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Missing</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{totals.missing}</div>
+        <div className="flex flex-wrap gap-3">
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Missing</span>
+            <span className="ml-2 text-lg font-semibold text-white">{totals.missing}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Diffs</div>
-            <div className="mt-1 text-2xl font-semibold text-amber-300">{totals.diffs}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Diffs</span>
+            <span className="ml-2 text-lg font-semibold text-amber-300">{totals.diffs}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Stale</div>
-            <div className="mt-1 text-2xl font-semibold text-red-300">{totals.stale}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Stale</span>
+            <span className="ml-2 text-lg font-semibold text-red-300">{totals.stale}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Updated</div>
-            <div className="mt-1 text-2xl font-semibold text-sky-300">{totals.updated}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Updated</span>
+            <span className="ml-2 text-lg font-semibold text-sky-300">{totals.updated}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Created</div>
-            <div className="mt-1 text-2xl font-semibold text-emerald-400">{totals.created}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Created</span>
+            <span className="ml-2 text-lg font-semibold text-emerald-400">{totals.created}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Deleted</div>
-            <div className="mt-1 text-2xl font-semibold text-red-400">{totals.deleted}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Deleted</span>
+            <span className="ml-2 text-lg font-semibold text-red-400">{totals.deleted}</span>
           </div>
         </div>
 
