@@ -80,7 +80,14 @@ function cleanDescription(text: string | null): string {
   const lines = String(text).replace(/\r\n/g, '\n').split('\n');
   const start = lines.findIndex(line => line.trim() === 'Допълнителна информация');
   const trimmed = start === -1 ? lines : lines.slice(start + 4);
-  return trimmed.join('\n').trim();
+  const cleaned = trimmed.filter((line) => {
+    const normalized = line.trim().toLowerCase();
+    if (!normalized) return true;
+    if (normalized.includes('виж всички обяви в')) return false;
+    if (normalized.includes('.mobile.bg') || normalized.includes('.bazar.bg')) return false;
+    return true;
+  });
+  return cleaned.join('\n').trim();
 }
 
 function parseViewsCount(text: string | null): number | null {
