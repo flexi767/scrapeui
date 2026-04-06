@@ -101,6 +101,17 @@ export async function PATCH(
       );
     }
 
+    const nothingChanged =
+      trimmedTitle === (listing.title ?? '').trim() &&
+      currentPrice === (listing.current_price ?? 0) &&
+      vatForDb === (listing.vat ?? null) &&
+      kaparo === (listing.kaparo ?? 0) &&
+      adStatus === (listing.ad_status ?? 'none');
+
+    if (nothingChanged) {
+      return NextResponse.json(listing);
+    }
+
     raw
       .prepare(
         `UPDATE mobilebg_backups

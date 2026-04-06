@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
@@ -95,6 +96,59 @@ interface LogEntry {
   ok?: boolean;
 }
 
+function formatVatLabel(value: string | null) {
+  if (value === 'included') return 'има';
+  if (value === 'exempt') return 'няма';
+  if (value === 'excluded') return '+ДДС';
+  return '—';
+}
+
+function buildChangeRows(row: EditOwnSyncRow) {
+  const changes: Array<{ label: string; oldValue: string; newValue: string }> = [];
+
+  if ((row.source_title ?? '') !== (row.title ?? '')) {
+    changes.push({
+      label: 'Title',
+      oldValue: row.source_title || '—',
+      newValue: row.title || '—',
+    });
+  }
+
+  if ((row.source_price ?? null) !== (row.current_price ?? null)) {
+    changes.push({
+      label: 'Price',
+      oldValue: row.source_price != null ? formatPrice(row.source_price) : '—',
+      newValue: row.current_price != null ? formatPrice(row.current_price) : '—',
+    });
+  }
+
+  if ((row.source_vat ?? null) !== (row.vat ?? null)) {
+    changes.push({
+      label: 'VAT',
+      oldValue: formatVatLabel(row.source_vat),
+      newValue: formatVatLabel(row.vat),
+    });
+  }
+
+  if ((row.source_ad_status ?? 'none') !== (row.ad_status ?? 'none')) {
+    changes.push({
+      label: 'Paid',
+      oldValue: row.source_ad_status || 'none',
+      newValue: row.ad_status || 'none',
+    });
+  }
+
+  if ((row.source_kaparo ?? 0) !== (row.kaparo ?? 0)) {
+    changes.push({
+      label: 'К',
+      oldValue: row.source_kaparo === 1 ? 'К' : '—',
+      newValue: row.kaparo === 1 ? 'К' : '—',
+    });
+  }
+
+  return changes;
+}
+
 function toBatchRow(row: EditOwnSyncRow): BatchRow {
   return {
     ...row,
@@ -132,6 +186,7 @@ function labelForRow(row: Pick<BatchRow, 'make' | 'model' | 'title' | 'mobile_id
 }
 
 export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props) {
+  const router = useRouter();
   const [rows, setRows] = useState<BatchRow[]>(() => initialRows.map(toBatchRow));
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
@@ -139,6 +194,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
   const [currentLabel, setCurrentLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [doneSummary, setDoneSummary] = useState<RunStats | null>(null);
+  const [revertingId, setRevertingId] = useState<number | null>(null);
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -156,6 +212,25 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
     () => rows.filter((row) => row.runStatus === 'success' || row.runStatus === 'failed').slice().reverse().slice(0, 12),
     [rows],
   );
+
+  async function revertDraft(row: BatchRow) {
+    setRevertingId(row.backup_id);
+    try {
+      const res = await fetch(`/api/editown/sync-drafts/${row.backup_id}`, { method: 'POST' });
+      const data = await res.json().catch(() => null) as EditOwnSyncRow | { error?: string } | null;
+      if (!res.ok || !data || 'error' in data) {
+        throw new Error((data && 'error' in data ? data.error : null) || 'Failed to revert draft');
+      }
+
+      setRows((prev) => prev.map((entry) => entry.backup_id === row.backup_id ? toBatchRow(data) : entry));
+      toast.success('Draft reverted to original listing values');
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to revert draft');
+    } finally {
+      setRevertingId(null);
+    }
+  }
 
   async function run() {
     setRunning(true);
@@ -325,6 +400,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
               } else {
                 toast.error(`Synced ${event.succeeded}, ${event.failed} failed`);
               }
+              router.refresh();
               continue;
             }
           } catch {
@@ -484,20 +560,26 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
             <tr>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-left">Listing</th>
+              <th className="px-3 py-2 text-left">Changes</th>
               <th className="px-3 py-2 text-left">Dealer</th>
               <th className="px-3 py-2 text-right">Price</th>
               <th className="px-3 py-2 text-right">Updated</th>
+              <th className="px-3 py-2 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50 bg-gray-900/40">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                   No changed listings are waiting for sync.
                 </td>
               </tr>
             )}
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const changes = buildChangeRows(row);
+              const canRevert = !running && row.needs_sync === 1 && changes.length > 0;
+
+              return (
               <tr key={row.backup_id} className="align-top">
                 <td className="px-3 py-3">
                   <div className="space-y-1">
@@ -511,6 +593,26 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                   <div className="font-medium text-white">{row.make ?? '—'} {row.model ?? ''}</div>
                   <div className="text-xs text-gray-400">{row.title || '—'}</div>
                   <div className="text-[11px] text-gray-500">mobile.bg #{row.mobile_id}</div>
+                </td>
+                <td className="px-3 py-3">
+                  {changes.length > 0 ? (
+                    <div className="space-y-1 text-xs">
+                      {changes.map((change) => (
+                        <div key={change.label}>
+                          <div>
+                            <span className="text-gray-500">{change.label}:</span>{' '}
+                            <span className="text-gray-400">{change.oldValue}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">→</span>{' '}
+                            <span className="text-gray-200">{change.newValue}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-600">No pending field changes</span>
+                  )}
                 </td>
                 <td className="px-3 py-3 text-gray-300">{row.dealer_name ?? '—'}</td>
                 <td className="px-3 py-3 text-right">
@@ -526,8 +628,17 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                 <td className="px-3 py-3 text-right text-xs text-gray-400">
                   {row.completedAt ? formatDate(row.completedAt) : '—'}
                 </td>
+                <td className="px-3 py-3 text-right">
+                  <button
+                    onClick={() => void revertDraft(row)}
+                    disabled={!canRevert || revertingId === row.backup_id}
+                    className="rounded-md border border-gray-700 px-2.5 py-1 text-xs text-gray-200 hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {revertingId === row.backup_id ? 'Reverting…' : 'Revert'}
+                  </button>
+                </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

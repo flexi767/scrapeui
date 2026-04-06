@@ -175,6 +175,7 @@ export interface MobileBgRepostJobRow {
 
 export interface EditOwnSyncRow {
   backup_id: number;
+  listing_id: number;
   mobile_id: string;
   dealer_name: string | null;
   dealer_slug: string | null;
@@ -183,6 +184,13 @@ export interface EditOwnSyncRow {
   title: string | null;
   current_price: number | null;
   vat: string | null;
+  ad_status: string | null;
+  kaparo: number | null;
+  source_title: string | null;
+  source_price: number | null;
+  source_vat: string | null;
+  source_ad_status: string | null;
+  source_kaparo: number | null;
   needs_sync: number;
   last_mobile_sync_status: string | null;
   last_mobile_sync_error: string | null;
@@ -210,6 +218,28 @@ export interface ListingFilters {
   page?: number;
   limit?: number;
 }
+
+const ownVatExpr = `
+  CASE
+    WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
+    WHEN b.vat_included IN (1, '1') THEN 'included'
+    WHEN b.vat_included IN (0, '0') THEN 'exempt'
+    ELSE l.vat
+  END
+`;
+
+const ownNeedsSyncExpr = `
+  CASE
+    WHEN COALESCE(b.draft_needs_sync, 0) = 1 AND (
+      IFNULL(COALESCE(b.title, l.title), '') != IFNULL(l.title, '') OR
+      IFNULL(COALESCE(b.price_amount, l.current_price), -1) != IFNULL(l.current_price, -1) OR
+      IFNULL(${ownVatExpr}, '') != IFNULL(l.vat, '') OR
+      IFNULL(COALESCE(b.ad_status, l.ad_status), 'none') != IFNULL(l.ad_status, 'none') OR
+      IFNULL(COALESCE(b.kaparo, l.kaparo), 0) != IFNULL(l.kaparo, 0)
+    ) THEN 1
+    ELSE 0
+  END
+`;
 
 const VALID_SORT: Record<string, string> = {
   price: 'l.current_price',
@@ -454,23 +484,21 @@ export function getOwnListings(filters: ListingFilters = {}) {
       COALESCE(b.fuel, l.fuel) as fuel,
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
-      CASE
-        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
-        WHEN b.vat_included IN (1, '1') THEN 'included'
-        WHEN b.vat_included IN (0, '0') THEN 'exempt'
-        ELSE l.vat
-      END as vat,
+      ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
-      COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
         FROM listing_search_profiles sp
         WHERE sp.listing_id = l.id
       ) THEN 1 ELSE 0 END as has_saved_search_profile,
-      b.last_mobile_sync_status,
+      CASE
+        WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
+        ELSE b.last_mobile_sync_status
+      END as last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,
       b.search_checked_at,
@@ -529,23 +557,21 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       COALESCE(b.fuel, l.fuel) as fuel,
       COALESCE(b.price_amount, l.current_price) as current_price,
       l.price_change,
-      CASE
-        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
-        WHEN b.vat_included IN (1, '1') THEN 'included'
-        WHEN b.vat_included IN (0, '0') THEN 'exempt'
-        ELSE l.vat
-      END as vat,
+      ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
-      COALESCE(b.draft_needs_sync, 0) as needs_sync,
+      ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
         FROM listing_search_profiles sp
         WHERE sp.listing_id = l.id
       ) THEN 1 ELSE 0 END as has_saved_search_profile,
-      b.last_mobile_sync_status,
+      CASE
+        WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
+        ELSE b.last_mobile_sync_status
+      END as last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at,
       b.search_checked_at,
@@ -1302,6 +1328,7 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
     )
     SELECT
       b.id as backup_id,
+      l.id as listing_id,
       l.mobile_id,
       d.name as dealer_name,
       d.slug as dealer_slug,
@@ -1309,9 +1336,19 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
       COALESCE(b.model, l.model) as model,
       COALESCE(b.title, l.title) as title,
       COALESCE(b.price_amount, l.current_price) as current_price,
-      COALESCE(b.vat_included, l.vat) as vat,
-      COALESCE(b.draft_needs_sync, 0) as needs_sync,
-      b.last_mobile_sync_status,
+      ${ownVatExpr} as vat,
+      COALESCE(b.ad_status, l.ad_status) as ad_status,
+      COALESCE(b.kaparo, l.kaparo) as kaparo,
+      l.title as source_title,
+      l.current_price as source_price,
+      l.vat as source_vat,
+      l.ad_status as source_ad_status,
+      l.kaparo as source_kaparo,
+      ${ownNeedsSyncExpr} as needs_sync,
+      CASE
+        WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
+        ELSE b.last_mobile_sync_status
+      END as last_mobile_sync_status,
       b.last_mobile_sync_error,
       b.last_mobile_sync_at
     FROM ranked_backups b
@@ -1319,7 +1356,7 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
     JOIN dealers d ON d.id = b.dealer_id
     WHERE b.row_num = 1 AND d.own = 1 AND d.active = 1
     ORDER BY
-      CASE WHEN COALESCE(b.draft_needs_sync, 0) = 1 THEN 0 ELSE 1 END,
+      CASE WHEN ${ownNeedsSyncExpr} = 1 THEN 0 ELSE 1 END,
       COALESCE(b.updated_at, b.created_at) DESC,
       b.id DESC
   `).all() as EditOwnSyncRow[];

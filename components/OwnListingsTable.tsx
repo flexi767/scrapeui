@@ -1,10 +1,10 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, Clock3, RefreshCw, SearchIcon, X } from 'lucide-react';
+import { Check, RefreshCw, SearchIcon, X } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { OwnListingRow } from '@/lib/queries';
@@ -81,6 +81,10 @@ function KaparoBadge({ kaparo }: { kaparo: number }) {
   return <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-xs text-orange-200">К</span>;
 }
 
+function stopEditorPointerPropagation(e: { stopPropagation: () => void }) {
+  e.stopPropagation();
+}
+
 function StatusSymbol({
   title,
   className,
@@ -100,7 +104,77 @@ function StatusSymbol({
   );
 }
 
+function SyncStateButton({
+  row,
+  syncing,
+  onSync,
+}: {
+  row: OwnListingRow;
+  syncing: boolean;
+  onSync: () => void;
+}) {
+  if (syncing) {
+    return (
+      <button
+        disabled
+        title="Syncing…"
+        aria-label="Syncing"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-500/50 text-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        <RefreshCw className="h-3 w-3 animate-spin" />
+      </button>
+    );
+  }
+
+  if (row.last_mobile_sync_status === 'failed') {
+    return (
+      <button
+        onClick={onSync}
+        title={row.last_mobile_sync_error || 'Sync failed. Retry'}
+        aria-label="Retry sync"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 text-red-300 hover:bg-red-500/10"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    );
+  }
+
+  if (row.needs_sync === 1 || row.last_mobile_sync_status === 'pending') {
+    return (
+      <button
+        onClick={onSync}
+        title="Sync pending"
+        aria-label="Start sync"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-500/60 text-blue-200 hover:bg-blue-500/10"
+      >
+        <RefreshCw className="h-3 w-3" />
+      </button>
+    );
+  }
+
+  if (row.last_mobile_sync_status === 'success') {
+    return (
+      <StatusSymbol
+        title="Sync succeeded"
+        className="border-emerald-500/50 text-emerald-300"
+      >
+        <Check className="h-3 w-3" />
+      </StatusSymbol>
+    );
+  }
+
+  return (
+    <StatusSymbol
+      title="Up to date"
+      className="border-gray-700 text-gray-400"
+    >
+      <Check className="h-3 w-3" />
+    </StatusSymbol>
+  );
+}
+
 export default function OwnListingsTable({ initialRows }: Props) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -120,9 +194,18 @@ export default function OwnListingsTable({ initialRows }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const tableKey = searchParams.toString();
+  const priceSaveTimeoutRef = useRef<number | null>(null);
+
+  function clearPriceSaveTimeout() {
+    if (priceSaveTimeoutRef.current != null) {
+      window.clearTimeout(priceSaveTimeoutRef.current);
+      priceSaveTimeoutRef.current = null;
+    }
+  }
 
   function startEdit(row: OwnListingRow) {
     if (saving) return;
+    clearPriceSaveTimeout();
     setEditForm({
       title: row.title ?? '',
       current_price: row.current_price ?? 0,
@@ -133,28 +216,34 @@ export default function OwnListingsTable({ initialRows }: Props) {
     setEditingId(row.mobile_id);
   }
 
-  async function handleSave() {
-    if (editForm.current_price < 0) {
+  async function handleSave(options?: { closeAfterSave?: boolean; formSnapshot?: typeof editForm }) {
+    clearPriceSaveTimeout();
+    const formToSave = options?.formSnapshot ?? editForm;
+
+    if (formToSave.current_price < 0) {
       toast.error('Price must be non-negative');
       return;
     }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/listings/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: editForm.title,
-          current_price: editForm.current_price,
-          vat: editForm.vat,
-          kaparo: editForm.kaparo,
-          ad_status: editForm.ad_status,
+          title: formToSave.title,
+          current_price: formToSave.current_price,
+          vat: formToSave.vat,
+          kaparo: formToSave.kaparo,
+          ad_status: formToSave.ad_status,
         }),
       });
       if (res.ok) {
         const updated: OwnListingRow = await res.json();
         setRows(prev => prev.map(r => r.mobile_id === updated.mobile_id ? updated : r));
-        setEditingId(null);
+        if (options?.closeAfterSave) {
+          setEditingId(null);
+        }
       } else {
         const data = await res.json();
         toast.error(data.error ?? 'Save failed');
@@ -164,8 +253,13 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
-  function handleCancel() {
-    setEditingId(null);
+  function handleEditorKeyDown(e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement>) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!saving) {
+      void handleSave({ closeAfterSave: true });
+    }
   }
 
   async function handleSync(row: OwnListingRow) {
@@ -201,6 +295,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         last_mobile_sync_at: new Date().toISOString(),
       } : item));
       toast.success('Listing synced to mobile.bg');
+      router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sync failed';
       setRows((prev) => prev.map((item) => item.backup_id === row.backup_id ? {
@@ -219,7 +314,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
       <table key={tableKey} className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-            <th className="px-2 py-1.5 text-left w-28">Sync</th>
             <th className="w-16 px-3 py-1.5 text-left">Img</th>
             <th className="px-3 py-1.5 text-left">Make / Model</th>
             <th className="px-3 py-1.5 text-left">Title</th>
@@ -252,13 +346,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
             <th className="px-3 py-1.5 text-right">
               <SortHeader label="KM" sortKey="mileage" align="right" />
             </th>
-            <th className="px-2 py-1.5 text-center w-16"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={20} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={18} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -286,44 +379,44 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 onClick={!editing ? () => startEdit(row) : undefined}
                 style={{ cursor: editing ? 'default' : 'pointer' }}
               >
-                {/* Sync */}
-                <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
-                  <div className="flex flex-col items-start gap-1">
-                    {row.needs_sync === 1 ? (
-                      <button
-                        onClick={() => handleSync(row)}
-                        disabled={Boolean(syncingIds[row.backup_id])}
-                        className="rounded border border-blue-500/60 px-2 py-1 text-[11px] font-medium text-blue-200 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {syncingIds[row.backup_id] ? 'Syncing…' : 'Sync'}
-                      </button>
-                    ) : (
-                      <StatusSymbol
-                        title="Up to date"
-                        className="border-gray-700 text-gray-400"
-                      >
-                        <Check className="h-3 w-3" />
-                      </StatusSymbol>
-                    )}
-                    <SyncStatusBadge
-                      status={row.last_mobile_sync_status}
-                      error={row.last_mobile_sync_error}
-                    />
-                  </div>
-                </td>
-
                 {/* Img */}
                 <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
                   <div className="flex items-start gap-2">
+                    <div className="flex flex-col items-center gap-1">
+                      <SyncStateButton
+                        row={row}
+                        syncing={Boolean(syncingIds[row.backup_id])}
+                        onSync={() => handleSync(row)}
+                      />
+                      {editing ? (
+                        <button
+                          onClick={() => void handleSave({ closeAfterSave: true })}
+                          disabled={saving}
+                          title="Save"
+                          className="text-green-400 hover:text-green-300 disabled:opacity-50 text-base leading-none"
+                        >
+                          ✓
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(row)}
+                          disabled={saving}
+                          title="Edit"
+                          className={`text-gray-400 hover:text-white text-base leading-none ${saving ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                        >
+                          ✎
+                        </button>
+                      )}
+                    </div>
                     <ListingSearchPrefillButton listingId={row.id} />
                     {thumbSrc ? (
-                      <div className="relative inline-block" style={{ width: 40, height: 30 }}>
+                      <div className="relative inline-block w-16">
                         <ImageWithFallback
                           src={thumbSrc}
                           alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
-                          className="peer rounded object-cover"
-                          style={{ width: 40, height: 30 }}
-                          fallbackClassName="peer rounded bg-gray-800 text-gray-400"
+                          className="peer w-16 rounded object-contain"
+                          style={{ aspectRatio: '4/3' }}
+                          fallbackClassName="peer w-16 rounded bg-gray-800 text-gray-400"
                           fallbackLabel="Missing"
                         />
                         <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
@@ -337,7 +430,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                         </div>
                       </div>
                     ) : (
-                      <div style={{ width: 40, height: 30 }} className="rounded bg-gray-700" />
+                      <div className="h-12 w-16 rounded bg-gray-700" />
                     )}
                   </div>
                 </td>
@@ -351,21 +444,27 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 {/* Title */}
                 <td className="px-2 py-1.5 max-w-[200px]">
                   {editing ? (
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       value={editForm.title}
                       onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      onClick={e => e.stopPropagation()}
-                      className="w-full bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
+                      onClick={stopEditorPointerPropagation}
+                      onMouseDown={stopEditorPointerPropagation}
+                      onPointerDown={stopEditorPointerPropagation}
+                      onKeyDown={handleEditorKeyDown}
+                      className="min-h-12 w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white resize-y"
                     />
                   ) : (
-                    <span className="block whitespace-normal break-words text-gray-200">{row.title}</span>
+                    <span className="block whitespace-normal break-words text-xs text-gray-400">{row.title}</span>
                   )}
                 </td>
 
                 {/* Dealer */}
-                <td className="px-2 py-1.5 text-gray-400 whitespace-nowrap">
-                  {row.dealer_name}
+                <td className="px-2 py-1.5 text-gray-400">
+                  <div className="whitespace-nowrap">{row.dealer_name}</div>
+                  {editing && (
+                    <div className="text-[10px] text-gray-500">{editForm.title.length}</div>
+                  )}
                 </td>
 
                 {/* Ad Status */}
@@ -373,8 +472,15 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   {editing ? (
                     <select
                       value={editForm.ad_status}
-                      onChange={e => setEditForm(f => ({ ...f, ad_status: e.target.value }))}
-                      onClick={e => e.stopPropagation()}
+                      onChange={e => {
+                        const nextForm = { ...editForm, ad_status: e.target.value };
+                        setEditForm(nextForm);
+                        void handleSave({ closeAfterSave: true, formSnapshot: nextForm });
+                      }}
+                      onClick={stopEditorPointerPropagation}
+                      onMouseDown={stopEditorPointerPropagation}
+                      onPointerDown={stopEditorPointerPropagation}
+                      onKeyDown={handleEditorKeyDown}
                       className="bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
                     >
                       <option value="none">—</option>
@@ -396,9 +502,17 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       value={editForm.current_price}
                       onChange={e => {
                         const v = parseInt(e.target.value, 10);
-                        setEditForm(f => ({ ...f, current_price: isNaN(v) ? 0 : v }));
+                        const nextForm = { ...editForm, current_price: isNaN(v) ? 0 : v };
+                        setEditForm(nextForm);
+                        clearPriceSaveTimeout();
+                        priceSaveTimeoutRef.current = window.setTimeout(() => {
+                          void handleSave({ closeAfterSave: true, formSnapshot: nextForm });
+                        }, 1000);
                       }}
-                      onClick={e => e.stopPropagation()}
+                      onClick={stopEditorPointerPropagation}
+                      onMouseDown={stopEditorPointerPropagation}
+                      onPointerDown={stopEditorPointerPropagation}
+                      onKeyDown={handleEditorKeyDown}
                       className="w-24 bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm text-right"
                     />
                   ) : (
@@ -454,8 +568,15 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   {editing ? (
                     <select
                       value={editForm.vat}
-                      onChange={e => setEditForm(f => ({ ...f, vat: e.target.value }))}
-                      onClick={e => e.stopPropagation()}
+                      onChange={e => {
+                        const nextForm = { ...editForm, vat: e.target.value };
+                        setEditForm(nextForm);
+                        void handleSave({ closeAfterSave: true, formSnapshot: nextForm });
+                      }}
+                      onClick={stopEditorPointerPropagation}
+                      onMouseDown={stopEditorPointerPropagation}
+                      onPointerDown={stopEditorPointerPropagation}
+                      onKeyDown={handleEditorKeyDown}
                       className="bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
                     >
                       <option value="">—</option>
@@ -473,8 +594,15 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   {editing ? (
                     <select
                       value={editForm.kaparo}
-                      onChange={e => setEditForm(f => ({ ...f, kaparo: parseInt(e.target.value, 10) }))}
-                      onClick={e => e.stopPropagation()}
+                      onChange={e => {
+                        const nextForm = { ...editForm, kaparo: parseInt(e.target.value, 10) };
+                        setEditForm(nextForm);
+                        void handleSave({ closeAfterSave: true, formSnapshot: nextForm });
+                      }}
+                      onClick={stopEditorPointerPropagation}
+                      onMouseDown={stopEditorPointerPropagation}
+                      onPointerDown={stopEditorPointerPropagation}
+                      onKeyDown={handleEditorKeyDown}
                       className="bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
                     >
                       <option value={0}>—</option>
@@ -522,46 +650,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   {kmFormatted}
                 </td>
 
-                {/* Actions */}
-                <td className="px-2 py-1.5 text-center" onClick={e => e.stopPropagation()}>
-                  {editing ? (
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        title="Save"
-                        className="text-green-400 hover:text-green-300 disabled:opacity-50 text-base leading-none"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        disabled={saving}
-                        title="Cancel"
-                        className="text-red-400 hover:text-red-300 disabled:opacity-50 text-base leading-none"
-                      >
-                        ✗
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => startEdit(row)}
-                      disabled={saving}
-                      title="Edit"
-                      className={`text-gray-400 hover:text-white text-base leading-none ${saving ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
-                    >
-                      ✎
-                    </button>
-                  )}
-                  {!editing && row.needs_sync === 1 && (
-                    <Link
-                      href="/editown/sync"
-                      className="ml-2 text-xs text-blue-300 hover:text-blue-200"
-                    >
-                      batch
-                    </Link>
-                  )}
-                </td>
               </tr>
             );
           })}
@@ -569,36 +657,4 @@ export default function OwnListingsTable({ initialRows }: Props) {
       </table>
     </div>
   );
-}
-
-function SyncStatusBadge({ status, error }: { status: string | null; error: string | null }) {
-  if (status === 'running') {
-    return (
-      <StatusSymbol title="Sync running" className="border-amber-500/50 text-amber-300">
-        <RefreshCw className="h-3 w-3 animate-spin" />
-      </StatusSymbol>
-    );
-  }
-  if (status === 'success') {
-    return (
-      <StatusSymbol title="Last sync succeeded" className="border-emerald-500/50 text-emerald-300">
-        <Check className="h-3 w-3" />
-      </StatusSymbol>
-    );
-  }
-  if (status === 'failed') {
-    return (
-      <StatusSymbol title={error || 'Last sync failed'} className="border-red-500/50 text-red-300">
-        <X className="h-3 w-3" />
-      </StatusSymbol>
-    );
-  }
-  if (status === 'pending') {
-    return (
-      <StatusSymbol title="Sync pending" className="border-amber-500/50 text-amber-300">
-        <Clock3 className="h-3 w-3" />
-      </StatusSymbol>
-    );
-  }
-  return null;
 }

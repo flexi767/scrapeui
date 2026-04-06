@@ -204,6 +204,17 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     const priceMatch = body.match(/([\d\s.,]+)\s*€/);
     const noVat = body.includes('Не се начислява ДДС');
     const hasVat = !noVat && body.includes('начислява ДДС');
+    const readTechDataValue = (label: string) => {
+      const rows = Array.from(document.querySelectorAll('.techData .items .item'));
+      for (const row of rows) {
+        const divs = row.querySelectorAll('div');
+        if (divs.length < 2) continue;
+        if (divs[0].textContent?.trim() === label) {
+          return divs[1].textContent?.trim() || null;
+        }
+      }
+      return null;
+    };
 
     const extract = (pattern: RegExp) => {
       const match = body.match(pattern);
@@ -215,10 +226,16 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     const power = extract(/Мощност\s+([\d]+)/);
     const engine = extract(/Кубатура[^)]*\)\s*([\d]+)/);
     const transmission = extract(/Скоростна кутия\s+(\S+)/);
-    const categoryRaw = extract(/Категория\s+(\S+(?:\s+\S+)?)/);
-    // Validate category to avoid capturing mileage/other fields - only keep single words without digits
-    const category = categoryRaw && !/\d/.test(categoryRaw) ? categoryRaw.split(/\s/)[0] : categoryRaw?.split(/\s/)[0] || null;
-    const mileageMatch = body.match(/Пробег[\s\[\]км]*?([\d\s]+)\s*км/);
+    const categoryFromTechData = readTechDataValue('Категория');
+    const categoryRaw = categoryFromTechData || extract(/Категория\s+(.+?)(?:\n|Пробег|Цвят|$)/);
+    const category = categoryRaw
+      ? categoryRaw
+        .replace(/\s+Пробег.*$/i, '')
+        .replace(/\s+Цвят.*$/i, '')
+        .trim()
+      : null;
+    const mileageFromTechData = readTechDataValue('Пробег');
+    const mileageMatch = (mileageFromTechData || body).match(/([\d\s]+)\s*км/);
     const mileage = mileageMatch ? mileageMatch[1].replace(/\s/g, '').trim() : null;
     const color = extract(/Цвят\s+(\S+(?:\s+\S+)?)/);
     const descMatch = body.match(/Допълнителна информация\s*([\s\S]*?)(?:Виж всички обяви|Контакти с продавача|$)/);
