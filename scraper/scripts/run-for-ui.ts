@@ -367,21 +367,30 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           const vatText = document.querySelector('.PriceInfo')?.textContent?.trim() || '';
           const statistikiText = (document.querySelector('.statistiki') as HTMLElement)?.innerText?.trim() || '';
           const description = (document.querySelector('.moreInfo') as HTMLElement)?.innerText?.trim() || '';
-          const thumbUrls = Array.from(document.querySelectorAll('.smallPicturesGallery img')).map(img => (img as HTMLImageElement).src).filter(Boolean);
-          const fullUrls = [...new Set(
+          const thumbUrls = Array.from(document.querySelectorAll('.smallPicturesGallery img'))
+            .map((img) => (img as HTMLImageElement).src)
+            .filter(Boolean);
+          const fullUrls = Array.from(new Set(
             Array.from(document.querySelectorAll('.carouselimg, [class*=carousel] img'))
-              .map(img => (img as HTMLImageElement).src || img.getAttribute('data-src') || '')
-              .filter(s => s.includes('/big1/') && s.includes('.webp'))
-          )];
-          const parseImgUrl = (u: string) => {
-            const m = u.match(/^https?:\/\/([^/]+)\/mobile\/photosorg\/\d+\/(\d+)\/(?:big1\/)?[^_]+_([^.]+)\.webp$/);
-            return m ? { cdn: m[1], shard: m[2], key: m[3] } : null;
-          };
-          const firstThumb = thumbUrls[0] ? parseImgUrl(thumbUrls[0]) : null;
+              .map((img) => (img as HTMLImageElement).src || img.getAttribute('data-src') || '')
+              .filter((src) => src.includes('/big1/') && src.includes('.webp'))
+          ));
+          const extras = Array.from(document.querySelectorAll('.carExtri .items div'))
+            .map((el) => el.textContent?.trim() || '')
+            .filter(Boolean);
+          const parsedThumbs = thumbUrls.map((src) => {
+            const match = src.match(/^https?:\/\/([^/]+)\/mobile\/photosorg\/\d+\/(\d+)\/(?:big1\/)?[^_]+_([^.]+)\.webp$/);
+            return match ? { cdn: match[1], shard: match[2], key: match[3] } : null;
+          });
+          const parsedFull = fullUrls.map((src) => {
+            const match = src.match(/^https?:\/\/([^/]+)\/mobile\/photosorg\/\d+\/(\d+)\/(?:big1\/)?[^_]+_([^.]+)\.webp$/);
+            return match ? { cdn: match[1], shard: match[2], key: match[3] } : null;
+          });
+          const firstThumb = parsedThumbs.find(Boolean) || null;
           const imgMeta = firstThumb ? { cdn: firstThumb.cdn, shard: firstThumb.shard } : null;
-          const thumbKeys = thumbUrls.map(u => parseImgUrl(u)?.key).filter(Boolean) as string[];
-          const fullKeys = fullUrls.map(u => parseImgUrl(u)?.key).filter(Boolean) as string[];
-          return { priceText, vatText, bodyText: document.body.innerText.substring(0, 5000), statistikiText, description, imgMeta, thumbKeys, fullKeys, firstThumbUrl: thumbUrls[0] || '' };
+          const thumbKeys = parsedThumbs.map((item) => item?.key).filter(Boolean) as string[];
+          const fullKeys = parsedFull.map((item) => item?.key).filter(Boolean) as string[];
+          return { priceText, vatText, bodyText: document.body.innerText.substring(0, 5000), statistikiText, description, imgMeta, thumbKeys, fullKeys, firstThumbUrl: thumbUrls[0] || '', extras };
         });
 
         const euroMatch = raw.priceText.replace(/\s/g, '').match(/([\d.,]+)€/);
@@ -412,10 +421,6 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         const powerRaw = extract('Мощност');
         const vinRaw = extract('VIN номер');
         const euronormRaw = extract('Евростандарт');
-        const extras = Array.from(document.querySelectorAll('.carExtri .items div'))
-          .map((el) => el.textContent?.trim() || '')
-          .filter(Boolean);
-
         let lastEdit: string | null = null;
         let views: number | null = null;
         let isNew = false;
@@ -440,7 +445,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           color: extract('Цвят'), fuel: extract('Двигател'),
           vin: vinRaw ? vinRaw.split(/\s+/)[0] : null,
           euronorm: euronormRaw ? parseInt(euronormRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
-          extras,
+          extras: raw.extras,
           bodyType: extractSingleWord('Категория'), transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           description: cleanDescription(raw.description),

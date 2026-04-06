@@ -297,7 +297,7 @@ export default async function ListingsPage({
                     <td className="max-w-[200px] px-2 py-1.5">
                       <Link
                         href={`/listings/${listingSlug}`}
-                        className="block whitespace-normal break-words text-xs text-gray-400 no-underline hover:text-gray-400 hover:no-underline"
+                        className="block whitespace-normal break-words text-xs text-gray-400 no-underline hover:text-gray-300 hover:no-underline"
                       >
                         {row.title}
                       </Link>
@@ -394,14 +394,14 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Reg Month */}
-                    <td className="px-3 py-1 text-right text-gray-300">
+                    <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
                       {row.reg_month ?? '—'}
                     </td>
 
                     {/* Reg Year */}
-                    <td className="px-3 py-1 text-right">
+                    <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
                       {row.reg_year ? (
-                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-300 hover:text-white">
+                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-400 hover:text-white">
                           {row.reg_year}
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
