@@ -240,6 +240,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const itemClass = item?.className || '';
             const priceEl = card?.querySelector('.price');
             const priceWrapText = (priceEl?.parentElement?.textContent || item?.textContent || '').trim();
+            const itemText = (item?.textContent || '').trim();
             const params = Array.from(item?.querySelectorAll('.params span') || [])
               .map(span => span.textContent?.trim() || '')
               .filter(Boolean);
@@ -261,6 +262,12 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               : null;
             const adStatus = /\bTOP\b/i.test(itemClass) ? 'TOP' : /\bVIP\b/i.test(itemClass) ? 'VIP' : 'none';
             const kaparo = !!(a.closest('.kaparo') || item?.querySelector('.kaparo') || item?.classList?.contains('kaparo'));
+            const imageCountMatch = itemText.match(/Повече детайли\s*и\s*(\d+)\s*снимк/i);
+            const imageCount = imageCountMatch
+              ? parseInt(imageCountMatch[1], 10) || 0
+              : itemText.includes('Повече детайли')
+              ? 1
+              : 0;
             const allImgs = Array.from(item?.querySelectorAll('img') || []);
             const thumbImg = allImgs.find(i => {
               const src = (i as HTMLImageElement).currentSrc || (i as HTMLImageElement).src || i.getAttribute('data-src') || i.getAttribute('data-lazy') || i.getAttribute('data-srcset') || i.getAttribute('srcset') || '';
@@ -285,6 +292,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               fuel,
               transmission,
               adStatus, kaparo,
+              imageCount,
               bodyType,
               thumb,
             };
@@ -326,13 +334,13 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               fuel: card.fuel || null,
               transmission: card.transmission || null,
               thumb: card.thumb || '', price: { amount: priceAmount, currency: 'EUR' },
-              vat, lastEdit: null, isNew: false, imageCount: 0,
+              vat, lastEdit: null, isNew: false, imageCount: card.imageCount || 0,
               images: { meta: null, thumbKeys: [], fullKeys: [] },
               scrapedAt: new Date().toISOString(), source: 'mobile.bg', dealer: dealer.slug, snapshotDate,
             };
             const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
             count++;
-            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: 0 });
+            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: card.imageCount || 0 });
           }
         }
 
