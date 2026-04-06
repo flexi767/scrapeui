@@ -83,6 +83,17 @@ function cleanDescription(text: string | null): string {
   return trimmed.join('\n').trim();
 }
 
+function parseViewsCount(text: string | null): number | null {
+  if (!text) return null;
+  const match =
+    text.match(/Прегледана:\s*([\d\s]+)/i) ||
+    text.match(/Обявата е видяна\s+([\d\s]+)\s+пъти\.?/i);
+  if (!match) return null;
+  const normalized = match[1].replace(/\s+/g, '');
+  const parsed = parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function upsertListing(db: Database.Database, dealerId: number, listing: Record<string, any>, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   const now = new Date().toISOString();
@@ -103,7 +114,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   const price: number | null = listing.price?.amount ?? null;
   const vat: string | null = listing.vat ?? null;
   const views: number | null = listing.views ?? null;
-  const hasOverviewSpecs = Boolean(listing.year || listing.mileage != null || listing.fuel || listing.bodyType || listing.transmission || listing.color || listing.vat);
+  const hasOverviewSpecs = Boolean(listing.year || listing.mileage != null || listing.fuel || listing.bodyType || listing.transmission || listing.color || listing.vat || listing.euronorm != null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId) as Record<string, any> | undefined;
@@ -126,8 +137,9 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
     const titleChanged = normalizedTitle !== (existing.title || '');
     const descriptionChanged = isDeep ? ((listing.description || '') !== (existing.description || '')) : false;
+    const trackedChange = priceChanged || vatChanged || lastEditChanged || viewsChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged;
 
-    if (priceChanged || vatChanged || lastEditChanged || viewsChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged) {
+    if (trackedChange) {
       db.prepare(`
         INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -179,7 +191,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       (isDeep || hasOverviewSpecs) && transmission ? transmission : existing.transmission,
       (isDeep || hasOverviewSpecs) && listing.color ? listing.color : existing.color,
       isDeep ? vin : (existing.vin ?? null),
-      isDeep ? euronorm : (existing.euronorm ?? null),
+      (isDeep || hasOverviewSpecs) && euronorm != null ? euronorm : (existing.euronorm ?? null),
       isDeep ? (listing.power || null) : existing.power,
       (isDeep || hasOverviewSpecs) && listing.mileage != null ? listing.mileage : existing.mileage,
       isDeep ? (listing.description || null) : existing.description,
@@ -191,7 +203,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       price, vat != null ? vat : (existing.vat ?? null), priceChangeDelta,
       ...imageValues, now, thumbSaved ? 1 : (existing.thumb_saved ?? 0), existing.id
     );
-    return { action: 'updated', snapshot: priceChanged || vatChanged, title: normalizedTitle, make, model };
+    return { action: 'updated', snapshot: trackedChange, title: normalizedTitle, make, model };
   }
 
   db.prepare(`
@@ -247,6 +259,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const transmissionOptions = ['Ръчна', 'Автоматична', 'Полуавтоматична'];
             const transmissionIndex = params.findIndex(value => transmissionOptions.includes(value));
             const year = params.find(value => /\d{4}/.test(value)) || null;
+            const euronormText = params.find(value => /(?:евро|euro)\s*\d/i.test(value)) || null;
             const mileageIndex = params.findIndex(value => /км/i.test(value));
             const mileage = mileageIndex !== -1 ? params[mileageIndex] : null;
             const color = mileageIndex !== -1 ? (params[mileageIndex + 1] || null) : null;
@@ -287,6 +300,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               priceText: priceEl?.textContent?.trim() || '',
               vatText,
               year,
+              euronormText,
               mileage,
               color,
               fuel,
@@ -330,6 +344,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               bodyType,
               color: card.color || null,
               year: card.year || null,
+              euronorm: card.euronormText ? parseInt(card.euronormText.match(/(\d+)/)?.[1] || '', 10) || null : null,
               mileage: card.mileage ? parseInt(String(card.mileage).replace(/\D/g, ''), 10) || null : null,
               fuel: card.fuel || null,
               transmission: card.transmission || null,
@@ -340,7 +355,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             };
             const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
             count++;
-            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: card.imageCount || 0 });
+            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: card.imageCount || 0, views: listing.views ?? null });
           }
         }
 
@@ -428,12 +443,11 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           isNew = !raw.statistikiText.startsWith('Редактирана');
           const dateMatch = raw.statistikiText.match(/(\d{2})\.(\d{2})\.(\d{4})/);
           const timeMatch = raw.statistikiText.match(/(\d{2}:\d{2})/);
-          const viewsMatch = raw.statistikiText.match(/Прегледана:\s*(\d+)/i);
           if (dateMatch) {
             const [, dd, mm, yyyy] = dateMatch;
             lastEdit = `${yyyy}-${mm}-${dd} ${timeMatch ? timeMatch[1] : '00:00'}`;
           }
-          views = viewsMatch ? parseInt(viewsMatch[1], 10) || null : null;
+          views = parseViewsCount(raw.statistikiText);
         }
 
         const listing = {
@@ -455,7 +469,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         };
         const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
         count++;
-        emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url, thumb: raw.firstThumbUrl || request.userData?.thumb || '', newListing: result.action === 'inserted', imageCount: raw.thumbKeys.length });
+        emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url, thumb: raw.firstThumbUrl || request.userData?.thumb || '', newListing: result.action === 'inserted', imageCount: raw.thumbKeys.length, views });
       }
     },
   });
