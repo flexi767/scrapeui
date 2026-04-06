@@ -101,6 +101,34 @@ export async function PATCH(
       );
     }
 
+    const sourceListing = raw.prepare(`
+      SELECT id, title, current_price, vat, kaparo, ad_status, carsbg_title
+      FROM listings
+      WHERE mobile_id = ?
+      LIMIT 1
+    `).get(mobileId) as {
+      id: number;
+      title: string | null;
+      current_price: number | null;
+      vat: string | null;
+      kaparo: number | null;
+      ad_status: string | null;
+      carsbg_title: string | null;
+    } | undefined;
+
+    if (!sourceListing) {
+      return NextResponse.json(
+        { error: 'Not found' },
+        { status: 404 }
+      );
+    }
+
+    const sourceAdStatus = sourceListing.ad_status ?? 'none';
+    const effectiveAdStatus =
+      adStatus === 'none' && sourceAdStatus !== 'none'
+        ? sourceAdStatus
+        : adStatus;
+
     const backup = raw.prepare(`
       SELECT b.id
       FROM mobilebg_backups b
@@ -118,18 +146,18 @@ export async function PATCH(
     }
 
     const nothingChanged =
-      trimmedTitle === (listing.title ?? '').trim() &&
-      carsbgTitleForDb === (listing.carsbg_title ?? null) &&
-      currentPrice === (listing.current_price ?? 0) &&
-      vatForDb === (listing.vat ?? null) &&
-      kaparo === (listing.kaparo ?? 0) &&
-      adStatus === (listing.ad_status ?? 'none');
+      trimmedTitle === (sourceListing.title ?? '').trim() &&
+      carsbgTitleForDb === (sourceListing.carsbg_title ?? null) &&
+      currentPrice === (sourceListing.current_price ?? 0) &&
+      vatForDb === (sourceListing.vat ?? null) &&
+      kaparo === (sourceListing.kaparo ?? 0) &&
+      effectiveAdStatus === sourceAdStatus;
 
     if (nothingChanged) {
       return NextResponse.json(listing);
     }
 
-    if (carsbgTitleForDb !== (listing.carsbg_title ?? null)) {
+    if (carsbgTitleForDb !== (sourceListing.carsbg_title ?? null)) {
       raw
         .prepare(
           `UPDATE listings
@@ -140,11 +168,11 @@ export async function PATCH(
     }
 
     const mobileFieldsChanged =
-      trimmedTitle !== (listing.title ?? '').trim() ||
-      currentPrice !== (listing.current_price ?? 0) ||
-      vatForDb !== (listing.vat ?? null) ||
-      kaparo !== (listing.kaparo ?? 0) ||
-      adStatus !== (listing.ad_status ?? 'none');
+      trimmedTitle !== (sourceListing.title ?? '').trim() ||
+      currentPrice !== (sourceListing.current_price ?? 0) ||
+      vatForDb !== (sourceListing.vat ?? null) ||
+      kaparo !== (sourceListing.kaparo ?? 0) ||
+      effectiveAdStatus !== sourceAdStatus;
 
     if (!mobileFieldsChanged) {
       const updatedListing = getOwnListingByMobileId(mobileId);
@@ -171,7 +199,7 @@ export async function PATCH(
         currentPrice,
         vatForDb,
         kaparo,
-        adStatus,
+        effectiveAdStatus,
         new Date().toISOString(),
         backup.id,
       );
