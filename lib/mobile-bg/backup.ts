@@ -42,6 +42,7 @@ interface ScrapedDetail {
   extras: Record<string, Array<{ label: string; alias: string | null }>>;
   techData: Record<string, string>;
   photoOrder: string[];
+  photoThumbUrls: string[];
   imageUrls: string[];
 }
 
@@ -137,7 +138,7 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
     };
     const toFullSizeUrl = (source: string) =>
       source
-        .replace(/(\/mobile\/photosorg\/\d+)\/\d+\/(?!big1)/, '$1/1/big1/')
+        .replace(/(\/mobile\/photosorg\/\d+)\/(\d+)\/(?!big1)/, '$1/$2/big1/')
         .replace(/\/1\/big1\/big1\//, '/1/big1/');
 
     const galleryEls = document.querySelectorAll('.smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]');
@@ -208,6 +209,14 @@ function normalizeImageUrl(value: string): string | null {
       return null;
     }
   }
+}
+
+function toMobileBgFullImageUrl(value: string): string | null {
+  const normalized = normalizeImageUrl(value);
+  if (!normalized) return null;
+  return normalized
+    .replace(/(\/mobile\/photosorg\/\d+)\/(\d+)\/(?!big1)/, '$1/$2/big1/')
+    .replace(/\/(\d+)\/big1\/big1\//, '/$1/big1/');
 }
 
 async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap | null): Promise<ScrapedDetail> {
@@ -299,6 +308,10 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
       })
       .filter((value): value is string => Boolean(value));
 
+    const photoThumbUrls = Array.from(document.querySelectorAll('.smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]'))
+      .map((el) => (el as HTMLImageElement).src || el.getAttribute('data-lazy') || el.getAttribute('data-src') || '')
+      .filter((value): value is string => Boolean(value));
+
     return {
       title,
       price: priceMatch ? priceMatch[1].replace(/\s/g, '').replace(',', '.') : null,
@@ -318,11 +331,17 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
       extras,
       techData,
       photoOrder,
+      photoThumbUrls,
     };
   });
 
-  const imageUrls = await scrapeAllImages(page);
+  const scrapedImageUrls = await scrapeAllImages(page);
   const mobileId = url.match(/obiava-(\d+)/)?.[1] || data.listingId || String(Date.now());
+  const imageUrls = scrapedImageUrls.length > 0
+    ? scrapedImageUrls
+    : data.photoThumbUrls
+      .map((thumbUrl) => toMobileBgFullImageUrl(thumbUrl))
+      .filter((value): value is string => Boolean(value));
   const cleanedTitle = data.title.replace(/\s*Обява:\s*\d+\s*$/i, '').trim();
   const parsed = parseMakeModelSync(cleanedTitle, makesMap);
 
@@ -349,6 +368,7 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     extras: data.extras,
     techData: data.techData,
     photoOrder: data.photoOrder,
+    photoThumbUrls: data.photoThumbUrls,
     imageUrls,
   };
 }

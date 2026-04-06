@@ -356,6 +356,19 @@ function mapFuel(fuelName: string | null | undefined): { id: number; label: stri
   return null;
 }
 
+function normalizeFuelFamily(fuelName: string | null | undefined): string | null {
+  const normalized = normalizeLabel(fuelName || '');
+  if (!normalized) return null;
+  if (normalized.includes('plug in') || normalized.includes('плъг ин') || normalized.includes('plug-in')) return 'plug-in hybrid';
+  if (normalized.includes('хибрид')) return 'hybrid';
+  if (normalized.includes('диз')) return 'diesel';
+  if (normalized.includes('бенз')) return 'petrol';
+  if (normalized.includes('газ')) return 'gas';
+  if (normalized.includes('метан')) return 'methane';
+  if (normalized.includes('елект')) return 'electric';
+  return normalized;
+}
+
 function mapGear(transmission: string | null | undefined): { id: number; label: string } | null {
   const normalized = normalizeLabel(transmission || '');
   if (!normalized) return null;
@@ -816,7 +829,9 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
         }
 
         if (mobileListing.fuel && carsListing.fuel) {
-          if (mobileListing.fuel === carsListing.fuel) score += 1;
+          const mobileFuelFamily = normalizeFuelFamily(mobileListing.fuel);
+          const carsFuelFamily = normalizeFuelFamily(carsListing.fuel);
+          if (mobileFuelFamily && carsFuelFamily && mobileFuelFamily === carsFuelFamily) score += 1;
           else continue;
         }
 
