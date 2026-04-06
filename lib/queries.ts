@@ -27,10 +27,12 @@ export interface ListingRow {
   dealer_name: string;
   dealer_slug: string;
   is_active: number;
+  deleted_at?: string | null;
   source: string;
 }
 
 export interface OwnListingRow extends ListingRow {
+  watching: number | null;
   needs_sync: number;
   backup_id: number;
   has_saved_search_profile: number;
@@ -365,6 +367,117 @@ export function getListings(filters: ListingFilters = {}) {
   return { data: rows, total: count, page, limit };
 }
 
+export function getDeletedListings(filters: ListingFilters = {}) {
+  const {
+    make = '',
+    model = '',
+    dealerSlugs = [],
+    years = [],
+    categories = [],
+    statuses = [],
+    vatValues = [],
+    fuels = [],
+    priceMin = null,
+    priceMax = null,
+    priceChangeMin = null,
+    priceChangeMax = null,
+    kaparo = '',
+    source = '',
+    sort = 'last_edit',
+    order = 'desc',
+    search = '',
+    page = 1,
+    limit = 50,
+  } = filters;
+
+  const wheres: string[] = ['l.is_active = 0', 'l.deleted_at IS NOT NULL', 'd.active = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
+  const params: (string | number)[] = [];
+
+  if (make) { wheres.push('l.make = ?'); params.push(make); }
+  if (model) { wheres.push('l.model = ?'); params.push(model); }
+  if (categories.length > 0) {
+    const ph = categories.map(() => '?').join(',');
+    wheres.push(`l.body_type IN (${ph})`);
+    params.push(...categories);
+  }
+  if (statuses.length > 0) {
+    const ph = statuses.map(() => '?').join(',');
+    wheres.push(`l.ad_status IN (${ph})`);
+    params.push(...statuses);
+  }
+  if (vatValues.length > 0) {
+    const includeNull = vatValues.includes('null');
+    const nonNull = vatValues.filter(v => v !== 'null');
+    const clauses: string[] = [];
+    if (nonNull.length > 0) {
+      const ph = nonNull.map(() => '?').join(',');
+      clauses.push(`l.vat IN (${ph})`);
+      params.push(...nonNull);
+    }
+    if (includeNull) clauses.push('l.vat IS NULL');
+    if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
+  }
+  if (fuels.length > 0) {
+    const ph = fuels.map(() => '?').join(',');
+    wheres.push(`l.fuel IN (${ph})`);
+    params.push(...fuels);
+  }
+  if (priceMin !== null) { wheres.push('l.current_price >= ?'); params.push(priceMin); }
+  if (priceMax !== null) { wheres.push('l.current_price <= ?'); params.push(priceMax); }
+  if (priceChangeMin !== null || priceChangeMax !== null) {
+    wheres.push('l.price_change IS NOT NULL');
+    if (priceChangeMin !== null) { wheres.push('l.price_change >= ?'); params.push(priceChangeMin); }
+    if (priceChangeMax !== null) { wheres.push('l.price_change <= ?'); params.push(priceChangeMax); }
+  }
+  if (kaparo) {
+    wheres.push('l.kaparo = ?');
+    params.push(kaparo === 'yes' ? 1 : 0);
+  }
+  if (years.length > 0) {
+    const ph = years.map(() => '?').join(',');
+    wheres.push(`l.reg_year IN (${ph})`);
+    params.push(...years);
+  }
+  if (search) {
+    wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (dealerSlugs.length > 0) {
+    const ph = dealerSlugs.map(() => '?').join(',');
+    wheres.push(`d.slug IN (${ph})`);
+    params.push(...dealerSlugs);
+  }
+  if (source) { wheres.push('l.source = ?'); params.push(source); }
+
+  const where = `WHERE ${wheres.join(' AND ')}`;
+  const sortCol = VALID_SORT[sort] ?? 'l.last_edit';
+  const sortDir = order === 'asc' ? 'ASC' : 'DESC';
+  const offset = (page - 1) * limit;
+
+  const rows = raw.prepare(`
+    SELECT
+      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
+      l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active, l.deleted_at,
+      COALESCE(l.source, 'm') as source,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    ${where}
+    ORDER BY ${sortCol} ${sortDir}
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset) as ListingRow[];
+
+  const { count } = raw.prepare(`
+    SELECT COUNT(*) as count
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    ${where}
+  `).get(...params) as { count: number };
+
+  return { data: rows, total: count, page, limit };
+}
+
 export function getOwnListings(filters: ListingFilters = {}) {
   const {
     make = '',
@@ -488,7 +601,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
-      l.last_edit, l.views, l.is_new,
+      l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
@@ -561,7 +674,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
-      l.last_edit, l.views, l.is_new,
+      l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (

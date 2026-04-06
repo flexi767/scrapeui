@@ -15,6 +15,7 @@ import { resolveCarsBgMakeModelIds } from '@/lib/cars-bg/makes-models';
 import { fetchFuelTypes, normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { fetchTransmissionTypes, normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
 import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
+import { reconcileDeletedMobileBgListings } from '@/lib/mobile-bg/reconcile-deleted';
 
 // Parse args
 const args = process.argv.slice(2);
@@ -142,7 +143,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
         fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?, description = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
-        last_seen_at = ?, is_active = 1
+        last_seen_at = ?, is_active = 1, deleted_at = NULL
       WHERE id = ?
     `).run(
       dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId,
@@ -170,8 +171,8 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
       fuel, body_type, transmission, color, power, mileage, description, ad_status, kaparo, is_new,
       last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
-      images_downloaded, first_seen_at, last_seen_at, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1)
+      images_downloaded, first_seen_at, last_seen_at, is_active, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 1, NULL)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
@@ -190,6 +191,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
   let count = 0;
   const maxPages = 20;
   const snapshotDate = new Date().toISOString().slice(0, 10);
+  const seenMobileIds = new Set<string>();
 
   const crawler = new PlaywrightCrawler({
     maxRequestRetries: 3,
@@ -231,6 +233,11 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             };
           }).filter(c => c.url.includes('/obiava-'))
         );
+
+        for (const card of cards) {
+          const mobileId = extractMobileId(card.url);
+          if (mobileId) seenMobileIds.add(mobileId);
+        }
 
         if (deepCrawl) {
           for (const card of cards) {
@@ -359,6 +366,11 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
   });
 
   await crawler.run([{ url: dealer.mobileBg, label: 'LIST' }]);
+  const reconciliation = reconcileDeletedMobileBgListings(db, dealer.id as number, seenMobileIds);
+  emit({
+    type: 'log',
+    message: `Reconciled live mobile.bg listings for ${dealer.slug}: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
+  });
   return count;
 }
 

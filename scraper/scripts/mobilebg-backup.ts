@@ -19,6 +19,7 @@ interface DealerRow {
   id: number;
   slug: string;
   name: string;
+  own: number;
   mobile_url: string | null;
   mobile_user: string | null;
   mobile_password: string | null;
@@ -28,7 +29,7 @@ async function main() {
   const dbPath = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
   const db = new Database(dbPath);
   const dealer = db.prepare(`
-    SELECT id, slug, name, mobile_url, mobile_user, mobile_password
+    SELECT id, slug, name, own, mobile_url, mobile_user, mobile_password
     FROM dealers
     WHERE slug = ?
   `).get(dealerSlug) as DealerRow | undefined;
@@ -50,6 +51,7 @@ async function main() {
     id: dealer.id,
     slug: dealer.slug,
     name: dealer.name,
+    own: dealer.own === 1,
     mobileUrl: dealer.mobile_url,
     mobileUser: dealer.mobile_user,
     mobilePassword: dealer.mobile_password,

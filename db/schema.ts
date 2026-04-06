@@ -55,6 +55,7 @@ export const listings = sqliteTable('listings', {
   firstSeenAt: text('first_seen_at'),
   lastSeenAt: text('last_seen_at'),
   isActive: integer('is_active').default(1),
+  deletedAt: text('deleted_at'),
   carsId: text('cars_id'),          // cars.bg offer ID after sync
   source: text('source').default('m'),  // 'm' = mobile.bg, 'c' = cars.bg
   duplicate: integer('duplicate').default(0), // 1 = duplicate of listing from other source

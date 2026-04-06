@@ -10,6 +10,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/listings', label: 'Listings', icon: CarIcon },
+  { href: '/listings/deleted', label: 'Deleted Listings', icon: TrashIcon, indent: true },
   { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
   { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
@@ -211,6 +212,14 @@ function LogoutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7.5h12m-9.75 0V6a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 .75.75v1.5m-9.75 0v9.75A2.25 2.25 0 0 0 9 19.5h6a2.25 2.25 0 0 0 2.25-2.25V7.5M10.5 11.25v4.5m3-4.5v4.5" />
     </svg>
   );
 }

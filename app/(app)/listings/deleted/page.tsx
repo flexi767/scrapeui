@@ -1,0 +1,222 @@
+import Link from 'next/link';
+import { Suspense } from 'react';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
+import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
+import FilterBar from '@/components/FilterBar';
+import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { buildImageList, formatDate, formatPrice, parseJson } from '@/lib/utils';
+import { getPriceWithVat } from '@/lib/vat';
+
+interface SearchParams {
+  make?: string;
+  model?: string;
+  dealer?: string | string[];
+  year?: string | string[];
+  category?: string | string[];
+  status?: string | string[];
+  vat?: string | string[];
+  fuel?: string | string[];
+  kaparo?: string;
+  p_min?: string;
+  p_max?: string;
+  pc_min?: string;
+  pc_max?: string;
+  sort?: string;
+  order?: string;
+  search?: string;
+  page?: string;
+}
+
+function AdStatusBadge({ status }: { status: string }) {
+  if (!status || status === 'none') return <span className="text-gray-600">—</span>;
+  if (status.toUpperCase() === 'TOP') return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#1a6496' }}>TOP</span>;
+  if (status.toUpperCase() === 'VIP') return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#c0392b' }}>VIP</span>;
+  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
+}
+
+function SortLink({
+  label,
+  sortKey,
+  currentSort,
+  currentOrder,
+  params,
+}: {
+  label: string;
+  sortKey: string;
+  currentSort: string;
+  currentOrder: string;
+  params: URLSearchParams;
+}) {
+  const p = new URLSearchParams(params.toString());
+  p.delete('page');
+  if (currentSort === sortKey) {
+    p.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+  } else {
+    p.set('sort', sortKey);
+    p.set('order', 'desc');
+  }
+  const arrow = currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
+  return <Link href={`/listings/deleted?${p.toString()}`} className="hover:text-white">{label}{arrow}</Link>;
+}
+
+export default async function DeletedListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+  const make = sp.make ?? '';
+  const model = sp.model ?? '';
+  const dealerSlugs = sp.dealer ? (Array.isArray(sp.dealer) ? sp.dealer : [sp.dealer]) : [];
+  const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
+  const categories = sp.category ? (Array.isArray(sp.category) ? sp.category : [sp.category]) : [];
+  const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
+  const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
+  const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
+  const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
+  const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
+  const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
+  const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
+  const kaparo = sp.kaparo ?? '';
+  const sort = sp.sort ?? 'last_edit';
+  const order = sp.order ?? 'desc';
+  const search = sp.search ?? '';
+  const page = parseInt(sp.page ?? '1', 10);
+
+  const { data: rows, total } = getDeletedListings({
+    make, model, dealerSlugs, years, categories, statuses, vatValues, fuels,
+    priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, limit: 50,
+  });
+
+  const makeModels = getMakeModels();
+  const allDealers = getAllDealers();
+  const makes = Object.keys(makeModels).sort();
+  const currentParams = new URLSearchParams();
+  for (const s of statuses) currentParams.append('status', s);
+  for (const v of vatValues) currentParams.append('vat', v);
+  for (const c of categories) currentParams.append('category', c);
+  for (const f of fuels) currentParams.append('fuel', f);
+  if (kaparo) currentParams.set('kaparo', kaparo);
+  if (make) currentParams.set('make', make);
+  if (model) currentParams.set('model', model);
+  for (const d of dealerSlugs) currentParams.append('dealer', d);
+  for (const y of years) currentParams.append('year', y);
+  if (search) currentParams.set('search', search);
+  currentParams.set('sort', sort);
+  currentParams.set('order', order);
+
+  const totalPages = Math.ceil(total / 50);
+
+  return (
+    <div className="min-h-screen bg-[#111827]">
+      <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-[1600px] px-4 py-3">
+          <Suspense>
+            <FilterBar
+              makes={makes}
+              makeModels={makeModels}
+              allDealers={allDealers}
+              allYears={getDistinctYears()}
+              allCategories={getDistinctCategories()}
+              allFuels={getDistinctFuels()}
+              total={total}
+              priceChangeRange={getPriceChangeRange()}
+              priceRange={getPriceRange()}
+              showPageLinks={false}
+            />
+          </Suspense>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1600px] px-4 py-4">
+        <div className="mb-3 text-sm text-red-300">Deleted listings</div>
+        <div className="overflow-x-auto rounded-lg border border-gray-700/60">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="w-24 px-3 py-1.5 text-left">Img</th>
+                <th className="px-3 py-1.5 text-left">Make / Model</th>
+                <th className="px-3 py-1.5 text-left">Title</th>
+                <th className="px-3 py-1.5 text-left"><SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="pl-1 pr-3 py-1.5 text-right"><SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-center">VAT</th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-right">Views</th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-right">Deleted</th>
+                <th className="px-2 py-1.5 text-center w-12">New</th>
+                <th className="px-3 py-1.5 text-right">Month</th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-center">Body Type</th>
+                <th className="px-3 py-1.5 text-center"><SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/50">
+              {rows.length === 0 && (
+                <tr><td colSpan={17} className="py-16 text-center text-gray-500">No deleted listings found</td></tr>
+              )}
+              {rows.map((row) => {
+                const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
+                const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
+                const fullKeys = parseJson<string[]>(row.full_keys, []);
+                const images = buildImageList(row.mobile_id, fullKeys.length ? fullKeys : thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
+                const thumb = images[0]?.thumb ?? null;
+                const listingSlug = row.mobile_id || row.cars_id || String(row.id);
+                return (
+                  <tr key={listingSlug} className="group bg-red-950/10 transition-colors hover:bg-red-950/20">
+                    <td className="px-3 py-1">
+                      <div className="flex items-start gap-2">
+                        <ListingSearchPrefillButton listingId={row.id} />
+                        {thumb ? (
+                          <Link href={`/listings/${listingSlug}`} className="block">
+                            <ImageWithFallback src={thumb} alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'} className="w-16 rounded object-contain" style={{ aspectRatio: '4/3' }} fallbackClassName="w-16 rounded bg-gray-800 text-gray-400" fallbackLabel="Missing" />
+                          </Link>
+                        ) : <div className="h-10 w-14 rounded bg-gray-700" />}
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">
+                      <div className="font-medium text-white">{row.make ?? '—'}</div>
+                      <div className="text-xs text-gray-400">{row.model ?? '—'}</div>
+                    </td>
+                    <td className="max-w-[200px] px-2 py-1.5">
+                      <Link href={`/listings/${listingSlug}`} className="block whitespace-normal break-words text-xs text-gray-400 no-underline hover:text-gray-300 hover:no-underline">{row.title}</Link>
+                    </td>
+                    <td className="px-2 py-1.5 text-gray-400">{row.dealer_name ?? '—'}</td>
+                    <td className="px-2 py-1 text-center"><AdStatusBadge status={row.ad_status} /></td>
+                    <td className="pl-1 pr-3 py-1 text-right">
+                      <span className="flex items-center justify-end gap-1 font-semibold text-green-400">{formatPrice(row.current_price)}</span>
+                      {getPriceWithVat(row.current_price, row.vat) != null && <div className="text-xs text-emerald-200/85">{formatPrice(getPriceWithVat(row.current_price, row.vat))}</div>}
+                    </td>
+                    <td className="px-3 py-1 text-center">
+                      {row.vat === 'included' ? <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span> : row.vat === 'exempt' ? <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span> : row.vat === 'excluded' ? <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span> : <span className="text-gray-600">—</span>}
+                    </td>
+                    <td className="px-2 py-1 text-center">{row.kaparo ? <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span> : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-3 py-1 text-right text-xs text-gray-300">{row.views != null ? row.views.toLocaleString('en-US') : '—'}</td>
+                    <td className="w-20 px-2 py-1 text-right text-xs text-gray-400"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.last_edit).replace(/,\s+/, '\n')}</span></td>
+                    <td className="w-20 px-2 py-1 text-right text-xs text-red-300"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.deleted_at).replace(/,\s+/, '\n')}</span></td>
+                    <td className="px-2 py-1 text-center">{row.is_new ? <span className="rounded-full bg-emerald-800/70 px-2 py-0.5 text-[11px] text-emerald-200">new</span> : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-3 py-1 text-right text-gray-300">{row.reg_month ?? '—'}</td>
+                    <td className="px-3 py-1 text-right text-gray-300">{row.reg_year ?? '—'}</td>
+                    <td className="px-3 py-1 text-center text-gray-300">{row.body_type ?? '—'}</td>
+                    <td className="px-3 py-1 text-center text-gray-300">{row.fuel ?? '—'}</td>
+                    <td className="px-3 py-1 text-right text-gray-300">{row.mileage != null ? row.mileage.toLocaleString('en-US') : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+            {page > 1 && <Link href={`/listings/deleted?${new URLSearchParams({ ...Object.fromEntries(currentParams.entries()), page: String(page - 1) }).toString()}`} className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800">Prev</Link>}
+            <span className="text-gray-400">Page {page} of {totalPages}</span>
+            {page < totalPages && <Link href={`/listings/deleted?${new URLSearchParams({ ...Object.fromEntries(currentParams.entries()), page: String(page + 1) }).toString()}`} className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800">Next</Link>}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

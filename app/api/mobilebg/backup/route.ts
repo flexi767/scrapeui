@@ -8,6 +8,7 @@ interface DealerRow {
   id: number;
   slug: string;
   name: string;
+  own: number;
   mobile_url: string | null;
   mobile_user: string | null;
   mobile_password: string | null;
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   const slugsUnique = Array.from(new Set(requestedSlugs));
   const placeholders = slugsUnique.map(() => '?').join(',');
   const dealers = raw.prepare(`
-    SELECT id, slug, name, mobile_url, mobile_user, mobile_password
+    SELECT id, slug, name, own, mobile_url, mobile_user, mobile_password
     FROM dealers
     WHERE slug IN (${placeholders})
     ORDER BY name
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
               id: dealer.id,
               slug: dealer.slug,
               name: dealer.name,
+              own: dealer.own === 1,
               mobileUrl: dealer.mobile_url!,
               mobileUser: dealer.mobile_user!,
               mobilePassword: dealer.mobile_password!,

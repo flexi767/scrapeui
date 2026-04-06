@@ -6,12 +6,14 @@ import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
 import { captureEditFormSnapshotWithPage } from '@/lib/mobile-bg/edit-form-capture';
+import { reconcileDeletedMobileBgListings } from '@/lib/mobile-bg/reconcile-deleted';
 import type { VatValue } from '@/lib/vat';
 
 export interface DealerBackupConfig {
   id: number;
   slug: string;
   name: string;
+  own?: boolean;
   mobileUrl: string;
   mobileUser: string;
   mobilePassword: string;
@@ -570,6 +572,9 @@ export async function backupDealerToDb(
 
     onProgress?.({ type: 'status', dealer: dealer.name, message: 'Collecting dealer listings', runId });
     const links = await collectListingLinks(page, dealer.mobileUrl);
+    const seenMobileIds = links
+      .map((link) => link.match(/obiava-(\d+)/)?.[1] || null)
+      .filter((value): value is string => Boolean(value));
     onProgress?.({
       type: 'status',
       dealer: dealer.name,
@@ -614,6 +619,16 @@ export async function backupDealerToDb(
         url: detail.url,
         previewUrl: detail.imageUrls[0] || undefined,
         imageCount: savedImages.length,
+      });
+    }
+
+    if (dealer.own) {
+      const reconciliation = reconcileDeletedMobileBgListings(db, dealer.id, seenMobileIds);
+      onProgress?.({
+        type: 'status',
+        dealer: dealer.name,
+        runId,
+        message: `Reconciled own mobile.bg listings: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
       });
     }
 
