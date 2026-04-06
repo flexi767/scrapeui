@@ -38,6 +38,7 @@ export const listings = sqliteTable('listings', {
   transmission: text('transmission'),
   color: text('color'),
   vin: text('vin'),
+  euronorm: integer('euronorm'),
   power: integer('power'),
   mileage: integer('mileage'),
   description: text('description'),

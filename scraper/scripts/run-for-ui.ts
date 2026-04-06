@@ -98,11 +98,12 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   const bodyType = normalizeBodyTypeSync(listing.bodyType, getBodyTypeMap());
   const transmission = normalizeTransmissionSync(listing.transmission, transmissionMap);
   const vin: string | null = listing.vin ?? null;
+  const euronorm: number | null = listing.euronorm ?? null;
   const extrasJson: string | null = listing.extras ? JSON.stringify(listing.extras) : null;
   const price: number | null = listing.price?.amount ?? null;
   const vat: string | null = listing.vat ?? null;
   const views: number | null = listing.views ?? null;
-  const hasOverviewSpecs = Boolean(listing.year || listing.mileage != null || listing.fuel || listing.bodyType || listing.transmission || listing.vat);
+  const hasOverviewSpecs = Boolean(listing.year || listing.mileage != null || listing.fuel || listing.bodyType || listing.transmission || listing.color || listing.vat);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE mobile_id = ?').get(mobileId) as Record<string, any> | undefined;
@@ -165,7 +166,7 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     db.prepare(`
       UPDATE listings SET
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
-        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, power = ?, mileage = ?, description = ?, extras_json = ?, ad_status = ?, kaparo = ?,
+        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, euronorm = ?, power = ?, mileage = ?, description = ?, extras_json = ?, ad_status = ?, kaparo = ?,
         is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
         last_seen_at = ?, is_active = 1, deleted_at = NULL, thumb_saved = ?
       WHERE id = ?
@@ -176,8 +177,9 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
       (isDeep || hasOverviewSpecs) && fuel ? fuel : existing.fuel,
       (isDeep || hasOverviewSpecs) && bodyType ? bodyType : (existing.body_type || bodyType || null),
       (isDeep || hasOverviewSpecs) && transmission ? transmission : existing.transmission,
-      isDeep ? (listing.color || null) : existing.color,
+      (isDeep || hasOverviewSpecs) && listing.color ? listing.color : existing.color,
       isDeep ? vin : (existing.vin ?? null),
+      isDeep ? euronorm : (existing.euronorm ?? null),
       isDeep ? (listing.power || null) : existing.power,
       (isDeep || hasOverviewSpecs) && listing.mileage != null ? listing.mileage : existing.mileage,
       isDeep ? (listing.description || null) : existing.description,
@@ -195,13 +197,13 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
   db.prepare(`
     INSERT INTO listings (
       mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
-      fuel, body_type, transmission, color, vin, power, mileage, description, extras_json, ad_status, kaparo, is_new,
+      fuel, body_type, transmission, color, vin, euronorm, power, mileage, description, extras_json, ad_status, kaparo, is_new,
       last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
       images_downloaded, thumb_saved, first_seen_at, last_seen_at, is_active, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
   `).run(
     mobileId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId, carsMakeId, carsModelId, regMonth, regYear,
-    fuel || null, bodyType || null, transmission || null, listing.color || null, vin, listing.power || null, listing.mileage || null,
+    fuel || null, bodyType || null, transmission || null, listing.color || null, vin, euronorm, listing.power || null, listing.mileage || null,
     listing.description || null, extrasJson, listing.adStatus || 'none', listing.kaparo ? 1 : 0, listing.isNew ? 1 : 0,
     listing.lastEdit || null, views, price, vat, listing.imageCount || 0,
     listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
@@ -244,7 +246,9 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const transmissionOptions = ['Ръчна', 'Автоматична', 'Полуавтоматична'];
             const transmissionIndex = params.findIndex(value => transmissionOptions.includes(value));
             const year = params.find(value => /\d{4}/.test(value)) || null;
-            const mileage = params.find(value => /км/i.test(value)) || null;
+            const mileageIndex = params.findIndex(value => /км/i.test(value));
+            const mileage = mileageIndex !== -1 ? params[mileageIndex] : null;
+            const color = mileageIndex !== -1 ? (params[mileageIndex + 1] || null) : null;
             const fuel = params.find(value => /(бенз|дизел|electric|електр|хибрид|газ|метан)/i.test(value)) || null;
             const transmission = transmissionIndex !== -1 ? params[transmissionIndex] : null;
             const bodyType = params.find(value => ['Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'].includes(value)) || (transmissionIndex !== -1 ? (params[transmissionIndex + 1] || null) : null);
@@ -277,6 +281,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
               vatText,
               year,
               mileage,
+              color,
               fuel,
               transmission,
               adStatus, kaparo,
@@ -315,6 +320,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             const listing = {
               url: card.url, title: card.title, adStatus: card.adStatus, kaparo: card.kaparo,
               bodyType,
+              color: card.color || null,
               year: card.year || null,
               mileage: card.mileage ? parseInt(String(card.mileage).replace(/\D/g, ''), 10) || null : null,
               fuel: card.fuel || null,
@@ -397,6 +403,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
         const mileageRaw = extract('Пробег \\[км\\]');
         const powerRaw = extract('Мощност');
         const vinRaw = extract('VIN номер');
+        const euronormRaw = extract('Евростандарт');
         const extras = Array.from(document.querySelectorAll('.carExtri .items div'))
           .map((el) => el.textContent?.trim() || '')
           .filter(Boolean);
@@ -424,6 +431,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
           mileage: mileageRaw ? parseInt(mileageRaw.replace(/\D/g, ''), 10) || null : null,
           color: extract('Цвят'), fuel: extract('Двигател'),
           vin: vinRaw ? vinRaw.split(/\s+/)[0] : null,
+          euronorm: euronormRaw ? parseInt(euronormRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,
           extras,
           bodyType: extractSingleWord('Категория'), transmission: extract('Скоростна кутия'),
           power: powerRaw ? parseInt(powerRaw.match(/(\d+)/)?.[1] || '', 10) || null : null,

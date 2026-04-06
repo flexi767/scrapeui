@@ -13,6 +13,7 @@ export interface ListingRow {
   fuel: string | null;
   body_type: string | null;
   vin?: string | null;
+  euronorm?: number | null;
   current_price: number;
   price_change: number | null;
   vat: string | null;
@@ -733,6 +734,7 @@ export interface DetailListing {
   fuel: string;
   color: string;
   vin: string | null;
+  euronorm: number | null;
   power: number;
   mileage: number;
   current_price: number;
