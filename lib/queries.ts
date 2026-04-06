@@ -20,6 +20,7 @@ export interface ListingRow {
   kaparo: number;
   ad_status: string;
   last_edit: string;
+  carsbg_created_date: string | null;
   views: number | null;
   is_new: number;
   thumb_keys: string;
@@ -356,7 +357,7 @@ export function getListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
+      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_created_date, l.views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
@@ -473,7 +474,7 @@ export function getDeletedListings(filters: ListingFilters = {}) {
   const rows = raw.prepare(`
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.views, l.is_new,
+      l.vin, l.current_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_created_date, l.views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active, l.deleted_at,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
@@ -623,7 +624,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
-      l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
+      l.last_edit, l.carsbg_created_date, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
@@ -696,7 +697,7 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
       ${ownVatExpr} as vat,
       COALESCE(b.kaparo, l.kaparo) as kaparo,
       COALESCE(b.ad_status, l.ad_status) as ad_status,
-      l.last_edit, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
+      l.last_edit, l.carsbg_created_date, COALESCE(b.views, l.views) as views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
@@ -742,6 +743,7 @@ export interface DetailListing {
   kaparo: number;
   ad_status: string;
   last_edit: string;
+  carsbg_created_date: string | null;
   views: number | null;
   description: string;
   url: string;

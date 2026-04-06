@@ -197,6 +197,7 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
+                <th className="px-3 py-1.5 text-right">cars.bg created</th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
                 <th className="px-3 py-1.5 text-right">Month</th>
                 <th className="px-3 py-1.5 text-right">
@@ -216,7 +217,7 @@ export default async function ListingsPage({
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="py-16 text-center text-gray-500">
+                  <td colSpan={17} className="py-16 text-center text-gray-500">
                     No listings found
                   </td>
                 </tr>
@@ -381,6 +382,13 @@ export default async function ListingsPage({
                     <td className="w-20 px-2 py-1 text-right text-xs text-gray-400">
                       <span className="inline-block whitespace-pre-line leading-tight">
                         {formatDate(row.last_edit).replace(/,\s+/, '\n')}
+                      </span>
+                    </td>
+
+                    {/* cars.bg created */}
+                    <td className="w-20 px-2 py-1 text-right text-xs text-gray-400">
+                      <span className="inline-block whitespace-pre-line leading-tight">
+                        {row.carsbg_created_date ? formatDate(row.carsbg_created_date).replace(/,\s+/, '\n') : '—'}
                       </span>
                     </td>
 

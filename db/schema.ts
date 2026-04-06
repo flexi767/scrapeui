@@ -47,6 +47,7 @@ export const listings = sqliteTable('listings', {
   kaparo: integer('kaparo'),
   isNew: integer('is_new'),
   lastEdit: text('last_edit'),
+  carsbgCreatedDate: text('carsbg_created_date'),
   views: integer('views'),
   currentPrice: integer('current_price'),
   vat: text('vat'),

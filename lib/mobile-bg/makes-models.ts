@@ -13,7 +13,12 @@ export type MakesMap = Map<string, MakeEntry>;
 const _cache = new Map<string, MakesMap>();
 
 export function normalizeMakeModelLabel(value = ''): string {
-  return String(value).toLowerCase().replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  return String(value)
+    .toLowerCase()
+    .replace(/&amp;/g, '&')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function fetchWin1251(url: string): Promise<string> {

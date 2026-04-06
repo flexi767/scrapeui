@@ -41,6 +41,35 @@ function emit(obj: object) {
   process.stdout.write(JSON.stringify(obj) + '\n');
 }
 
+interface CarsBgRunStats {
+  processed: number;
+  insertedUnique: number;
+  insertedDuplicate: number;
+  refreshedUnique: number;
+  refreshedDuplicate: number;
+  changed: number;
+  syncNeeded: number;
+}
+
+interface MobileDuplicateCandidate {
+  id: number;
+  mobile_id: string | null;
+  title: string | null;
+  reg_year: string | null;
+  mileage: number | null;
+  fuel: string | null;
+  body_type: string | null;
+  current_price: number | null;
+}
+
+interface CarsBgDuplicateProbe {
+  title?: string | null;
+  year?: string | null;
+  mileage?: number | null;
+  fuel?: string | null;
+  bodyType?: string | null;
+}
+
 function formatError(err: unknown): string {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
@@ -167,19 +196,88 @@ function parseCarsBgPriceToEur(value: string | null | undefined): number | null 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function checkDuplicate(db: Database.Database, dealerId: number, make: string | null, model: string | null, price: number | null): boolean {
-  if (!make || !model || !price) return false;
-  const row = db.prepare(
-    `SELECT id FROM listings WHERE source = 'm' AND dealer_id = ? AND make = ? AND model = ? AND current_price = ? AND is_active = 1 LIMIT 1`
-  ).get(dealerId, make, model, price);
-  return !!row;
+function parseCarsBgCreatedDateFromImageUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = String(value).match(/\/(20\d{2}-\d{2}-\d{2})_\d+\//);
+  return match ? match[1] : null;
+}
+
+function normalizeCompareText(value: string | null | undefined): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9а-я]+/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleOverlapScore(a: string | null | undefined, b: string | null | undefined): number {
+  const aTokens = new Set(normalizeCompareText(a).split(' ').filter((token) => token.length > 2));
+  const bTokens = new Set(normalizeCompareText(b).split(' ').filter((token) => token.length > 2));
+  if (aTokens.size === 0 || bTokens.size === 0) return 0;
+  let overlap = 0;
+  for (const token of aTokens) {
+    if (bTokens.has(token)) overlap++;
+  }
+  return overlap;
+}
+
+function findMatchingMobileListing(
+  db: Database.Database,
+  dealerId: number,
+  listing: CarsBgDuplicateProbe,
+  make: string | null,
+  model: string | null,
+) {
+  if (!make || !model) return null;
+  const candidates = db.prepare(`
+    SELECT id, mobile_id, title, reg_year, mileage, fuel, body_type, current_price
+    FROM listings
+    WHERE source = 'm' AND dealer_id = ? AND make = ? AND model = ? AND is_active = 1
+  `).all(dealerId, make, model) as MobileDuplicateCandidate[];
+
+  let best: { row: MobileDuplicateCandidate; score: number } | null = null;
+
+  for (const row of candidates) {
+    let score = 0;
+
+    if (listing.year && row.reg_year) {
+      if (String(listing.year) !== String(row.reg_year)) continue;
+      score += 4;
+    }
+
+    if (listing.mileage != null && row.mileage != null) {
+      const diff = Math.abs(Number(listing.mileage) - Number(row.mileage));
+      if (diff === 0) score += 5;
+      else if (diff <= 1000) score += 4;
+      else if (diff <= 5000) score += 2;
+      else continue;
+    }
+
+    if (listing.fuel && row.fuel) {
+      if (String(listing.fuel) === String(row.fuel)) score += 2;
+      else continue;
+    }
+
+    if (listing.bodyType && row.body_type) {
+      if (String(listing.bodyType) === String(row.body_type)) score += 1;
+    }
+
+    score += Math.min(3, titleOverlapScore(listing.title, row.title));
+
+    if (best == null || score > best.score) {
+      best = { row, score };
+    }
+  }
+
+  if (!best) return null;
+  return best.score >= 6 ? best.row : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: Record<string, any>, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   const now = new Date().toISOString();
   const carsId = extractCarsId(listing.url);
-  if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '' };
+  if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '', duplicate: false, trackedChange: false, syncNeeded: false };
 
   const rawTitle = listing.title || '';
   const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
@@ -194,7 +292,15 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
   const transmission = normalizeTransmissionSync(transRaw, transmissionMap);
 
   const price: number | null = listing.price?.amount ?? null;
-  const isDuplicate = checkDuplicate(db, dealerId, make, model, price) ? 1 : 0;
+  const carsbgCreatedDate: string | null = listing.carsbgCreatedDate ?? null;
+  const matchingMobile = findMatchingMobileListing(db, dealerId, listing, make, model);
+  const isDuplicate = matchingMobile ? 1 : 0;
+  const syncNeeded = Boolean(
+    matchingMobile &&
+    price != null &&
+    matchingMobile.current_price != null &&
+    Number(price) !== Number(matchingMobile.current_price),
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as Record<string, any> | undefined;
@@ -204,8 +310,9 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     const titleChanged = normalizedTitle !== (existing.title || '');
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
+    const trackedChange = priceChanged || titleChanged || adStatusChanged || kaparoChanged;
 
-    if (priceChanged || titleChanged || adStatusChanged || kaparoChanged) {
+    if (trackedChange) {
       db.prepare(`
         INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -243,7 +350,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
         dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?,
         fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?,
         ad_status = ?, kaparo = ?, current_price = ?, price_change = ?,
-        reg_year = ?, ${imageFields}
+        reg_year = ?, carsbg_created_date = ?, ${imageFields}
         last_seen_at = ?, is_active = 1, duplicate = ?
       WHERE id = ?
     `).run(
@@ -253,10 +360,11 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
       price, priceChangeDelta,
       listing.year || existing.reg_year,
+      carsbgCreatedDate || existing.carsbg_created_date || null,
       ...imageValues,
       now, isDuplicate, existing.id
     );
-    return { action: 'updated' as const, snapshot: priceChanged, title: normalizedTitle, make, model };
+    return { action: 'updated' as const, snapshot: priceChanged, title: normalizedTitle, make, model, duplicate: isDuplicate === 1, trackedChange, syncNeeded };
   }
 
   // Insert new
@@ -264,26 +372,35 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     INSERT INTO listings (
       cars_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id,
       fuel, body_type, transmission, color, power, mileage,
-      ad_status, kaparo, current_price, reg_year,
+      ad_status, kaparo, current_price, reg_year, carsbg_created_date,
       image_count, full_keys,
       first_seen_at, last_seen_at, is_active, source, duplicate
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
   `).run(
     carsId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
     fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
     listing.adStatus || 'none', listing.kaparo ? 1 : 0,
-    price, listing.year || null,
+    price, listing.year || null, carsbgCreatedDate,
     listing.images?.length || 0,
     listing.images ? JSON.stringify(listing.images) : null,
     now, now, isDuplicate
   );
-  return { action: 'inserted' as const, snapshot: false, title: normalizedTitle, make, model };
+  return { action: 'inserted' as const, snapshot: false, title: normalizedTitle, make, model, duplicate: isDuplicate === 1, trackedChange: false, syncNeeded };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Database, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   let count = 0;
   const maxPages = 20;
+  const stats: CarsBgRunStats = {
+    processed: 0,
+    insertedUnique: 0,
+    insertedDuplicate: 0,
+    refreshedUnique: 0,
+    refreshedDuplicate: 0,
+    changed: 0,
+    syncNeeded: 0,
+  };
 
   const crawler = new PlaywrightCrawler({
     maxRequestRetries: 3,
@@ -364,6 +481,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               url: card.url, title: card.title,
               adStatus: 'none', kaparo: false,
               thumb: card.thumb,
+              carsbgCreatedDate: parseCarsBgCreatedDateFromImageUrl(card.thumb),
               price: { amount: priceEur, currency: 'EUR' },
               year: specs.year, mileage: specs.mileage, power: specs.power,
               fuel: specs.fuel, transmission: specs.transmission, bodyType: specs.bodyType,
@@ -372,11 +490,21 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
             };
             const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
             count++;
+            stats.processed++;
+            if (result.action === 'inserted') {
+              if (result.duplicate) stats.insertedDuplicate++;
+              else stats.insertedUnique++;
+            } else if (result.action === 'updated') {
+              if (result.duplicate) stats.refreshedDuplicate++;
+              else stats.refreshedUnique++;
+              if (result.trackedChange) stats.changed++;
+            }
+            if (result.syncNeeded) stats.syncNeeded++;
             emit({
               type: 'listing', dealer: dealer.slug,
               make: result.make, model: result.model, title: result.title,
               price: priceEur, url: card.url, thumb: card.thumb,
-              newListing: result.action === 'inserted', imageCount: 0,
+              newListing: result.action === 'inserted' && !result.duplicate, uniqueMatch: !result.duplicate, syncNeeded: result.syncNeeded, imageCount: 0,
             });
           }
         }
@@ -435,6 +563,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
         const listing = {
           url, title: data.title,
           adStatus: 'none', kaparo: false, thumb: images[0] || '',
+          carsbgCreatedDate: parseCarsBgCreatedDateFromImageUrl(images[0] || ''),
           price: { amount: priceEur, currency: 'EUR' },
           year: specs.year, mileage: specs.mileage, power: specs.power,
           fuel: specs.fuel, transmission: specs.transmission, bodyType: specs.bodyType,
@@ -444,11 +573,21 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
         };
         const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
         count++;
+        stats.processed++;
+        if (result.action === 'inserted') {
+          if (result.duplicate) stats.insertedDuplicate++;
+          else stats.insertedUnique++;
+        } else if (result.action === 'updated') {
+          if (result.duplicate) stats.refreshedDuplicate++;
+          else stats.refreshedUnique++;
+          if (result.trackedChange) stats.changed++;
+        }
+        if (result.syncNeeded) stats.syncNeeded++;
         emit({
           type: 'listing', dealer: dealer.slug,
           make: result.make, model: result.model, title: result.title,
           price: priceEur, url, thumb: images[0] || '',
-          newListing: result.action === 'inserted', imageCount: images.length,
+          newListing: result.action === 'inserted' && !result.duplicate, uniqueMatch: !result.duplicate, syncNeeded: result.syncNeeded, imageCount: images.length,
         });
       }
     },
@@ -459,7 +598,11 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
   });
 
   await crawler.run([{ url: dealer.carsUrl as string, label: 'LIST' }]);
-  return count;
+  emit({
+    type: 'log',
+    message: `Cars.bg summary for ${dealer.slug}: ${stats.insertedUnique} unique inserted, ${stats.insertedDuplicate} duplicate inserted, ${stats.refreshedUnique} unique refreshed, ${stats.refreshedDuplicate} duplicate refreshed, ${stats.changed} changed, ${stats.syncNeeded} need mobile sync`,
+  });
+  return { count, stats };
 }
 
 async function main() {
@@ -485,11 +628,27 @@ async function main() {
   }
 
   let hadErrors = false;
+  const totals: CarsBgRunStats = {
+    processed: 0,
+    insertedUnique: 0,
+    insertedDuplicate: 0,
+    refreshedUnique: 0,
+    refreshedDuplicate: 0,
+    changed: 0,
+    syncNeeded: 0,
+  };
   for (const dealer of selected) {
     emit({ type: 'log', message: `Starting cars.bg scrape: ${dealer.name}` });
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const count = await scrapeCarsBgForUI(dealer as Record<string, any>, db, makesMap, fuelMap, transmissionMap);
+      const { count, stats } = await scrapeCarsBgForUI(dealer as Record<string, any>, db, makesMap, fuelMap, transmissionMap);
+      totals.processed += stats.processed;
+      totals.insertedUnique += stats.insertedUnique;
+      totals.insertedDuplicate += stats.insertedDuplicate;
+      totals.refreshedUnique += stats.refreshedUnique;
+      totals.refreshedDuplicate += stats.refreshedDuplicate;
+      totals.changed += stats.changed;
+      totals.syncNeeded += stats.syncNeeded;
       emit({ type: 'done', dealer: dealer.slug, count });
     } catch (err) {
       hadErrors = true;
@@ -497,7 +656,12 @@ async function main() {
     }
   }
 
-  if (!hadErrors) emit({ type: 'seeded', message: 'Cars.bg data saved' });
+  if (!hadErrors) {
+    emit({
+      type: 'seeded',
+      message: `Cars.bg saved: ${totals.insertedUnique} unique inserted, ${totals.insertedDuplicate} duplicates inserted, ${totals.refreshedUnique} unique refreshed, ${totals.refreshedDuplicate} duplicates refreshed, ${totals.changed} changed, ${totals.syncNeeded} need mobile sync`,
+    });
+  }
   db.close();
 }
 

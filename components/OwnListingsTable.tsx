@@ -336,6 +336,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
             <th className="px-3 py-1.5 text-right">
               <SortHeader label="Last Edit" sortKey="last_edit" align="right" />
             </th>
+            <th className="px-3 py-1.5 text-right">cars.bg created</th>
             <th className="px-2 py-1.5 text-center w-12">New</th>
             <th className="px-3 py-1.5 text-right">Month</th>
             <th className="px-3 py-1.5 text-right">
@@ -353,7 +354,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={20} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={21} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -629,6 +630,13 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 <td className="w-20 px-2 py-1.5 text-right text-xs text-gray-400">
                   <span className="inline-block whitespace-pre-line leading-tight">
                     {formatDate(row.last_edit).replace(/,\s+/, '\n')}
+                  </span>
+                </td>
+
+                {/* cars.bg created */}
+                <td className="w-20 px-2 py-1.5 text-right text-xs text-gray-400">
+                  <span className="inline-block whitespace-pre-line leading-tight">
+                    {row.carsbg_created_date ? formatDate(row.carsbg_created_date).replace(/,\s+/, '\n') : '—'}
                   </span>
                 </td>
 
