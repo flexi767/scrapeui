@@ -77,7 +77,11 @@ function parseReg(yearStr: string | null): { regMonth: string | null; regYear: s
 
 function cleanDescription(text: string | null): string {
   if (!text) return '';
-  const lines = String(text).replace(/\r\n/g, '\n').split('\n');
+  const normalizedText = String(text)
+    .replace(/\r\n/g, '\n')
+    .replace(/Виж всички обяви в\s+[^\s]+\.bazar\.bg\s+и\s+[^\s]+\.mobile\.bg/giu, '')
+    .replace(/\n{3,}/g, '\n\n');
+  const lines = normalizedText.split('\n');
   const start = lines.findIndex(line => line.trim() === 'Допълнителна информация');
   const trimmed = start === -1 ? lines : lines.slice(start + 4);
   const cleaned = trimmed.filter((line) => {
