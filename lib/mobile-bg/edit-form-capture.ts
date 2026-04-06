@@ -47,7 +47,7 @@ export async function captureEditFormSnapshotWithPage(
   dbPath: string,
   page: Page,
   refs?: { listingId?: number | null; backupId?: number | null },
-): Promise<{ snapshotId: number; screenshotPath: string | null }> {
+): Promise<{ snapshotId: number; screenshotPath: string | null; views: number | null; watching: number | null }> {
   const listingRow = refs?.listingId != null
     ? { id: refs.listingId }
     : db.prepare(`
@@ -212,5 +212,5 @@ export async function captureEditFormSnapshotWithPage(
     `).run(row.refreshText, views, viewedSinceDate, watching, now, backupRow.id);
   }
 
-  return { snapshotId: Number(result.lastInsertRowid), screenshotPath };
+  return { snapshotId: Number(result.lastInsertRowid), screenshotPath, views, watching };
 }

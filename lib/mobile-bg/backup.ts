@@ -75,6 +75,8 @@ export interface BackupProgressEvent {
   url?: string;
   previewUrl?: string;
   imageCount?: number;
+  views?: number | null;
+  watching?: number | null;
   runId?: number;
   listingsCount?: number;
   imagesCount?: number;
@@ -178,6 +180,17 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
         imgs.push(canonical);
       }
     });
+    if (imgs.length > 0) return imgs;
+
+    const html = document.documentElement.innerHTML;
+    const regex = /https?:\/\/[^"'\\\s]+\/photosorg\/[^"'\\\s]+\/big1\/[^"'\\\s]+\.(?:webp|jpg|jpeg|png)(?:\?[^"'\\\s]*)?/gi;
+    const htmlMatches = html.match(regex) || [];
+    for (const rawUrl of htmlMatches) {
+      const canonical = normalizeUrl(rawUrl);
+      if (!canonical || seen.has(canonical)) continue;
+      seen.add(canonical);
+      imgs.push(canonical);
+    }
     return imgs;
   });
 }
@@ -592,8 +605,9 @@ export async function backupDealerToDb(
       const { backupId, action } = upsertBackupArtifact(db, runId, dealer.id, detail);
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
+      let engagement: { views: number | null; watching: number | null } | null = null;
       try {
-        await captureEditFormSnapshotWithPage(db, dealer, detail.mobileId, dbPath, page, {
+        engagement = await captureEditFormSnapshotWithPage(db, dealer, detail.mobileId, dbPath, page, {
           backupId,
         });
       } catch (error) {
@@ -619,6 +633,8 @@ export async function backupDealerToDb(
         url: detail.url,
         previewUrl: detail.imageUrls[0] || undefined,
         imageCount: savedImages.length,
+        views: engagement?.views ?? null,
+        watching: engagement?.watching ?? null,
       });
     }
 

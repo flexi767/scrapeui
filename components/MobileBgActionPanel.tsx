@@ -29,6 +29,8 @@ interface BackupLogEntry {
   url?: string;
   previewUrl?: string;
   imageCount?: number;
+  views?: number | null;
+  watching?: number | null;
   listingsCount?: number;
   imagesCount?: number;
 }
@@ -242,6 +244,8 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                         <span>{entry.current ?? 0}/{entry.total ?? 0}</span>
                         <span>{entry.imageCount ?? 0} images</span>
+                        {entry.views != null ? <span>{entry.views} views</span> : null}
+                        {entry.watching != null ? <span>{entry.watching} watching</span> : null}
                         {entry.url ? (
                           <a href={entry.url} target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200">
                             open
