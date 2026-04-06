@@ -201,7 +201,9 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
-                <th className="px-2 py-1.5 text-left">Body Type</th>
+                <th className="w-16 px-2 py-1.5 text-left">
+                  <span className="block whitespace-pre-line leading-tight">Body{`\n`}Type</span>
+                </th>
                 <th className="w-20 px-2 py-1.5 text-left">
                   <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -405,10 +407,10 @@ export default async function ListingsPage({
                     </td>
 
                     {/* Category */}
-                    <td className="px-2 py-1.5 text-gray-400 text-xs">
+                    <td className="w-16 px-2 py-1.5 text-gray-400 text-xs">
                       {row.body_type ? (
                         <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'category'), ['category', row.body_type]]).toString()}`}>
-                          <span className="text-xs text-gray-400 hover:text-gray-400">{row.body_type}</span>
+                          <span className="block whitespace-normal wrap-break-word leading-tight text-xs text-gray-400 hover:text-gray-400">{row.body_type}</span>
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
                     </td>
