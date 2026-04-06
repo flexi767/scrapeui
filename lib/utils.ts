@@ -88,7 +88,7 @@ export function buildImageList(
     // Cars.bg listings store full URLs directly as keys
     if (key.startsWith('http')) {
       const remoteThumb = thumbKeys[i]?.startsWith('http') ? thumbKeys[i] : key;
-      return { full: key, thumb: getThumbProxyUrl(mobileId, remoteThumb) };
+      return { full: key, thumb: remoteThumb };
     }
     if (imagesDownloaded) {
       return {

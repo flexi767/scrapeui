@@ -70,6 +70,22 @@ interface CarsBgDuplicateProbe {
   bodyType?: string | null;
 }
 
+function normalizeModelCompare(value: string | null | undefined): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9а-я]+/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function modelsLookEquivalent(a: string | null | undefined, b: string | null | undefined): boolean {
+  const left = normalizeModelCompare(a);
+  const right = normalizeModelCompare(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  return left.includes(right) || right.includes(left);
+}
+
 function formatError(err: unknown): string {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
@@ -240,44 +256,36 @@ function findMatchingMobileListing(
   const candidates = db.prepare(`
     SELECT id, mobile_id, title, reg_year, mileage, fuel, body_type, current_price
     FROM listings
-    WHERE source = 'm' AND dealer_id = ? AND make = ? AND model = ? AND is_active = 1
-  `).all(dealerId, make, model) as MobileDuplicateCandidate[];
+    WHERE source = 'm' AND dealer_id = ? AND make = ? AND is_active = 1
+  `).all(dealerId, make) as MobileDuplicateCandidate[];
 
   let best: { row: MobileDuplicateCandidate; score: number } | null = null;
 
   for (const row of candidates) {
     let score = 0;
-    let strongMatches = 0;
-    let comparedFields = 0;
+    if (!modelsLookEquivalent(model, row.model)) continue;
+    score += 3;
 
     if (listing.year && row.reg_year) {
-      comparedFields++;
       if (String(listing.year) !== String(row.reg_year)) continue;
       score += 4;
-      strongMatches++;
     }
 
     if (listing.mileage != null && row.mileage != null) {
-      comparedFields++;
       const diff = Math.abs(Number(listing.mileage) - Number(row.mileage));
       if (diff === 0) {
         score += 5;
-        strongMatches++;
       } else if (diff <= 1000) {
         score += 4;
-        strongMatches++;
       } else if (diff <= 5000) score += 2;
       else continue;
     }
 
     if (listing.fuel && row.fuel) {
-      comparedFields++;
       if (String(listing.fuel) === String(row.fuel)) score += 2;
-      else continue;
     }
 
     if (listing.bodyType && row.body_type) {
-      comparedFields++;
       if (String(listing.bodyType) === String(row.body_type)) score += 1;
     }
 
@@ -286,10 +294,6 @@ function findMatchingMobileListing(
     }
 
     if (best == null || score > best.score) {
-      best = { row, score };
-    }
-
-    if (strongMatches >= 2 && comparedFields >= 2 && (!best || score >= best.score)) {
       best = { row, score };
     }
   }
@@ -566,7 +570,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
               price: { amount: priceEur, currency: 'EUR' },
               year: specs.year, mileage: specs.mileage, power: specs.power,
               fuel: specs.fuel, transmission: specs.transmission, bodyType: specs.bodyType,
-              color: specs.color, images: null,
+              color: specs.color, images: card.thumb ? [card.thumb] : null,
               dealer: dealer.slug,
             };
             const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
