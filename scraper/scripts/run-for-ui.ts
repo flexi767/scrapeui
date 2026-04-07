@@ -143,11 +143,13 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     const priceChanged = price !== null && price !== existing.current_price;
     const vatChanged = vat != null ? (vat !== existing.vat) : false;
     const lastEditChanged = isDeep ? ((listing.lastEdit || null) !== (existing.last_edit || null)) : false;
-    const viewsChanged = isDeep ? (views !== (existing.views ?? null)) : false;
+    const hadViews = existing.views != null;
+    const viewsChanged = isDeep ? (hadViews && views !== existing.views) : false;
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
     const titleChanged = normalizedTitle !== (existing.title || '');
-    const descriptionChanged = isDeep ? ((listing.description || '') !== (existing.description || '')) : false;
+    const hadDescription = Boolean((existing.description || '').trim());
+    const descriptionChanged = isDeep ? (hadDescription && (listing.description || '') !== (existing.description || '')) : false;
     const trackedChange = priceChanged || vatChanged || lastEditChanged || viewsChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged;
 
     if (trackedChange) {
