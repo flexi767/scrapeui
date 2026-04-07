@@ -156,14 +156,14 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         existing.id,
-        (priceChanged || vatChanged) ? existing.current_price : null,
-        (priceChanged || vatChanged) ? existing.vat : null,
-        lastEditChanged ? (listing.lastEdit || null) : null,
-        viewsChanged ? views : null,
-        adStatusChanged ? (listing.adStatus || 'none') : null,
-        kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
-        titleChanged ? (normalizedTitle || null) : null,
-        descriptionChanged ? (listing.description || null) : null,
+        priceChanged ? existing.current_price : null,
+        vatChanged ? existing.vat : null,
+        lastEditChanged ? (existing.last_edit || null) : null,
+        viewsChanged ? (existing.views ?? null) : null,
+        adStatusChanged ? (existing.ad_status || 'none') : null,
+        kaparoChanged ? (existing.kaparo ? 1 : 0) : null,
+        titleChanged ? (existing.title || null) : null,
+        descriptionChanged ? (existing.description || null) : null,
         now,
       );
       emit({
