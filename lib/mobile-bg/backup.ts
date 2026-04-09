@@ -266,7 +266,10 @@ async function scrapeListingDetail(page: Page, url: string, makesMap: MakesMap |
     const mileageFromTechData = readTechDataValue('Пробег');
     const mileageMatch = (mileageFromTechData || body).match(/([\d\s]+)\s*км/);
     const mileage = mileageMatch ? mileageMatch[1].replace(/\s/g, '').trim() : null;
-    const color = extract(/Цвят\s+(\S+(?:\s+\S+)?)/);
+    const colorFromTechData = readTechDataValue('Цвят');
+    const color = (colorFromTechData || extract(/Цвят\s+([^\r\n]+)/) || null)
+      ?.split(/\r?\n/)[0]
+      .trim() || null;
     const descMatch = body.match(/Допълнителна информация\s*([\s\S]*?)(?:Виж всички обяви|Контакти с продавача|$)/);
     const description = descMatch ? descMatch[1].trim() : '';
     const listingId = window.location.href.match(/obiava-(\d+)/)?.[1] || null;
@@ -475,11 +478,16 @@ function upsertBackupArtifact(
 ): { backupId: number; action: 'created' | 'updated' } {
   const now = new Date().toISOString();
   const listingRow = db.prepare(`
-    SELECT id, ad_status, kaparo
+    SELECT id, ad_status, kaparo, carsbg_created_date
     FROM listings
     WHERE mobile_id = ?
     LIMIT 1
-  `).get(detail.mobileId) as { id?: number; ad_status?: string | null; kaparo?: number | null } | undefined;
+  `).get(detail.mobileId) as {
+    id?: number;
+    ad_status?: string | null;
+    kaparo?: number | null;
+    carsbg_created_date?: string | null;
+  } | undefined;
   const existing = db.prepare(`
     SELECT id
     FROM mobilebg_backups
@@ -489,6 +497,9 @@ function upsertBackupArtifact(
 
   const canonical = existing[0];
   const duplicateIds = existing.slice(1).map((row) => row.id);
+  const normalizedColor = detail.color
+    ? detail.color.split(/\r?\n/)[0].trim() || null
+    : null;
 
   if (canonical) {
     if (duplicateIds.length > 0) {
@@ -499,7 +510,7 @@ function upsertBackupArtifact(
       UPDATE mobilebg_backups
       SET
         run_id = ?, listing_id = ?, source_url = ?, source_title = ?, phones_json = ?, extras_json = ?, tech_data_json = ?,
-        photo_order_json = ?, image_count = 0, updated_at = ?
+        photo_order_json = ?, image_count = 0, created_at = COALESCE(?, created_at), updated_at = ?
       WHERE id = ?
     `).run(
       runId,
@@ -510,6 +521,7 @@ function upsertBackupArtifact(
       JSON.stringify(detail.extras),
       JSON.stringify(detail.techData),
       JSON.stringify(detail.photoOrder),
+      listingRow?.carsbg_created_date ?? null,
       now,
       canonical.id,
     );
@@ -517,6 +529,8 @@ function upsertBackupArtifact(
     clearBackupImages(db, canonical.id);
     return { backupId: canonical.id, action: 'updated' };
   }
+
+  const createdAt = listingRow?.carsbg_created_date ?? now;
 
   const result = db.prepare(`
     INSERT INTO mobilebg_backups (
@@ -543,7 +557,7 @@ function upsertBackupArtifact(
     detail.fuel,
     detail.power,
     detail.engine,
-    detail.color,
+    normalizedColor,
     detail.transmission,
     detail.category,
     detail.description,
@@ -556,7 +570,7 @@ function upsertBackupArtifact(
     JSON.stringify(detail.techData),
     JSON.stringify(detail.photoOrder),
     0,
-    now,
+    createdAt,
     now,
   );
 
