@@ -180,11 +180,27 @@ export function getStaleCarsBgListings(db: Database.Database, dealerSlug: string
 }
 
 function normalizeCompareText(value: string | null | undefined): string {
-  return String(value || '')
+  return normalizeCarsBgDescriptionText(value)
     .toLowerCase()
     .replace(/[^a-z0-9а-я]+/giu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function normalizeCarsBgDescriptionText(value: string | null | undefined): string {
+  return String(value || '').replace(/[💵📞✓]/gu, '✓');
+}
+
+function sanitizeCarsBgDescription(value: string | null | undefined): string {
+  return normalizeCarsBgDescriptionText(value).trim();
+}
+
+function normalizeCarsBgTitleText(value: string | null | undefined): string {
+  return String(value || '').replace(/[💵📞✓]/gu, '');
+}
+
+function sanitizeCarsBgTitle(value: string | null | undefined): string {
+  return normalizeCarsBgTitleText(value).trim();
 }
 
 function titleOverlapScore(a: string | null | undefined, b: string | null | undefined): number {
@@ -950,7 +966,7 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
 }
 
 function getCarsBgTitleValue(listing: CarsBgSyncListing): string {
-  return (listing.carsbgTitle || listing.title || listing.fullTitle || '').trim();
+  return sanitizeCarsBgTitle(listing.carsbgTitle || listing.title || listing.fullTitle || '');
 }
 
 export async function updateListingContent(page: Page, offerUrlOrId: string, listing: CarsBgSyncListing): Promise<boolean> {
@@ -961,7 +977,7 @@ export async function updateListingContent(page: Page, offerUrlOrId: string, lis
   await prepareCarsBgPage(page);
 
   const targetTitle = getCarsBgTitleValue(listing);
-  const notes = listing.description || listing.fullTitle;
+  const notes = sanitizeCarsBgDescription(listing.description || listing.fullTitle);
 
   const titleInput = page.locator('#engine, input[name="engine"], input[id*="engine"]').first();
   if (targetTitle && await titleInput.count()) {
@@ -1075,7 +1091,7 @@ export async function createListing(page: Page, listing: CarsBgSyncListing, deal
   if (color) await selectRadio(page, 'colorId', color.id);
 
   await selectRadio(page, 'is_inbg', 1);
-  await fillTextarea(page, '#notes', listing.description || listing.fullTitle);
+  await fillTextarea(page, '#notes', sanitizeCarsBgDescription(listing.description || listing.fullTitle));
 
   if (listing.carsBgExtras?.selected?.length) {
     await applyCarsBgExtras(page, listing.carsBgExtras).catch(() => {});
