@@ -37,6 +37,7 @@ const dealersIdx = args.indexOf('--dealers');
 const dealerArg = dealersIdx !== -1 && args[dealersIdx + 1] ? args[dealersIdx + 1] : '';
 const deepCrawl = args.includes('--deep');
 const requestedSlugs = dealerArg ? dealerArg.split(',').map(s => s.trim()) : [];
+const CARS_BG_MAX_IMAGES = 15;
 
 function emit(obj: object) {
   process.stdout.write(JSON.stringify(obj) + '\n');
@@ -86,6 +87,7 @@ interface ExistingCarsListing {
   mileage: number | null;
   fuel: string | null;
   body_type: string | null;
+  cars_total_views?: number | null;
   image_count: number | null;
   full_keys: string | null;
 }
@@ -345,7 +347,7 @@ function normalizeCarsBgImages(urls: Array<string | null | undefined>): string[]
     }
   }
 
-  return [...preferred.values()];
+  return [...preferred.values()].slice(0, CARS_BG_MAX_IMAGES);
 }
 
 function applyCarsBgOwnerDetails(
@@ -353,18 +355,39 @@ function applyCarsBgOwnerDetails(
   dealerId: number,
   carsId: string,
   details: CarsBgOwnerDetails,
-) {
+): { viewsChanged: boolean; oldViews: number | null; newViews: number | null } {
   const existingCars = db.prepare(`
     SELECT *
     FROM listings
     WHERE cars_id = ? AND source = 'c'
   `).get(carsId) as ExistingCarsListing | undefined;
 
-  if (!existingCars) return;
+  if (!existingCars) return { viewsChanged: false, oldViews: null, newViews: details.carsTotalViews ?? null };
 
   const now = new Date().toISOString();
+  const oldViews = existingCars.cars_total_views ?? null;
+  const newViews = details.carsTotalViews ?? null;
+  const viewsChanged = oldViews != null && newViews != null && oldViews !== newViews;
   const imageCount = details.carsImages.length > 0 ? details.carsImages.length : (existingCars.image_count ?? 0);
   const fullKeys = details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : existingCars.full_keys ?? null;
+
+  if (viewsChanged) {
+    db.prepare(`
+      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      existingCars.id,
+      null,
+      null,
+      null,
+      oldViews,
+      null,
+      null,
+      null,
+      null,
+      now,
+    );
+  }
 
   db.prepare(`
     UPDATE listings
@@ -399,7 +422,7 @@ function applyCarsBgOwnerDetails(
     existingCars.model,
   );
 
-  if (!matchingMobile) return;
+  if (!matchingMobile) return { viewsChanged, oldViews, newViews };
 
   db.prepare(`
     UPDATE listings
@@ -412,6 +435,8 @@ function applyCarsBgOwnerDetails(
     details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
     matchingMobile.id,
   );
+
+  return { viewsChanged, oldViews, newViews };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -628,8 +653,19 @@ async function deepCrawlCarsBgOwnListings(dealer: Record<string, any>, db: Datab
         carsImages: normalizeCarsBgImages(details.carsImages),
       };
 
-      applyCarsBgOwnerDetails(db, Number(dealer.id), carsId, normalized);
+      const ownerUpdate = applyCarsBgOwnerDetails(db, Number(dealer.id), carsId, normalized);
       updated++;
+
+      if (ownerUpdate.viewsChanged) {
+        emit({
+          type: 'change',
+          carsId,
+          dealer: dealer.slug,
+          viewsChanged: true,
+          oldViews: ownerUpdate.oldViews,
+          newViews: ownerUpdate.newViews,
+        });
+      }
 
       emit({
         type: 'log',
@@ -888,7 +924,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
           year: specs.year, mileage: specs.mileage, power: specs.power,
           fuel: specs.fuel, transmission: specs.transmission, bodyType: specs.bodyType,
           color: specs.color,
-          images: images.slice(0, 15),
+          images: images.slice(0, CARS_BG_MAX_IMAGES),
           dealer: dealer.slug,
         };
         const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);

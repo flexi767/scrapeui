@@ -1053,7 +1053,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
             AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
           ORDER BY s2.recorded_at ASC, s2.id ASC
           LIMIT 1
-        ), l.views) as target_views,
+        ), CASE WHEN l.source = 'c' THEN l.cars_total_views ELSE l.views END) as target_views,
         COALESCE((
           SELECT s2.ad_status
           FROM listing_snapshots s2
@@ -1161,7 +1161,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
             AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
           ORDER BY s2.recorded_at ASC, s2.id ASC
           LIMIT 1
-        ), l.views) as target_views,
+        ), CASE WHEN l.source = 'c' THEN l.cars_total_views ELSE l.views END) as target_views,
         COALESCE((
           SELECT s2.ad_status
           FROM listing_snapshots s2
@@ -1203,7 +1203,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
         l.current_price,
         l.vat as current_vat,
         l.last_edit as current_last_edit,
-        l.views as current_views,
+        CASE WHEN l.source = 'c' THEN l.cars_total_views ELSE l.views END as current_views,
         l.ad_status as current_ad_status,
         l.kaparo as current_kaparo,
         l.title as current_title,
