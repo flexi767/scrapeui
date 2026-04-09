@@ -75,6 +75,34 @@ export interface ListingImage {
   thumb: string;
 }
 
+function normalizeImageKey(key: string): string {
+  return key.trim();
+}
+
+function keysMatchBySet(fullKeys: string[], thumbKeys: string[]): boolean {
+  if (fullKeys.length === 0 || thumbKeys.length === 0) return false;
+  if (fullKeys.length !== thumbKeys.length) return false;
+  if (fullKeys.some((key) => key.startsWith('http')) || thumbKeys.some((key) => key.startsWith('http'))) {
+    return false;
+  }
+
+  const fullCounts = new Map<string, number>();
+  for (const key of fullKeys) {
+    const normalized = normalizeImageKey(key);
+    fullCounts.set(normalized, (fullCounts.get(normalized) ?? 0) + 1);
+  }
+
+  for (const key of thumbKeys) {
+    const normalized = normalizeImageKey(key);
+    const count = fullCounts.get(normalized) ?? 0;
+    if (count === 0) return false;
+    if (count === 1) fullCounts.delete(normalized);
+    else fullCounts.set(normalized, count - 1);
+  }
+
+  return fullCounts.size === 0;
+}
+
 export function buildImageList(
   mobileId: string,
   fullKeys: string[],
@@ -84,7 +112,10 @@ export function buildImageList(
 ): ListingImage[] {
   if (!fullKeys.length) return [];
 
-  return fullKeys.map((key, i) => {
+  const useThumbOrder = keysMatchBySet(fullKeys, thumbKeys);
+  const orderedKeys = useThumbOrder ? thumbKeys : fullKeys;
+
+  return orderedKeys.map((key, i) => {
     // Cars.bg listings store full URLs directly as keys
     if (key.startsWith('http')) {
       const remoteThumb = thumbKeys[i]?.startsWith('http') ? thumbKeys[i] : key;
@@ -97,10 +128,11 @@ export function buildImageList(
       };
     }
     if (!imageMeta) return { full: '', thumb: '' };
-    const remoteThumb = getCdnImageUrl(mobileId, thumbKeys[i] ?? key, imageMeta, 'thumb');
+    const thumbKey = useThumbOrder ? key : (thumbKeys[i] ?? key);
+    const fullKey = useThumbOrder ? key : key;
     return {
-      full: getCdnImageUrl(mobileId, key, imageMeta, 'full'),
-      thumb: getThumbProxyUrl(mobileId, remoteThumb),
+      full: getCdnImageUrl(mobileId, fullKey, imageMeta, 'full'),
+      thumb: getCdnImageUrl(mobileId, thumbKey, imageMeta, 'thumb'),
     };
   });
 }

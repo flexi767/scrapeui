@@ -83,7 +83,7 @@ function cleanDescription(text: string | null): string {
     .replace(/\n{3,}/g, '\n\n');
   const lines = normalizedText.split('\n');
   const start = lines.findIndex(line => line.trim() === 'Допълнителна информация');
-  const trimmed = start === -1 ? lines : lines.slice(start + 4);
+  const trimmed = start === -1 ? lines : lines.slice(start + 1);
   const cleaned = trimmed.filter((line) => {
     const normalized = line.trim().toLowerCase();
     if (!normalized) return true;

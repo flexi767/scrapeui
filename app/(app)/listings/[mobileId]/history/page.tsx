@@ -67,6 +67,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                   <th className="px-4 py-3 text-right">Price</th>
                   <th className="px-4 py-3 text-center">VAT</th>
                   <th className="px-4 py-3 text-center">Last Edit</th>
+                  <th className="px-4 py-3 text-right">Views</th>
                   <th className="px-4 py-3 text-center">Paid</th>
                   <th className="px-4 py-3 text-center">К</th>
                   <th className="px-4 py-3 text-left">Title</th>
@@ -77,7 +78,7 @@ export default async function PriceHistoryPage({ params }: Props) {
               <tbody className="divide-y divide-gray-700/50">
                 {snapshots.map((snap, i) => {
                   const prev = snapshots[i - 1];
-                  const delta = prev ? snap.price - prev.price : null;
+                  const delta = prev && snap.price != null && prev.price != null ? snap.price - prev.price : null;
                   const deltaAbs = delta !== null ? Math.abs(delta) : null;
 
                   return (
@@ -113,8 +114,11 @@ export default async function PriceHistoryPage({ params }: Props) {
                       <td className="px-4 py-3 text-center text-xs text-gray-400">
                         {snap.last_edit ? formatDate(snap.last_edit) : <span className="text-gray-600">—</span>}
                       </td>
+                      <td className="px-4 py-3 text-right text-xs text-gray-300">
+                        {snap.views != null ? snap.views.toLocaleString('en-US') : <span className="text-gray-600">—</span>}
+                      </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-300">
-                        {snap.ad_status && snap.ad_status !== 'none' ? snap.ad_status : <span className="text-gray-600">—</span>}
+                        {snap.ad_status != null ? snap.ad_status : <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-300">
                         {snap.kaparo ? 'К' : <span className="text-gray-600">—</span>}

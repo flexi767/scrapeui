@@ -794,7 +794,7 @@ export function getListingByMobileId(mobileId: string): DetailListing | null {
 
 export interface SnapshotRow {
   id: number;
-  price: number;
+  price: number | null;
   vat: string | null;
   last_edit: string | null;
   views: number | null;
