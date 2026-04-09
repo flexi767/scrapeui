@@ -266,6 +266,19 @@ export const activityLog = sqliteTable('activity_log', {
   createdAt: text('created_at'),
 });
 
+// ─── Scrape Failures ──────────────────────────────────────────────
+
+export const scrapeFailures = sqliteTable('scrape_failures', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  dealerId: integer('dealer_id').references(() => dealers.id),
+  dealerSlug: text('dealer_slug'),
+  url: text('url').notNull(),
+  source: text('source').notNull(), // 'mobile.bg' | 'cars.bg'
+  retryCount: integer('retry_count'),
+  error: text('error'),
+  createdAt: text('created_at'),
+});
+
 // ─── Mobile.bg Backup / Edit / Repost Artifacts ──────────────────
 
 export const mobileBgBackupRuns = sqliteTable('mobilebg_backup_runs', {
