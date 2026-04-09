@@ -14,8 +14,8 @@ import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } 
 interface SearchParams {
   make?: string;
   model?: string;
-  dealer?: string;
-  field?: string;
+  dealer?: string | string[];
+  field?: string | string[];
   search?: string;
   when?: string;
   page?: string;
@@ -31,6 +31,21 @@ const FIELD_OPTIONS = [
   { value: 'title', label: 'Title' },
   { value: 'description', label: 'Description' },
 ];
+
+const DEFAULT_FIELD_VALUES = FIELD_OPTIONS
+  .map((field) => field.value)
+  .filter((value) => value !== 'views');
+
+function toArray(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+}
+
+function appendMultiParams(params: URLSearchParams, key: string, values: string[]) {
+  values.forEach((value) => {
+    if (value) params.append(key, value);
+  });
+}
 
 function changedFields(change: TrackedChangeRow) {
   const result: string[] = [];
@@ -68,8 +83,9 @@ export default async function ListingsChangesPage({
   const sp = await searchParams;
   const make = sp.make ?? '';
   const model = sp.model ?? '';
-  const dealerSlug = sp.dealer ?? '';
-  const field = sp.field ?? '';
+  const dealerSlugs = toArray(sp.dealer);
+  const requestedFields = toArray(sp.field);
+  const fields = requestedFields.length > 0 ? requestedFields : DEFAULT_FIELD_VALUES;
   const search = sp.search ?? '';
   const when = sp.when ?? '';
   const page = parseInt(sp.page ?? '1', 10);
@@ -79,8 +95,8 @@ export default async function ListingsChangesPage({
   const { data: rows, total } = getTrackedChanges({
     make,
     model,
-    dealerSlug,
-    field,
+    dealerSlugs,
+    fields,
     search,
     whenStart: selectedWindow?.start ?? null,
     whenEnd: selectedWindow?.end ?? null,
@@ -97,8 +113,8 @@ export default async function ListingsChangesPage({
   const currentParams = new URLSearchParams();
   if (make) currentParams.set('make', make);
   if (model) currentParams.set('model', model);
-  if (dealerSlug) currentParams.set('dealer', dealerSlug);
-  if (field) currentParams.set('field', field);
+  appendMultiParams(currentParams, 'dealer', dealerSlugs);
+  appendMultiParams(currentParams, 'field', requestedFields);
   if (search) currentParams.set('search', search);
   if (when) currentParams.set('when', when);
 
@@ -117,6 +133,7 @@ export default async function ListingsChangesPage({
               makeModels={makeModels}
               allDealers={allDealers}
               fieldOptions={FIELD_OPTIONS}
+              defaultFieldValues={DEFAULT_FIELD_VALUES}
               whenOptions={whenOptions}
               total={total}
             />

@@ -264,11 +264,45 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
   const snapshotDate = new Date().toISOString().slice(0, 10);
   const seenMobileIds = new Set<string>();
 
+  const failedUrls: string[] = [];
+
   const crawler = new PlaywrightCrawler({
-    maxRequestRetries: 3,
+    maxRequestRetries: 2,
     requestHandlerTimeoutSecs: 60,
     headless: true,
-    maxConcurrency: 3,
+    maxConcurrency: 1,
+
+    async failedRequestHandler({ request }, error) {
+      const url = request.url;
+      failedUrls.push(url);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      emit({
+        type: 'warn',
+        message: `Permanently failed after ${request.retryCount} retries: ${url}`,
+      });
+      db.prepare(`
+        INSERT INTO scrape_failures (dealer_id, dealer_slug, url, source, retry_count, error, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        dealer.id,
+        dealer.slug,
+        url,
+        'mobile.bg',
+        request.retryCount,
+        errorMsg,
+        new Date().toISOString(),
+      );
+    },
+
+    preNavigationHooks: [
+      async ({ request }) => {
+        if (request.retryCount > 0) {
+          const delaySec = request.retryCount * 5;
+          emit({ type: 'log', message: `Retry #${request.retryCount} for ${request.url} — waiting ${delaySec}s` });
+          await new Promise(r => setTimeout(r, delaySec * 1000));
+        }
+      },
+    ],
 
     async requestHandler({ page, request }) {
       const url = request.url;
@@ -506,6 +540,13 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
   });
 
   await crawler.run([{ url: dealer.mobileBg, label: 'LIST' }]);
+  if (failedUrls.length > 0) {
+    emit({
+      type: 'warn',
+      message: `${failedUrls.length} request(s) failed permanently for ${dealer.slug}`,
+      failedUrls,
+    });
+  }
   const reconciliation = reconcileDeletedMobileBgListings(db, dealer.id as number, seenMobileIds);
   emit({
     type: 'log',

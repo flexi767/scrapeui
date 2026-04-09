@@ -657,12 +657,24 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
     syncNeeded: 0,
   };
 
+  const failedUrls: string[] = [];
+
   const crawler = new PlaywrightCrawler({
-    maxRequestRetries: 3,
+    maxRequestRetries: 2,
     requestHandlerTimeoutSecs: 120,
     headless: true,
     maxConcurrency: 2,
     navigationTimeoutSecs: 60,
+
+    preNavigationHooks: [
+      async ({ request }) => {
+        if (request.retryCount > 0) {
+          const delaySec = request.retryCount * 5;
+          emit({ type: 'log', message: `Retry #${request.retryCount} for ${request.url} — waiting ${delaySec}s` });
+          await new Promise(r => setTimeout(r, delaySec * 1000));
+        }
+      },
+    ],
 
     async requestHandler({ page, request }) {
       await prepareCarsBgPage(page);
@@ -901,12 +913,34 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
       }
     },
 
-    failedRequestHandler({ request }) {
-      emit({ type: 'log', level: 'stderr', message: `Failed after retries: ${request.url}` });
+    failedRequestHandler({ request }, error) {
+      const url = request.url;
+      failedUrls.push(url);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      emit({ type: 'warn', message: `Permanently failed after ${request.retryCount} retries: ${url}` });
+      db.prepare(`
+        INSERT INTO scrape_failures (dealer_id, dealer_slug, url, source, retry_count, error, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        dealer.id,
+        dealer.slug,
+        url,
+        'cars.bg',
+        request.retryCount,
+        errorMsg,
+        new Date().toISOString(),
+      );
     },
   });
 
   await crawler.run([{ url: dealer.carsUrl as string, label: 'LIST' }]);
+  if (failedUrls.length > 0) {
+    emit({
+      type: 'warn',
+      message: `${failedUrls.length} request(s) failed permanently for ${dealer.slug} (cars.bg)`,
+      failedUrls,
+    });
+  }
   if (deepCrawl && dealer.own) {
     const ownUpdated = await deepCrawlCarsBgOwnListings(dealer, db);
     emit({ type: 'log', message: `Cars.bg own deep crawl for ${dealer.slug}: updated ${ownUpdated} listings` });

@@ -860,8 +860,8 @@ export interface TrackedChangeRow {
 export interface TrackedChangesFilters {
   make?: string;
   model?: string;
-  dealerSlug?: string;
-  field?: string;
+  dealerSlugs?: string[];
+  fields?: string[];
   search?: string;
   whenStart?: string | null;
   whenEnd?: string | null;
@@ -888,9 +888,9 @@ function buildTrackedChangesWhere(filters: TrackedChangesFilters): { where: stri
     clauses.push('l.model = ?');
     params.push(filters.model);
   }
-  if (filters.dealerSlug) {
-    clauses.push('d.slug = ?');
-    params.push(filters.dealerSlug);
+  if (filters.dealerSlugs && filters.dealerSlugs.length > 0) {
+    clauses.push(`d.slug IN (${filters.dealerSlugs.map(() => '?').join(', ')})`);
+    params.push(...filters.dealerSlugs);
   }
   if (filters.search) {
     clauses.push(`(
@@ -909,7 +909,7 @@ function buildTrackedChangesWhere(filters: TrackedChangesFilters): { where: stri
     clauses.push('s.recorded_at >= ? AND s.recorded_at <= ?');
     params.push(filters.whenStart, filters.whenEnd);
   }
-  if (filters.field) {
+  if (filters.fields && filters.fields.length > 0) {
     const fieldMap: Record<string, string> = {
       price: 's.price IS NOT NULL',
       vat: 's.vat IS NOT NULL',
@@ -920,8 +920,10 @@ function buildTrackedChangesWhere(filters: TrackedChangesFilters): { where: stri
       title: `s.title IS NOT NULL AND TRIM(s.title) != ''`,
       description: `s.description IS NOT NULL AND TRIM(s.description) != ''`,
     };
-    const clause = fieldMap[filters.field];
-    if (clause) clauses.push(clause);
+    const selectedClauses = filters.fields
+      .map((field) => fieldMap[field])
+      .filter(Boolean);
+    if (selectedClauses.length > 0) clauses.push(`(${selectedClauses.join(' OR ')})`);
   }
 
   return {
