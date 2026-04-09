@@ -152,20 +152,38 @@ async function upsertListing(db: Database.Database, dealerId: number, listing: R
     const descriptionChanged = isDeep ? (hadDescription && (listing.description || '') !== (existing.description || '')) : false;
     const trackedChange = priceChanged || vatChanged || lastEditChanged || viewsChanged || adStatusChanged || kaparoChanged || titleChanged || descriptionChanged;
 
-    if (trackedChange) {
+    const snapshotPrice = priceChanged ? existing.current_price : null;
+    const snapshotVat = vatChanged ? existing.vat : null;
+    const snapshotLastEdit = lastEditChanged ? (existing.last_edit || null) : null;
+    const snapshotViews = viewsChanged ? (existing.views ?? null) : null;
+    const snapshotAdStatus = adStatusChanged ? (existing.ad_status || 'none') : null;
+    const snapshotKaparo = kaparoChanged ? (existing.kaparo ? 1 : 0) : null;
+    const snapshotTitle = titleChanged ? (existing.title || null) : null;
+    const snapshotDescription = descriptionChanged ? (existing.description || null) : null;
+    const hasSnapshotPayload =
+      snapshotPrice != null ||
+      snapshotVat != null ||
+      snapshotLastEdit != null ||
+      snapshotViews != null ||
+      snapshotAdStatus != null ||
+      snapshotKaparo != null ||
+      (snapshotTitle != null && snapshotTitle.trim() !== '') ||
+      (snapshotDescription != null && snapshotDescription.trim() !== '');
+
+    if (trackedChange && hasSnapshotPayload) {
       db.prepare(`
         INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         existing.id,
-        priceChanged ? existing.current_price : null,
-        vatChanged ? existing.vat : null,
-        lastEditChanged ? (existing.last_edit || null) : null,
-        viewsChanged ? (existing.views ?? null) : null,
-        adStatusChanged ? (existing.ad_status || 'none') : null,
-        kaparoChanged ? (existing.kaparo ? 1 : 0) : null,
-        titleChanged ? (existing.title || null) : null,
-        descriptionChanged ? (existing.description || null) : null,
+        snapshotPrice,
+        snapshotVat,
+        snapshotLastEdit,
+        snapshotViews,
+        snapshotAdStatus,
+        snapshotKaparo,
+        snapshotTitle,
+        snapshotDescription,
         now,
       );
       emit({

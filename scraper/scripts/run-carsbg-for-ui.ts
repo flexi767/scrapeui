@@ -479,17 +479,27 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
     const trackedChange = priceChanged || titleChanged || adStatusChanged || kaparoChanged;
 
-    if (trackedChange) {
+    const snapshotPrice = priceChanged ? existing.current_price : null;
+    const snapshotAdStatus = adStatusChanged ? (existing.ad_status || 'none') : null;
+    const snapshotKaparo = kaparoChanged ? (existing.kaparo ? 1 : 0) : null;
+    const snapshotTitle = titleChanged ? (existing.title || null) : null;
+    const hasSnapshotPayload =
+      snapshotPrice != null ||
+      snapshotAdStatus != null ||
+      snapshotKaparo != null ||
+      (snapshotTitle != null && snapshotTitle.trim() !== '');
+
+    if (trackedChange && hasSnapshotPayload) {
       db.prepare(`
         INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         existing.id,
-        priceChanged ? existing.current_price : null,
+        snapshotPrice,
         null, null,
-        adStatusChanged ? (listing.adStatus || 'none') : null,
-        kaparoChanged ? (listing.kaparo ? 1 : 0) : null,
-        titleChanged ? normalizedTitle : null,
+        snapshotAdStatus,
+        snapshotKaparo,
+        snapshotTitle,
         null, now,
       );
       emit({

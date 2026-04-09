@@ -985,6 +985,18 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
   const limit = filters.limit ?? 50;
   const offset = (page - 1) * limit;
   const { where, params } = buildTrackedChangesWhere(filters);
+  const actualChangeWhere = `
+    (
+      (snapshot_price IS NOT NULL AND snapshot_price != target_price) OR
+      (snapshot_vat IS NOT NULL AND snapshot_vat != target_vat) OR
+      (snapshot_last_edit IS NOT NULL AND snapshot_last_edit != target_last_edit) OR
+      (snapshot_views IS NOT NULL AND snapshot_views != target_views) OR
+      (snapshot_ad_status IS NOT NULL AND snapshot_ad_status != target_ad_status) OR
+      (snapshot_kaparo IS NOT NULL AND snapshot_kaparo != target_kaparo) OR
+      (snapshot_title IS NOT NULL AND TRIM(snapshot_title) != '' AND snapshot_title != target_title) OR
+      (snapshot_description IS NOT NULL AND TRIM(snapshot_description) != '' AND snapshot_description != target_description)
+    )
+  `;
 
   const baseFrom = `
     FROM listing_snapshots s
@@ -994,120 +1006,212 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
   `;
 
   const totalRow = raw.prepare(`
+    WITH change_rows AS (
+      SELECT
+        s.price as snapshot_price,
+        s.vat as snapshot_vat,
+        s.last_edit as snapshot_last_edit,
+        s.views as snapshot_views,
+        s.ad_status as snapshot_ad_status,
+        s.kaparo as snapshot_kaparo,
+        s.title as snapshot_title,
+        s.description as snapshot_description,
+        COALESCE((
+          SELECT s2.price
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.price IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.current_price) as target_price,
+        COALESCE((
+          SELECT s2.vat
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.vat IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.vat) as target_vat,
+        COALESCE((
+          SELECT s2.last_edit
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.last_edit IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.last_edit) as target_last_edit,
+        COALESCE((
+          SELECT s2.views
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.views IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.views) as target_views,
+        COALESCE((
+          SELECT s2.ad_status
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.ad_status IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.ad_status) as target_ad_status,
+        COALESCE((
+          SELECT s2.kaparo
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.kaparo IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.kaparo) as target_kaparo,
+        COALESCE((
+          SELECT s2.title
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.title IS NOT NULL
+            AND TRIM(s2.title) != ''
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.title) as target_title,
+        COALESCE((
+          SELECT s2.description
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.description IS NOT NULL
+            AND TRIM(s2.description) != ''
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.description) as target_description
+      ${baseFrom}
+    )
     SELECT COUNT(*) as count
-    ${baseFrom}
+    FROM change_rows
+    WHERE ${actualChangeWhere}
   `).get(...params) as { count: number };
 
   const data = raw.prepare(`
-    SELECT
-      s.id,
-      s.listing_id,
-      l.mobile_id,
-      l.cars_id,
-      l.title,
-      l.make,
-      l.model,
-      d.name as dealer_name,
-      d.slug as dealer_slug,
-      l.source,
-      l.image_meta,
-      l.thumb_keys,
-      l.full_keys,
-      l.images_downloaded,
-      l.thumb_saved,
-      s.price as snapshot_price,
-      s.vat as snapshot_vat,
-      s.last_edit as snapshot_last_edit,
-      s.views as snapshot_views,
-      s.ad_status as snapshot_ad_status,
-      s.kaparo as snapshot_kaparo,
-      s.title as snapshot_title,
-      s.description as snapshot_description,
-      s.recorded_at,
-      COALESCE((
-        SELECT s2.price
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.price IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.current_price) as target_price,
-      COALESCE((
-        SELECT s2.vat
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.vat IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.vat) as target_vat,
-      COALESCE((
-        SELECT s2.last_edit
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.last_edit IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.last_edit) as target_last_edit,
-      COALESCE((
-        SELECT s2.views
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.views IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.views) as target_views,
-      COALESCE((
-        SELECT s2.ad_status
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.ad_status IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.ad_status) as target_ad_status,
-      COALESCE((
-        SELECT s2.kaparo
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.kaparo IS NOT NULL
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.kaparo) as target_kaparo,
-      COALESCE((
-        SELECT s2.title
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.title IS NOT NULL
-          AND TRIM(s2.title) != ''
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.title) as target_title,
-      COALESCE((
-        SELECT s2.description
-        FROM listing_snapshots s2
-        WHERE s2.listing_id = s.listing_id
-          AND s2.description IS NOT NULL
-          AND TRIM(s2.description) != ''
-          AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-        ORDER BY s2.recorded_at ASC, s2.id ASC
-        LIMIT 1
-      ), l.description) as target_description,
-      l.current_price,
-      l.vat as current_vat,
-      l.last_edit as current_last_edit,
-      l.views as current_views,
-      l.ad_status as current_ad_status,
-      l.kaparo as current_kaparo,
-      l.title as current_title,
-      l.description as current_description
+    WITH change_rows AS (
+      SELECT
+        s.id,
+        s.listing_id,
+        l.mobile_id,
+        l.cars_id,
+        l.title,
+        l.make,
+        l.model,
+        d.name as dealer_name,
+        d.slug as dealer_slug,
+        l.source,
+        l.image_meta,
+        l.thumb_keys,
+        l.full_keys,
+        l.images_downloaded,
+        l.thumb_saved,
+        s.price as snapshot_price,
+        s.vat as snapshot_vat,
+        s.last_edit as snapshot_last_edit,
+        s.views as snapshot_views,
+        s.ad_status as snapshot_ad_status,
+        s.kaparo as snapshot_kaparo,
+        s.title as snapshot_title,
+        s.description as snapshot_description,
+        s.recorded_at,
+        COALESCE((
+          SELECT s2.price
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.price IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.current_price) as target_price,
+        COALESCE((
+          SELECT s2.vat
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.vat IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.vat) as target_vat,
+        COALESCE((
+          SELECT s2.last_edit
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.last_edit IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.last_edit) as target_last_edit,
+        COALESCE((
+          SELECT s2.views
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.views IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.views) as target_views,
+        COALESCE((
+          SELECT s2.ad_status
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.ad_status IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.ad_status) as target_ad_status,
+        COALESCE((
+          SELECT s2.kaparo
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.kaparo IS NOT NULL
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.kaparo) as target_kaparo,
+        COALESCE((
+          SELECT s2.title
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.title IS NOT NULL
+            AND TRIM(s2.title) != ''
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.title) as target_title,
+        COALESCE((
+          SELECT s2.description
+          FROM listing_snapshots s2
+          WHERE s2.listing_id = s.listing_id
+            AND s2.description IS NOT NULL
+            AND TRIM(s2.description) != ''
+            AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
+          ORDER BY s2.recorded_at ASC, s2.id ASC
+          LIMIT 1
+        ), l.description) as target_description,
+        l.current_price,
+        l.vat as current_vat,
+        l.last_edit as current_last_edit,
+        l.views as current_views,
+        l.ad_status as current_ad_status,
+        l.kaparo as current_kaparo,
+        l.title as current_title,
+        l.description as current_description
       ${baseFrom}
-    ORDER BY s.recorded_at DESC, s.id DESC
+    )
+    SELECT *
+    FROM change_rows
+    WHERE ${actualChangeWhere}
+    ORDER BY recorded_at DESC, id DESC
     LIMIT ? OFFSET ?
   `).all(...params, limit, offset) as TrackedChangeRow[];
 
