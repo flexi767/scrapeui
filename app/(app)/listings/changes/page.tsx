@@ -52,12 +52,18 @@ function changedFields(change: TrackedChangeRow) {
   if (change.snapshot_price != null && change.snapshot_price !== change.target_price) result.push('Price');
   if (change.snapshot_vat != null && change.snapshot_vat !== change.target_vat) result.push('VAT');
   if (change.snapshot_last_edit != null && change.snapshot_last_edit !== change.target_last_edit) result.push('Last Edit');
-  if (change.snapshot_views != null && change.snapshot_views !== change.target_views) result.push('Views');
+  if (change.snapshot_views != null && change.snapshot_views !== change.target_views) {
+    result.push(change.source === 'c' ? 'Cars.bg views' : 'Views');
+  }
   if (change.snapshot_ad_status != null && change.snapshot_ad_status !== change.target_ad_status) result.push('Paid');
   if (change.snapshot_kaparo != null && change.snapshot_kaparo !== change.target_kaparo) result.push('К');
   if (change.snapshot_title && change.snapshot_title !== change.target_title) result.push('Title');
   if (change.snapshot_description && change.snapshot_description !== change.target_description) result.push('Description');
   return result;
+}
+
+function getViewsLabel(change: TrackedChangeRow) {
+  return change.source === 'c' ? 'Cars.bg views' : 'Views';
 }
 
 function formatWhenOption(value: string, count: number) {
@@ -254,7 +260,7 @@ export default async function ListingsChangesPage({
                         {row.snapshot_price != null && row.snapshot_price !== row.target_price ? <div>Price: {formatPrice(row.snapshot_price)} → {formatPrice(row.target_price)}</div> : null}
                         {row.snapshot_vat != null && row.snapshot_vat !== row.target_vat ? <div>VAT: {row.snapshot_vat || '—'} → {row.target_vat || '—'}</div> : null}
                         {row.snapshot_last_edit != null && row.snapshot_last_edit !== row.target_last_edit ? <div>Last Edit: {formatDate(row.snapshot_last_edit)} → {formatDate(row.target_last_edit)}</div> : null}
-                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>Views: {row.snapshot_views.toLocaleString('en-US')} → {(row.target_views ?? 0).toLocaleString('en-US')}</div> : null}
+                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{getViewsLabel(row)}: {row.snapshot_views.toLocaleString('en-US')} → {(row.target_views ?? 0).toLocaleString('en-US')}</div> : null}
                         {row.snapshot_ad_status != null && row.snapshot_ad_status !== row.target_ad_status ? <div>Paid: {row.snapshot_ad_status} → {row.target_ad_status || 'none'}</div> : null}
                         {row.snapshot_kaparo != null && row.snapshot_kaparo !== row.target_kaparo ? <div>К: {row.snapshot_kaparo ? 'yes' : 'no'} → {row.target_kaparo ? 'yes' : 'no'}</div> : null}
                         {row.snapshot_title && row.snapshot_title !== row.target_title ? <div className="line-clamp-2">Title: {row.snapshot_title} → {row.target_title || '—'}</div> : null}

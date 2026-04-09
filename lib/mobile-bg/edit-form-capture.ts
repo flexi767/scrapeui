@@ -2,6 +2,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
+import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
 
 interface DealerLike {
   id: number;
@@ -131,6 +132,7 @@ export async function captureEditFormSnapshotWithPage(
   await submitMyAdsEditForm(page, row.listingId, row.token);
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1800);
+  await acceptMobileBgCookies(page);
 
   const formDump = await page.evaluate(() => {
     const forms = Array.from(document.forms).map((form) => ({
@@ -188,6 +190,7 @@ export async function captureEditFormSnapshotWithPage(
   });
 
   const screenshotPath = path.join(snapshotDir, 'edit-form.png');
+  await acceptMobileBgCookies(page);
   await page.screenshot({ path: screenshotPath, fullPage: true });
 
   const now = new Date().toISOString();

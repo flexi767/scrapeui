@@ -63,6 +63,7 @@ interface MobileDuplicateCandidate {
   fuel: string | null;
   body_type: string | null;
   current_price: number | null;
+  cars_total_views?: number | null;
 }
 
 interface CarsBgDuplicateProbe {
@@ -205,8 +206,8 @@ function parseSpecsString(specs: string) {
   const bodyMatch = specs.match(/(Седан|Хечбек|Комби|SUV|Джип|Купе|Кабрио|Ван|Миниван)/i);
   const bodyType = bodyMatch ? bodyMatch[1] : null;
 
-  // Color: after "X/Y врати, " pattern
-  const colorMatch = specs.match(/\d\/\d\s+врати,\s+(.+?)$/);
+  // Color: after "X/Y врати, " pattern, but stop before the next line/section
+  const colorMatch = specs.match(/\d\/\d\s+врати,\s*([^\n\r]+)/);
   const color = colorMatch ? colorMatch[1].trim() : null;
 
   return { year, mileage, power, fuel, transmission, bodyType, color };
@@ -423,6 +424,27 @@ function applyCarsBgOwnerDetails(
   );
 
   if (!matchingMobile) return { viewsChanged, oldViews, newViews };
+
+  const oldMobileViews = matchingMobile.cars_total_views ?? null;
+  const mobileViewsChanged = oldMobileViews != null && newViews != null && oldMobileViews !== newViews;
+
+  if (mobileViewsChanged) {
+    db.prepare(`
+      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      matchingMobile.id,
+      null,
+      null,
+      null,
+      oldMobileViews,
+      null,
+      null,
+      null,
+      null,
+      now,
+    );
+  }
 
   db.prepare(`
     UPDATE listings

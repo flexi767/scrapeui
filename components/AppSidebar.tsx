@@ -35,15 +35,16 @@ export function AppSidebar() {
   const { data: session } = useSession();
 
   return (
-    <aside className="flex h-screen w-56 flex-col border-r border-gray-700 bg-gray-900">
-      <div className="flex h-14 items-center justify-between border-b border-gray-700 px-3">
+    <aside className="flex h-screen w-52 flex-col border-r border-gray-700 bg-gray-900">
+      <div className="flex h-14 items-center gap-2 border-b border-gray-700 px-3">
         <QuickAdd />
         <NotificationBell />
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {navItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const exactActive = pathname === item.href;
+          const sectionOpen = !exactActive && pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
@@ -51,9 +52,11 @@ export function AppSidebar() {
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                item.indent && 'ml-4',
-                active
+                item.indent && 'ml-2 border-l border-gray-800 pl-5',
+                exactActive
                   ? 'bg-gray-800 text-white'
+                  : sectionOpen
+                  ? 'bg-gray-800/40 text-gray-200'
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200',
               )}
             >
@@ -65,7 +68,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="border-t border-gray-700 p-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-gray-200">
               {session?.user?.name}
@@ -76,7 +79,7 @@ export function AppSidebar() {
           </div>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+            className="ml-auto shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
             title="Sign out"
           >
             <LogoutIcon className="h-4 w-4" />

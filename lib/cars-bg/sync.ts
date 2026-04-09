@@ -44,6 +44,7 @@ interface SyncListingRow {
   body_type: string | null;
   transmission: string | null;
   color: string | null;
+  euronorm: number | null;
   power: number | null;
   mileage: number | null;
   description: string | null;
@@ -89,6 +90,7 @@ export interface CarsBgSyncListing {
   category: string | null;
   transmission: string | null;
   color: string | null;
+  euronorm: number | null;
   power: number | null;
   mileage: number | null;
   description: string | null;
@@ -98,6 +100,7 @@ export interface CarsBgSyncListing {
   price: { amount: number | null; currency: 'EUR' };
   images: string[];
   carsBgExtras: CarsBgExtrasPayload | null;
+  extraLabels: string[];
 }
 
 interface CarsBgDiff {
@@ -229,6 +232,29 @@ function normalizeLabel(value = ''): string {
     .replace(/[^a-z0-9а-я\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function getExtraLabels(extrasJson: string | null): string[] {
+  if (!extrasJson) return [];
+  try {
+    const parsed = JSON.parse(extrasJson) as Record<string, unknown>;
+    return Object.values(parsed).flatMap((entry) => {
+      if (!Array.isArray(entry)) return [];
+      return entry.flatMap((item) => {
+        if (typeof item === 'string') return [item];
+        if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
+        return [];
+      });
+    });
+  } catch {
+    return [];
+  }
+}
+
+function parseCarsBgExtrasPayload(extrasJson: string | null): CarsBgExtrasPayload | null {
+  const parsed = parseJson<CarsBgExtrasPayload | null>(extrasJson, null);
+  if (!parsed || !Array.isArray(parsed.selected)) return null;
+  return parsed;
 }
 
 interface OptionEntry {
@@ -472,9 +498,14 @@ export async function extractCarsBgExtras(page: Page, extrasUrl?: string | null)
   return extras;
 }
 
-export async function applyCarsBgExtras(page: Page, extrasData: CarsBgExtrasPayload | null | undefined): Promise<boolean> {
+export async function applyCarsBgExtras(
+  page: Page,
+  extrasData: CarsBgExtrasPayload | null | undefined,
+  extraLabels: string[] = [],
+): Promise<boolean> {
   const selected = Array.isArray(extrasData?.selected) ? extrasData.selected : [];
-  if (!selected.length) return false;
+  const normalizedExtraLabels = extraLabels.map((label) => normalizeLabel(label)).filter(Boolean);
+  if (!selected.length && !normalizedExtraLabels.length) return false;
 
   const href = extrasData?.url || await page.evaluate(() => {
     const link = document.querySelector<HTMLAnchorElement>('a[sync-data="extrasSelectPage"]');
@@ -486,7 +517,10 @@ export async function applyCarsBgExtras(page: Page, extrasData: CarsBgExtrasPayl
   await page.goto(href, { waitUntil: 'domcontentloaded' });
   await prepareCarsBgPage(page);
 
-  const labels = selected.map((entry) => normalizeLabel(entry.label || '')).filter(Boolean);
+  const labels = [
+    ...selected.map((entry) => normalizeLabel(entry.label || '')).filter(Boolean),
+    ...normalizedExtraLabels,
+  ];
   const pairs = selected.map((entry) => `${entry.name || ''}::${entry.value || ''}`);
 
   await page.evaluate(({ expectedPairs, expectedLabels }) => {
@@ -516,6 +550,28 @@ export async function applyCarsBgExtras(page: Page, extrasData: CarsBgExtrasPayl
 
   await prepareCarsBgPage(page);
   return true;
+}
+
+async function ensureCarsBgPriceOptions(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const selectors = ['#barter', '#leasing', 'input[name="barter"]', 'input[name="leasing"]'];
+    for (const selector of selectors) {
+      const input = document.querySelector<HTMLInputElement>(selector);
+      if (!input || input.checked) continue;
+      input.checked = true;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
+async function applyCarsBgSupplementalFields(page: Page, listing: CarsBgSyncListing): Promise<void> {
+  if (listing.euronorm != null) {
+    await selectRadio(page, 'euroId', listing.euronorm);
+  }
+  await ensureCarsBgPriceOptions(page);
+  if (listing.carsBgExtras?.selected?.length || listing.extraLabels.length) {
+    await applyCarsBgExtras(page, listing.carsBgExtras, listing.extraLabels).catch(() => {});
+  }
 }
 
 async function getSharp() {
@@ -730,6 +786,7 @@ function mapRowToSyncListing(db: Database.Database, row: SyncListingRow): CarsBg
     category: row.body_type,
     transmission: row.transmission,
     color: row.color,
+    euronorm: row.euronorm,
     power: row.power,
     mileage: row.mileage,
     description: row.description,
@@ -738,7 +795,8 @@ function mapRowToSyncListing(db: Database.Database, row: SyncListingRow): CarsBg
     vat: row.vat,
     price: { amount: row.current_price, currency: 'EUR' },
     images: parseListingImageSources(db, row),
-    carsBgExtras: parseJson<CarsBgExtrasPayload | null>(row.extras_json, null),
+    carsBgExtras: parseCarsBgExtrasPayload(row.extras_json),
+    extraLabels: getExtraLabels(row.extras_json),
   };
 }
 
@@ -747,7 +805,7 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
     SELECT
       id, mobile_id, cars_id, dealer_id, url, title, make, model, reg_month, reg_year, fuel,
       carsbg_title,
-      body_type, transmission, color, power, mileage, description, extras_json,
+      body_type, transmission, color, euronorm, power, mileage, description, extras_json,
       ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded,
       (
         SELECT b.id
@@ -771,7 +829,7 @@ function loadDealerCarsListings(db: Database.Database, dealerId: number): CarsBg
     SELECT
       id, mobile_id, cars_id, dealer_id, url, title, make, model, reg_month, reg_year, fuel,
       carsbg_title,
-      body_type, transmission, color, power, mileage, description, extras_json,
+      body_type, transmission, color, euronorm, power, mileage, description, extras_json,
       ad_status, kaparo, current_price, vat, image_count, image_meta, full_keys, images_downloaded
     FROM listings
     WHERE dealer_id = ?
@@ -919,7 +977,7 @@ export async function deleteCarsBgOffer(page: Page, offerId: string): Promise<bo
   return bodyText.includes('изтрита') || bodyText.includes('deleted') || bodyText.includes('успешно');
 }
 
-export async function updateListingPrice(page: Page, offerUrlOrId: string, newPrice: number): Promise<boolean> {
+export async function updateListingPrice(page: Page, offerUrlOrId: string, listing: CarsBgSyncListing): Promise<boolean> {
   const offerId = extractOfferId(offerUrlOrId);
   if (!offerId) return false;
 
@@ -930,7 +988,8 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
   if (!(await priceInput.count())) return false;
 
   await priceInput.fill('');
-  await priceInput.type(String(newPrice), { delay: 20 });
+  await priceInput.type(String(listing.price.amount), { delay: 20 });
+  await applyCarsBgSupplementalFields(page, listing);
 
   const submitSelectors = [
     '#publishBtn',
@@ -962,7 +1021,7 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
   const persistedValue = await priceInput.inputValue().catch(() => '');
   const bodyText = (await page.textContent('body').catch(() => '')) || '';
   const navigatedAway = !page.url().includes('editcar.php');
-  return !errorText && (persistedValue === String(newPrice) || bodyText.includes(String(newPrice)) || navigatedAway);
+  return !errorText && (persistedValue === String(listing.price.amount) || bodyText.includes(String(listing.price.amount)) || navigatedAway);
 }
 
 function getCarsBgTitleValue(listing: CarsBgSyncListing): string {
@@ -990,6 +1049,8 @@ export async function updateListingContent(page: Page, offerUrlOrId: string, lis
     await notesInput.fill('');
     await notesInput.type(notes.slice(0, 32000), { delay: 5 });
   }
+
+  await applyCarsBgSupplementalFields(page, listing);
 
   const submitSelectors = [
     '#publishBtn',
@@ -1092,10 +1153,7 @@ export async function createListing(page: Page, listing: CarsBgSyncListing, deal
 
   await selectRadio(page, 'is_inbg', 1);
   await fillTextarea(page, '#notes', sanitizeCarsBgDescription(listing.description || listing.fullTitle));
-
-  if (listing.carsBgExtras?.selected?.length) {
-    await applyCarsBgExtras(page, listing.carsBgExtras).catch(() => {});
-  }
+  await applyCarsBgSupplementalFields(page, listing);
 
   let tempDir: string | null = null;
   try {
@@ -1180,7 +1238,7 @@ export async function syncCarsBgDealer(
       let ok = true;
       if (diff.priceDiff && diff.mobileBg.price.amount != null) {
         updateParts.push(`price €${diff.carsBg.price.amount ?? '—'} -> €${diff.mobileBg.price.amount}`);
-        ok = ok && await updateListingPrice(page, targetId, diff.mobileBg.price.amount);
+        ok = ok && await updateListingPrice(page, targetId, diff.mobileBg);
       }
       if (diff.titleDiff || diff.descriptionDiff) {
         const changedFields = [
