@@ -136,7 +136,6 @@ export default async function DeletedListingsPage({
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-4">
-        <div className="mb-3 text-sm text-red-300">Deleted listings</div>
         <div className="overflow-x-auto rounded-lg border border-gray-700/60">
           <table className="w-full min-w-[980px] text-sm">
             <thead>

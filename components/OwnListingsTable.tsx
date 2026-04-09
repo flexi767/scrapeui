@@ -205,6 +205,20 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
+  function formatDateOnly(value: string | null | undefined): string {
+    if (!value) return '—';
+    const plain = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (plain) return `${plain[3]}.${plain[2]}.${plain[1].slice(2)}`;
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(2);
+      return `${dd}.${mm}.${yy}`;
+    }
+    return value;
+  }
+
   function startEdit(row: OwnListingRow) {
     if (saving) return;
     clearPriceSaveTimeout();
@@ -332,7 +346,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
             </th>
             <th className="px-3 py-1.5 text-center">Orig #</th>
             <th className="px-3 py-1.5 text-center">Price #</th>
-            <th className="px-3 py-1.5 text-right">Lead Price</th>
             <th className="px-3 py-1.5 text-center">VAT</th>
             <th className="px-2 py-1.5 text-center w-14">К</th>
             <th className="px-3 py-1.5 text-right">W</th>
@@ -346,7 +359,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
               <SortHeader label="cars.bg created" sortKey="carsbg_created_date" align="right" />
             </th>
             <th className="px-2 py-1.5 text-center w-12">New</th>
-            <th className="px-3 py-1.5 text-right">Month</th>
             <th className="px-3 py-1.5 text-right">
               <SortHeader label="Year" sortKey="reg_year" align="right" />
             </th>
@@ -362,7 +374,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         <tbody className="divide-y divide-gray-700/50">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={21} className="px-4 py-6 text-center text-gray-500">No listings</td>
+              <td colSpan={19} className="px-4 py-6 text-center text-gray-500">No listings</td>
             </tr>
           )}
           {rows.map(row => {
@@ -567,6 +579,11 @@ export default function OwnListingsTable({ initialRows }: Props) {
                           {formatPrice(getPriceWithVat(row.current_price, row.vat))}
                         </div>
                       )}
+                      {row.search_first_result_price != null && (
+                        <div className="text-[11px] text-gray-400">
+                          {formatPrice(row.search_first_result_price)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </td>
@@ -594,14 +611,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 <td className="px-2 py-1.5 text-center">
                   {row.search_price_position != null ? (
                     <span className="font-medium text-emerald-200">{row.search_price_position}</span>
-                  ) : (
-                    <span className="text-gray-600">—</span>
-                  )}
-                </td>
-
-                <td className="px-2 py-1.5 text-right whitespace-nowrap">
-                  {row.search_first_result_price != null ? (
-                    <span className="text-gray-300">{formatPrice(row.search_first_result_price)}</span>
                   ) : (
                     <span className="text-gray-600">—</span>
                   )}
@@ -681,9 +690,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
                 {/* cars.bg created */}
                 <td className="w-20 px-2 py-1.5 text-right text-xs text-gray-400">
-                  <span className="inline-block whitespace-pre-line leading-tight">
-                    {row.carsbg_created_date ? formatDate(row.carsbg_created_date).replace(/,\s+/, '\n') : '—'}
-                  </span>
+                  {formatDateOnly(row.carsbg_created_date)}
                 </td>
 
                 {/* New */}
@@ -693,14 +700,10 @@ export default function OwnListingsTable({ initialRows }: Props) {
                   )}
                 </td>
 
-                {/* Month */}
-                <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
-                  {row.reg_month ?? '—'}
-                </td>
-
                 {/* Year */}
                 <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
-                  {row.reg_year ?? '—'}
+                  <div>{row.reg_month ?? '—'}</div>
+                  <div>{row.reg_year ?? '—'}</div>
                 </td>
 
                 {/* Category */}

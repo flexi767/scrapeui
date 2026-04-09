@@ -73,6 +73,20 @@ function SortLink({
   );
 }
 
+function formatDateOnly(value: string | null | undefined): string {
+  if (!value) return '—';
+  const plain = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (plain) return `${plain[3]}.${plain[2]}.${plain[1].slice(2)}`;
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(2);
+    return `${dd}.${mm}.${yy}`;
+  }
+  return value;
+}
+
 export default async function ListingsPage({
   searchParams,
 }: {
@@ -203,7 +217,6 @@ export default async function ListingsPage({
                   <SortLink label="cars.bg created" sortKey="carsbg_created_date" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
-                <th className="px-3 py-1.5 text-right">Month</th>
                 <th className="px-3 py-1.5 text-right">
                   <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
                 </th>
@@ -401,9 +414,7 @@ export default async function ListingsPage({
 
                     {/* cars.bg created */}
                     <td className="w-20 px-2 py-1 text-right text-xs text-gray-400">
-                      <span className="inline-block whitespace-pre-line leading-tight">
-                        {row.carsbg_created_date ? formatDate(row.carsbg_created_date).replace(/,\s+/, '\n') : '—'}
-                      </span>
+                      {formatDateOnly(row.carsbg_created_date)}
                     </td>
 
                     {/* New */}
@@ -415,18 +426,16 @@ export default async function ListingsPage({
                       )}
                     </td>
 
-                    {/* Reg Month */}
-                    <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
-                      {row.reg_month ?? '—'}
-                    </td>
-
                     {/* Reg Year */}
                     <td className="px-3 py-1.5 text-right text-gray-400 text-xs">
-                      {row.reg_year ? (
-                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-400 hover:text-white">
-                          {row.reg_year}
-                        </Link>
-                      ) : <span className="text-gray-600">—</span>}
+                      <div>{row.reg_month ?? '—'}</div>
+                      <div>
+                        {row.reg_year ? (
+                          <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-400 hover:text-white">
+                            {row.reg_year}
+                          </Link>
+                        ) : <span className="text-gray-600">—</span>}
+                      </div>
                     </td>
 
                     {/* Category */}

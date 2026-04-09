@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { getMobileBgBackups } from '@/lib/queries';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
 
 export default function MobileBgBackupsPage() {
   const backups = getMobileBgBackups(250);
@@ -30,20 +31,53 @@ export default function MobileBgBackupsPage() {
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-gray-500">No mobile.bg backups yet.</td>
               </tr>
-            ) : backups.map((backup) => (
+            ) : backups.map((backup) => {
+              const imageMeta = parseJson<{ cdn: string; shard: string } | null>(backup.image_meta, null);
+              const thumbKeys = parseJson<string[]>(backup.thumb_keys, []);
+              const fullKeys = parseJson<string[]>(backup.full_keys, []);
+              const images = buildImageList(
+                backup.mobile_id || '',
+                fullKeys.length ? fullKeys : thumbKeys,
+                thumbKeys,
+                imageMeta,
+                backup.images_downloaded === 1,
+              );
+              const thumb = images[0]?.thumb ?? (backup.mobile_id && backup.thumb_saved === 1 ? getThumbProxyUrl(backup.mobile_id, null) : null);
+
+              return (
               <tr key={backup.id} className="hover:bg-gray-800/40">
                 <td className="px-4 py-3">
-                  <Link href={`/mobilebg/backups/${backup.id}`} className="block font-medium text-white hover:text-blue-300">
-                    {backup.make || '—'} {backup.model || ''}
-                  </Link>
-                  <div className="mt-0.5 text-xs text-gray-400">{backup.title || backup.source_title || backup.mobile_id || '—'}</div>
+                  <div className="flex items-center gap-3">
+                    <Link href={`/mobilebg/backups/${backup.id}`} className="block shrink-0">
+                      <div className="overflow-hidden rounded-md border border-gray-700 bg-gray-900">
+                        {thumb ? (
+                          <ImageWithFallback
+                            src={thumb}
+                            alt={`${backup.make || 'Listing'} ${backup.model || ''}`.trim()}
+                            className="h-12 w-16 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-16 items-center justify-center text-[10px] text-gray-500">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                    <div className="min-w-0">
+                      <Link href={`/mobilebg/backups/${backup.id}`} className="block font-medium text-white hover:text-blue-300">
+                        {backup.make || '—'} {backup.model || ''}
+                      </Link>
+                      <div className="mt-0.5 text-xs text-gray-400">{backup.title || backup.source_title || backup.mobile_id || '—'}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-gray-300">{backup.dealer_name || '—'}</td>
                 <td className="px-4 py-3 text-right font-medium text-green-400">{formatPrice(backup.price_amount)}</td>
                 <td className="px-4 py-3 text-right text-gray-300">{backup.image_count}</td>
                 <td className="px-4 py-3 text-right text-gray-400">{formatDate(backup.updated_at || backup.created_at)}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

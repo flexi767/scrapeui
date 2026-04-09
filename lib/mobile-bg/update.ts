@@ -192,10 +192,30 @@ export async function updateBackupOnMobileBg(
   const log = options?.log ?? (() => {});
   const backup = db.prepare(`
     SELECT
-      id, listing_id, mobile_id, title, source_title, price_amount, vat_included,
-      mileage, fuel, power, engine, color, transmission, category as body_type, description, ad_status
-    FROM mobilebg_backups
-    WHERE id = ?
+      b.id,
+      b.listing_id,
+      b.mobile_id,
+      COALESCE(l.title, b.title) as title,
+      b.source_title,
+      COALESCE(l.current_price, b.price_amount) as price_amount,
+      CASE
+        WHEN l.vat = 'included' THEN 'yes'
+        WHEN l.vat = 'excluded' THEN 'no'
+        WHEN l.vat = 'exempt' THEN 'no'
+        ELSE b.vat_included
+      END as vat_included,
+      COALESCE(l.mileage, b.mileage) as mileage,
+      COALESCE(l.fuel, b.fuel) as fuel,
+      COALESCE(l.power, b.power) as power,
+      COALESCE(l.carsbg_title, b.engine) as engine,
+      COALESCE(l.color, b.color) as color,
+      COALESCE(l.transmission, b.transmission) as transmission,
+      COALESCE(l.body_type, b.category) as body_type,
+      COALESCE(l.description, b.description) as description,
+      COALESCE(l.ad_status, b.ad_status) as ad_status
+    FROM mobilebg_backups b
+    LEFT JOIN listings l ON l.id = b.listing_id
+    WHERE b.id = ?
   `).get(backupId) as BackupRow | undefined;
 
   if (!backup?.mobile_id) {

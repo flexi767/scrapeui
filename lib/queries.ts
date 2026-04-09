@@ -107,6 +107,11 @@ export interface MobileBgBackupListRow {
   updated_at: string | null;
   dealer_name: string | null;
   dealer_slug: string | null;
+  thumb_keys: string | null;
+  full_keys: string | null;
+  image_meta: string | null;
+  images_downloaded: number | null;
+  thumb_saved: number | null;
 }
 
 export interface MobileBgBackupImageRow {
@@ -156,6 +161,11 @@ export interface MobileBgEditFormRow {
   created_at: string | null;
   dealer_name: string | null;
   dealer_slug: string | null;
+  thumb_keys: string | null;
+  full_keys: string | null;
+  image_meta: string | null;
+  images_downloaded: number | null;
+  thumb_saved: number | null;
 }
 
 export interface MobileBgEditFormDetailRow extends MobileBgEditFormRow {
@@ -1836,9 +1846,11 @@ export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
       b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.image_count,
       b.created_at, b.updated_at,
-      d.name as dealer_name, d.slug as dealer_slug
+      d.name as dealer_name, d.slug as dealer_slug,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved
     FROM ranked b
     LEFT JOIN dealers d ON b.dealer_id = d.id
+    LEFT JOIN listings l ON b.listing_id = l.id
     WHERE b.row_num = 1
     ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
     LIMIT ?
@@ -1925,9 +1937,11 @@ export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {
     SELECT
       e.id, e.backup_id, e.listing_id, e.mobile_id, e.source_url, e.listing_token,
       e.row_title, e.row_price_text, e.form_url, e.screenshot_path, e.created_at,
-      d.name as dealer_name, d.slug as dealer_slug
+      d.name as dealer_name, d.slug as dealer_slug,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved
     FROM mobilebg_edit_form_snapshots e
     LEFT JOIN dealers d ON e.dealer_id = d.id
+    LEFT JOIN listings l ON e.listing_id = l.id
     ORDER BY e.created_at DESC, e.id DESC
     LIMIT ?
   `).all(limit) as MobileBgEditFormRow[];
