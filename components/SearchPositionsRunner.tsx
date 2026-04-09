@@ -156,6 +156,7 @@ export default function SearchPositionsRunner() {
     () => logs.filter((entry): entry is DisplayLogEntry & { kind: 'result'; found: boolean } => entry.kind === 'result' && typeof entry.found === 'boolean'),
     [logs],
   );
+  const appendLog = (entry: DisplayLogEntry) => setLogs((prev) => [...prev, entry]);
 
   async function run(missingOnly = false) {
     setRunning(true);
@@ -233,7 +234,7 @@ export default function SearchPositionsRunner() {
 
             if (event.type === 'start') {
               setStats(event.stats);
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
@@ -241,7 +242,7 @@ export default function SearchPositionsRunner() {
               setStats(event.stats);
               setCurrentLabel(labelForTarget(event.target));
               setCurrentPreview({ thumbUrl: event.target.thumb_url, listingUrl: event.target.listing_url });
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
@@ -249,31 +250,28 @@ export default function SearchPositionsRunner() {
               setStats(event.stats);
               setCurrentLabel(labelForRow(event.row));
               setCurrentPreview({ thumbUrl: event.row.thumb_url, listingUrl: event.row.listing_url });
-              setLogs((prev) => [
-                ...prev,
-                {
-                  kind: 'result',
-                  found: event.row.found,
-                  message: labelForRow(event.row),
-                  thumbUrl: event.row.thumb_url,
-                  listingUrl: event.row.listing_url,
-                  originalPosition: event.row.original_position,
-                  pricePosition: event.row.price_position,
-                },
-              ]);
+              appendLog({
+                kind: 'result',
+                found: event.row.found,
+                message: labelForRow(event.row),
+                thumbUrl: event.row.thumb_url,
+                listingUrl: event.row.listing_url,
+                originalPosition: event.row.original_position,
+                pricePosition: event.row.price_position,
+              });
               continue;
             }
 
             if (event.type === 'log') {
               if (event.message) {
-                setLogs((prev) => [...prev, { kind: 'log', message: event.message }]);
+                appendLog({ kind: 'log', message: event.message });
               }
               continue;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Search-position run failed';
-              setLogs((prev) => [...prev, { kind: 'error', message }]);
+              appendLog({ kind: 'error', message });
               toast.error(message);
               continue;
             }
@@ -298,7 +296,7 @@ export default function SearchPositionsRunner() {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Search-position run failed';
-        setLogs((prev) => [...prev, { kind: 'error', message }]);
+        appendLog({ kind: 'error', message });
         toast.error(message);
       }
     } finally {
@@ -321,10 +319,10 @@ export default function SearchPositionsRunner() {
       if (!res.ok) {
         throw new Error(data.error || 'Failed to stop search-position run');
       }
-      setLogs((prev) => [...prev, { kind: 'log', message: 'Stopping search-position run…' }]);
+      appendLog({ kind: 'log', message: 'Stopping search-position run…' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop search-position run';
-      setLogs((prev) => [...prev, { kind: 'error', message }]);
+      appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);
       return;

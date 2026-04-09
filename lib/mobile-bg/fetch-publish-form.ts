@@ -27,7 +27,7 @@ export async function fetchPublishForm(page: Page, mobileId?: string | null): Pr
   await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2000);
 
-  return page.evaluate(() => {
+  const result = await page.evaluate(() => {
     const result: Record<string, unknown> = {};
 
     document.querySelectorAll('select[name]').forEach((sel) => {
@@ -76,5 +76,7 @@ export async function fetchPublishForm(page: Page, mobileId?: string | null): Pr
     });
 
     return result as Record<string, unknown>;
-  }) as PublishFormFields;
+  });
+
+  return result as PublishFormFields;
 }

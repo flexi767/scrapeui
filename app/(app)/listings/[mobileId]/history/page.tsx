@@ -27,9 +27,11 @@ export default async function PriceHistoryPage({ params }: Props) {
   // Build price series for the chart: old prices from snapshots + current price as final point
   const pricePoints = [
     ...snapshots
-      .filter(s => s.price != null)
-      .map(s => ({ price: s.price, recorded_at: s.recorded_at })),
-    { price: listing.current_price, recorded_at: new Date().toISOString() },
+      .filter((s): s is typeof s & { price: number } => s.price != null)
+      .map((s) => ({ price: s.price, vat: s.vat, recorded_at: s.recorded_at })),
+    ...(listing.current_price != null
+      ? [{ price: listing.current_price, vat: listing.vat, recorded_at: new Date().toISOString() }]
+      : []),
   ];
 
   return (

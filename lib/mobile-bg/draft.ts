@@ -12,7 +12,7 @@ export interface MobileBgDraftBackupRow {
   engine: string | null;
   color: string | null;
   transmission: string | null;
-  body_type: string | null;
+  body_type?: string | null;
   description: string | null;
 }
 

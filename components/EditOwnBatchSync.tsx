@@ -181,8 +181,12 @@ function SyncBadge({ status, error }: { status: string | null; error: string | n
   return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-400">idle</span>;
 }
 
-function labelForRow(row: Pick<BatchRow, 'make' | 'model' | 'title' | 'mobile_id' | 'backup_id'>) {
+function labelForRow(row: { make: string | null; model: string | null; title: string | null; mobile_id: string | null; backup_id: number }) {
   return [row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`;
+}
+
+function isEditOwnSyncRow(data: EditOwnSyncRow | { error?: string } | null): data is EditOwnSyncRow {
+  return Boolean(data && typeof data === 'object' && 'backup_id' in data);
 }
 
 export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props) {
@@ -212,13 +216,14 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
     () => rows.filter((row) => row.runStatus === 'success' || row.runStatus === 'failed').slice().reverse().slice(0, 12),
     [rows],
   );
+  const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
 
   async function revertDraft(row: BatchRow) {
     setRevertingId(row.backup_id);
     try {
       const res = await fetch(`/api/editown/sync-drafts/${row.backup_id}`, { method: 'POST' });
       const data = await res.json().catch(() => null) as EditOwnSyncRow | { error?: string } | null;
-      if (!res.ok || !data || 'error' in data) {
+      if (!res.ok || !isEditOwnSyncRow(data)) {
         throw new Error((data && 'error' in data ? data.error : null) || 'Failed to revert draft');
       }
 
@@ -319,7 +324,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                 succeeded: event.succeeded,
                 failed: event.failed,
               });
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
@@ -330,13 +335,13 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                 succeeded: event.succeeded,
                 failed: event.failed,
               });
-              setCurrentLabel(labelForRow(event.target));
+              setCurrentLabel(labelForRow({ ...event.target, mobile_id: event.target.mobile_id }));
               setRows((prev) => prev.map((row) => row.backup_id === event.target.backup_id ? {
                 ...row,
                 runStatus: 'running',
                 runError: null,
               } : row));
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
@@ -355,28 +360,28 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
                 completedAt: event.row.completed_at,
               } : row));
               if (event.message) {
-                setLogs((prev) => [...prev, {
+                appendLog({
                   kind: 'result',
                   ok: event.row.status === 'success',
                   message: event.message,
-                }]);
+                });
               }
               continue;
             }
 
             if (event.type === 'log') {
               if (event.message) {
-                setLogs((prev) => [...prev, {
+                appendLog({
                   kind: event.level === 'stderr' ? 'error' : 'log',
                   message: event.message,
-                }]);
+                });
               }
               continue;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Batch sync failed';
-              setLogs((prev) => [...prev, { kind: 'error', message }]);
+              appendLog({ kind: 'error', message });
               toast.error(message);
               continue;
             }
@@ -394,7 +399,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
               setRunning(false);
               setStopping(false);
               abortRef.current = null;
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               if (event.failed === 0) {
                 toast.success(`Synced ${event.succeeded} listing${event.succeeded === 1 ? '' : 's'} to mobile.bg`);
               } else {
@@ -411,7 +416,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Batch sync failed';
-        setLogs((prev) => [...prev, { kind: 'error', message }]);
+        appendLog({ kind: 'error', message });
         toast.error(message);
       }
     } finally {
@@ -432,10 +437,10 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
       if (!res.ok) {
         throw new Error(data.error || 'Failed to stop batch sync');
       }
-      setLogs((prev) => [...prev, { kind: 'log', message: 'Stopping batch sync…' }]);
+      appendLog({ kind: 'log', message: 'Stopping batch sync…' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop batch sync';
-      setLogs((prev) => [...prev, { kind: 'error', message }]);
+      appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);
       return;

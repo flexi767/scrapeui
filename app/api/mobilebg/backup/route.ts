@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const enc = new TextEncoder();
 
-      const send = (data: BackupProgressEvent | { type: 'error'; message: string }) => {
+      const send = (data: BackupProgressEvent | { type: 'error'; message: string; dealer?: string }) => {
         controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 

@@ -161,6 +161,6 @@ export async function loginToCarsBg(page: Page, username: string, password: stri
   await page.waitForTimeout(2000);
   await page.goto(`${CARS_BG_BASE_URL}/my-offers.php`, { waitUntil: 'domcontentloaded' }).catch(() => {});
   await prepareCarsBgPage(page);
-  const bodyText = await page.textContent('body').catch(() => '');
+  const bodyText = (await page.textContent('body').catch(() => '')) || '';
   return bodyText.includes('Моите обяви') || bodyText.includes('Добави обява');
 }

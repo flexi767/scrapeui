@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { raw } from '@/db/client';
 
 interface TestResult {
@@ -10,13 +11,15 @@ interface TestResult {
 
 function runTest(slug: string): Promise<Record<string, TestResult>> {
   return new Promise((resolve, reject) => {
+    const routeDir = path.dirname(fileURLToPath(import.meta.url));
+    const scriptPath = path.resolve(routeDir, '../../../../scraper/scripts/test-dealer-logins.js');
     const dbPath =
       process.env.DB_PATH ||
       path.join(process.cwd(), '../scraped/listings.db');
 
     const child = spawn(
-      'node',
-      [path.join(process.cwd(), 'scraper/scripts/test-dealer-logins.js'), slug],
+      process.execPath,
+      [scriptPath, slug],
       { env: { ...process.env, SCRAPEUI_DB_PATH: dbPath } },
     );
 

@@ -34,7 +34,7 @@ export default async function ListingDetailPage({ params }: Props) {
   if (!listing) notFound();
 
   const snapshots = getSnapshots(listing.id);
-  const lastPriceSnapshot = [...snapshots].reverse().find((s) => s.price != null);
+  const lastPriceSnapshot = [...snapshots].reverse().find((s): s is typeof s & { price: number } => s.price != null);
 
   const imageMeta = parseJson<{ cdn: string; shard: string } | null>(
     listing.image_meta,

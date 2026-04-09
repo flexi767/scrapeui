@@ -17,7 +17,7 @@ function getArg(name: string): string | null {
   return idx !== -1 && args[idx + 1] ? args[idx + 1] : null;
 }
 
-function emit(event: Record<string, unknown>) {
+function emit(event: unknown) {
   console.log(JSON.stringify(event));
 }
 

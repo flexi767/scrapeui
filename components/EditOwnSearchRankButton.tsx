@@ -102,6 +102,7 @@ export default function EditOwnSearchRankButton() {
   const [currentLabel, setCurrentLabel] = useState<string | null>(null);
   const [doneSummary, setDoneSummary] = useState<{ total: number; found: number; notFound: number } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const appendLog = (entry: DisplayLogEntry) => setLogs((prev) => [...prev, entry]);
 
   async function run(missingOnly = false) {
     setRunning(true);
@@ -178,41 +179,38 @@ export default function EditOwnSearchRankButton() {
 
             if (event.type === 'start') {
               setStats(event.stats);
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
             if (event.type === 'checking') {
               setStats(event.stats);
               setCurrentLabel(labelForTarget(event.target));
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
             if (event.type === 'result') {
               setStats(event.stats);
               setCurrentLabel(labelForRow(event.row));
-              setLogs((prev) => [
-                ...prev,
-                {
-                  kind: 'result',
-                  found: event.row.found,
-                  message: event.message || labelForRow(event.row),
-                },
-              ]);
+              appendLog({
+                kind: 'result',
+                found: event.row.found,
+                message: event.message || labelForRow(event.row),
+              });
               continue;
             }
 
             if (event.type === 'log') {
               if (event.message) {
-                setLogs((prev) => [...prev, { kind: 'log', message: event.message }]);
+                appendLog({ kind: 'log', message: event.message });
               }
               continue;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Search-position run failed';
-              setLogs((prev) => [...prev, { kind: 'error', message }]);
+              appendLog({ kind: 'error', message });
               toast.error(message);
               continue;
             }
@@ -236,7 +234,7 @@ export default function EditOwnSearchRankButton() {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Search-position run failed';
-        setLogs((prev) => [...prev, { kind: 'error', message }]);
+        appendLog({ kind: 'error', message });
         toast.error(message);
       }
     } finally {

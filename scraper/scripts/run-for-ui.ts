@@ -420,7 +420,7 @@ async function scrapeCompetitorForUI(dealer: Record<string, any>, db: Database.D
             };
             const result = await upsertListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
             count++;
-            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: card.imageCount || 0, views: listing.views ?? null });
+            emit({ type: 'listing', dealer: dealer.slug, make: result.make, model: result.model, title: result.title, price: priceAmount, url: card.url, thumb: card.thumb || '', newListing: result.action === 'inserted', imageCount: card.imageCount || 0, views: null });
           }
         }
 

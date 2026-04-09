@@ -505,7 +505,8 @@ export async function applyCarsBgExtras(page: Page, extrasData: CarsBgExtrasPayl
 async function getSharp() {
   if (sharpModule !== undefined) return sharpModule;
   try {
-    sharpModule = await import('sharp');
+    const module = await import('sharp');
+    sharpModule = ('default' in module ? module.default : module) as typeof import('sharp');
   } catch {
     sharpModule = null;
   }
@@ -518,7 +519,7 @@ async function convertToJpeg(filePath: string): Promise<string | null> {
   const sharp = await getSharp();
   if (!sharp) return null;
   const jpegPath = filePath.replace(/\.[^.]+$/, '.jpg');
-  await sharp.default(filePath).jpeg({ quality: 90 }).toFile(jpegPath);
+  await sharp(filePath).jpeg({ quality: 90 }).toFile(jpegPath);
   return jpegPath;
 }
 
@@ -571,8 +572,8 @@ async function uploadImagesFallback(page: Page, files: string[]): Promise<void> 
     }, i + 1);
     const ok = await page.waitForFunction(
       (expected) => document.querySelectorAll('.photobox.haspic').length >= expected,
-      { timeout: 15000 },
       initialCount + i + 1,
+      { timeout: 15000 },
     ).then(() => true).catch(() => false);
     void ok;
     await page.waitForTimeout(600);
@@ -898,7 +899,7 @@ export async function deleteCarsBgOffer(page: Page, offerId: string): Promise<bo
       credentials: 'include',
     });
   }, { offer: offerId, baseUrl: CARS_BG_BASE_URL }).catch(() => {});
-  const bodyText = await page.textContent('body').catch(() => '');
+  const bodyText = (await page.textContent('body').catch(() => '')) || '';
   return bodyText.includes('изтрита') || bodyText.includes('deleted') || bodyText.includes('успешно');
 }
 
@@ -935,7 +936,7 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
   }
 
   if (!clicked) {
-    await page.locator('form').first().evaluate((form) => form.submit()).catch(() => {});
+    await page.locator('form').first().evaluate((form) => (form as HTMLFormElement).submit()).catch(() => {});
   }
 
   await page.waitForLoadState('networkidle').catch(() => {});
@@ -943,7 +944,7 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, newPr
 
   const errorText = await page.$$eval('.error', (nodes) => nodes.map((node) => node.textContent?.trim()).filter(Boolean).join(' | ')).catch(() => '');
   const persistedValue = await priceInput.inputValue().catch(() => '');
-  const bodyText = await page.textContent('body').catch(() => '');
+  const bodyText = (await page.textContent('body').catch(() => '')) || '';
   const navigatedAway = !page.url().includes('editcar.php');
   return !errorText && (persistedValue === String(newPrice) || bodyText.includes(String(newPrice)) || navigatedAway);
 }
@@ -994,7 +995,7 @@ export async function updateListingContent(page: Page, offerUrlOrId: string, lis
   }
 
   if (!clicked) {
-    await page.locator('form').first().evaluate((form) => form.submit()).catch(() => {});
+    await page.locator('form').first().evaluate((form) => (form as HTMLFormElement).submit()).catch(() => {});
   }
 
   await page.waitForLoadState('networkidle').catch(() => {});
@@ -1003,7 +1004,7 @@ export async function updateListingContent(page: Page, offerUrlOrId: string, lis
   const errorText = await page.$$eval('.error', (nodes) => nodes.map((node) => node.textContent?.trim()).filter(Boolean).join(' | ')).catch(() => '');
   const persistedTitle = await titleInput.inputValue().catch(() => '');
   const persistedNotes = await notesInput.inputValue().catch(() => '');
-  const bodyText = await page.textContent('body').catch(() => '');
+  const bodyText = (await page.textContent('body').catch(() => '')) || '';
   const navigatedAway = !page.url().includes('editcar.php');
 
   return !errorText && (

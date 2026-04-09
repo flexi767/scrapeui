@@ -103,9 +103,8 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
 
   const hasPlan = missing.length > 0 || diffs.length > 0 || staleCarsIds.length > 0 || doneSummary !== null;
 
-  const recentMissing = useMemo(() => missing.slice(0, 12), [missing]);
-  const recentDiffs = useMemo(() => diffs.slice(0, 12), [diffs]);
   const allSelected = selectedDealers.length === dealers.length;
+  const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
 
   function toggleDealer(slug: string) {
     setSelectedDealers((prev) => prev.includes(slug) ? prev.filter((entry) => entry !== slug) : [...prev, slug]);
@@ -191,13 +190,13 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             const event = JSON.parse(line.slice(6)) as StreamEntry;
 
             if (event.type === 'start') {
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
             if (event.type === 'dealer') {
               setCurrentDealer(event.dealer);
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               continue;
             }
 
@@ -208,10 +207,10 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 diffs: prev.diffs + event.diffs,
                 stale: prev.stale + event.stale,
               }));
-              setLogs((prev) => [...prev, {
+              appendLog({
                 kind: 'status',
                 message: `${event.dealer}: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`,
-              }]);
+              });
               continue;
             }
 
@@ -262,24 +261,26 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 failedCreates: prev.failedCreates + event.failedCreates,
                 failedDeletes: prev.failedDeletes + event.failedDeletes,
               }));
-              setLogs((prev) => [...prev, {
+              appendLog({
                 kind: 'status',
                 message: `${event.dealer}: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`,
-              }]);
+              });
               continue;
             }
 
             if (event.type === 'log') {
-              if (event.message) setLogs((prev) => [...prev, {
-                kind: event.level === 'stderr' ? 'error' : 'log',
-                message: event.dealer ? `${event.dealer}: ${event.message}` : event.message,
-              }]);
+              if (event.message) {
+                appendLog({
+                  kind: event.level === 'stderr' ? 'error' : 'log',
+                  message: event.dealer ? `${event.dealer}: ${event.message}` : event.message,
+                });
+              }
               continue;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Cars.bg sync failed';
-              setLogs((prev) => [...prev, { kind: 'error', message }]);
+              appendLog({ kind: 'error', message });
               toast.error(message);
               continue;
             }
@@ -302,7 +303,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
               setStopping(false);
               setCurrentDealer(null);
               abortRef.current = null;
-              if (event.message) setLogs((prev) => [...prev, { kind: 'status', message: event.message }]);
+              if (event.message) appendLog({ kind: 'status', message: event.message });
               if (live) {
                 if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
                   toast.success(`Cars.bg sync finished: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`);
@@ -322,7 +323,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Cars.bg sync failed';
-        setLogs((prev) => [...prev, { kind: 'error', message }]);
+        appendLog({ kind: 'error', message });
         toast.error(message);
       }
     } finally {
@@ -341,10 +342,10 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       const res = await fetch('/api/editown/carsbg-sync', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to stop cars.bg sync');
-      setLogs((prev) => [...prev, { kind: 'log', message: 'Stopping cars.bg sync…' }]);
+      appendLog({ kind: 'log', message: 'Stopping cars.bg sync…' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop cars.bg sync';
-      setLogs((prev) => [...prev, { kind: 'error', message }]);
+      appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);
       return;
@@ -487,9 +488,9 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
               Missing On Cars.bg
             </div>
             <div className="divide-y divide-gray-700/40 bg-gray-900/40">
-              {recentMissing.length === 0 ? (
+              {missing.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-gray-500">No missing listings in the current plan.</div>
-              ) : recentMissing.map((item, index) => (
+              ) : missing.map((item, index) => (
                 <div key={`${item.mobileId || index}`} className="px-4 py-3 text-sm">
                   <div className="text-white">{listingLabel(item)}</div>
                   <div className="mt-1 text-xs text-gray-500">
@@ -507,9 +508,9 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
               Price Diffs
             </div>
             <div className="divide-y divide-gray-700/40 bg-gray-900/40">
-              {recentDiffs.length === 0 ? (
+              {diffs.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-gray-500">No price diffs in the current plan.</div>
-              ) : recentDiffs.map((item, index) => (
+              ) : diffs.map((item, index) => (
                 <div key={`${item.mobileId || item.carsId || index}`} className="px-4 py-3 text-sm">
                   <div className="text-white">{listingLabel(item)}</div>
                   <div className="mt-1 text-xs text-gray-500">
@@ -547,7 +548,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             <div className="divide-y divide-gray-700/40 bg-gray-900/40">
               {staleCarsIds.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-gray-500">No stale offers in the current plan.</div>
-              ) : staleCarsIds.slice(0, 12).map((item, index) => (
+              ) : staleCarsIds.map((item, index) => (
                 <div key={`${item.carsId || index}`} className="px-4 py-3 text-sm">
                   <div className="text-white">{item.carsId || 'Unknown cars.bg id'}</div>
                   <div className="mt-1 text-xs text-gray-500">{item.dealer}</div>

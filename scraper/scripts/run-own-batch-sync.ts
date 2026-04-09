@@ -17,7 +17,7 @@ interface SyncTarget {
   make: string | null;
   model: string | null;
   dealer_name: string | null;
-  dealer_slug: string;
+  dealer_slug: string | null;
 }
 
 function emit(data: object) {
