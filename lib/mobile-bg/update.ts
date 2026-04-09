@@ -138,7 +138,12 @@ async function promoteListingStatusOnMyAds(
       })),
     ).catch(() => []);
 
+    const statusPattern = desiredStatus === 'TOP'
+      ? /ТОП|TOP|BEST/i
+      : /VIP/i;
     const weekOption =
+      optionValues.find((option) => statusPattern.test(option.text) && /1\s*седмиц|една\s*седмиц|1\s*week/i.test(option.text)) ||
+      optionValues.find((option) => statusPattern.test(option.text)) ||
       optionValues.find((option) => /1\s*седмиц|една\s*седмиц|1\s*week/i.test(option.text)) ||
       optionValues[0];
 
@@ -195,24 +200,25 @@ export async function updateBackupOnMobileBg(
       b.id,
       b.listing_id,
       b.mobile_id,
-      COALESCE(l.title, b.title) as title,
+      COALESCE(b.title, l.title) as title,
       b.source_title,
-      COALESCE(l.current_price, b.price_amount) as price_amount,
+      COALESCE(b.price_amount, l.current_price) as price_amount,
       CASE
+        WHEN b.vat_included IS NOT NULL THEN b.vat_included
         WHEN l.vat = 'included' THEN 'yes'
         WHEN l.vat = 'excluded' THEN 'no'
         WHEN l.vat = 'exempt' THEN 'no'
-        ELSE b.vat_included
+        ELSE NULL
       END as vat_included,
-      COALESCE(l.mileage, b.mileage) as mileage,
-      COALESCE(l.fuel, b.fuel) as fuel,
-      COALESCE(l.power, b.power) as power,
-      COALESCE(l.carsbg_title, b.engine) as engine,
-      COALESCE(l.color, b.color) as color,
-      COALESCE(l.transmission, b.transmission) as transmission,
-      COALESCE(l.body_type, b.category) as body_type,
-      COALESCE(l.description, b.description) as description,
-      COALESCE(l.ad_status, b.ad_status) as ad_status
+      COALESCE(b.mileage, l.mileage) as mileage,
+      COALESCE(b.fuel, l.fuel) as fuel,
+      COALESCE(b.power, l.power) as power,
+      COALESCE(b.engine, l.carsbg_title) as engine,
+      COALESCE(b.color, l.color) as color,
+      COALESCE(b.transmission, l.transmission) as transmission,
+      COALESCE(b.category, l.body_type) as body_type,
+      COALESCE(b.description, l.description) as description,
+      COALESCE(b.ad_status, l.ad_status) as ad_status
     FROM mobilebg_backups b
     LEFT JOIN listings l ON l.id = b.listing_id
     WHERE b.id = ?

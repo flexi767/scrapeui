@@ -565,6 +565,10 @@ export default function OwnListingsTable({ initialRows }: Props) {
                           void handleSave({ closeAfterSave: true, formSnapshot: nextForm });
                         }, 1000);
                       }}
+                      onBlur={() => {
+                        clearPriceSaveTimeout();
+                        void handleSave({ closeAfterSave: true });
+                      }}
                       onClick={stopEditorPointerPropagation}
                       onMouseDown={stopEditorPointerPropagation}
                       onPointerDown={stopEditorPointerPropagation}

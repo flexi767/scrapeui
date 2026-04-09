@@ -134,6 +134,10 @@ async function main() {
           priceDiff: diff.priceDiff,
           titleDiff: diff.titleDiff,
           descriptionDiff: diff.descriptionDiff,
+          oldTitle: diff.carsBg.carsbgTitle || diff.carsBg.title || null,
+          newTitle: diff.mobileBg.carsbgTitle || diff.mobileBg.title || null,
+          oldDescription: diff.carsBg.description ?? null,
+          newDescription: diff.mobileBg.description ?? null,
           url: diff.carsBg.url || diff.mobileBg.url,
         });
       }

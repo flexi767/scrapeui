@@ -10,7 +10,7 @@ type StreamEntry =
   | { type: 'dealer'; dealer: string; message?: string }
   | { type: 'summary'; dealer: string; missing: number; diffs: number; stale: number; dryRun: boolean }
   | { type: 'listing'; dealer: string; action: 'missing'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; price: number | null; url: string | null }
-  | { type: 'diff'; dealer: string; action: 'price'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; oldPrice: number | null; newPrice: number | null; priceDiff?: boolean; titleDiff?: boolean; descriptionDiff?: boolean; url: string | null }
+  | { type: 'diff'; dealer: string; action: 'price'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; oldPrice: number | null; newPrice: number | null; priceDiff?: boolean; titleDiff?: boolean; descriptionDiff?: boolean; oldTitle?: string | null; newTitle?: string | null; oldDescription?: string | null; newDescription?: string | null; url: string | null }
   | { type: 'stale'; dealer: string; carsId: string | null }
   | { type: 'done'; dealer: string; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number }
   | { type: 'end'; dryRun: boolean; missing: number; diffs: number; stale: number; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number; message?: string }
@@ -41,6 +41,10 @@ interface DiffItem {
   priceDiff?: boolean;
   titleDiff?: boolean;
   descriptionDiff?: boolean;
+  oldTitle?: string | null;
+  newTitle?: string | null;
+  oldDescription?: string | null;
+  newDescription?: string | null;
   url: string | null;
 }
 
@@ -91,6 +95,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const [doneSummary, setDoneSummary] = useState<Totals | null>(null);
   const [missing, setMissing] = useState<MissingItem[]>([]);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
+  const [openDescriptionKey, setOpenDescriptionKey] = useState<string | null>(null);
   const [staleCarsIds, setStaleCarsIds] = useState<Array<{ dealer: string; carsId: string | null }>>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -123,6 +128,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     setDoneSummary(null);
     setMissing([]);
     setDiffs([]);
+    setOpenDescriptionKey(null);
     setStaleCarsIds([]);
     setLogs([]);
 
@@ -241,6 +247,10 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 priceDiff: event.priceDiff,
                 titleDiff: event.titleDiff,
                 descriptionDiff: event.descriptionDiff,
+                oldTitle: event.oldTitle ?? null,
+                newTitle: event.newTitle ?? null,
+                oldDescription: event.oldDescription ?? null,
+                newDescription: event.newDescription ?? null,
                 url: event.url,
               }]);
               continue;
@@ -357,22 +367,6 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Cars.bg Sync</h2>
-            <p className="mt-1 max-w-2xl text-sm text-gray-400">
-              Preview or run the Mobile.bg → Cars.bg sync for own dealers using the migrated cars.bg publish flow.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3 text-right">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Mode</div>
-            <div className="mt-1 text-sm font-medium text-gray-100">
-              {running ? (liveMode ? 'Running live' : 'Planning') : (doneSummary ? (liveMode ? 'Last run live' : 'Last preview') : 'Idle')}
-            </div>
-          </div>
-        </div>
-
         <div className="flex flex-wrap gap-3">
           <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
             <span className="uppercase tracking-wide text-gray-500">Missing</span>
@@ -397,6 +391,12 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
           <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
             <span className="uppercase tracking-wide text-gray-500">Deleted</span>
             <span className="ml-2 text-lg font-semibold text-red-400">{totals.deleted}</span>
+          </div>
+          <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
+            <span className="uppercase tracking-wide text-gray-500">Mode</span>
+            <span className="ml-2 text-sm font-medium text-gray-100">
+              {running ? (liveMode ? 'Running live' : 'Planning') : (doneSummary ? (liveMode ? 'Last run live' : 'Last preview') : 'Idle')}
+            </span>
           </div>
         </div>
 
@@ -510,8 +510,11 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             <div className="divide-y divide-gray-700/40 bg-gray-900/40">
               {diffs.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-gray-500">No price diffs in the current plan.</div>
-              ) : diffs.map((item, index) => (
-                <div key={`${item.mobileId || item.carsId || index}`} className="px-4 py-3 text-sm">
+              ) : diffs.map((item, index) => {
+                const diffKey = `${item.mobileId || item.carsId || index}`;
+                const descriptionOpen = openDescriptionKey === diffKey;
+                return (
+                <div key={diffKey} className="px-4 py-3 text-sm">
                   <div className="text-white">{listingLabel(item)}</div>
                   <div className="mt-1 text-xs text-gray-500">
                     {item.dealer}
@@ -525,7 +528,13 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                       <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-200">title</span>
                     )}
                     {item.descriptionDiff && (
-                      <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-violet-200">description</span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenDescriptionKey((prev) => prev === diffKey ? null : diffKey)}
+                        className="rounded-full bg-violet-500/15 px-2 py-0.5 text-violet-200 transition-colors hover:bg-violet-500/25"
+                      >
+                        description
+                      </button>
                     )}
                   </div>
                   {item.priceDiff && (
@@ -536,8 +545,32 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                       <span className="text-white">{formatPrice(item.newPrice)}</span>
                     </div>
                   )}
+                  {item.titleDiff && (
+                    <div className="mt-1 text-xs">
+                      <span className="text-gray-500">title:</span>{' '}
+                      <span className="text-gray-300">{item.oldTitle?.trim() || '—'}</span>
+                      <span className="mx-1 text-gray-600">→</span>
+                      <span className="text-white">{item.newTitle?.trim() || '—'}</span>
+                    </div>
+                  )}
+                  {descriptionOpen && item.descriptionDiff && (
+                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                      <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
+                        <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">Old</div>
+                        <div className="whitespace-pre-wrap text-xs text-gray-300">
+                          {item.oldDescription?.trim() || '—'}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
+                        <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">New</div>
+                        <div className="whitespace-pre-wrap text-xs text-gray-200">
+                          {item.newDescription?.trim() || '—'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 

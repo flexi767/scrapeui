@@ -147,13 +147,20 @@ export async function PATCH(
       );
     }
 
+    const currentTitle = (listing.title ?? '').trim();
+    const currentCarsbgTitle = listing.carsbg_title ?? null;
+    const currentPriceValue = listing.current_price ?? 0;
+    const currentVat = listing.vat ?? null;
+    const currentKaparo = listing.kaparo ?? 0;
+    const currentAdStatus = listing.ad_status ?? 'none';
+
     const nothingChanged =
-      trimmedTitle === (sourceListing.title ?? '').trim() &&
-      carsbgTitleForDb === (sourceListing.carsbg_title ?? null) &&
-      currentPrice === (sourceListing.current_price ?? 0) &&
-      vatForDb === (sourceListing.vat ?? null) &&
-      kaparo === (sourceListing.kaparo ?? 0) &&
-      effectiveAdStatus === sourceAdStatus;
+      trimmedTitle === currentTitle &&
+      carsbgTitleForDb === currentCarsbgTitle &&
+      currentPrice === currentPriceValue &&
+      vatForDb === currentVat &&
+      kaparo === currentKaparo &&
+      effectiveAdStatus === currentAdStatus;
 
     if (nothingChanged) {
       return NextResponse.json(listing);
@@ -170,11 +177,11 @@ export async function PATCH(
     }
 
     const mobileFieldsChanged =
-      trimmedTitle !== (sourceListing.title ?? '').trim() ||
-      currentPrice !== (sourceListing.current_price ?? 0) ||
-      vatForDb !== (sourceListing.vat ?? null) ||
-      kaparo !== (sourceListing.kaparo ?? 0) ||
-      effectiveAdStatus !== sourceAdStatus;
+      trimmedTitle !== currentTitle ||
+      currentPrice !== currentPriceValue ||
+      vatForDb !== currentVat ||
+      kaparo !== currentKaparo ||
+      effectiveAdStatus !== currentAdStatus;
 
     if (!mobileFieldsChanged) {
       const updatedListing = getOwnListingByMobileId(mobileId);
