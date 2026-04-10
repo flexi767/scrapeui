@@ -2379,8 +2379,8 @@ export interface MobileBgCrawlQueueRow {
 
 export interface MobileBgCrawlQueueFilters {
   dealer?: string | string[];
-  urlType?: string;
-  status?: string;
+  urlType?: string | string[];
+  status?: string | string[];
   search?: string;
   page?: number;
   limit?: number;
@@ -2397,6 +2397,8 @@ export function getMobileBgCrawlQueue(filters: MobileBgCrawlQueueFilters = {}) {
   } = filters;
 
   const dealerSlugs = Array.isArray(dealer) ? dealer : dealer ? [dealer] : [];
+  const urlTypes = Array.isArray(urlType) ? urlType : urlType ? [urlType] : [];
+  const statuses = Array.isArray(status) ? status : status ? [status] : [];
   const wheres: string[] = [];
   const params: (string | number)[] = [];
 
@@ -2405,13 +2407,15 @@ export function getMobileBgCrawlQueue(filters: MobileBgCrawlQueueFilters = {}) {
     wheres.push(`d.slug IN (${ph})`);
     params.push(...dealerSlugs);
   }
-  if (urlType) {
-    wheres.push("c.url_type = ?");
-    params.push(urlType);
+  if (urlTypes.length > 0) {
+    const ph = urlTypes.map(() => "?").join(",");
+    wheres.push(`c.url_type IN (${ph})`);
+    params.push(...urlTypes);
   }
-  if (status) {
-    wheres.push("c.status = ?");
-    params.push(status);
+  if (statuses.length > 0) {
+    const ph = statuses.map(() => "?").join(",");
+    wheres.push(`c.status IN (${ph})`);
+    params.push(...statuses);
   }
   if (search) {
     wheres.push("(c.url LIKE ? OR c.mobile_id LIKE ?)");
