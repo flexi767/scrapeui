@@ -1,22 +1,27 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Loader2, Plus, Save, SearchIcon } from 'lucide-react';
-import { toast } from 'sonner';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
-import { Button } from '@/components/ui/button';
-import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
-import {
-  type SearchPrefillData,
-} from '@/lib/mobile-bg/search-prefill';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink, Loader2, Plus, Save, SearchIcon } from "lucide-react";
+import { toast } from "sonner";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
+import { Button } from "@/components/ui/button";
+import { MobileBgSearchResultsTable } from "@/components/MobileBgSearchResultsTable";
+import { type SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import {
   SEARCH_ACTION,
   buildFirstSevenSearchFields,
   type SearchField,
-} from '@/lib/mobile-bg/search-form-shared';
-import { buildImageList, formatMileage, formatPrice, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import type { SavedSearchSummary } from '@/lib/mobile-bg/saved-searches';
-import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
+} from "@/lib/mobile-bg/search-form-shared";
+import {
+  buildImageList,
+  formatMileage,
+  formatPrice,
+  getThumbProxyUrl,
+  parseJson,
+  type ImageMeta,
+} from "@/lib/utils";
+import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
+import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
 
 interface SavedSearchDetailResponse {
   detail: {
@@ -34,7 +39,8 @@ interface SavedSearchListResponse {
   searches: SavedSearchSummary[];
 }
 
-interface SavedSearchMutationResponse extends SavedSearchListResponse, SavedSearchDetailResponse {}
+interface SavedSearchMutationResponse
+  extends SavedSearchListResponse, SavedSearchDetailResponse {}
 
 interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
   fallback_note?: string | null;
@@ -45,12 +51,41 @@ interface AutocompleteOption {
   count?: number | null;
 }
 
-const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
-const ENGINE_OPTIONS = ['', 'Бензинов', 'Дизелов', 'Електрически', 'Хибриден', 'Plug-in хибрид', 'Газ', 'Водород'];
-const TRANSMISSION_OPTIONS = ['', 'Ръчна', 'Автоматична', 'Полуавтоматична'];
-const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'];
-const STEPPER_FIELDS = new Set(['f10', 'f11', 'f25', 'f26']);
-const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
+const HIDDEN_FIELD_NAMES = new Set([
+  "topmenu",
+  "rub",
+  "act",
+  "rub_pub_save",
+  "pubtype",
+  "f20",
+  "f9",
+]);
+const ENGINE_OPTIONS = [
+  "",
+  "Бензинов",
+  "Дизелов",
+  "Електрически",
+  "Хибриден",
+  "Plug-in хибрид",
+  "Газ",
+  "Водород",
+];
+const TRANSMISSION_OPTIONS = ["", "Ръчна", "Автоматична", "Полуавтоматична"];
+const CATEGORY_OPTIONS = [
+  "",
+  "Ван",
+  "Джип",
+  "Кабрио",
+  "Комби",
+  "Купе",
+  "Миниван",
+  "Пикап",
+  "Седан",
+  "Стреч лимузина",
+  "Хечбек",
+];
+const STEPPER_FIELDS = new Set(["f10", "f11", "f25", "f26"]);
+const CLEARABLE_FIELDS = new Set(["f25", "f26", "f7", "f8", "f15"]);
 function normalizeAutocompleteValue(value: string) {
   return value.trim().toLowerCase();
 }
@@ -60,15 +95,17 @@ function sortMakeOptions(options: AutocompleteOption[]) {
     const aHigh = (a.count ?? 0) > 10000 ? 1 : 0;
     const bHigh = (b.count ?? 0) > 10000 ? 1 : 0;
     if (aHigh !== bHigh) return bHigh - aHigh;
-    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0)) return (b.count ?? 0) - (a.count ?? 0);
-    return a.value.localeCompare(b.value, 'bg');
+    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0))
+      return (b.count ?? 0) - (a.count ?? 0);
+    return a.value.localeCompare(b.value, "bg");
   });
 }
 
 function sortModelOptions(options: AutocompleteOption[]) {
   return [...options].sort((a, b) => {
-    if ((a.count ?? 0) !== (b.count ?? 0)) return (b.count ?? 0) - (a.count ?? 0);
-    return a.value.localeCompare(b.value, 'bg');
+    if ((a.count ?? 0) !== (b.count ?? 0))
+      return (b.count ?? 0) - (a.count ?? 0);
+    return a.value.localeCompare(b.value, "bg");
   });
 }
 
@@ -82,12 +119,15 @@ function filterAutocompleteOptions(
   } = {},
 ) {
   const normalizedQuery = normalizeAutocompleteValue(query);
-  const visibleBase = !normalizedQuery && hideLowCountOnEmpty
-    ? options.filter((option) => (option.count ?? 0) >= 5)
-    : options;
+  const visibleBase =
+    !normalizedQuery && hideLowCountOnEmpty
+      ? options.filter((option) => (option.count ?? 0) >= 5)
+      : options;
 
   const filtered = normalizedQuery
-    ? visibleBase.filter((option) => normalizeAutocompleteValue(option.value).includes(normalizedQuery))
+    ? visibleBase.filter((option) =>
+        normalizeAutocompleteValue(option.value).includes(normalizedQuery),
+      )
     : visibleBase;
 
   return filtered;
@@ -113,27 +153,57 @@ function AutocompleteInput({
   onOpenChange: (open: boolean) => void;
 }) {
   const [isTyping, setIsTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectAllOnFocusRef = useRef(false);
+  // Keep a ref to the latest `open` value so the blur timeout reads current
+  // state rather than a stale closure (avoids closing a sibling dropdown that
+  // the parent opened after this input's onBlur was scheduled).
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   const visibleOptions = useMemo(
-    () => filterAutocompleteOptions(options, isTyping ? value : '', { hideLowCountOnEmpty }),
+    () =>
+      filterAutocompleteOptions(options, isTyping ? value : "", {
+        hideLowCountOnEmpty,
+      }),
     [hideLowCountOnEmpty, isTyping, options, value],
   );
 
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         value={value}
         onChange={(event) => {
           onChange(event.target.value);
           setIsTyping(true);
+          shouldSelectAllOnFocusRef.current = false;
           onOpenChange(true);
         }}
         onFocus={() => {
           setIsTyping(false);
+          shouldSelectAllOnFocusRef.current = true;
           onOpenChange(true);
+          window.requestAnimationFrame(() => {
+            if (
+              shouldSelectAllOnFocusRef.current &&
+              inputRef.current &&
+              document.activeElement === inputRef.current
+            ) {
+              inputRef.current.select();
+            }
+          });
         }}
         onBlur={() => {
-          window.setTimeout(() => onOpenChange(false), 120);
+          shouldSelectAllOnFocusRef.current = false;
+          // Only close if we're still the active dropdown by the time the
+          // timeout fires — the parent may have opened a sibling (e.g. model
+          // opens after make is selected) before the 120 ms elapses.
+          window.setTimeout(() => {
+            if (openRef.current) onOpenChange(false);
+          }, 120);
         }}
         placeholder={placeholder}
         className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
@@ -151,13 +221,21 @@ function AutocompleteInput({
                   event.preventDefault();
                   onChange(option.value);
                   setIsTyping(false);
+                  // Close the currently active dropdown after selecting an option.
                   onOpenChange(false);
+                  // Blur the input instead of calling onOpenChange(false) directly.
+                  // This lets the parent's onChange (e.g. updateMake) set the next
+                  // open dropdown first; the blur→timeout will then see open=false
+                  // for this input and skip the redundant close.
+                  inputRef.current?.blur();
                 }}
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
               >
                 <span>{option.value}</span>
                 {option.count != null && (
-                  <span className="text-xs text-gray-500">{option.count.toLocaleString('en-US')}</span>
+                  <span className="text-xs text-gray-500">
+                    {option.count.toLocaleString("en-US")}
+                  </span>
                 )}
               </button>
             ))
@@ -169,23 +247,24 @@ function AutocompleteInput({
 }
 
 function formatYearRange(search: SavedSearchSummary) {
-  if (search.yearFrom && search.yearTo) return `${search.yearFrom} - ${search.yearTo}`;
+  if (search.yearFrom && search.yearTo)
+    return `${search.yearFrom} - ${search.yearTo}`;
   if (search.yearFrom) return `from ${search.yearFrom}`;
   if (search.yearTo) return `to ${search.yearTo}`;
   if (search.regYear) return search.regYear;
-  return '—';
+  return "—";
 }
 
 function formatSavedAt(value: string | null) {
-  if (!value) return '—';
+  if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-GB', {
-    year: '2-digit',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleString("en-GB", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -194,22 +273,38 @@ export default function SavedSearchesWorkspace({
   initialDetail,
 }: {
   initialSearches: SavedSearchSummary[];
-  initialDetail: SavedSearchDetailResponse['detail'] | null;
+  initialDetail: SavedSearchDetailResponse["detail"] | null;
 }) {
   const [searches, setSearches] = useState(initialSearches);
-  const [selectedId, setSelectedId] = useState<number | null>(initialDetail?.search.id ?? initialSearches[0]?.id ?? null);
-  const [detail, setDetail] = useState<SavedSearchDetailResponse['detail'] | null>(initialDetail);
-  const [editableFields, setEditableFields] = useState<SearchField[]>(initialDetail?.prefill.form.fields.map((field) => ({ ...field })) ?? []);
-  const [subLocationLabel, setSubLocationLabel] = useState(initialDetail?.prefill.options.subLocations.label ?? 'Населено място');
-  const [subLocationOptions, setSubLocationOptions] = useState(initialDetail?.prefill.options.subLocations.options ?? [{ value: '', label: 'всички' }]);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    initialDetail?.search.id ?? initialSearches[0]?.id ?? null,
+  );
+  const [detail, setDetail] = useState<
+    SavedSearchDetailResponse["detail"] | null
+  >(initialDetail);
+  const [editableFields, setEditableFields] = useState<SearchField[]>(
+    initialDetail?.prefill.form.fields.map((field) => ({ ...field })) ?? [],
+  );
+  const [subLocationLabel, setSubLocationLabel] = useState(
+    initialDetail?.prefill.options.subLocations.label ?? "Населено място",
+  );
+  const [subLocationOptions, setSubLocationOptions] = useState(
+    initialDetail?.prefill.options.subLocations.options ?? [
+      { value: "", label: "всички" },
+    ],
+  );
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [resultsError, setResultsError] = useState('');
-  const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
+  const [resultsError, setResultsError] = useState("");
+  const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(
+    null,
+  );
   const [saveBusy, setSaveBusy] = useState(false);
   const [cloneBusy, setCloneBusy] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [openAutocomplete, setOpenAutocomplete] = useState<'marka' | 'model' | null>(null);
+  const [openAutocomplete, setOpenAutocomplete] = useState<
+    "marka" | "model" | null
+  >(null);
 
   const listing = detail?.prefill.listing ?? null;
   const imageMeta = parseJson<ImageMeta | null>(listing?.imageMeta, null);
@@ -225,7 +320,10 @@ export default function SavedSearchesWorkspace({
       )
     : [];
   const thumbSrc = listing?.mobile_id
-    ? images[0]?.thumb ?? (listing.thumbSaved === 1 ? getThumbProxyUrl(listing.mobile_id, null) : null)
+    ? (images[0]?.thumb ??
+      (listing.thumbSaved === 1
+        ? getThumbProxyUrl(listing.mobile_id, null)
+        : null))
     : null;
 
   useEffect(() => {
@@ -241,26 +339,37 @@ export default function SavedSearchesWorkspace({
     let cancelled = false;
     setLoadingDetail(true);
     setResults(null);
-    setResultsError('');
+    setResultsError("");
 
     void fetch(`/api/saved-searches/${selectedId}`)
       .then(async (res) => {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error((payload as { error?: string }).error || 'Failed to load saved search');
+          throw new Error(
+            (payload as { error?: string }).error ||
+              "Failed to load saved search",
+          );
         }
         return payload as SavedSearchDetailResponse;
       })
       .then((payload) => {
         if (cancelled) return;
         setDetail(payload.detail);
-        setEditableFields(payload.detail.prefill.form.fields.map((field) => ({ ...field })));
+        setEditableFields(
+          payload.detail.prefill.form.fields.map((field) => ({ ...field })),
+        );
         setSubLocationLabel(payload.detail.prefill.options.subLocations.label);
-        setSubLocationOptions(payload.detail.prefill.options.subLocations.options);
+        setSubLocationOptions(
+          payload.detail.prefill.options.subLocations.options,
+        );
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error(error instanceof Error ? error.message : 'Failed to load saved search');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load saved search",
+        );
       })
       .finally(() => {
         if (!cancelled) setLoadingDetail(false);
@@ -275,114 +384,151 @@ export default function SavedSearchesWorkspace({
     () => searches.find((entry) => entry.id === selectedId) ?? null,
     [searches, selectedId],
   );
-  const currentFields = useMemo(() => buildSubmissionFields(), [detail, editableFields]);
+  const currentFields = useMemo(
+    () => buildSubmissionFields(),
+    [detail, editableFields],
+  );
   const makeOrModelChanged = useMemo(() => {
     if (!detail) return false;
-    const originalMap = new Map(detail.prefill.form.fields.map((field) => [field.name, field.value]));
-    const currentMap = new Map(currentFields.map((field) => [field.name, field.value]));
-    return (currentMap.get('marka') ?? '') !== (originalMap.get('marka') ?? '')
-      || (currentMap.get('model') ?? '') !== (originalMap.get('model') ?? '');
+    const originalMap = new Map(
+      detail.prefill.form.fields.map((field) => [field.name, field.value]),
+    );
+    const currentMap = new Map(
+      currentFields.map((field) => [field.name, field.value]),
+    );
+    return (
+      (currentMap.get("marka") ?? "") !== (originalMap.get("marka") ?? "") ||
+      (currentMap.get("model") ?? "") !== (originalMap.get("model") ?? "")
+    );
   }, [currentFields, detail]);
 
-  function syncFromDetail(nextDetail: SavedSearchDetailResponse['detail']) {
+  function syncFromDetail(nextDetail: SavedSearchDetailResponse["detail"]) {
     setDetail(nextDetail);
-    setEditableFields(nextDetail.prefill.form.fields.map((field) => ({ ...field })));
+    setEditableFields(
+      nextDetail.prefill.form.fields.map((field) => ({ ...field })),
+    );
     setSubLocationLabel(nextDetail.prefill.options.subLocations.label);
     setSubLocationOptions(nextDetail.prefill.options.subLocations.options);
   }
 
   function updateField(name: string, value: string) {
-    setEditableFields((prev) => prev.map((field) => (
-      field.name === name ? { ...field, value } : field
-    )));
+    setEditableFields((prev) =>
+      prev.map((field) => (field.name === name ? { ...field, value } : field)),
+    );
   }
 
   function getFieldValue(name: string) {
-    return editableFields.find((field) => field.name === name)?.value ?? '';
+    return editableFields.find((field) => field.name === name)?.value ?? "";
   }
 
   function updateMake(value: string) {
-    setOpenAutocomplete('model');
+    setOpenAutocomplete("model");
     setEditableFields((prev) => {
-      const next = prev.map((field) => (
-        field.name === 'marka' ? { ...field, value } : field
-      ));
+      const next = prev.map((field) =>
+        field.name === "marka" ? { ...field, value } : field,
+      );
       const validModels = detail?.prefill.options.modelsByMake[value] ?? [];
-      const currentModel = next.find((field) => field.name === 'model')?.value ?? '';
-      if (currentModel && !validModels.some((option) => option.value === currentModel)) {
-        return next.map((field) => (
-          field.name === 'model' ? { ...field, value: '' } : field
-        ));
+      const currentModel =
+        next.find((field) => field.name === "model")?.value ?? "";
+      if (
+        currentModel &&
+        !validModels.some((option) => option.value === currentModel)
+      ) {
+        return next.map((field) =>
+          field.name === "model" ? { ...field, value: "" } : field,
+        );
       }
       return next;
     });
   }
 
   async function updateLocation(value: string) {
-    updateField('f17', value);
+    updateField("f17", value);
     setLocationLoading(true);
-    setSubLocationLabel('Населено място');
-    setSubLocationOptions([{ value: '', label: 'всички' }]);
-    setEditableFields((prev) => prev.map((field) => {
-      if (field.name === 'f17') return { ...field, value };
-      if (field.name === 'f18') return { ...field, value: '', label: 'Населено място', source: 'default' };
-      return field;
-    }));
+    setSubLocationLabel("Населено място");
+    setSubLocationOptions([{ value: "", label: "всички" }]);
+    setEditableFields((prev) =>
+      prev.map((field) => {
+        if (field.name === "f17") return { ...field, value };
+        if (field.name === "f18")
+          return {
+            ...field,
+            value: "",
+            label: "Населено място",
+            source: "default",
+          };
+        return field;
+      }),
+    );
 
     try {
       const params = new URLSearchParams();
-      if (value) params.set('location', value);
-      const res = await fetch(`/api/mobile-bg/location-options?${params.toString()}`);
+      if (value) params.set("location", value);
+      const res = await fetch(
+        `/api/mobile-bg/location-options?${params.toString()}`,
+      );
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) return;
 
-      const nextLabel = typeof payload.label === 'string' && payload.label ? payload.label : 'Населено място';
-      const nextOptions = Array.isArray(payload.options) && payload.options.length > 0
-        ? payload.options as Array<{ value: string; label: string }>
-        : [{ value: '', label: 'всички' }];
+      const nextLabel =
+        typeof payload.label === "string" && payload.label
+          ? payload.label
+          : "Населено място";
+      const nextOptions =
+        Array.isArray(payload.options) && payload.options.length > 0
+          ? (payload.options as Array<{ value: string; label: string }>)
+          : [{ value: "", label: "всички" }];
 
       setSubLocationLabel(nextLabel);
       setSubLocationOptions(nextOptions);
-      setEditableFields((prev) => prev.map((field) => (
-        field.name === 'f18' ? { ...field, label: nextLabel, value: '' } : field
-      )));
+      setEditableFields((prev) =>
+        prev.map((field) =>
+          field.name === "f18"
+            ? { ...field, label: nextLabel, value: "" }
+            : field,
+        ),
+      );
     } finally {
       setLocationLoading(false);
     }
   }
 
   function nudgeField(name: string, delta: number) {
-    setEditableFields((prev) => prev.map((field) => {
-      if (field.name !== name) return field;
-      const parsed = Number.parseInt(field.value || '0', 10);
-      const base = Number.isFinite(parsed) ? parsed : 0;
-      return { ...field, value: String(base + delta) };
-    }));
+    setEditableFields((prev) =>
+      prev.map((field) => {
+        if (field.name !== name) return field;
+        const parsed = Number.parseInt(field.value || "0", 10);
+        const base = Number.isFinite(parsed) ? parsed : 0;
+        return { ...field, value: String(base + delta) };
+      }),
+    );
   }
 
   function clearField(name: string) {
-    updateField(name, '');
+    updateField(name, "");
   }
 
   function buildSubmissionFields() {
     if (!detail) return [];
     return detail.prefill.form.fields.map((field) => {
-      const edited = editableFields.find((candidate) => candidate.name === field.name);
+      const edited = editableFields.find(
+        (candidate) => candidate.name === field.name,
+      );
       return edited ?? field;
     });
   }
 
   function openInMobileBg(fields = buildSubmissionFields()) {
-    if (typeof document === 'undefined') return;
-    const form = document.createElement('form');
-    form.method = 'POST';
+    if (typeof document === "undefined") return;
+    const form = document.createElement("form");
+    form.method = "POST";
     form.action = SEARCH_ACTION;
-    form.target = '_blank';
-    form.acceptCharset = 'windows-1251';
+    form.target = "_blank";
+    form.acceptCharset = "windows-1251";
 
     for (const field of fields) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
+      const input = document.createElement("input");
+      input.type = "hidden";
       input.name = field.name;
       input.value = field.value;
       form.appendChild(input);
@@ -396,12 +542,12 @@ export default function SavedSearchesWorkspace({
   async function showResultsHere(fields = buildSubmissionFields()) {
     if (!detail || !listing) return;
     setResultsLoading(true);
-    setResultsError('');
+    setResultsError("");
 
     try {
-      const res = await fetch('/api/mobile-bg/search-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/mobile-bg/search-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: detail.prefill.form.action,
           method: detail.prefill.form.method,
@@ -412,11 +558,18 @@ export default function SavedSearchesWorkspace({
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to load mobile.bg results');
+        throw new Error(
+          (payload as { error?: string }).error ||
+            "Failed to load mobile.bg results",
+        );
       }
       setResults(payload as MobileBgSearchResultsResponse);
     } catch (error) {
-      setResultsError(error instanceof Error ? error.message : 'Failed to load mobile.bg results');
+      setResultsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load mobile.bg results",
+      );
       setResults(null);
     } finally {
       setResultsLoading(false);
@@ -428,21 +581,25 @@ export default function SavedSearchesWorkspace({
     setSaveBusy(true);
     try {
       const res = await fetch(`/api/saved-searches/${detail.search.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fields: buildSubmissionFields() }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to save search');
+        throw new Error(
+          (payload as { error?: string }).error || "Failed to save search",
+        );
       }
 
       const data = payload as SavedSearchMutationResponse;
       setSearches(data.searches);
       syncFromDetail(data.detail);
-      toast.success('Saved search updated');
+      toast.success("Saved search updated");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save search');
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save search",
+      );
     } finally {
       setSaveBusy(false);
     }
@@ -452,9 +609,9 @@ export default function SavedSearchesWorkspace({
     if (!detail) return;
     setCloneBusy(true);
     try {
-      const res = await fetch('/api/saved-searches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId: detail.search.listingId,
           fields: buildSubmissionFields(),
@@ -462,16 +619,23 @@ export default function SavedSearchesWorkspace({
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to create saved search');
+        throw new Error(
+          (payload as { error?: string }).error ||
+            "Failed to create saved search",
+        );
       }
 
       const data = payload as SavedSearchMutationResponse;
       setSearches(data.searches);
       syncFromDetail(data.detail);
       setSelectedId(data.detail.search.id);
-      toast.success('Created a new saved search');
+      toast.success("Created a new saved search");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create saved search');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create saved search",
+      );
     } finally {
       setCloneBusy(false);
     }
@@ -481,12 +645,16 @@ export default function SavedSearchesWorkspace({
     <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
       <section className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/70">
         <div className="border-b border-gray-700 px-4 py-3">
-          <div className="text-sm font-medium text-gray-200">Saved searches</div>
+          <div className="text-sm font-medium text-gray-200">
+            Saved searches
+          </div>
           <div className="text-xs text-gray-500">{searches.length} total</div>
         </div>
         <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
           {searches.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-gray-500">No saved searches yet.</div>
+            <div className="px-4 py-8 text-sm text-gray-500">
+              No saved searches yet.
+            </div>
           ) : (
             <div className="divide-y divide-gray-800">
               {searches.map((search) => {
@@ -497,22 +665,27 @@ export default function SavedSearchesWorkspace({
                     type="button"
                     onClick={() => setSelectedId(search.id)}
                     className={`w-full px-4 py-3 text-left transition-colors ${
-                      active ? 'bg-gray-800/80' : 'hover:bg-gray-800/40'
+                      active ? "bg-gray-800/80" : "hover:bg-gray-800/40"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-white">
-                          {[search.make, search.model].filter(Boolean).join(' ') || 'Saved search'}
+                          {[search.make, search.model]
+                            .filter(Boolean)
+                            .join(" ") || "Saved search"}
                         </div>
                         <div className="truncate text-xs text-gray-400">
                           Year range: {formatYearRange(search)}
                         </div>
                         <div className="mt-1 truncate text-[11px] text-gray-500">
-                          Entry: {search.title || '—'}{search.mobileId ? ` • ${search.mobileId}` : ''}
+                          Entry: {search.title || "—"}
+                          {search.mobileId ? ` • ${search.mobileId}` : ""}
                         </div>
                       </div>
-                      <div className="shrink-0 text-[11px] text-gray-500">#{search.id}</div>
+                      <div className="shrink-0 text-[11px] text-gray-500">
+                        #{search.id}
+                      </div>
                     </div>
                   </button>
                 );
@@ -540,12 +713,18 @@ export default function SavedSearchesWorkspace({
                   <div className="flex items-start gap-3">
                     {listing.mobile_id && thumbSrc ? (
                       <div className="relative inline-block w-24 shrink-0">
-                        <a href={`/listings/${listing.mobile_id}`} className="peer block">
+                        <a
+                          href={`/listings/${listing.mobile_id}`}
+                          className="peer block"
+                        >
                           <ImageWithFallback
                             src={thumbSrc}
-                            alt={`${listing.make ?? 'Listing'} ${listing.model ?? ''}`.trim() || 'Listing image'}
+                            alt={
+                              `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
+                              "Listing image"
+                            }
                             className="w-24 rounded object-contain"
-                            style={{ aspectRatio: '4/3' }}
+                            style={{ aspectRatio: "4/3" }}
                             fallbackClassName="w-24 rounded bg-gray-800 text-gray-400"
                             fallbackLabel="Missing"
                           />
@@ -553,7 +732,10 @@ export default function SavedSearchesWorkspace({
                         <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-72 peer-hover:block">
                           <ImageWithFallback
                             src={thumbSrc}
-                            alt={`${listing.make ?? 'Listing'} ${listing.model ?? ''}`.trim() || 'Listing image preview'}
+                            alt={
+                              `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
+                              "Listing image preview"
+                            }
                             className="w-full rounded shadow-xl"
                             fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
                             fallbackLabel="Missing"
@@ -565,21 +747,29 @@ export default function SavedSearchesWorkspace({
                     )}
                     <div className="min-w-0">
                       <div className="text-lg font-semibold text-white">
-                        {[listing.make, listing.model].filter(Boolean).join(' ') || 'Saved search'}
+                        {[listing.make, listing.model]
+                          .filter(Boolean)
+                          .join(" ") || "Saved search"}
                       </div>
                       <a
-                        href={listing.mobile_id ? `/listings/${listing.mobile_id}` : undefined}
+                        href={
+                          listing.mobile_id
+                            ? `/listings/${listing.mobile_id}`
+                            : undefined
+                        }
                         className="mt-1 block text-sm text-gray-300 hover:text-white"
                       >
-                        {listing.title || '—'}
+                        {listing.title || "—"}
                       </a>
                       <div className="mt-1 text-xs text-gray-500">
-                        {formatPrice(listing.currentPrice)} • {listing.fuel || '—'} • {formatMileage(listing.mileage)}
+                        {formatPrice(listing.currentPrice)} •{" "}
+                        {listing.fuel || "—"} • {formatMileage(listing.mileage)}
                       </div>
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
-                    Updated {formatSavedAt(detail.search.updatedAt)} • Created {formatSavedAt(detail.search.createdAt)}
+                    Updated {formatSavedAt(detail.search.updatedAt)} • Created{" "}
+                    {formatSavedAt(detail.search.createdAt)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -587,7 +777,11 @@ export default function SavedSearchesWorkspace({
                     type="button"
                     variant="outline"
                     className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-                    onClick={() => void showResultsHere(buildFirstSevenSearchFields(currentFields))}
+                    onClick={() =>
+                      void showResultsHere(
+                        buildFirstSevenSearchFields(currentFields),
+                      )
+                    }
                     disabled={resultsLoading}
                   >
                     <SearchIcon className="mr-2 h-4 w-4" />
@@ -600,7 +794,11 @@ export default function SavedSearchesWorkspace({
                     onClick={() => void showResultsHere()}
                     disabled={resultsLoading}
                   >
-                    {resultsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
+                    {resultsLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <SearchIcon className="mr-2 h-4 w-4" />
+                    )}
                     All Fields
                   </Button>
                   <Button
@@ -620,7 +818,11 @@ export default function SavedSearchesWorkspace({
                       onClick={() => void saveCurrent()}
                       disabled={saveBusy}
                     >
-                      {saveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      {saveBusy ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
                       Save
                     </Button>
                   )}
@@ -631,141 +833,255 @@ export default function SavedSearchesWorkspace({
                     onClick={() => void saveAsNew()}
                     disabled={cloneBusy}
                   >
-                    {cloneBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                    {cloneBusy ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
                     Save As New
                   </Button>
                 </div>
               </div>
 
               <div className="mt-3 text-xs text-gray-500">
-                Reference counts: {detail.prefill.reference.makeCount != null ? detail.prefill.reference.makeCount.toLocaleString('en-US') : '—'} for make
-                {detail.prefill.reference.modelCount != null ? ` • ${detail.prefill.reference.modelCount.toLocaleString('en-US')} for model` : ''}
+                Reference counts:{" "}
+                {detail.prefill.reference.makeCount != null
+                  ? detail.prefill.reference.makeCount.toLocaleString("en-US")
+                  : "—"}{" "}
+                for make
+                {detail.prefill.reference.modelCount != null
+                  ? ` • ${detail.prefill.reference.modelCount.toLocaleString("en-US")} for model`
+                  : ""}
               </div>
               {detail.prefill.omitted.length > 0 && (
                 <div className="mt-2 text-xs text-amber-300/80">
-                  {detail.prefill.omitted.join(' ')}
+                  {detail.prefill.omitted.join(" ")}
                 </div>
               )}
             </div>
 
             <div className="rounded-lg border border-gray-700 bg-gray-900/70">
-              <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-200">Search fields</div>
+              <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-200">
+                Search fields
+              </div>
               <div className="grid gap-2 p-4 md:grid-cols-2">
-                {editableFields.filter((field) => !HIDDEN_FIELD_NAMES.has(field.name)).map((field) => {
-                  const selectedMake = getFieldValue('marka');
-                  const matchedMakeKey = Object.keys(detail.prefill.options.modelsByMake).find(
-                    (make) => normalizeAutocompleteValue(make) === normalizeAutocompleteValue(selectedMake),
-                  ) ?? selectedMake;
-                  const modelOptions = (detail.prefill.options.modelsByMake[matchedMakeKey] ?? []).map((option) => ({
+                {editableFields
+                  .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
+                  .map((field) => {
+                    const selectedMake = getFieldValue("marka");
+                    const matchedMakeKey =
+                      Object.keys(detail.prefill.options.modelsByMake).find(
+                        (make) =>
+                          normalizeAutocompleteValue(make) ===
+                          normalizeAutocompleteValue(selectedMake),
+                      ) ?? selectedMake;
+                    const modelOptions = (
+                      detail.prefill.options.modelsByMake[matchedMakeKey] ?? []
+                    ).map((option) => ({
                       value: option.value,
                       count: option.count,
                     }));
-                  const makeOptions = sortMakeOptions(
-                    detail.prefill.options.makes.map((option) => ({
-                      value: option.value,
-                      count: option.count,
-                    })),
-                  );
+                    const makeOptions = sortMakeOptions(
+                      detail.prefill.options.makes.map((option) => ({
+                        value: option.value,
+                        count: option.count,
+                      })),
+                    );
 
-                  return (
-                    <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-gray-700 bg-gray-800/70 px-3 py-2">
-                      <div className="min-w-0">
-                        <div className="text-sm text-gray-100">{field.name === 'f18' ? subLocationLabel : field.label}</div>
-                        <div className="text-xs uppercase tracking-wide text-gray-500">{field.name}</div>
-                      </div>
-                      <div className="min-w-0">
-                        {field.name === 'marka' ? (
-                          <AutocompleteInput
-                            value={field.value}
-                            onChange={updateMake}
-                            options={makeOptions}
-                            placeholder="Type make"
-                            emptyLabel="No make matches"
-                            hideLowCountOnEmpty
-                            open={openAutocomplete === 'marka'}
-                            onOpenChange={(open) => setOpenAutocomplete(open ? 'marka' : null)}
-                          />
-                        ) : field.name === 'model' ? (
-                          <AutocompleteInput
-                            value={field.value}
-                            onChange={(value) => updateField(field.name, value)}
-                            options={modelOptions}
-                            placeholder="Type model"
-                            emptyLabel="No model matches"
-                            open={openAutocomplete === 'model'}
-                            onOpenChange={(open) => setOpenAutocomplete(open ? 'model' : null)}
-                          />
-                        ) : field.name === 'f12' ? (
-                          <select
-                            value={field.value}
-                            onChange={(event) => updateField(field.name, event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            {ENGINE_OPTIONS.map((option) => <option key={option || 'engine-all'} value={option}>{option || 'Всички типове'}</option>)}
-                          </select>
-                        ) : field.name === 'f13' ? (
-                          <select
-                            value={field.value}
-                            onChange={(event) => updateField(field.name, event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            {TRANSMISSION_OPTIONS.map((option) => <option key={option || 'trans-all'} value={option}>{option || 'Без значение'}</option>)}
-                          </select>
-                        ) : field.name === 'f14' ? (
-                          <select
-                            value={field.value}
-                            onChange={(event) => updateField(field.name, event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            {CATEGORY_OPTIONS.map((option) => <option key={option || 'cat-all'} value={option}>{option || 'всички категории'}</option>)}
-                          </select>
-                        ) : field.name === 'f17' ? (
-                          <select
-                            value={field.value}
-                            onChange={(event) => void updateLocation(event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            {detail.prefill.options.locations.map((option) => (
-                              <option key={`${option.value || 'loc-all'}-${option.label}`} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        ) : field.name === 'f18' ? (
-                          <div className="relative">
+                    return (
+                      <div
+                        key={field.name}
+                        className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-gray-700 bg-gray-800/70 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-100">
+                            {field.name === "f18"
+                              ? subLocationLabel
+                              : field.label}
+                          </div>
+                          <div className="text-xs uppercase tracking-wide text-gray-500">
+                            {field.name}
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          {field.name === "marka" ? (
+                            <AutocompleteInput
+                              value={field.value}
+                              onChange={updateMake}
+                              options={makeOptions}
+                              placeholder="Type make"
+                              emptyLabel="No make matches"
+                              hideLowCountOnEmpty
+                              open={openAutocomplete === "marka"}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  setOpenAutocomplete("marka");
+                                  return;
+                                }
+                                setOpenAutocomplete((current) =>
+                                  current === "marka" ? null : current,
+                                );
+                              }}
+                            />
+                          ) : field.name === "model" ? (
+                            <AutocompleteInput
+                              value={field.value}
+                              onChange={(value) =>
+                                updateField(field.name, value)
+                              }
+                              options={modelOptions}
+                              placeholder="Type model"
+                              emptyLabel="No model matches"
+                              open={openAutocomplete === "model"}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  setOpenAutocomplete("model");
+                                  return;
+                                }
+                                setOpenAutocomplete((current) =>
+                                  current === "model" ? null : current,
+                                );
+                              }}
+                            />
+                          ) : field.name === "f12" ? (
                             <select
                               value={field.value}
-                              onChange={(event) => updateField(field.name, event.target.value)}
-                              disabled={locationLoading}
-                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
+                              onChange={(event) =>
+                                updateField(field.name, event.target.value)
+                              }
+                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                             >
-                              <option value="">всички</option>
-                              {subLocationOptions.filter((option) => option.value !== '').map((option) => (
-                                <option key={`${option.value}-${option.label}`} value={option.value}>{option.label}</option>
+                              {ENGINE_OPTIONS.map((option) => (
+                                <option
+                                  key={option || "engine-all"}
+                                  value={option}
+                                >
+                                  {option || "Всички типове"}
+                                </option>
                               ))}
                             </select>
-                            {locationLoading && <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <input
+                          ) : field.name === "f13" ? (
+                            <select
                               value={field.value}
-                              onChange={(event) => updateField(field.name, event.target.value)}
-                              className="min-w-0 flex-1 rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                            />
-                            {STEPPER_FIELDS.has(field.name) && (
-                              <>
-                                <button type="button" className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700" onClick={() => nudgeField(field.name, -1)}>-1</button>
-                                <button type="button" className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700" onClick={() => nudgeField(field.name, 1)}>+1</button>
-                              </>
-                            )}
-                            {CLEARABLE_FIELDS.has(field.name) && field.value && (
-                              <button type="button" className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700" onClick={() => clearField(field.name)}>Clear</button>
-                            )}
-                          </div>
-                        )}
+                              onChange={(event) =>
+                                updateField(field.name, event.target.value)
+                              }
+                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                            >
+                              {TRANSMISSION_OPTIONS.map((option) => (
+                                <option
+                                  key={option || "trans-all"}
+                                  value={option}
+                                >
+                                  {option || "Без значение"}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.name === "f14" ? (
+                            <select
+                              value={field.value}
+                              onChange={(event) =>
+                                updateField(field.name, event.target.value)
+                              }
+                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                            >
+                              {CATEGORY_OPTIONS.map((option) => (
+                                <option
+                                  key={option || "cat-all"}
+                                  value={option}
+                                >
+                                  {option || "всички категории"}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.name === "f17" ? (
+                            <select
+                              value={field.value}
+                              onChange={(event) =>
+                                void updateLocation(event.target.value)
+                              }
+                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                            >
+                              {detail.prefill.options.locations.map(
+                                (option) => (
+                                  <option
+                                    key={`${option.value || "loc-all"}-${option.label}`}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          ) : field.name === "f18" ? (
+                            <div className="relative">
+                              <select
+                                value={field.value}
+                                onChange={(event) =>
+                                  updateField(field.name, event.target.value)
+                                }
+                                disabled={locationLoading}
+                                className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
+                              >
+                                <option value="">всички</option>
+                                {subLocationOptions
+                                  .filter((option) => option.value !== "")
+                                  .map((option) => (
+                                    <option
+                                      key={`${option.value}-${option.label}`}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </option>
+                                  ))}
+                              </select>
+                              {locationLoading && (
+                                <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={field.value}
+                                onChange={(event) =>
+                                  updateField(field.name, event.target.value)
+                                }
+                                className="min-w-0 flex-1 rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                              />
+                              {STEPPER_FIELDS.has(field.name) && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
+                                    onClick={() => nudgeField(field.name, -1)}
+                                  >
+                                    -1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
+                                    onClick={() => nudgeField(field.name, 1)}
+                                  >
+                                    +1
+                                  </button>
+                                </>
+                              )}
+                              {CLEARABLE_FIELDS.has(field.name) &&
+                                field.value && (
+                                  <button
+                                    type="button"
+                                    className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
+                                    onClick={() => clearField(field.name)}
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
 
