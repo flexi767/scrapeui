@@ -40,12 +40,133 @@ interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
   fallback_note?: string | null;
 }
 
+interface AutocompleteOption {
+  value: string;
+  count?: number | null;
+}
+
 const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
 const ENGINE_OPTIONS = ['', 'Бензинов', 'Дизелов', 'Електрически', 'Хибриден', 'Plug-in хибрид', 'Газ', 'Водород'];
 const TRANSMISSION_OPTIONS = ['', 'Ръчна', 'Автоматична', 'Полуавтоматична'];
 const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'];
 const STEPPER_FIELDS = new Set(['f10', 'f11', 'f25', 'f26']);
 const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
+function normalizeAutocompleteValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function sortMakeOptions(options: AutocompleteOption[]) {
+  return [...options].sort((a, b) => {
+    const aHigh = (a.count ?? 0) > 10000 ? 1 : 0;
+    const bHigh = (b.count ?? 0) > 10000 ? 1 : 0;
+    if (aHigh !== bHigh) return bHigh - aHigh;
+    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0)) return (b.count ?? 0) - (a.count ?? 0);
+    return a.value.localeCompare(b.value, 'bg');
+  });
+}
+
+function sortModelOptions(options: AutocompleteOption[]) {
+  return [...options].sort((a, b) => {
+    if ((a.count ?? 0) !== (b.count ?? 0)) return (b.count ?? 0) - (a.count ?? 0);
+    return a.value.localeCompare(b.value, 'bg');
+  });
+}
+
+function filterAutocompleteOptions(
+  options: AutocompleteOption[],
+  query: string,
+  {
+    hideLowCountOnEmpty = false,
+  }: {
+    hideLowCountOnEmpty?: boolean;
+  } = {},
+) {
+  const normalizedQuery = normalizeAutocompleteValue(query);
+  const visibleBase = !normalizedQuery && hideLowCountOnEmpty
+    ? options.filter((option) => (option.count ?? 0) >= 5)
+    : options;
+
+  const filtered = normalizedQuery
+    ? visibleBase.filter((option) => normalizeAutocompleteValue(option.value).includes(normalizedQuery))
+    : visibleBase;
+
+  return filtered;
+}
+
+function AutocompleteInput({
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyLabel,
+  hideLowCountOnEmpty = false,
+  open,
+  onOpenChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: AutocompleteOption[];
+  placeholder?: string;
+  emptyLabel: string;
+  hideLowCountOnEmpty?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [isTyping, setIsTyping] = useState(false);
+
+  const visibleOptions = useMemo(
+    () => filterAutocompleteOptions(options, isTyping ? value : '', { hideLowCountOnEmpty }),
+    [hideLowCountOnEmpty, isTyping, options, value],
+  );
+
+  return (
+    <div className="relative">
+      <input
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setIsTyping(true);
+          onOpenChange(true);
+        }}
+        onFocus={() => {
+          setIsTyping(false);
+          onOpenChange(true);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => onOpenChange(false), 120);
+        }}
+        placeholder={placeholder}
+        className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+      />
+      {open && (
+        <div className="saved-search-autocomplete-scroll absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-scroll overscroll-contain rounded-md border border-gray-700 bg-gray-900 shadow-xl [scrollbar-gutter:stable]">
+          {visibleOptions.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
+          ) : (
+            visibleOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(option.value);
+                  setIsTyping(false);
+                  onOpenChange(false);
+                }}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+              >
+                <span>{option.value}</span>
+                {option.count != null && (
+                  <span className="text-xs text-gray-500">{option.count.toLocaleString('en-US')}</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function formatYearRange(search: SavedSearchSummary) {
   if (search.yearFrom && search.yearTo) return `${search.yearFrom} - ${search.yearTo}`;
@@ -88,6 +209,7 @@ export default function SavedSearchesWorkspace({
   const [saveBusy, setSaveBusy] = useState(false);
   const [cloneBusy, setCloneBusy] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [openAutocomplete, setOpenAutocomplete] = useState<'marka' | 'model' | null>(null);
 
   const listing = detail?.prefill.listing ?? null;
   const imageMeta = parseJson<ImageMeta | null>(listing?.imageMeta, null);
@@ -153,6 +275,14 @@ export default function SavedSearchesWorkspace({
     () => searches.find((entry) => entry.id === selectedId) ?? null,
     [searches, selectedId],
   );
+  const currentFields = useMemo(() => buildSubmissionFields(), [detail, editableFields]);
+  const makeOrModelChanged = useMemo(() => {
+    if (!detail) return false;
+    const originalMap = new Map(detail.prefill.form.fields.map((field) => [field.name, field.value]));
+    const currentMap = new Map(currentFields.map((field) => [field.name, field.value]));
+    return (currentMap.get('marka') ?? '') !== (originalMap.get('marka') ?? '')
+      || (currentMap.get('model') ?? '') !== (originalMap.get('model') ?? '');
+  }, [currentFields, detail]);
 
   function syncFromDetail(nextDetail: SavedSearchDetailResponse['detail']) {
     setDetail(nextDetail);
@@ -172,6 +302,7 @@ export default function SavedSearchesWorkspace({
   }
 
   function updateMake(value: string) {
+    setOpenAutocomplete('model');
     setEditableFields((prev) => {
       const next = prev.map((field) => (
         field.name === 'marka' ? { ...field, value } : field
@@ -456,7 +587,7 @@ export default function SavedSearchesWorkspace({
                     type="button"
                     variant="outline"
                     className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-                    onClick={() => void showResultsHere(buildFirstSevenSearchFields(buildSubmissionFields()))}
+                    onClick={() => void showResultsHere(buildFirstSevenSearchFields(currentFields))}
                     disabled={resultsLoading}
                   >
                     <SearchIcon className="mr-2 h-4 w-4" />
@@ -481,16 +612,18 @@ export default function SavedSearchesWorkspace({
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open mobile.bg
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
-                    onClick={() => void saveCurrent()}
-                    disabled={saveBusy}
-                  >
-                    {saveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save
-                  </Button>
+                  {!makeOrModelChanged && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
+                      onClick={() => void saveCurrent()}
+                      disabled={saveBusy}
+                    >
+                      {saveBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Save
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -520,7 +653,19 @@ export default function SavedSearchesWorkspace({
               <div className="grid gap-2 p-4 md:grid-cols-2">
                 {editableFields.filter((field) => !HIDDEN_FIELD_NAMES.has(field.name)).map((field) => {
                   const selectedMake = getFieldValue('marka');
-                  const modelOptions = detail.prefill.options.modelsByMake[selectedMake] ?? [];
+                  const matchedMakeKey = Object.keys(detail.prefill.options.modelsByMake).find(
+                    (make) => normalizeAutocompleteValue(make) === normalizeAutocompleteValue(selectedMake),
+                  ) ?? selectedMake;
+                  const modelOptions = (detail.prefill.options.modelsByMake[matchedMakeKey] ?? []).map((option) => ({
+                      value: option.value,
+                      count: option.count,
+                    }));
+                  const makeOptions = sortMakeOptions(
+                    detail.prefill.options.makes.map((option) => ({
+                      value: option.value,
+                      count: option.count,
+                    })),
+                  );
 
                   return (
                     <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-gray-700 bg-gray-800/70 px-3 py-2">
@@ -530,31 +675,26 @@ export default function SavedSearchesWorkspace({
                       </div>
                       <div className="min-w-0">
                         {field.name === 'marka' ? (
-                          <select
+                          <AutocompleteInput
                             value={field.value}
-                            onChange={(event) => updateMake(event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="">Select make</option>
-                            {detail.prefill.options.makes.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={updateMake}
+                            options={makeOptions}
+                            placeholder="Type make"
+                            emptyLabel="No make matches"
+                            hideLowCountOnEmpty
+                            open={openAutocomplete === 'marka'}
+                            onOpenChange={(open) => setOpenAutocomplete(open ? 'marka' : null)}
+                          />
                         ) : field.name === 'model' ? (
-                          <select
+                          <AutocompleteInput
                             value={field.value}
-                            onChange={(event) => updateField(field.name, event.target.value)}
-                            className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="">All models</option>
-                            {modelOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(value) => updateField(field.name, value)}
+                            options={modelOptions}
+                            placeholder="Type model"
+                            emptyLabel="No model matches"
+                            open={openAutocomplete === 'model'}
+                            onOpenChange={(open) => setOpenAutocomplete(open ? 'model' : null)}
+                          />
                         ) : field.name === 'f12' ? (
                           <select
                             value={field.value}

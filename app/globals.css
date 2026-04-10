@@ -81,6 +81,29 @@ body {
   background: #ffffff;
 }
 
+.saved-search-autocomplete-scroll {
+  scrollbar-color: #94a3b8 #111827;
+  scrollbar-width: auto;
+}
+
+.saved-search-autocomplete-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.saved-search-autocomplete-scroll::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.saved-search-autocomplete-scroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+  border: 2px solid #111827;
+}
+
+.saved-search-autocomplete-scroll::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
 a {
   color: white;
   text-decoration: none;

@@ -73,21 +73,16 @@ function parseCmm(js: string, mm2pt: Map<string, string>, pubtypes: string[]): M
     const makeIdRaw = m[2].trim();
     const tokens = [...m[3].matchAll(/'([^']*)'/g)].map(x => x[1].trim());
 
-    const models: ModelEntry[] = [];
-    for (let i = 0; i < tokens.length;) {
-      const label = tokens[i] || '';
-      if (!label || /^\d+$/.test(label)) { i += 1; continue; }
-      const nextToken = tokens[i + 1] || '';
-      const hasPairedId = /^\d+$/.test(nextToken);
-      models.push({ label, id: hasPairedId ? Number(nextToken) || null : null });
-      i += hasPairedId ? 2 : 1;
-    }
-
-    // Only include models that are explicitly tagged in mm2pt for one of our pubtypes.
-    // Untagged entries (motorcycles, trucks, etc.) are excluded entirely.
-    const filtered = models.filter(model => {
-      const mapped = mm2pt.get(`${make}~${model.label}`);
-      return mapped !== undefined && ptSet.has(mapped);
+    // cmmvars.js rows now mix plain model labels with numeric-looking model names
+    // (for example BMW "1", "3", "520"), so we cannot treat digit-only tokens as IDs.
+    // Instead, rely on mm2pt as the source of truth for valid make~model pairs and
+    // keep every token that is explicitly tagged for the requested pubtypes.
+    const filtered = tokens.flatMap((label) => {
+      const normalizedLabel = label.trim();
+      if (!normalizedLabel) return [];
+      const mapped = mm2pt.get(`${make}~${normalizedLabel}`);
+      if (mapped === undefined || !ptSet.has(mapped)) return [];
+      return [{ label: normalizedLabel, id: null } satisfies ModelEntry];
     });
 
     if (filtered.length === 0) continue;
