@@ -245,7 +245,6 @@ function saveCrawlQueueStatus(
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function upsertListing(
   db: Database.Database,
   dealerId: number,
@@ -294,7 +293,6 @@ async function upsertListing(
     listing.euronorm != null,
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existing = db
     .prepare("SELECT * FROM listings WHERE mobile_id = ?")
     .get(mobileId) as Record<string, any> | undefined;
@@ -521,7 +519,6 @@ async function upsertListing(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function scrapeCompetitorForUI(
   dealer: Record<string, any>,
   db: Database.Database,
@@ -692,17 +689,6 @@ async function scrapeCompetitorForUI(
           const mobileId = extractMobileId(card.url);
           if (mobileId) seenMobileIds.add(mobileId);
         }
-
-        saveCrawlQueueStatus(
-          db,
-          dealer.id as number,
-          dealer.mobileBg as string,
-          "dealer_homepage",
-          {
-            listingsCount: seenMobileIds.size,
-            status: "completed",
-          },
-        );
 
         if (deepCrawl) {
           for (const card of cards) {
@@ -1060,6 +1046,16 @@ async function scrapeCompetitorForUI(
   });
 
   await crawler.run([{ url: dealer.mobileBg, label: "LIST" }]);
+  saveCrawlQueueStatus(
+    db,
+    dealer.id as number,
+    dealer.mobileBg as string,
+    "dealer_homepage",
+    {
+      listingsCount: seenMobileIds.size,
+      status: "completed",
+    },
+  );
   const reconciliation = reconcileDeletedMobileBgListings(
     db,
     dealer.id as number,
@@ -1108,7 +1104,6 @@ async function main() {
   for (const dealer of selected) {
     emit({ type: "log", message: `Starting scrape: ${dealer.name}` });
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const count = await scrapeCompetitorForUI(
         dealer as Record<string, any>,
         db,
