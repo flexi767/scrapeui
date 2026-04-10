@@ -84,12 +84,132 @@ export interface BackupProgressEvent {
   imagesCount?: number;
 }
 
+const CRAWL_CACHE_TTL_HOURS = 24; // Cache dealer homepage crawls for 24 hours
+
 export function getStorageRoot(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'mobilebg-backups');
 }
 
 async function ensureDir(dir: string): Promise<void> {
   await fsp.mkdir(dir, { recursive: true });
+}
+
+interface CrawlQueueEntry {
+  id: number;
+  status: string;
+  listingsCount: number | null;
+  price: number | null;
+  views: number | null;
+  lastCrawledAt: string | null;
+}
+
+interface CrawlCacheResult {
+  cached: boolean;
+  listingsCount?: number;
+  price?: number;
+  views?: number;
+}
+
+function getCrawlQueueEntry(db: Database.Database, dealerId: number, url: string): CrawlQueueEntry | null {
+  return db.prepare(`
+    SELECT id, status, listings_count, price, views, last_crawled_at
+    FROM mobilebg_crawl_queue
+    WHERE dealer_id = ? AND url = ?
+    LIMIT 1
+  `).get(dealerId, url) as CrawlQueueEntry | null;
+}
+
+function checkCrawlCache(db: Database.Database, dealerId: number, url: string, urlType: 'dealer_homepage' | 'listing_detail'): CrawlCacheResult {
+  const entry = getCrawlQueueEntry(db, dealerId, url);
+  if (!entry) {
+    return { cached: false };
+  }
+
+  // Check if cache is still fresh (only for dealer_homepage)
+  if (urlType === 'dealer_homepage' && entry.lastCrawledAt) {
+    const lastCrawl = new Date(entry.lastCrawledAt);
+    const now = new Date();
+    const hoursSince = (now.getTime() - lastCrawl.getTime()) / (1000 * 60 * 60);
+    if (hoursSince < CRAWL_CACHE_TTL_HOURS) {
+      return {
+        cached: true,
+        listingsCount: entry.listingsCount ?? undefined,
+      };
+    }
+  }
+
+  // For listing_detail, use cache if available
+  if (urlType === 'listing_detail' && entry.lastCrawledAt) {
+    return {
+      cached: true,
+      price: entry.price ?? undefined,
+      views: entry.views ?? undefined,
+    };
+  }
+
+  return { cached: false };
+}
+
+function saveCrawlQueueStatus(
+  db: Database.Database,
+  dealerId: number,
+  url: string,
+  urlType: 'dealer_homepage' | 'listing_detail',
+  data: {
+    listingsCount?: number;
+    price?: number;
+    views?: number;
+    mobileId?: string;
+    status?: string;
+    error?: string;
+  },
+): void {
+  const now = new Date().toISOString();
+  const existing = getCrawlQueueEntry(db, dealerId, url);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE mobilebg_crawl_queue
+      SET
+        status = ?,
+        listings_count = COALESCE(?, listings_count),
+        price = COALESCE(?, price),
+        views = COALESCE(?, views),
+        last_crawled_at = ?,
+        error = ?,
+        updated_at = ?
+      WHERE id = ?
+    `).run(
+      data.status ?? 'completed',
+      data.listingsCount ?? null,
+      data.price ?? null,
+      data.views ?? null,
+      now,
+      data.error ?? null,
+      now,
+      existing.id,
+    );
+  } else {
+    db.prepare(`
+      INSERT INTO mobilebg_crawl_queue (
+        dealer_id, url, url_type, mobile_id, status, listings_count, price, views,
+        last_crawled_at, error, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      dealerId,
+      url,
+      urlType,
+      data.mobileId ?? null,
+      data.status ?? 'completed',
+      data.listingsCount ?? null,
+      data.price ?? null,
+      data.views ?? null,
+      now,
+      data.error ?? null,
+      now,
+      now,
+    );
+  }
 }
 
 async function collectListingLinks(page: Page, dealerUrl: string, maxPages = 30): Promise<string[]> {
@@ -619,7 +739,29 @@ export async function backupDealerToDb(
     }
 
     onProgress?.({ type: 'status', dealer: dealer.name, message: 'Collecting dealer listings', runId });
-    const links = await collectListingLinks(page, dealer.mobileUrl);
+    
+    // Check if dealer homepage crawl is cached
+    const homepageCache = checkCrawlCache(db, dealer.id, dealer.mobileUrl, 'dealer_homepage');
+    let links: string[];
+    if (homepageCache.cached && homepageCache.listingsCount) {
+      onProgress?.({
+        type: 'status',
+        dealer: dealer.name,
+        message: `Using cached dealer listing count: ${homepageCache.listingsCount} ads`,
+        runId,
+      });
+      links = [];
+      // For cached homepage, still need to fetch listing IDs from DB if they're not being updated
+      // For now, we skip re-crawling but this means we rely on previously found listings
+    } else {
+      links = await collectListingLinks(page, dealer.mobileUrl);
+      // Save homepage crawl results to cache
+      saveCrawlQueueStatus(db, dealer.id, dealer.mobileUrl, 'dealer_homepage', {
+        listingsCount: links.length,
+        status: 'completed',
+      });
+    }
+    
     const seenMobileIds = links
       .map((link) => link.match(/obiava-(\d+)/)?.[1] || null)
       .filter((value): value is string => Boolean(value));
@@ -634,7 +776,19 @@ export async function backupDealerToDb(
 
     for (let index = 0; index < links.length; index += 1) {
       const link = links[index];
+      
+      // Check if listing detail page is cached
+      const listingCache = checkCrawlCache(db, dealer.id, link, 'listing_detail');
+      
       const detail = await scrapeListingDetail(page, link, makesMap);
+      
+      // Save listing detail crawl results to cache
+      saveCrawlQueueStatus(db, dealer.id, link, 'listing_detail', {
+        mobileId: detail.mobileId,
+        price: detail.priceAmount ? Math.floor(detail.priceAmount) : undefined,
+        status: 'completed',
+      });
+      
       const listingDir = path.join(dealerRoot, detail.mobileId);
       await ensureDir(listingDir);
       const { backupId, action } = upsertBackupArtifact(db, runId, dealer.id, detail);
@@ -645,6 +799,13 @@ export async function backupDealerToDb(
         engagement = await captureEditFormSnapshotWithPage(db, dealer, detail.mobileId, dbPath, page, {
           backupId,
         });
+        
+        // Update crawl queue with views from engagement data
+        if (engagement?.views != null) {
+          saveCrawlQueueStatus(db, dealer.id, link, 'listing_detail', {
+            views: engagement.views,
+          });
+        }
       } catch (error) {
         onProgress?.({
           type: 'status',
