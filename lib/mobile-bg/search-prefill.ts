@@ -221,9 +221,17 @@ async function fetchSubLocationOptions(location: string) {
 
 export async function getListingSearchPrefill(
   listingId: number,
-  options: { includeLocationOptions?: boolean } = {},
+  options: {
+    includeLocationOptions?: boolean;
+    overrideFields?: SearchField[] | null;
+    useSavedProfile?: boolean;
+  } = {},
 ): Promise<SearchPrefillData | null> {
-  const { includeLocationOptions = true } = options;
+  const {
+    includeLocationOptions = true,
+    overrideFields = null,
+    useSavedProfile = true,
+  } = options;
   const listing = raw.prepare(`
     SELECT
       id,
@@ -279,8 +287,9 @@ export async function getListingSearchPrefill(
     return acc;
   }, {});
 
-  const savedProfile = getSavedSearchProfile(listing.id);
-  const savedFieldMap = new Map(savedProfile?.fields.map((field) => [field.name, field]) ?? []);
+  const savedProfile = useSavedProfile ? getSavedSearchProfile(listing.id) : null;
+  const effectiveSavedFields = overrideFields ?? savedProfile?.fields ?? [];
+  const savedFieldMap = new Map(effectiveSavedFields.map((field) => [field.name, field]));
   const preferredLocation = savedFieldMap.get('f17')?.value || 'България';
 
   const subLocations = includeLocationOptions
@@ -429,8 +438,8 @@ export async function getListingSearchPrefill(
     },
     omitted,
     savedSearch: {
-      enabled: savedProfile != null,
-      updatedAt: savedProfile?.updatedAt ?? null,
+      enabled: effectiveSavedFields.length > 0,
+      updatedAt: overrideFields ? null : savedProfile?.updatedAt ?? null,
     },
   };
 }

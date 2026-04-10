@@ -16,6 +16,7 @@ const navItems = [
   { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon, indent: true },
   { href: '/editown/carsbg-sync', label: 'Cars.bg Sync', icon: UploadIcon, indent: true },
   { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
+  { href: '/editown/saved-searches', label: 'Saved Searches', icon: SearchIcon, indent: true },
   { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
   { href: '/mobilebg/backups', label: 'Backups', icon: ArchiveIcon, indent: true },
