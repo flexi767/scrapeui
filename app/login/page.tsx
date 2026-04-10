@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Auto-login in development mode
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
+    if (process.env.NODE_ENV !== "development") return;
     setLoading(true);
-    signIn('credentials', {
-      username: '',
-      password: '__dev_auto__',
+    signIn("credentials", {
+      username: "",
+      password: "__dev_auto__",
       redirect: false,
     }).then((res) => {
       if (res?.error) {
         setLoading(false);
       } else {
-        router.push('/dashboard');
+        router.push("/dashboard");
         router.refresh();
       }
     });
@@ -33,20 +33,20 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     const form = new FormData(e.currentTarget);
-    const res = await signIn('credentials', {
-      username: form.get('username') as string,
-      password: form.get('password') as string,
+    const res = await signIn("credentials", {
+      username: form.get("username") as string,
+      password: form.get("password") as string,
       redirect: false,
     });
 
     if (res?.error) {
-      setError('Invalid username or password');
+      setError("Invalid username or password");
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      router.push("/dashboard");
       router.refresh();
     }
   }
@@ -83,12 +83,10 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
       </div>

@@ -2,6 +2,12 @@ import { raw } from '@/db/client';
 import { load } from 'cheerio';
 import iconv from 'iconv-lite';
 import { getSavedSearchProfile } from '@/lib/mobile-bg/search-profiles';
+import {
+  ALWAYS_INCLUDED_FIELD_NAMES,
+  HIDDEN_FIELD_NAMES,
+  SEARCH_ACTION,
+  type SearchField,
+} from '@/lib/mobile-bg/search-form-shared';
 
 interface ListingSearchRow {
   id: number;
@@ -16,18 +22,16 @@ interface ListingSearchRow {
   power: number | null;
   mileage: number | null;
   current_price: number | null;
+  thumb_keys: string | null;
+  full_keys: string | null;
+  image_meta: string | null;
+  images_downloaded: number | null;
+  thumb_saved: number | null;
 }
 
 interface ReferenceRow {
   make_count: number | null;
   model_count: number | null;
-}
-
-export interface SearchField {
-  name: string;
-  label: string;
-  value: string;
-  source: 'default' | 'listing' | 'derived' | 'saved';
 }
 
 interface ReferenceOption {
@@ -54,6 +58,11 @@ export interface SearchPrefillData {
     power: number | null;
     mileage: number | null;
     currentPrice: number | null;
+    thumbKeys: string | null;
+    fullKeys: string | null;
+    imageMeta: string | null;
+    imagesDownloaded: number | null;
+    thumbSaved: number | null;
   };
   form: {
     action: string;
@@ -81,10 +90,7 @@ export interface SearchPrefillData {
   };
 }
 
-export const SEARCH_ACTION = 'https://www.mobile.bg/pcgi/mobile.cgi';
 const SEARCH_PAGE_URL = 'https://www.mobile.bg/search/avtomobili-dzhipove';
-export const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
-export const ALWAYS_INCLUDED_FIELD_NAMES = new Set(['f17']);
 
 const ALLOWED_FUELS = new Set([
   'Бензинов',
@@ -245,7 +251,12 @@ export async function getListingSearchPrefill(
       body_type,
       power,
       mileage,
-      current_price
+      current_price,
+      thumb_keys,
+      full_keys,
+      image_meta,
+      images_downloaded,
+      thumb_saved
     FROM listings
     WHERE id = ?
     LIMIT 1
@@ -419,6 +430,11 @@ export async function getListingSearchPrefill(
       power: listing.power,
       mileage: listing.mileage,
       currentPrice: listing.current_price,
+      thumbKeys: listing.thumb_keys,
+      fullKeys: listing.full_keys,
+      imageMeta: listing.image_meta,
+      imagesDownloaded: listing.images_downloaded,
+      thumbSaved: listing.thumb_saved,
     },
     form: {
       action: SEARCH_ACTION,
@@ -442,13 +458,4 @@ export async function getListingSearchPrefill(
       updatedAt: overrideFields ? null : savedProfile?.updatedAt ?? null,
     },
   };
-}
-
-export function buildFirstSevenSearchFields(fields: SearchField[]) {
-  const hiddenFields = fields.filter((field) => HIDDEN_FIELD_NAMES.has(field.name));
-  const alwaysIncludedFields = fields.filter((field) => ALWAYS_INCLUDED_FIELD_NAMES.has(field.name));
-  const firstSevenVisibleFields = fields
-    .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name) && !ALWAYS_INCLUDED_FIELD_NAMES.has(field.name))
-    .slice(0, 7);
-  return [...hiddenFields, ...alwaysIncludedFields, ...firstSevenVisibleFields];
 }

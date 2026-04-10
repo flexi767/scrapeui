@@ -1,7 +1,7 @@
 import { raw } from '@/db/client';
+import type { SearchField } from '@/lib/mobile-bg/search-form-shared';
 import {
   getListingSearchPrefill,
-  type SearchField,
   type SearchPrefillData,
 } from '@/lib/mobile-bg/search-prefill';
 
@@ -130,6 +130,8 @@ function ensureSavedSearchTables() {
 function toSummaryYearRange(fields: SearchField[]) {
   const byName = new Map(fields.map((field) => [field.name, field.value]));
   return {
+    make: byName.get('marka') || null,
+    model: byName.get('model') || null,
     yearFrom: byName.get('f10') || null,
     yearTo: byName.get('f11') || null,
   };
@@ -173,8 +175,8 @@ export function listSavedSearchSummaries(): SavedSearchSummary[] {
       id: row.id,
       listingId: row.listing_id,
       mobileId: row.mobile_id,
-      make: row.make,
-      model: row.model,
+      make: range.make ?? row.make,
+      model: range.model ?? row.model,
       title: row.title,
       regYear: row.reg_year,
       yearFrom: range.yearFrom,

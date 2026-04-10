@@ -1,4 +1,4 @@
-import { raw } from '@/db/client';
+import { raw } from "@/db/client";
 
 export interface ListingRow {
   id: number;
@@ -264,22 +264,22 @@ const ownNeedsSyncExpr = `
 `;
 
 const VALID_SORT: Record<string, string> = {
-  price: 'l.current_price',
-  last_edit: 'l.last_edit',
-  carsbg_created_date: 'l.carsbg_created_date',
-  views: 'l.views',
-  mileage: 'l.mileage',
-  fuel: 'l.fuel',
-  dealer: 'd.priority DESC, d.name',
-  ad_status: 'l.ad_status',
-  kaparo: 'l.kaparo',
-  reg_year: 'l.reg_year',
+  price: "l.current_price",
+  last_edit: "l.last_edit",
+  carsbg_created_date: "l.carsbg_created_date",
+  views: "l.views",
+  mileage: "l.mileage",
+  fuel: "l.fuel",
+  dealer: "d.priority DESC, d.name",
+  ad_status: "l.ad_status",
+  kaparo: "l.kaparo",
+  reg_year: "l.reg_year",
 };
 
 export function getListings(filters: ListingFilters = {}) {
   const {
-    make = '',
-    model = '',
+    make = "",
+    model = "",
     dealerSlugs = [],
     years = [],
     categories = [],
@@ -291,86 +291,113 @@ export function getListings(filters: ListingFilters = {}) {
     priceMax = null,
     priceChangeMin = null,
     priceChangeMax = null,
-    kaparo = '',
-    source = '',
-    sort = 'price',
-    order = 'desc',
-    search = '',
+    kaparo = "",
+    source = "",
+    sort = "price",
+    order = "desc",
+    search = "",
     page = 1,
     limit = 25,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 1', 'd.active = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
+  const wheres: string[] = [
+    "l.is_active = 1",
+    "d.active = 1",
+    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+  ];
   const params: (string | number)[] = [];
 
-  if (make) { wheres.push('l.make = ?'); params.push(make); }
-  if (model) { wheres.push('l.model = ?'); params.push(model); }
+  if (make) {
+    wheres.push("l.make = ?");
+    params.push(make);
+  }
+  if (model) {
+    wheres.push("l.model = ?");
+    params.push(model);
+  }
   if (categories.length > 0) {
-    const ph = categories.map(() => '?').join(',');
+    const ph = categories.map(() => "?").join(",");
     wheres.push(`l.body_type IN (${ph})`);
     params.push(...categories);
   }
 
   if (statuses.length > 0) {
-    const ph = statuses.map(() => '?').join(',');
+    const ph = statuses.map(() => "?").join(",");
     wheres.push(`l.ad_status IN (${ph})`);
     params.push(...statuses);
   }
   if (vatValues.length > 0) {
-    const includeNull = vatValues.includes('null');
-    const nonNull = vatValues.filter(v => v !== 'null');
+    const includeNull = vatValues.includes("null");
+    const nonNull = vatValues.filter((v) => v !== "null");
     const clauses: string[] = [];
     if (nonNull.length > 0) {
-      const ph = nonNull.map(() => '?').join(',');
+      const ph = nonNull.map(() => "?").join(",");
       clauses.push(`l.vat IN (${ph})`);
       params.push(...nonNull);
     }
-    if (includeNull) clauses.push('l.vat IS NULL');
-    if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
+    if (includeNull) clauses.push("l.vat IS NULL");
+    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
   }
   if (fuels.length > 0) {
-    const ph = fuels.map(() => '?').join(',');
+    const ph = fuels.map(() => "?").join(",");
     wheres.push(`l.fuel IN (${ph})`);
     params.push(...fuels);
   }
   if (extras.length > 0) {
-    const clauses = extras.map(() => 'l.extras_json LIKE ?');
-    wheres.push(`(${clauses.join(' OR ')})`);
+    const clauses = extras.map(() => "l.extras_json LIKE ?");
+    wheres.push(`(${clauses.join(" OR ")})`);
     params.push(...extras.map((extra) => `%${extra}%`));
   }
-  if (priceMin !== null) { wheres.push('l.current_price >= ?'); params.push(priceMin); }
-  if (priceMax !== null) { wheres.push('l.current_price <= ?'); params.push(priceMax); }
+  if (priceMin !== null) {
+    wheres.push("l.current_price >= ?");
+    params.push(priceMin);
+  }
+  if (priceMax !== null) {
+    wheres.push("l.current_price <= ?");
+    params.push(priceMax);
+  }
   if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push('l.price_change IS NOT NULL');
-    if (priceChangeMin !== null) { wheres.push('l.price_change >= ?'); params.push(priceChangeMin); }
-    if (priceChangeMax !== null) { wheres.push('l.price_change <= ?'); params.push(priceChangeMax); }
+    wheres.push("l.price_change IS NOT NULL");
+    if (priceChangeMin !== null) {
+      wheres.push("l.price_change >= ?");
+      params.push(priceChangeMin);
+    }
+    if (priceChangeMax !== null) {
+      wheres.push("l.price_change <= ?");
+      params.push(priceChangeMax);
+    }
   }
   if (kaparo) {
-    wheres.push('l.kaparo = ?');
-    params.push(kaparo === 'yes' ? 1 : 0);
+    wheres.push("l.kaparo = ?");
+    params.push(kaparo === "yes" ? 1 : 0);
   }
   if (years.length > 0) {
-    const ph = years.map(() => '?').join(',');
+    const ph = years.map(() => "?").join(",");
     wheres.push(`l.reg_year IN (${ph})`);
     params.push(...years);
   }
   if (search) {
-    wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
+    wheres.push("(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)");
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => '?').join(',');
+    const ph = dealerSlugs.map(() => "?").join(",");
     wheres.push(`d.slug IN (${ph})`);
     params.push(...dealerSlugs);
   }
-  if (source) { wheres.push('l.source = ?'); params.push(source); }
+  if (source) {
+    wheres.push("l.source = ?");
+    params.push(source);
+  }
 
-  const where = `WHERE ${wheres.join(' AND ')}`;
-  const sortCol = VALID_SORT[sort] ?? 'l.last_edit';
-  const sortDir = order === 'asc' ? 'ASC' : 'DESC';
+  const where = `WHERE ${wheres.join(" AND ")}`;
+  const sortCol = VALID_SORT[sort] ?? "l.last_edit";
+  const sortDir = order === "asc" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
@@ -382,22 +409,28 @@ export function getListings(filters: ListingFilters = {}) {
     ${where}
     ORDER BY ${sortCol} ${sortDir}
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as ListingRow[];
+  `,
+    )
+    .all(...params, limit, offset) as ListingRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
 }
 
 export function getDeletedListings(filters: ListingFilters = {}) {
   const {
-    make = '',
-    model = '',
+    make = "",
+    model = "",
     dealerSlugs = [],
     years = [],
     categories = [],
@@ -409,85 +442,113 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     priceMax = null,
     priceChangeMin = null,
     priceChangeMax = null,
-    kaparo = '',
-    source = '',
-    sort = 'last_edit',
-    order = 'desc',
-    search = '',
+    kaparo = "",
+    source = "",
+    sort = "last_edit",
+    order = "desc",
+    search = "",
     page = 1,
     limit = 50,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 0', 'l.deleted_at IS NOT NULL', 'd.active = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
+  const wheres: string[] = [
+    "l.is_active = 0",
+    "l.deleted_at IS NOT NULL",
+    "d.active = 1",
+    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+  ];
   const params: (string | number)[] = [];
 
-  if (make) { wheres.push('l.make = ?'); params.push(make); }
-  if (model) { wheres.push('l.model = ?'); params.push(model); }
+  if (make) {
+    wheres.push("l.make = ?");
+    params.push(make);
+  }
+  if (model) {
+    wheres.push("l.model = ?");
+    params.push(model);
+  }
   if (categories.length > 0) {
-    const ph = categories.map(() => '?').join(',');
+    const ph = categories.map(() => "?").join(",");
     wheres.push(`l.body_type IN (${ph})`);
     params.push(...categories);
   }
   if (statuses.length > 0) {
-    const ph = statuses.map(() => '?').join(',');
+    const ph = statuses.map(() => "?").join(",");
     wheres.push(`l.ad_status IN (${ph})`);
     params.push(...statuses);
   }
   if (vatValues.length > 0) {
-    const includeNull = vatValues.includes('null');
-    const nonNull = vatValues.filter(v => v !== 'null');
+    const includeNull = vatValues.includes("null");
+    const nonNull = vatValues.filter((v) => v !== "null");
     const clauses: string[] = [];
     if (nonNull.length > 0) {
-      const ph = nonNull.map(() => '?').join(',');
+      const ph = nonNull.map(() => "?").join(",");
       clauses.push(`l.vat IN (${ph})`);
       params.push(...nonNull);
     }
-    if (includeNull) clauses.push('l.vat IS NULL');
-    if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
+    if (includeNull) clauses.push("l.vat IS NULL");
+    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
   }
   if (fuels.length > 0) {
-    const ph = fuels.map(() => '?').join(',');
+    const ph = fuels.map(() => "?").join(",");
     wheres.push(`l.fuel IN (${ph})`);
     params.push(...fuels);
   }
   if (extras.length > 0) {
-    const clauses = extras.map(() => 'l.extras_json LIKE ?');
-    wheres.push(`(${clauses.join(' OR ')})`);
+    const clauses = extras.map(() => "l.extras_json LIKE ?");
+    wheres.push(`(${clauses.join(" OR ")})`);
     params.push(...extras.map((extra) => `%${extra}%`));
   }
-  if (priceMin !== null) { wheres.push('l.current_price >= ?'); params.push(priceMin); }
-  if (priceMax !== null) { wheres.push('l.current_price <= ?'); params.push(priceMax); }
+  if (priceMin !== null) {
+    wheres.push("l.current_price >= ?");
+    params.push(priceMin);
+  }
+  if (priceMax !== null) {
+    wheres.push("l.current_price <= ?");
+    params.push(priceMax);
+  }
   if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push('l.price_change IS NOT NULL');
-    if (priceChangeMin !== null) { wheres.push('l.price_change >= ?'); params.push(priceChangeMin); }
-    if (priceChangeMax !== null) { wheres.push('l.price_change <= ?'); params.push(priceChangeMax); }
+    wheres.push("l.price_change IS NOT NULL");
+    if (priceChangeMin !== null) {
+      wheres.push("l.price_change >= ?");
+      params.push(priceChangeMin);
+    }
+    if (priceChangeMax !== null) {
+      wheres.push("l.price_change <= ?");
+      params.push(priceChangeMax);
+    }
   }
   if (kaparo) {
-    wheres.push('l.kaparo = ?');
-    params.push(kaparo === 'yes' ? 1 : 0);
+    wheres.push("l.kaparo = ?");
+    params.push(kaparo === "yes" ? 1 : 0);
   }
   if (years.length > 0) {
-    const ph = years.map(() => '?').join(',');
+    const ph = years.map(() => "?").join(",");
     wheres.push(`l.reg_year IN (${ph})`);
     params.push(...years);
   }
   if (search) {
-    wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
+    wheres.push("(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)");
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => '?').join(',');
+    const ph = dealerSlugs.map(() => "?").join(",");
     wheres.push(`d.slug IN (${ph})`);
     params.push(...dealerSlugs);
   }
-  if (source) { wheres.push('l.source = ?'); params.push(source); }
+  if (source) {
+    wheres.push("l.source = ?");
+    params.push(source);
+  }
 
-  const where = `WHERE ${wheres.join(' AND ')}`;
-  const sortCol = VALID_SORT[sort] ?? 'l.last_edit';
-  const sortDir = order === 'asc' ? 'ASC' : 'DESC';
+  const where = `WHERE ${wheres.join(" AND ")}`;
+  const sortCol = VALID_SORT[sort] ?? "l.last_edit";
+  const sortDir = order === "asc" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
@@ -499,22 +560,28 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     ${where}
     ORDER BY ${sortCol} ${sortDir}
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as ListingRow[];
+  `,
+    )
+    .all(...params, limit, offset) as ListingRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
 }
 
 export function getOwnListings(filters: ListingFilters = {}) {
   const {
-    make = '',
-    model = '',
+    make = "",
+    model = "",
     dealerSlugs = [],
     years = [],
     statuses = [],
@@ -525,31 +592,42 @@ export function getOwnListings(filters: ListingFilters = {}) {
     priceMax = null,
     priceChangeMin = null,
     priceChangeMax = null,
-    kaparo = '',
-    sort = 'last_edit',
-    order = 'desc',
-    search = '',
+    kaparo = "",
+    sort = "last_edit",
+    order = "desc",
+    search = "",
     page = 1,
     limit = 25,
   } = filters;
 
-  const wheres: string[] = ['l.is_active = 1', 'd.active = 1', 'd.own = 1', '(l.duplicate = 0 OR l.duplicate IS NULL)'];
+  const wheres: string[] = [
+    "l.is_active = 1",
+    "d.active = 1",
+    "d.own = 1",
+    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+  ];
   const params: (string | number)[] = [];
 
-  if (make) { wheres.push('COALESCE(b.make, l.make) = ?'); params.push(make); }
-  if (model) { wheres.push('COALESCE(b.model, l.model) = ?'); params.push(model); }
+  if (make) {
+    wheres.push("COALESCE(b.make, l.make) = ?");
+    params.push(make);
+  }
+  if (model) {
+    wheres.push("COALESCE(b.model, l.model) = ?");
+    params.push(model);
+  }
 
   if (statuses.length > 0) {
-    const ph = statuses.map(() => '?').join(',');
+    const ph = statuses.map(() => "?").join(",");
     wheres.push(`COALESCE(b.ad_status, l.ad_status) IN (${ph})`);
     params.push(...statuses);
   }
   if (vatValues.length > 0) {
-    const includeNull = vatValues.includes('null');
-    const nonNull = vatValues.filter(v => v !== 'null');
+    const includeNull = vatValues.includes("null");
+    const nonNull = vatValues.filter((v) => v !== "null");
     const clauses: string[] = [];
     if (nonNull.length > 0) {
-      const ph = nonNull.map(() => '?').join(',');
+      const ph = nonNull.map(() => "?").join(",");
       clauses.push(`(CASE
         WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
         WHEN b.vat_included IN (1, '1') THEN 'included'
@@ -558,66 +636,88 @@ export function getOwnListings(filters: ListingFilters = {}) {
       END) IN (${ph})`);
       params.push(...nonNull);
     }
-    if (includeNull) clauses.push(`(CASE
+    if (includeNull)
+      clauses.push(`(CASE
       WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
       WHEN b.vat_included IN (1, '1') THEN 'included'
       WHEN b.vat_included IN (0, '0') THEN 'exempt'
       ELSE l.vat
     END) IS NULL`);
-    if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
+    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
   }
   if (fuels.length > 0) {
-    const ph = fuels.map(() => '?').join(',');
+    const ph = fuels.map(() => "?").join(",");
     wheres.push(`COALESCE(b.fuel, l.fuel) IN (${ph})`);
     params.push(...fuels);
   }
   if (extras.length > 0) {
-    const clauses = extras.map(() => 'COALESCE(b.extras_json, l.extras_json) LIKE ?');
-    wheres.push(`(${clauses.join(' OR ')})`);
+    const clauses = extras.map(
+      () => "COALESCE(b.extras_json, l.extras_json) LIKE ?",
+    );
+    wheres.push(`(${clauses.join(" OR ")})`);
     params.push(...extras.map((extra) => `%${extra}%`));
   }
-  if (priceMin !== null) { wheres.push('COALESCE(b.price_amount, l.current_price) >= ?'); params.push(priceMin); }
-  if (priceMax !== null) { wheres.push('COALESCE(b.price_amount, l.current_price) <= ?'); params.push(priceMax); }
+  if (priceMin !== null) {
+    wheres.push("COALESCE(b.price_amount, l.current_price) >= ?");
+    params.push(priceMin);
+  }
+  if (priceMax !== null) {
+    wheres.push("COALESCE(b.price_amount, l.current_price) <= ?");
+    params.push(priceMax);
+  }
   if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push('l.price_change IS NOT NULL');
-    if (priceChangeMin !== null) { wheres.push('l.price_change >= ?'); params.push(priceChangeMin); }
-    if (priceChangeMax !== null) { wheres.push('l.price_change <= ?'); params.push(priceChangeMax); }
+    wheres.push("l.price_change IS NOT NULL");
+    if (priceChangeMin !== null) {
+      wheres.push("l.price_change >= ?");
+      params.push(priceChangeMin);
+    }
+    if (priceChangeMax !== null) {
+      wheres.push("l.price_change <= ?");
+      params.push(priceChangeMax);
+    }
   }
   if (kaparo) {
-    wheres.push('COALESCE(b.kaparo, l.kaparo) = ?');
-    params.push(kaparo === 'yes' ? 1 : 0);
+    wheres.push("COALESCE(b.kaparo, l.kaparo) = ?");
+    params.push(kaparo === "yes" ? 1 : 0);
   }
   if (years.length > 0) {
-    const ph = years.map(() => '?').join(',');
+    const ph = years.map(() => "?").join(",");
     wheres.push(`l.reg_year IN (${ph})`);
     params.push(...years);
   }
   if (search) {
-    wheres.push('(COALESCE(b.title, l.title) LIKE ? OR COALESCE(b.make, l.make) LIKE ? OR COALESCE(b.model, l.model) LIKE ?)');
+    wheres.push(
+      "(COALESCE(b.title, l.title) LIKE ? OR COALESCE(b.make, l.make) LIKE ? OR COALESCE(b.model, l.model) LIKE ?)",
+    );
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => '?').join(',');
+    const ph = dealerSlugs.map(() => "?").join(",");
     wheres.push(`d.slug IN (${ph})`);
     params.push(...dealerSlugs);
   }
 
-  const ownSortCol = ({
-    price: 'COALESCE(b.price_amount, l.current_price)',
-    last_edit: 'l.last_edit',
-    carsbg_created_date: 'l.carsbg_created_date',
-    views: 'COALESCE(b.views, l.views)',
-    mileage: 'COALESCE(b.mileage, l.mileage)',
-    fuel: 'COALESCE(b.fuel, l.fuel)',
-    dealer: 'd.priority DESC, d.name',
-    ad_status: 'COALESCE(b.ad_status, l.ad_status)',
-    kaparo: 'COALESCE(b.kaparo, l.kaparo)',
-    reg_year: 'l.reg_year',
-  } as Record<string, string>)[sort] ?? 'l.last_edit';
-  const sortDir = order === 'asc' ? 'ASC' : 'DESC';
+  const ownSortCol =
+    (
+      {
+        price: "COALESCE(b.price_amount, l.current_price)",
+        last_edit: "l.last_edit",
+        carsbg_created_date: "l.carsbg_created_date",
+        views: "COALESCE(b.views, l.views)",
+        mileage: "COALESCE(b.mileage, l.mileage)",
+        fuel: "COALESCE(b.fuel, l.fuel)",
+        dealer: "d.priority DESC, d.name",
+        ad_status: "COALESCE(b.ad_status, l.ad_status)",
+        kaparo: "COALESCE(b.kaparo, l.kaparo)",
+        reg_year: "l.reg_year",
+      } as Record<string, string>
+    )[sort] ?? "l.last_edit";
+  const sortDir = order === "asc" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     WITH ranked_backups AS (
       SELECT
         b.*,
@@ -664,12 +764,16 @@ export function getOwnListings(filters: ListingFilters = {}) {
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
     LEFT JOIN dealers d ON b.dealer_id = d.id
-    WHERE b.row_num = 1 AND ${wheres.join(' AND ')}
+    WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
     ORDER BY ${ownSortCol} ${sortDir}
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as OwnListingRow[];
+  `,
+    )
+    .all(...params, limit, offset) as OwnListingRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     WITH ranked_backups AS (
       SELECT
         b.*,
@@ -683,14 +787,20 @@ export function getOwnListings(filters: ListingFilters = {}) {
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
     LEFT JOIN dealers d ON b.dealer_id = d.id
-    WHERE b.row_num = 1 AND ${wheres.join(' AND ')}
-  `).get(...params) as { count: number };
+    WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
+  `,
+    )
+    .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
 }
 
-export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null {
-  return raw.prepare(`
+export function getOwnListingByMobileId(
+  mobileId: string,
+): OwnListingRow | null {
+  return raw
+    .prepare(
+      `
     WITH ranked_backups AS (
       SELECT
         b.*,
@@ -738,7 +848,9 @@ export function getOwnListingByMobileId(mobileId: string): OwnListingRow | null 
     JOIN listings l ON l.id = b.listing_id
     LEFT JOIN dealers d ON b.dealer_id = d.id
     WHERE b.row_num = 1 AND l.mobile_id = ? AND d.own = 1
-  `).get(mobileId) as OwnListingRow | null;
+  `,
+    )
+    .get(mobileId) as OwnListingRow | null;
 }
 
 export interface DetailListing {
@@ -780,7 +892,9 @@ export interface DetailListing {
 }
 
 export function getListingByMobileId(mobileId: string): DetailListing | null {
-  const byMobile = raw.prepare(`
+  const byMobile = raw
+    .prepare(
+      `
     SELECT
       l.*, COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug,
@@ -788,10 +902,14 @@ export function getListingByMobileId(mobileId: string): DetailListing | null {
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.mobile_id = ?
-  `).get(mobileId) as DetailListing | null;
+  `,
+    )
+    .get(mobileId) as DetailListing | null;
   if (byMobile) return byMobile;
   // Fallback: try cars_id for cars.bg-sourced listings
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT
       l.*, COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug,
@@ -799,7 +917,9 @@ export function getListingByMobileId(mobileId: string): DetailListing | null {
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.cars_id = ?
-  `).get(mobileId) as DetailListing | null;
+  `,
+    )
+    .get(mobileId) as DetailListing | null;
 }
 
 export interface SnapshotRow {
@@ -816,12 +936,16 @@ export interface SnapshotRow {
 }
 
 export function getSnapshots(listingId: number): SnapshotRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at
     FROM listing_snapshots
     WHERE listing_id = ?
     ORDER BY recorded_at ASC
-  `).all(listingId) as SnapshotRow[];
+  `,
+    )
+    .all(listingId) as SnapshotRow[];
 }
 
 export interface TrackedChangeRow {
@@ -886,20 +1010,25 @@ export interface TrackedChangeWindow {
   count: number;
 }
 
-function buildTrackedChangesWhere(filters: TrackedChangesFilters): { where: string; params: unknown[] } {
+function buildTrackedChangesWhere(filters: TrackedChangesFilters): {
+  where: string;
+  params: unknown[];
+} {
   const clauses: string[] = [];
   const params: unknown[] = [];
 
   if (filters.make) {
-    clauses.push('l.make = ?');
+    clauses.push("l.make = ?");
     params.push(filters.make);
   }
   if (filters.model) {
-    clauses.push('l.model = ?');
+    clauses.push("l.model = ?");
     params.push(filters.model);
   }
   if (filters.dealerSlugs && filters.dealerSlugs.length > 0) {
-    clauses.push(`d.slug IN (${filters.dealerSlugs.map(() => '?').join(', ')})`);
+    clauses.push(
+      `d.slug IN (${filters.dealerSlugs.map(() => "?").join(", ")})`,
+    );
     params.push(...filters.dealerSlugs);
   }
   if (filters.search) {
@@ -916,42 +1045,53 @@ function buildTrackedChangesWhere(filters: TrackedChangesFilters): { where: stri
     params.push(like, like, like, like, like, like, like);
   }
   if (filters.whenStart && filters.whenEnd) {
-    clauses.push('s.recorded_at >= ? AND s.recorded_at <= ?');
+    clauses.push("s.recorded_at >= ? AND s.recorded_at <= ?");
     params.push(filters.whenStart, filters.whenEnd);
   }
   if (filters.fields && filters.fields.length > 0) {
     const fieldMap: Record<string, string> = {
-      price: 's.price IS NOT NULL',
-      vat: 's.vat IS NOT NULL',
-      last_edit: 's.last_edit IS NOT NULL',
-      views: 's.views IS NOT NULL',
-      ad_status: 's.ad_status IS NOT NULL',
-      kaparo: 's.kaparo IS NOT NULL',
+      price: "s.price IS NOT NULL",
+      vat: "s.vat IS NOT NULL",
+      last_edit: "s.last_edit IS NOT NULL",
+      views: "s.views IS NOT NULL",
+      ad_status: "s.ad_status IS NOT NULL",
+      kaparo: "s.kaparo IS NOT NULL",
       title: `s.title IS NOT NULL AND TRIM(s.title) != ''`,
       description: `s.description IS NOT NULL AND TRIM(s.description) != ''`,
     };
     const selectedClauses = filters.fields
       .map((field) => fieldMap[field])
       .filter(Boolean);
-    if (selectedClauses.length > 0) clauses.push(`(${selectedClauses.join(' OR ')})`);
+    if (selectedClauses.length > 0)
+      clauses.push(`(${selectedClauses.join(" OR ")})`);
   }
 
   return {
-    where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
+    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
     params,
   };
 }
 
 export function getTrackedChangeWindows(): TrackedChangeWindow[] {
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT recorded_at
     FROM listing_snapshots
     ORDER BY recorded_at DESC, id DESC
-  `).all() as { recorded_at: string }[];
+  `,
+    )
+    .all() as { recorded_at: string }[];
 
   const windows: TrackedChangeWindow[] = [];
   const windowMs = 10 * 60 * 1000;
-  let current: { latestMs: number; latest: string; earliestMs: number; earliest: string; count: number } | null = null;
+  let current: {
+    latestMs: number;
+    latest: string;
+    earliestMs: number;
+    earliest: string;
+    count: number;
+  } | null = null;
 
   for (const row of rows) {
     const time = new Date(row.recorded_at).getTime();
@@ -992,7 +1132,10 @@ export function getTrackedChangeWindows(): TrackedChangeWindow[] {
   return windows;
 }
 
-export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: TrackedChangeRow[]; total: number } {
+export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
+  data: TrackedChangeRow[];
+  total: number;
+} {
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 50;
   const offset = (page - 1) * limit;
@@ -1017,7 +1160,9 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
     ${where}
   `;
 
-  const totalRow = raw.prepare(`
+  const totalRow = raw
+    .prepare(
+      `
     WITH change_rows AS (
       SELECT
         s.price as snapshot_price,
@@ -1107,9 +1252,13 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
     SELECT COUNT(*) as count
     FROM change_rows
     WHERE ${actualChangeWhere}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
-  const data = raw.prepare(`
+  const data = raw
+    .prepare(
+      `
     WITH change_rows AS (
       SELECT
         s.id,
@@ -1225,7 +1374,9 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): { data: 
     WHERE ${actualChangeWhere}
     ORDER BY recorded_at DESC, id DESC
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as TrackedChangeRow[];
+  `,
+    )
+    .all(...params, limit, offset) as TrackedChangeRow[];
 
   return { data, total: totalRow.count };
 }
@@ -1236,9 +1387,13 @@ export interface MakeModel {
 }
 
 export function getMakeModels(): Record<string, string[]> {
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY make, model
-  `).all() as MakeModel[];
+  `,
+    )
+    .all() as MakeModel[];
   const result: Record<string, string[]> = {};
   for (const r of rows) {
     if (!result[r.make]) result[r.make] = [];
@@ -1266,44 +1421,58 @@ export interface DealerRowFull extends DealerRow {
 
 export function getAllDealers(): DealerRow[] {
   // Credentials are excluded here — use getDealerById for the config UI where they're needed
-  return raw.prepare('SELECT id, slug, name, own, active, priority, mobile_url FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  return raw
+    .prepare(
+      "SELECT id, slug, name, own, active, priority, mobile_url FROM dealers ORDER BY priority DESC, name",
+    )
+    .all() as DealerRow[];
 }
 
 export function getDistinctYears(): string[] {
-  const rows = raw.prepare(
-    `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY reg_year DESC`
-  ).all() as { reg_year: string }[];
-  return rows.map(r => r.reg_year);
+  const rows = raw
+    .prepare(
+      `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY reg_year DESC`,
+    )
+    .all() as { reg_year: string }[];
+  return rows.map((r) => r.reg_year);
 }
 
 export function getPriceRange(): { min: number; max: number } | null {
-  const row = raw.prepare(
-    `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`
-  ).get() as { min: number | null; max: number | null };
+  const row = raw
+    .prepare(
+      `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`,
+    )
+    .get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
   return { min: row.min, max: row.max };
 }
 
 export function getPriceChangeRange(): { min: number; max: number } | null {
-  const row = raw.prepare(
-    `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`
-  ).get() as { min: number | null; max: number | null };
+  const row = raw
+    .prepare(
+      `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`,
+    )
+    .get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
   return { min: row.min, max: row.max };
 }
 
 export function getDistinctFuels(): string[] {
-  const rows = raw.prepare(
-    `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY fuel`
-  ).all() as { fuel: string }[];
-  return rows.map(r => r.fuel);
+  const rows = raw
+    .prepare(
+      `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY fuel`,
+    )
+    .all() as { fuel: string }[];
+  return rows.map((r) => r.fuel);
 }
 
 export function getDistinctCategories(): string[] {
-  const rows = raw.prepare(
-    `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY body_type`
-  ).all() as { body_type: string }[];
-  return rows.map(r => r.body_type);
+  const rows = raw
+    .prepare(
+      `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY body_type`,
+    )
+    .all() as { body_type: string }[];
+  return rows.map((r) => r.body_type);
 }
 
 // ─── Users ────────────────────────────────────────────────────────
@@ -1316,7 +1485,9 @@ export interface UserRow {
 }
 
 export function getAllUsers(): UserRow[] {
-  return raw.prepare('SELECT id, username, name, role FROM users ORDER BY name').all() as UserRow[];
+  return raw
+    .prepare("SELECT id, username, name, role FROM users ORDER BY name")
+    .all() as UserRow[];
 }
 
 // ─── Labels ───────────────────────────────────────────────────────
@@ -1328,7 +1499,9 @@ export interface LabelRow {
 }
 
 export function getAllLabels(): LabelRow[] {
-  return raw.prepare('SELECT id, name, color FROM labels ORDER BY name').all() as LabelRow[];
+  return raw
+    .prepare("SELECT id, name, color FROM labels ORDER BY name")
+    .all() as LabelRow[];
 }
 
 // ─── Listing Summaries (for pickers) ─────────────────────────────
@@ -1345,13 +1518,17 @@ export interface ListingSummary {
 }
 
 export function getListingSummaries(): ListingSummary[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price, l.vat
     FROM listings l
     JOIN dealers d ON l.dealer_id = d.id
     WHERE l.is_active = 1 AND d.own = 1 AND (l.duplicate = 0 OR l.duplicate IS NULL)
     ORDER BY l.make, l.model, l.reg_year
-  `).all() as ListingSummary[];
+  `,
+    )
+    .all() as ListingSummary[];
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────
@@ -1384,22 +1561,40 @@ export interface TaskFilters {
 }
 
 export function getTasks(filters: TaskFilters = {}) {
-  const { status, priority, assigneeId, search, page = 1, limit = 50 } = filters;
+  const {
+    status,
+    priority,
+    assigneeId,
+    search,
+    page = 1,
+    limit = 50,
+  } = filters;
   const wheres: string[] = [];
   const params: (string | number)[] = [];
 
-  if (status) { wheres.push('t.status = ?'); params.push(status); }
-  if (priority) { wheres.push('t.priority = ?'); params.push(priority); }
-  if (assigneeId) { wheres.push('t.assignee_id = ?'); params.push(assigneeId); }
+  if (status) {
+    wheres.push("t.status = ?");
+    params.push(status);
+  }
+  if (priority) {
+    wheres.push("t.priority = ?");
+    params.push(priority);
+  }
+  if (assigneeId) {
+    wheres.push("t.assignee_id = ?");
+    params.push(assigneeId);
+  }
   if (search) {
-    wheres.push('(t.title LIKE ?)');
+    wheres.push("(t.title LIKE ?)");
     params.push(`%${search}%`);
   }
 
-  const where = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
+  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT t.*,
       a.name as assignee_name,
       c.name as creator_name
@@ -1412,17 +1607,25 @@ export function getTasks(filters: TaskFilters = {}) {
       CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END,
       t.created_at DESC
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as TaskRow[];
+  `,
+    )
+    .all(...params, limit, offset) as TaskRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count FROM tasks t ${where}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
 }
 
 export function getTaskById(id: number) {
-  const task = raw.prepare(`
+  const task = raw
+    .prepare(
+      `
     SELECT t.*,
       a.name as assignee_name,
       c.name as creator_name
@@ -1430,56 +1633,87 @@ export function getTaskById(id: number) {
     LEFT JOIN users a ON a.id = t.assignee_id
     LEFT JOIN users c ON c.id = t.created_by_id
     WHERE t.id = ?
-  `).get(id) as TaskRow | undefined;
+  `,
+    )
+    .get(id) as TaskRow | undefined;
 
   if (!task) return null;
 
-  const listings = raw.prepare(`
+  const listings = raw
+    .prepare(
+      `
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
     FROM task_listings tl
     JOIN listings l ON l.id = tl.listing_id
     WHERE tl.task_id = ?
-  `).all(id) as ListingSummary[];
+  `,
+    )
+    .all(id) as ListingSummary[];
 
-  const labels = raw.prepare(`
+  const labels = raw
+    .prepare(
+      `
     SELECT lb.id, lb.name, lb.color
     FROM task_labels tl
     JOIN labels lb ON lb.id = tl.label_id
     WHERE tl.task_id = ?
-  `).all(id) as LabelRow[];
+  `,
+    )
+    .all(id) as LabelRow[];
 
-  const subtasks = raw.prepare(`
+  const subtasks = raw
+    .prepare(
+      `
     SELECT t.id, t.title, t.status, t.priority
     FROM tasks t WHERE t.parent_id = ?
     ORDER BY t.created_at
-  `).all(id) as { id: number; title: string; status: string; priority: string }[];
+  `,
+    )
+    .all(id) as {
+    id: number;
+    title: string;
+    status: string;
+    priority: string;
+  }[];
 
-  const deps = raw.prepare(`
+  const deps = raw
+    .prepare(
+      `
     SELECT t.id, t.title, t.status
     FROM task_deps td
     JOIN tasks t ON t.id = td.depends_on_id
     WHERE td.task_id = ?
-  `).all(id) as { id: number; title: string; status: string }[];
+  `,
+    )
+    .all(id) as { id: number; title: string; status: string }[];
 
   return { ...task, listings, labels, subtasks, deps };
 }
 
 export function getTaskLabels(taskId: number): LabelRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT lb.id, lb.name, lb.color
     FROM task_labels tl
     JOIN labels lb ON lb.id = tl.label_id
     WHERE tl.task_id = ?
-  `).all(taskId) as LabelRow[];
+  `,
+    )
+    .all(taskId) as LabelRow[];
 }
 
 export function getTaskListings(taskId: number): ListingSummary[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
     FROM task_listings tl
     JOIN listings l ON l.id = tl.listing_id
     WHERE tl.task_id = ?
-  `).all(taskId) as ListingSummary[];
+  `,
+    )
+    .all(taskId) as ListingSummary[];
 }
 
 // ─── Comments ─────────────────────────────────────────────────────
@@ -1495,13 +1729,17 @@ export interface CommentRow {
 }
 
 export function getTaskComments(taskId: number): CommentRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT c.*, u.name as author_name
     FROM comments c
     JOIN users u ON u.id = c.author_id
     WHERE c.task_id = ?
     ORDER BY c.created_at ASC
-  `).all(taskId) as CommentRow[];
+  `,
+    )
+    .all(taskId) as CommentRow[];
 }
 
 // ─── Time Entries ─────────────────────────────────────────────────
@@ -1518,13 +1756,17 @@ export interface TimeEntryRow {
 }
 
 export function getTaskTimeEntries(taskId: number): TimeEntryRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT te.*, u.name as user_name
     FROM time_entries te
     JOIN users u ON u.id = te.user_id
     WHERE te.task_id = ?
     ORDER BY te.date DESC, te.created_at DESC
-  `).all(taskId) as TimeEntryRow[];
+  `,
+    )
+    .all(taskId) as TimeEntryRow[];
 }
 
 // ─── Activity Log ─────────────────────────────────────────────────
@@ -1540,15 +1782,22 @@ export interface ActivityRow {
   user_name: string | null;
 }
 
-export function getActivityLog(entityType: string, entityId: number): ActivityRow[] {
-  return raw.prepare(`
+export function getActivityLog(
+  entityType: string,
+  entityId: number,
+): ActivityRow[] {
+  return raw
+    .prepare(
+      `
     SELECT al.*, u.name as user_name
     FROM activity_log al
     LEFT JOIN users u ON u.id = al.user_id
     WHERE al.entity_type = ? AND al.entity_id = ?
     ORDER BY al.created_at DESC
     LIMIT 100
-  `).all(entityType, entityId) as ActivityRow[];
+  `,
+    )
+    .all(entityType, entityId) as ActivityRow[];
 }
 
 // ─── Expenses ─────────────────────────────────────────────────────
@@ -1581,70 +1830,114 @@ export function getExpenses(filters: ExpenseFilters = {}) {
   const wheres: string[] = [];
   const params: (string | number)[] = [];
 
-  if (category) { wheres.push('e.category = ?'); params.push(category); }
-  if (dateFrom) { wheres.push('e.date >= ?'); params.push(dateFrom); }
-  if (dateTo) { wheres.push('e.date <= ?'); params.push(dateTo); }
-  if (search) { wheres.push('e.title LIKE ?'); params.push(`%${search}%`); }
+  if (category) {
+    wheres.push("e.category = ?");
+    params.push(category);
+  }
+  if (dateFrom) {
+    wheres.push("e.date >= ?");
+    params.push(dateFrom);
+  }
+  if (dateTo) {
+    wheres.push("e.date <= ?");
+    params.push(dateTo);
+  }
+  if (search) {
+    wheres.push("e.title LIKE ?");
+    params.push(`%${search}%`);
+  }
 
-  const where = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
+  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT e.*, u.name as creator_name
     FROM expenses e
     LEFT JOIN users u ON u.id = e.created_by_id
     ${where}
     ORDER BY e.date DESC, e.created_at DESC
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as ExpenseRow[];
+  `,
+    )
+    .all(...params, limit, offset) as ExpenseRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count FROM expenses e ${where}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
-  const { total_amount } = raw.prepare(`
+  const { total_amount } = raw
+    .prepare(
+      `
     SELECT COALESCE(SUM(e.amount), 0) as total_amount FROM expenses e ${where}
-  `).get(...params) as { total_amount: number };
+  `,
+    )
+    .get(...params) as { total_amount: number };
 
   return { data: rows, total: count, totalAmount: total_amount, page, limit };
 }
 
 export function getExpenseById(id: number) {
-  const expense = raw.prepare(`
+  const expense = raw
+    .prepare(
+      `
     SELECT e.*, u.name as creator_name
     FROM expenses e
     LEFT JOIN users u ON u.id = e.created_by_id
     WHERE e.id = ?
-  `).get(id) as ExpenseRow | undefined;
+  `,
+    )
+    .get(id) as ExpenseRow | undefined;
 
   if (!expense) return null;
 
-  const listings = raw.prepare(`
+  const listings = raw
+    .prepare(
+      `
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
     FROM expense_listings el
     JOIN listings l ON l.id = el.listing_id
     WHERE el.expense_id = ?
-  `).all(id) as ListingSummary[];
+  `,
+    )
+    .all(id) as ListingSummary[];
 
-  const tasks = raw.prepare(`
+  const tasks = raw
+    .prepare(
+      `
     SELECT t.id, t.title, t.status
     FROM expense_tasks et
     JOIN tasks t ON t.id = et.task_id
     WHERE et.expense_id = ?
-  `).all(id) as { id: number; title: string; status: string }[];
+  `,
+    )
+    .all(id) as { id: number; title: string; status: string }[];
 
-  const labels = raw.prepare(`
+  const labels = raw
+    .prepare(
+      `
     SELECT lb.id, lb.name, lb.color
     FROM expense_labels el
     JOIN labels lb ON lb.id = el.label_id
     WHERE el.expense_id = ?
-  `).all(id) as LabelRow[];
+  `,
+    )
+    .all(id) as LabelRow[];
 
-  const uploads = raw.prepare(`
+  const uploads = raw
+    .prepare(
+      `
     SELECT * FROM uploads
     WHERE entity_type = 'expense' AND entity_id = ?
     ORDER BY created_at DESC
-  `).all(id);
+  `,
+    )
+    .all(id);
 
   return { ...expense, listings, tasks, labels, uploads };
 }
@@ -1674,60 +1967,89 @@ export function getArticles(filters: ArticleFilters = {}) {
   const wheres: string[] = [];
   const params: (string | number)[] = [];
 
-  if (search) { wheres.push('a.title LIKE ?'); params.push(`%${search}%`); }
+  if (search) {
+    wheres.push("a.title LIKE ?");
+    params.push(`%${search}%`);
+  }
   if (labelId) {
-    wheres.push('EXISTS (SELECT 1 FROM article_labels al WHERE al.article_id = a.id AND al.label_id = ?)');
+    wheres.push(
+      "EXISTS (SELECT 1 FROM article_labels al WHERE al.article_id = a.id AND al.label_id = ?)",
+    );
     params.push(labelId);
   }
 
-  const where = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
+  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
 
-  const rows = raw.prepare(`
+  const rows = raw
+    .prepare(
+      `
     SELECT a.*, u.name as author_name
     FROM articles a
     LEFT JOIN users u ON u.id = a.author_id
     ${where}
     ORDER BY a.updated_at DESC
     LIMIT ? OFFSET ?
-  `).all(...params, limit, offset) as ArticleRow[];
+  `,
+    )
+    .all(...params, limit, offset) as ArticleRow[];
 
-  const { count } = raw.prepare(`
+  const { count } = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count FROM articles a ${where}
-  `).get(...params) as { count: number };
+  `,
+    )
+    .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
 }
 
 export function getArticleBySlug(slug: string) {
-  const article = raw.prepare(`
+  const article = raw
+    .prepare(
+      `
     SELECT a.*, u.name as author_name
     FROM articles a
     LEFT JOIN users u ON u.id = a.author_id
     WHERE a.slug = ?
-  `).get(slug) as ArticleRow | undefined;
+  `,
+    )
+    .get(slug) as ArticleRow | undefined;
 
   if (!article) return null;
 
-  const labels = raw.prepare(`
+  const labels = raw
+    .prepare(
+      `
     SELECT lb.id, lb.name, lb.color
     FROM article_labels al
     JOIN labels lb ON lb.id = al.label_id
     WHERE al.article_id = ?
-  `).all(article.id) as LabelRow[];
+  `,
+    )
+    .all(article.id) as LabelRow[];
 
-  const listings = raw.prepare(`
+  const listings = raw
+    .prepare(
+      `
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
     FROM article_listings al
     JOIN listings l ON l.id = al.listing_id
     WHERE al.article_id = ?
-  `).all(article.id) as ListingSummary[];
+  `,
+    )
+    .all(article.id) as ListingSummary[];
 
-  const uploads = raw.prepare(`
+  const uploads = raw
+    .prepare(
+      `
     SELECT * FROM uploads
     WHERE entity_type = 'article' AND entity_id = ?
     ORDER BY created_at DESC
-  `).all(article.id);
+  `,
+    )
+    .all(article.id);
 
   return { ...article, labels, listings, uploads };
 }
@@ -1735,7 +2057,9 @@ export function getArticleBySlug(slug: string) {
 // ─── Tasks by Listing ─────────────────────────────────────────────
 
 export function getTasksByListing(listingId: number) {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT t.id, t.title, t.status, t.priority, t.deadline, t.created_at,
       a.name as assignee_name
     FROM task_listings tl
@@ -1745,23 +2069,31 @@ export function getTasksByListing(listingId: number) {
     ORDER BY
       CASE t.status WHEN 'in_progress' THEN 0 WHEN 'backlog' THEN 1 WHEN 'done' THEN 2 WHEN 'cancelled' THEN 3 END,
       t.created_at DESC
-  `).all(listingId);
+  `,
+    )
+    .all(listingId);
 }
 
 // ─── Expenses by Listing ──────────────────────────────────────────
 
 export function getExpensesByListing(listingId: number) {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT e.id, e.title, e.amount, e.currency, e.date, e.category
     FROM expense_listings el
     JOIN expenses e ON e.id = el.expense_id
     WHERE el.listing_id = ?
     ORDER BY e.date DESC
-  `).all(listingId);
+  `,
+    )
+    .all(listingId);
 }
 
 export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT
       l.make,
       l.model,
@@ -1793,22 +2125,36 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
       l.make,
       l.model
     LIMIT ?
-  `).all(limit) as MakeModelMappingRow[];
+  `,
+    )
+    .all(limit) as MakeModelMappingRow[];
 }
 
 export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
-  const runs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_runs`).get() as { count: number };
-  const backups = raw.prepare(`
+  const runs = raw
+    .prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_runs`)
+    .get() as { count: number };
+  const backups = raw
+    .prepare(
+      `
     SELECT COUNT(*) as count
     FROM (
       SELECT 1
       FROM mobilebg_backups
       GROUP BY dealer_id, mobile_id
     )
-  `).get() as { count: number };
-  const images = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_images`).get() as { count: number };
-  const editForms = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`).get() as { count: number };
-  const repostJobs = raw.prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`).get() as { count: number };
+  `,
+    )
+    .get() as { count: number };
+  const images = raw
+    .prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_images`)
+    .get() as { count: number };
+  const editForms = raw
+    .prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`)
+    .get() as { count: number };
+  const repostJobs = raw
+    .prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`)
+    .get() as { count: number };
   return {
     runs: runs.count,
     backups: backups.count,
@@ -1819,7 +2165,9 @@ export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
 }
 
 export function getMobileBgBackupRuns(limit = 20): MobileBgBackupRunRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT
       r.id, r.status, r.source_url, r.listings_count, r.images_count, r.notes,
       r.started_at, r.finished_at, r.created_at, r.updated_at,
@@ -1828,11 +2176,15 @@ export function getMobileBgBackupRuns(limit = 20): MobileBgBackupRunRow[] {
     LEFT JOIN dealers d ON r.dealer_id = d.id
     ORDER BY COALESCE(r.started_at, r.created_at) DESC, r.id DESC
     LIMIT ?
-  `).all(limit) as MobileBgBackupRunRow[];
+  `,
+    )
+    .all(limit) as MobileBgBackupRunRow[];
 }
 
 export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     WITH ranked AS (
       SELECT
         b.*,
@@ -1854,11 +2206,17 @@ export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
     WHERE b.row_num = 1
     ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
     LIMIT ?
-  `).all(limit) as MobileBgBackupListRow[];
+  `,
+    )
+    .all(limit) as MobileBgBackupListRow[];
 }
 
-export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { images: MobileBgBackupImageRow[] }) | null {
-  const row = raw.prepare(`
+export function getMobileBgBackupById(
+  id: number,
+): (MobileBgBackupDetailRow & { images: MobileBgBackupImageRow[] }) | null {
+  const row = raw
+    .prepare(
+      `
     SELECT
       b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.vat_included,
@@ -1871,22 +2229,30 @@ export function getMobileBgBackupById(id: number): (MobileBgBackupDetailRow & { 
     FROM mobilebg_backups b
     LEFT JOIN dealers d ON b.dealer_id = d.id
     WHERE b.id = ?
-  `).get(id) as MobileBgBackupDetailRow | undefined;
+  `,
+    )
+    .get(id) as MobileBgBackupDetailRow | undefined;
 
   if (!row) return null;
 
-  const images = raw.prepare(`
+  const images = raw
+    .prepare(
+      `
     SELECT id, backup_id, sort_order, filename, source_url, local_path, created_at
     FROM mobilebg_backup_images
     WHERE backup_id = ?
     ORDER BY sort_order ASC, id ASC
-  `).all(id) as MobileBgBackupImageRow[];
+  `,
+    )
+    .all(id) as MobileBgBackupImageRow[];
 
   return { ...row, images };
 }
 
 export function getEditOwnSyncRows(): EditOwnSyncRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     WITH ranked_backups AS (
       SELECT
         b.*,
@@ -1929,11 +2295,15 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
       CASE WHEN ${ownNeedsSyncExpr} = 1 THEN 0 ELSE 1 END,
       COALESCE(b.updated_at, b.created_at) DESC,
       b.id DESC
-  `).all() as EditOwnSyncRow[];
+  `,
+    )
+    .all() as EditOwnSyncRow[];
 }
 
 export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT
       e.id, e.backup_id, e.listing_id, e.mobile_id, e.source_url, e.listing_token,
       e.row_title, e.row_price_text, e.form_url, e.screenshot_path, e.created_at,
@@ -1944,11 +2314,17 @@ export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {
     LEFT JOIN listings l ON e.listing_id = l.id
     ORDER BY e.created_at DESC, e.id DESC
     LIMIT ?
-  `).all(limit) as MobileBgEditFormRow[];
+  `,
+    )
+    .all(limit) as MobileBgEditFormRow[];
 }
 
-export function getMobileBgEditFormById(id: number): MobileBgEditFormDetailRow | null {
-  const row = raw.prepare(`
+export function getMobileBgEditFormById(
+  id: number,
+): MobileBgEditFormDetailRow | null {
+  const row = raw
+    .prepare(
+      `
     SELECT
       e.id, e.backup_id, e.listing_id, e.mobile_id, e.source_url, e.listing_token,
       e.row_title, e.row_price_text, e.form_url, e.screenshot_path, e.created_at,
@@ -1957,12 +2333,16 @@ export function getMobileBgEditFormById(id: number): MobileBgEditFormDetailRow |
     FROM mobilebg_edit_form_snapshots e
     LEFT JOIN dealers d ON e.dealer_id = d.id
     WHERE e.id = ?
-  `).get(id) as MobileBgEditFormDetailRow | undefined;
+  `,
+    )
+    .get(id) as MobileBgEditFormDetailRow | undefined;
   return row ?? null;
 }
 
 export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
-  return raw.prepare(`
+  return raw
+    .prepare(
+      `
     SELECT
       r.id, r.backup_id, r.listing_id, r.source_mobile_id, r.target_mobile_id, r.status,
       r.message, r.preview_screenshot_path, r.debug_dir, r.started_at, r.finished_at, r.created_at,
@@ -1973,5 +2353,101 @@ export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
     LEFT JOIN mobilebg_backups b ON r.backup_id = b.id
     ORDER BY COALESCE(r.started_at, r.created_at) DESC, r.id DESC
     LIMIT ?
-  `).all(limit) as MobileBgRepostJobRow[];
+  `,
+    )
+    .all(limit) as MobileBgRepostJobRow[];
+}
+
+export interface MobileBgCrawlQueueRow {
+  id: number;
+  dealer_id: number;
+  url: string;
+  url_type: string;
+  mobile_id: string | null;
+  status: string;
+  listings_count: number | null;
+  price: number | null;
+  views: number | null;
+  last_crawled_at: string | null;
+  next_crawl_at: string | null;
+  error: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  dealer_name: string | null;
+  dealer_slug: string | null;
+}
+
+export interface MobileBgCrawlQueueFilters {
+  dealer?: string | string[];
+  urlType?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function getMobileBgCrawlQueue(filters: MobileBgCrawlQueueFilters = {}) {
+  const {
+    dealer = "",
+    urlType = "",
+    status = "",
+    search = "",
+    page = 1,
+    limit = 50,
+  } = filters;
+
+  const dealerSlugs = Array.isArray(dealer) ? dealer : dealer ? [dealer] : [];
+  const wheres: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (dealerSlugs.length > 0) {
+    const ph = dealerSlugs.map(() => "?").join(",");
+    wheres.push(`d.slug IN (${ph})`);
+    params.push(...dealerSlugs);
+  }
+  if (urlType) {
+    wheres.push("c.url_type = ?");
+    params.push(urlType);
+  }
+  if (status) {
+    wheres.push("c.status = ?");
+    params.push(status);
+  }
+  if (search) {
+    wheres.push("(c.url LIKE ? OR c.mobile_id LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
+  const offset = (page - 1) * limit;
+
+  const rows = raw
+    .prepare(
+      `
+    SELECT
+      c.id, c.dealer_id, c.url, c.url_type, c.mobile_id, c.status,
+      c.listings_count, c.price, c.views, c.last_crawled_at, c.next_crawl_at, c.error,
+      c.created_at, c.updated_at,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM mobilebg_crawl_queue c
+    LEFT JOIN dealers d ON c.dealer_id = d.id
+    ${where}
+    ORDER BY c.last_crawled_at DESC NULLS LAST, c.created_at DESC, c.id DESC
+    LIMIT ? OFFSET ?
+  `,
+    )
+    .all(...params, limit, offset) as MobileBgCrawlQueueRow[];
+
+  const { count } = raw
+    .prepare(
+      `
+    SELECT COUNT(*) as count
+    FROM mobilebg_crawl_queue c
+    LEFT JOIN dealers d ON c.dealer_id = d.id
+    ${where}
+  `,
+    )
+    .get(...params) as { count: number };
+
+  return { data: rows, total: count, page, limit };
 }

@@ -4,7 +4,7 @@ import {
   getSavedSearchDetail,
   listSavedSearchSummaries,
 } from '@/lib/mobile-bg/saved-searches';
-import type { SearchField } from '@/lib/mobile-bg/search-prefill';
+import type { SearchField } from '@/lib/mobile-bg/search-form-shared';
 
 function parseFields(payload: unknown): SearchField[] | null {
   if (!Array.isArray(payload)) return null;

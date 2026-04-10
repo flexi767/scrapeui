@@ -1,8 +1,9 @@
 import { raw } from '@/db/client';
+import { buildFirstSevenSearchFields } from '@/lib/mobile-bg/search-form-shared';
+import { getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
 import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
-import { buildFirstSevenSearchFields, getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
 import { buildImageList, parseJson, type ImageMeta } from '@/lib/utils';
 
 interface OwnSearchRankTarget {

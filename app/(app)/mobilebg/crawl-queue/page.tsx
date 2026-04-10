@@ -1,25 +1,27 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getAllDealers } from '@/lib/queries';
-import type { MobileBgCrawlQueueRow } from '@/lib/queries';
-import { formatDate } from '@/lib/utils';
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getAllDealers } from "@/lib/queries";
+import type { MobileBgCrawlQueueRow } from "@/lib/queries";
+import { formatDate } from "@/lib/utils";
 
-const URL_TYPES = ['dealer_homepage', 'listing_detail'];
-const STATUSES = ['pending', 'in_progress', 'completed', 'failed'];
+const URL_TYPES = ["dealer_homepage", "listing_detail"];
+const STATUSES = ["pending", "in_progress", "completed", "failed"];
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    pending: 'bg-gray-700 text-gray-300',
-    in_progress: 'bg-blue-900 text-blue-200',
-    completed: 'bg-green-900 text-green-200',
-    failed: 'bg-red-900 text-red-200',
+    pending: "bg-gray-700 text-gray-300",
+    in_progress: "bg-blue-900 text-blue-200",
+    completed: "bg-green-900 text-green-200",
+    failed: "bg-red-900 text-red-200",
   };
 
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colors[status] || 'bg-gray-700'}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colors[status] || "bg-gray-700"}`}
+    >
       {status}
     </span>
   );
@@ -31,13 +33,15 @@ export default function CrawlQueuePage() {
   const [rows, setRows] = useState<MobileBgCrawlQueueRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [allDealers, setAllDealers] = useState<Array<{ slug: string; name: string }>>([]);
+  const [allDealers, setAllDealers] = useState<
+    Array<{ slug: string; name: string }>
+  >([]);
 
-  const dealerFilter = searchParams.getAll('dealer');
-  const urlTypeFilter = searchParams.get('url_type') ?? '';
-  const statusFilter = searchParams.get('status') ?? '';
-  const searchFilter = searchParams.get('search') ?? '';
-  const page = parseInt(searchParams.get('page') ?? '1', 10);
+  const dealerFilter = searchParams.getAll("dealer");
+  const urlTypeFilter = searchParams.get("url_type") ?? "";
+  const statusFilter = searchParams.get("status") ?? "";
+  const searchFilter = searchParams.get("search") ?? "";
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
 
   // Load dealers once
   useEffect(() => {
@@ -48,12 +52,12 @@ export default function CrawlQueuePage() {
   // Fetch crawl queue when filters change
   useEffect(() => {
     const params = new URLSearchParams();
-    for (const d of dealerFilter) params.append('dealer', d);
-    if (urlTypeFilter) params.set('url_type', urlTypeFilter);
-    if (statusFilter) params.set('status', statusFilter);
-    if (searchFilter) params.set('search', searchFilter);
-    params.set('page', String(page));
-    params.set('limit', '50');
+    for (const d of dealerFilter) params.append("dealer", d);
+    if (urlTypeFilter) params.set("url_type", urlTypeFilter);
+    if (statusFilter) params.set("status", statusFilter);
+    if (searchFilter) params.set("search", searchFilter);
+    params.set("page", String(page));
+    params.set("limit", "50");
 
     setLoading(true);
     fetch(`/api/mobilebg/crawl-queue?${params}`)
@@ -69,11 +73,11 @@ export default function CrawlQueuePage() {
   const buildParams = (overrides: Record<string, string | string[]> = {}) => {
     const p = new URLSearchParams();
     if (dealerFilter.length > 0) {
-      for (const d of dealerFilter) p.append('dealer', d);
+      for (const d of dealerFilter) p.append("dealer", d);
     }
-    if (urlTypeFilter) p.set('url_type', urlTypeFilter);
-    if (statusFilter) p.set('status', statusFilter);
-    if (searchFilter) p.set('search', searchFilter);
+    if (urlTypeFilter) p.set("url_type", urlTypeFilter);
+    if (statusFilter) p.set("status", statusFilter);
+    if (searchFilter) p.set("search", searchFilter);
 
     for (const [key, val] of Object.entries(overrides)) {
       p.delete(key);
@@ -83,7 +87,7 @@ export default function CrawlQueuePage() {
         p.set(key, val);
       }
     }
-    p.delete('page');
+    p.delete("page");
     return p.toString();
   };
 
@@ -100,7 +104,9 @@ export default function CrawlQueuePage() {
           <div className="space-y-3">
             {/* Dealer filter */}
             <div className="flex flex-wrap gap-2">
-              <label className="text-sm font-medium text-gray-300">Dealers:</label>
+              <label className="text-sm font-medium text-gray-300">
+                Dealers:
+              </label>
               {allDealers.map((dealer) => (
                 <button
                   key={dealer.slug}
@@ -108,12 +114,14 @@ export default function CrawlQueuePage() {
                     const newDealers = dealerFilter.includes(dealer.slug)
                       ? dealerFilter.filter((d) => d !== dealer.slug)
                       : [...dealerFilter, dealer.slug];
-                    router.push(`/mobilebg/crawl-queue?${buildParams({ dealer: newDealers })}`);
+                    router.push(
+                      `/mobilebg/crawl-queue?${buildParams({ dealer: newDealers })}`,
+                    );
                   }}
                   className={`rounded px-2 py-1 text-sm transition-colors ${
                     dealerFilter.includes(dealer.slug)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   }`}
                 >
                   {dealer.name}
@@ -125,10 +133,16 @@ export default function CrawlQueuePage() {
             <div className="flex flex-wrap gap-4">
               {/* URL Type */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-300">Type:</label>
+                <label className="text-sm font-medium text-gray-300">
+                  Type:
+                </label>
                 <select
                   value={urlTypeFilter}
-                  onChange={(e) => router.push(`/mobilebg/crawl-queue?${buildParams({ url_type: e.target.value })}`)}
+                  onChange={(e) =>
+                    router.push(
+                      `/mobilebg/crawl-queue?${buildParams({ url_type: e.target.value })}`,
+                    )
+                  }
                   className="rounded bg-gray-700 px-2 py-1 text-sm text-gray-200"
                 >
                   <option value="">All</option>
@@ -142,10 +156,16 @@ export default function CrawlQueuePage() {
 
               {/* Status */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-300">Status:</label>
+                <label className="text-sm font-medium text-gray-300">
+                  Status:
+                </label>
                 <select
                   value={statusFilter}
-                  onChange={(e) => router.push(`/mobilebg/crawl-queue?${buildParams({ status: e.target.value })}`)}
+                  onChange={(e) =>
+                    router.push(
+                      `/mobilebg/crawl-queue?${buildParams({ status: e.target.value })}`,
+                    )
+                  }
                   className="rounded bg-gray-700 px-2 py-1 text-sm text-gray-200"
                 >
                   <option value="">All</option>
@@ -165,7 +185,9 @@ export default function CrawlQueuePage() {
                   value={searchFilter}
                   onChange={(e) => {
                     const timer = setTimeout(() => {
-                      router.push(`/mobilebg/crawl-queue?${buildParams({ search: e.target.value })}`);
+                      router.push(
+                        `/mobilebg/crawl-queue?${buildParams({ search: e.target.value })}`,
+                      );
                     }, 300);
                     return () => clearTimeout(timer);
                   }}
@@ -201,7 +223,10 @@ export default function CrawlQueuePage() {
                 <tbody className="divide-y divide-gray-700">
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-500">
+                      <td
+                        colSpan={9}
+                        className="py-8 text-center text-gray-500"
+                      >
                         No crawl queue entries found
                       </td>
                     </tr>
@@ -221,11 +246,16 @@ export default function CrawlQueuePage() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs text-gray-400">
-                        <span className="rounded bg-gray-700 px-2 py-0.5">{row.url_type}</span>
+                        <span className="rounded bg-gray-700 px-2 py-0.5">
+                          {row.url_type}
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-gray-300 truncate max-w-md">
                         {row.mobile_id ? (
-                          <Link href={`/listings/${row.mobile_id}`} className="text-blue-400 hover:text-blue-300 truncate block">
+                          <Link
+                            href={`/listings/${row.mobile_id}`}
+                            className="text-blue-400 hover:text-blue-300 truncate block"
+                          >
                             {row.mobile_id}
                           </Link>
                         ) : (
@@ -235,7 +265,7 @@ export default function CrawlQueuePage() {
                             rel="noopener noreferrer"
                             className="text-blue-400 hover:text-blue-300 truncate block"
                           >
-                            {row.url?.replace(/https?:\/\//, '')}
+                            {row.url?.replace(/https?:\/\//, "")}
                           </a>
                         )}
                       </td>
@@ -243,19 +273,24 @@ export default function CrawlQueuePage() {
                         <StatusBadge status={row.status} />
                       </td>
                       <td className="px-3 py-2 text-right text-gray-300">
-                        {row.listings_count ?? '—'}
+                        {row.listings_count ?? "—"}
                       </td>
                       <td className="px-3 py-2 text-right text-gray-300">
-                        {row.price ? `€${row.price}` : '—'}
+                        {row.price ? `€${row.price}` : "—"}
                       </td>
                       <td className="px-3 py-2 text-right text-gray-300">
-                        {row.views ?? '—'}
+                        {row.views ?? "—"}
                       </td>
                       <td className="px-3 py-2 text-xs text-gray-400">
-                        {row.last_crawled_at ? formatDate(row.last_crawled_at) : '—'}
+                        {row.last_crawled_at
+                          ? formatDate(row.last_crawled_at)
+                          : "—"}
                       </td>
-                      <td className="px-3 py-2 text-xs text-red-400 max-w-xs truncate" title={row.error || ''}>
-                        {row.error || '—'}
+                      <td
+                        className="px-3 py-2 text-xs text-red-400 max-w-xs truncate"
+                        title={row.error || ""}
+                      >
+                        {row.error || "—"}
                       </td>
                     </tr>
                   ))}

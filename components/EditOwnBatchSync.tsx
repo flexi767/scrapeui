@@ -8,9 +8,15 @@ import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
+interface OwnDealer {
+  slug: string;
+  name: string;
+}
+
 interface Props {
   initialRows: EditOwnSyncRow[];
   autoRun?: boolean;
+  ownDealers: OwnDealer[];
 }
 
 type BatchRow = EditOwnSyncRow & {
@@ -189,7 +195,7 @@ function isEditOwnSyncRow(data: EditOwnSyncRow | { error?: string } | null): dat
   return Boolean(data && typeof data === 'object' && 'backup_id' in data);
 }
 
-export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props) {
+export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDealers }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState<BatchRow[]>(() => initialRows.map(toBatchRow));
   const [running, setRunning] = useState(false);
@@ -199,14 +205,28 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [doneSummary, setDoneSummary] = useState<RunStats | null>(null);
   const [revertingId, setRevertingId] = useState<number | null>(null);
+  const [renewDealers, setRenewDealers] = useState<string[]>(() => ownDealers.map((d) => d.slug));
+  const [renewOnlyReset, setRenewOnlyReset] = useState(false);
+  const [renewRunning, setRenewRunning] = useState(false);
+  const [renewStopping, setRenewStopping] = useState(false);
+  const [renewStats, setRenewStats] = useState<RunStats | null>(null);
+  const [renewLogs, setRenewLogs] = useState<LogEntry[]>([]);
+  const [renewDone, setRenewDone] = useState<RunStats | null>(null);
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const renewAbortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const renewLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!logRef.current) return;
     logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
+
+  useEffect(() => {
+    if (!renewLogRef.current) return;
+    renewLogRef.current.scrollTop = renewLogRef.current.scrollHeight;
+  }, [renewLogs]);
 
   const pendingCount = rows.filter((row) => row.needs_sync === 1).length;
   const successCount = rows.filter((row) => row.runStatus === 'success').length;
@@ -449,6 +469,122 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
     abortRef.current?.abort();
   }
 
+  const appendRenewLog = (entry: LogEntry) => setRenewLogs((prev) => [...prev, entry]);
+
+  async function runRenewReset() {
+    if (renewDealers.length === 0) {
+      toast.error('Select at least one dealer');
+      return;
+    }
+    setRenewRunning(true);
+    setRenewStopping(false);
+    setRenewLogs([]);
+    setRenewDone(null);
+    setRenewStats({ total: 0, completed: 0, succeeded: 0, failed: 0 });
+
+    const abortController = new AbortController();
+    renewAbortRef.current = abortController;
+
+    let res: Response;
+    try {
+      res = await fetch('/api/editown/renew-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealerSlugs: renewDealers, onlyReset: renewOnlyReset }),
+        signal: abortController.signal,
+      });
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        setRenewRunning(false);
+        setRenewStopping(false);
+        renewAbortRef.current = null;
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
+      setRenewRunning(false);
+      setRenewStopping(false);
+      renewAbortRef.current = null;
+      return;
+    }
+
+    if (!res.ok || !res.body) {
+      let message = 'Failed to start renew & reset';
+      try { const data = await res.json(); message = data.error || message; } catch { /* ignore */ }
+      toast.error(message);
+      setRenewRunning(false);
+      setRenewStopping(false);
+      renewAbortRef.current = null;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split('\n\n');
+        buffer = chunks.pop() ?? '';
+
+        for (const chunk of chunks) {
+          const line = chunk.trim();
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6)) as StreamEntry;
+
+            if (event.type === 'start' || event.type === 'checking' || event.type === 'result' || event.type === 'complete') {
+              const s = { total: (event as RunStats).total ?? 0, completed: (event as RunStats).completed ?? 0, succeeded: (event as RunStats).succeeded ?? 0, failed: (event as RunStats).failed ?? 0 };
+              setRenewStats(s);
+              if (event.type === 'complete') {
+                setRenewDone(s);
+                setRenewRunning(false);
+                setRenewStopping(false);
+                renewAbortRef.current = null;
+                if (s.failed === 0) toast.success(`Renewed ${s.succeeded} listing${s.succeeded === 1 ? '' : 's'}`);
+                else toast.error(`Renewed ${s.succeeded}, ${s.failed} failed`);
+              }
+            }
+
+            if (event.type === 'log' || event.type === 'error') {
+              if (event.message) appendRenewLog({ kind: event.type === 'error' ? 'error' : 'log', message: event.message });
+            } else if ('message' in event && event.message) {
+              const kind = event.type === 'result' ? 'result' : 'status';
+              const ok = event.type === 'result' && 'row' in event ? (event.row as { status: string }).status === 'success' : undefined;
+              appendRenewLog({ kind, ok, message: event.message });
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
+      }
+    } finally {
+      setRenewRunning(false);
+      setRenewStopping(false);
+      renewAbortRef.current = null;
+    }
+  }
+
+  async function stopRenewReset() {
+    if (!renewRunning || renewStopping) return;
+    setRenewStopping(true);
+    try {
+      const res = await fetch('/api/editown/renew-reset', { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to stop');
+      appendRenewLog({ kind: 'log', message: 'Stopping…' });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to stop');
+      setRenewStopping(false);
+      return;
+    }
+    renewAbortRef.current?.abort();
+  }
+
   useEffect(() => {
     if (!autoRun || startedRef.current || rows.length === 0) {
       return;
@@ -462,38 +598,26 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Batch Sync</h2>
-            <p className="mt-1 max-w-2xl text-sm text-gray-400">
-              Runs the mobile.bg sync for changed own listings and streams each step live while the queue is processed.
-            </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Pending</span>
+            <span className="ml-2 text-lg font-semibold text-white">{pendingCount}</span>
           </div>
-
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3 text-right">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Mode</div>
-            <div className="mt-1 text-sm font-medium text-gray-100">
-              {running ? 'Syncing queue' : 'Idle'}
-            </div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Completed</span>
+            <span className="ml-2 text-lg font-semibold text-white">{stats?.completed ?? doneSummary?.completed ?? 0}</span>
           </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Pending</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{pendingCount}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Success</span>
+            <span className="ml-2 text-lg font-semibold text-emerald-400">{stats?.succeeded ?? successCount}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Completed</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{stats?.completed ?? doneSummary?.completed ?? 0}</div>
+          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+            <span className="uppercase tracking-wide text-gray-500">Failed</span>
+            <span className="ml-2 text-lg font-semibold text-red-400">{stats?.failed ?? failedCount}</span>
           </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Success</div>
-            <div className="mt-1 text-2xl font-semibold text-emerald-400">{stats?.succeeded ?? successCount}</div>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Failed</div>
-            <div className="mt-1 text-2xl font-semibold text-red-400">{stats?.failed ?? failedCount}</div>
+          <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
+            <span className="uppercase tracking-wide text-gray-500">Mode</span>
+            <span className="ml-2 text-sm font-medium text-gray-100">{running ? 'Syncing queue' : 'Idle'}</span>
           </div>
         </div>
 
@@ -670,6 +794,123 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false }: Props
               {entry.message}
             </div>
           ))}
+        </div>
+      )}
+
+      {ownDealers.length > 0 && (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
+          <div className="flex flex-wrap items-center gap-3">
+            {renewStats && (
+              <>
+                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+                  <span className="uppercase tracking-wide text-gray-500">Total</span>
+                  <span className="ml-2 text-lg font-semibold text-white">{renewStats.total}</span>
+                </div>
+                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+                  <span className="uppercase tracking-wide text-gray-500">Success</span>
+                  <span className="ml-2 text-lg font-semibold text-emerald-400">{renewStats.succeeded}</span>
+                </div>
+                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
+                  <span className="uppercase tracking-wide text-gray-500">Failed</span>
+                  <span className="ml-2 text-lg font-semibold text-red-400">{renewStats.failed}</span>
+                </div>
+              </>
+            )}
+            <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
+              <span className="uppercase tracking-wide text-gray-500">Mode</span>
+              <span className="ml-2 text-sm font-medium text-gray-100">{renewRunning ? 'Running' : 'Idle'}</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
+              <span>Dealers</span>
+              <span className="text-xs text-gray-500">({renewDealers.length} selected)</span>
+              <button
+                type="button"
+                onClick={() => setRenewDealers(renewDealers.length === ownDealers.length ? [] : ownDealers.map((d) => d.slug))}
+                disabled={renewRunning}
+                className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:text-gray-600"
+              >
+                {renewDealers.length === ownDealers.length ? 'Deselect all' : 'Select all'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {ownDealers.map((d) => (
+                <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={renewDealers.includes(d.slug)}
+                    onChange={() => setRenewDealers((prev) => prev.includes(d.slug) ? prev.filter((s) => s !== d.slug) : [...prev, d.slug])}
+                    disabled={renewRunning}
+                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                  />
+                  <span className="text-sm text-gray-200">{d.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={renewRunning ? stopRenewReset : () => void runRenewReset()}
+              disabled={renewStopping || (!renewRunning && renewDealers.length === 0) || running}
+              className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
+                renewRunning ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
+              }`}
+            >
+              {(renewRunning || renewStopping) && (
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {renewStopping ? 'Stopping…' : renewRunning ? 'Stop' : renewOnlyReset ? 'Reset views' : 'Renew & Reset'}
+            </button>
+
+            <div
+              onClick={() => !renewRunning && setRenewOnlyReset((v) => !v)}
+              className={`flex items-center gap-3 ${renewRunning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+            >
+              <div
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${renewOnlyReset ? 'bg-blue-600' : 'bg-gray-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${renewOnlyReset ? 'translate-x-6' : 'translate-x-1'}`} />
+              </div>
+              <span className="text-sm font-medium text-gray-200">Only reset views</span>
+            </div>
+          </div>
+
+          {renewDone && (
+            <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
+              Done — {renewOnlyReset ? 'reset' : 'renewed'} {renewDone.succeeded}, failed {renewDone.failed}
+            </div>
+          )}
+
+          {renewLogs.length > 0 && (
+            <div
+              ref={renewLogRef}
+              className="rounded-lg border border-gray-700 bg-gray-900 p-3 space-y-1 max-h-[420px] overflow-y-auto"
+            >
+              {renewLogs.map((entry, index) => (
+                <div
+                  key={`renew-${index}-${entry.message}`}
+                  className={
+                    entry.kind === 'error'
+                      ? 'text-xs py-0.5 font-mono text-red-400'
+                      : entry.kind === 'result'
+                      ? `text-xs py-0.5 font-mono ${entry.ok ? 'text-emerald-300' : 'text-red-300'}`
+                      : entry.kind === 'status'
+                      ? 'text-xs py-0.5 font-mono text-sky-300'
+                      : 'text-xs py-0.5 font-mono text-gray-400'
+                  }
+                >
+                  {entry.kind === 'error' ? '❌ ' : entry.kind === 'result' ? (entry.ok ? '✓ ' : '✕ ') : ''}
+                  {entry.message}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

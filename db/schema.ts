@@ -1,456 +1,544 @@
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 // ─── Existing tables ──────────────────────────────────────────────
 
-export const dealers = sqliteTable('dealers', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  slug: text('slug').notNull().unique(),
-  name: text('name').notNull(),
-  mobileUrl: text('mobile_url'),
-  own: integer('own').default(0),
-  active: integer('active').default(1),
-  priority: integer('priority').default(0),
-  mobileUser: text('mobile_user'),
-  mobilePassword: text('mobile_password'),
-  carsUrl: text('cars_url'),
-  carsUser: text('cars_user'),
-  carsPassword: text('cars_password'),
-  createdAt: text('created_at'),
+export const dealers = sqliteTable("dealers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  mobileUrl: text("mobile_url"),
+  own: integer("own").default(0),
+  active: integer("active").default(1),
+  priority: integer("priority").default(0),
+  mobileUser: text("mobile_user"),
+  mobilePassword: text("mobile_password"),
+  carsUrl: text("cars_url"),
+  carsUser: text("cars_user"),
+  carsPassword: text("cars_password"),
+  createdAt: text("created_at"),
 });
 
-export const listings = sqliteTable('listings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  mobileId: text('mobile_id').unique(),
-  priceChange: integer('price_change'),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  url: text('url'),
-  title: text('title'),
-  make: text('make'),
-  model: text('model'),
-  mobileMakeId: integer('mobile_make_id'),
-  mobileModelId: integer('mobile_model_id'),
-  carsMakeId: integer('cars_make_id'),
-  carsModelId: integer('cars_model_id'),
-  regMonth: text('reg_month'),
-  regYear: text('reg_year'),
-  fuel: text('fuel'),
-  bodyType: text('body_type'),
-  transmission: text('transmission'),
-  color: text('color'),
-  vin: text('vin'),
-  euronorm: integer('euronorm'),
-  power: integer('power'),
-  mileage: integer('mileage'),
-  description: text('description'),
-  extrasJson: text('extras_json'),
-  adStatus: text('ad_status'),
-  kaparo: integer('kaparo'),
-  isNew: integer('is_new'),
-  lastEdit: text('last_edit'),
-  carsbgTitle: text('carsbg_title'),
-  carsbgCreatedDate: text('carsbg_created_date'),
-  carsbgEditedDate: text('carsbg_edited_date'),
-  carsPrice: integer('cars_price'),
-  carsTotalViews: integer('cars_total_views'),
-  carsImages: text('cars_images'),
-  views: integer('views'),
-  currentPrice: integer('current_price'),
-  vat: text('vat'),
-  imageCount: integer('image_count'),
-  imageMeta: text('image_meta'),
-  thumbKeys: text('thumb_keys'),
-  fullKeys: text('full_keys'),
-  imagesDownloaded: integer('images_downloaded').default(0),
-  thumbSaved: integer('thumb_saved').default(0),
-  firstSeenAt: text('first_seen_at'),
-  lastSeenAt: text('last_seen_at'),
-  isActive: integer('is_active').default(1),
-  deletedAt: text('deleted_at'),
-  carsId: text('cars_id'),          // cars.bg offer ID after sync
-  source: text('source').default('m'),  // 'm' = mobile.bg, 'c' = cars.bg
-  duplicate: integer('duplicate').default(0), // 1 = duplicate of listing from other source
+export const listings = sqliteTable("listings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  mobileId: text("mobile_id").unique(),
+  priceChange: integer("price_change"),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  url: text("url"),
+  title: text("title"),
+  make: text("make"),
+  model: text("model"),
+  mobileMakeId: integer("mobile_make_id"),
+  mobileModelId: integer("mobile_model_id"),
+  carsMakeId: integer("cars_make_id"),
+  carsModelId: integer("cars_model_id"),
+  regMonth: text("reg_month"),
+  regYear: text("reg_year"),
+  fuel: text("fuel"),
+  bodyType: text("body_type"),
+  transmission: text("transmission"),
+  color: text("color"),
+  vin: text("vin"),
+  euronorm: integer("euronorm"),
+  power: integer("power"),
+  mileage: integer("mileage"),
+  description: text("description"),
+  extrasJson: text("extras_json"),
+  adStatus: text("ad_status"),
+  kaparo: integer("kaparo"),
+  isNew: integer("is_new"),
+  lastEdit: text("last_edit"),
+  carsbgTitle: text("carsbg_title"),
+  carsbgCreatedDate: text("carsbg_created_date"),
+  carsbgEditedDate: text("carsbg_edited_date"),
+  carsPrice: integer("cars_price"),
+  carsTotalViews: integer("cars_total_views"),
+  carsImages: text("cars_images"),
+  views: integer("views"),
+  currentPrice: integer("current_price"),
+  vat: text("vat"),
+  imageCount: integer("image_count"),
+  imageMeta: text("image_meta"),
+  thumbKeys: text("thumb_keys"),
+  fullKeys: text("full_keys"),
+  imagesDownloaded: integer("images_downloaded").default(0),
+  thumbSaved: integer("thumb_saved").default(0),
+  firstSeenAt: text("first_seen_at"),
+  lastSeenAt: text("last_seen_at"),
+  isActive: integer("is_active").default(1),
+  deletedAt: text("deleted_at"),
+  carsId: text("cars_id"), // cars.bg offer ID after sync
+  source: text("source").default("m"), // 'm' = mobile.bg, 'c' = cars.bg
+  duplicate: integer("duplicate").default(0), // 1 = duplicate of listing from other source
 });
 
-export const listingSnapshots = sqliteTable('listing_snapshots', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  listingId: integer('listing_id').references(() => listings.id),
-  price: integer('price'),
-  vat: text('vat'),
-  lastEdit: text('last_edit'),
-  views: integer('views'),
-  adStatus: text('ad_status'),
-  kaparo: integer('kaparo'),
-  title: text('title'),
-  description: text('description'),
-  recordedAt: text('recorded_at'),
+export const listingSnapshots = sqliteTable("listing_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  listingId: integer("listing_id").references(() => listings.id),
+  price: integer("price"),
+  vat: text("vat"),
+  lastEdit: text("last_edit"),
+  views: integer("views"),
+  adStatus: text("ad_status"),
+  kaparo: integer("kaparo"),
+  title: text("title"),
+  description: text("description"),
+  recordedAt: text("recorded_at"),
 });
 
 // ─── Users & Auth ─────────────────────────────────────────────────
 
-export const users = sqliteTable('users', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  username: text('username').notNull().unique(),
-  name: text('name').notNull(),
-  passwordHash: text('password_hash').notNull(),
-  role: text('role').notNull().default('user'),
-  createdAt: text('created_at'),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("user"),
+  createdAt: text("created_at"),
 });
 
 // ─── Labels (shared across tasks, articles, expenses) ─────────────
 
-export const labels = sqliteTable('labels', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(),
-  color: text('color').notNull().default('#6b7280'),
+export const labels = sqliteTable("labels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  color: text("color").notNull().default("#6b7280"),
 });
 
 // ─── Tasks ────────────────────────────────────────────────────────
 
-export const tasks = sqliteTable('tasks', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  description: text('description'),
-  status: text('status').notNull().default('backlog'),
-  priority: text('priority').notNull().default('medium'),
-  assigneeId: integer('assignee_id').references(() => users.id),
-  createdById: integer('created_by_id').references(() => users.id),
-  parentId: integer('parent_id'),
-  deadline: text('deadline'),
-  isRecurring: integer('is_recurring').default(0),
-  recurRule: text('recur_rule'),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const tasks = sqliteTable("tasks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("backlog"),
+  priority: text("priority").notNull().default("medium"),
+  assigneeId: integer("assignee_id").references(() => users.id),
+  createdById: integer("created_by_id").references(() => users.id),
+  parentId: integer("parent_id"),
+  deadline: text("deadline"),
+  isRecurring: integer("is_recurring").default(0),
+  recurRule: text("recur_rule"),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
-export const taskListings = sqliteTable('task_listings', {
-  taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
-  listingId: integer('listing_id').notNull().references(() => listings.id),
+export const taskListings = sqliteTable("task_listings", {
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  listingId: integer("listing_id")
+    .notNull()
+    .references(() => listings.id),
 });
 
-export const taskDeps = sqliteTable('task_deps', {
-  taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
-  dependsOnId: integer('depends_on_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+export const taskDeps = sqliteTable("task_deps", {
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  dependsOnId: integer("depends_on_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
 });
 
-export const taskLabels = sqliteTable('task_labels', {
-  taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
-  labelId: integer('label_id').notNull().references(() => labels.id, { onDelete: 'cascade' }),
+export const taskLabels = sqliteTable("task_labels", {
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  labelId: integer("label_id")
+    .notNull()
+    .references(() => labels.id, { onDelete: "cascade" }),
 });
 
 // ─── Comments ─────────────────────────────────────────────────────
 
-export const comments = sqliteTable('comments', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
-  authorId: integer('author_id').notNull().references(() => users.id),
-  body: text('body').notNull(),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const comments = sqliteTable("comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  authorId: integer("author_id")
+    .notNull()
+    .references(() => users.id),
+  body: text("body").notNull(),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
 // ─── Time Entries ─────────────────────────────────────────────────
 
-export const timeEntries = sqliteTable('time_entries', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
-  userId: integer('user_id').notNull().references(() => users.id),
-  description: text('description'),
-  durationMinutes: integer('duration_minutes').notNull(),
-  date: text('date').notNull(),
-  createdAt: text('created_at'),
+export const timeEntries = sqliteTable("time_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  description: text("description"),
+  durationMinutes: integer("duration_minutes").notNull(),
+  date: text("date").notNull(),
+  createdAt: text("created_at"),
 });
 
 // ─── Expenses ─────────────────────────────────────────────────────
 
-export const expenses = sqliteTable('expenses', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  amount: integer('amount').notNull(),
-  currency: text('currency').notNull().default('EUR'),
-  date: text('date').notNull(),
-  category: text('category').notNull(),
-  notes: text('notes'),
-  createdById: integer('created_by_id').references(() => users.id),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const expenses = sqliteTable("expenses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  date: text("date").notNull(),
+  category: text("category").notNull(),
+  notes: text("notes"),
+  createdById: integer("created_by_id").references(() => users.id),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
-export const expenseListings = sqliteTable('expense_listings', {
-  expenseId: integer('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
-  listingId: integer('listing_id').notNull().references(() => listings.id),
+export const expenseListings = sqliteTable("expense_listings", {
+  expenseId: integer("expense_id")
+    .notNull()
+    .references(() => expenses.id, { onDelete: "cascade" }),
+  listingId: integer("listing_id")
+    .notNull()
+    .references(() => listings.id),
 });
 
-export const expenseTasks = sqliteTable('expense_tasks', {
-  expenseId: integer('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
-  taskId: integer('task_id').notNull().references(() => tasks.id),
+export const expenseTasks = sqliteTable("expense_tasks", {
+  expenseId: integer("expense_id")
+    .notNull()
+    .references(() => expenses.id, { onDelete: "cascade" }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id),
 });
 
-export const expenseLabels = sqliteTable('expense_labels', {
-  expenseId: integer('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
-  labelId: integer('label_id').notNull().references(() => labels.id, { onDelete: 'cascade' }),
+export const expenseLabels = sqliteTable("expense_labels", {
+  expenseId: integer("expense_id")
+    .notNull()
+    .references(() => expenses.id, { onDelete: "cascade" }),
+  labelId: integer("label_id")
+    .notNull()
+    .references(() => labels.id, { onDelete: "cascade" }),
 });
 
 // ─── Uploads (file metadata) ─────────────────────────────────────
 
-export const uploads = sqliteTable('uploads', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  filename: text('filename').notNull(),
-  storedName: text('stored_name').notNull(),
-  mimeType: text('mime_type').notNull(),
-  sizeBytes: integer('size_bytes').notNull(),
-  entityType: text('entity_type'),
-  entityId: integer('entity_id'),
-  uploadedById: integer('uploaded_by_id').references(() => users.id),
-  createdAt: text('created_at'),
+export const uploads = sqliteTable("uploads", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  filename: text("filename").notNull(),
+  storedName: text("stored_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  entityType: text("entity_type"),
+  entityId: integer("entity_id"),
+  uploadedById: integer("uploaded_by_id").references(() => users.id),
+  createdAt: text("created_at"),
 });
 
 // ─── Knowledge Base ───────────────────────────────────────────────
 
-export const articles = sqliteTable('articles', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  title: text('title').notNull(),
-  slug: text('slug').notNull().unique(),
-  body: text('body').notNull(),
-  authorId: integer('author_id').notNull().references(() => users.id),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const articles = sqliteTable("articles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  body: text("body").notNull(),
+  authorId: integer("author_id")
+    .notNull()
+    .references(() => users.id),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
-export const articleLabels = sqliteTable('article_labels', {
-  articleId: integer('article_id').notNull().references(() => articles.id, { onDelete: 'cascade' }),
-  labelId: integer('label_id').notNull().references(() => labels.id, { onDelete: 'cascade' }),
+export const articleLabels = sqliteTable("article_labels", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  labelId: integer("label_id")
+    .notNull()
+    .references(() => labels.id, { onDelete: "cascade" }),
 });
 
-export const articleListings = sqliteTable('article_listings', {
-  articleId: integer('article_id').notNull().references(() => articles.id, { onDelete: 'cascade' }),
-  listingId: integer('listing_id').notNull().references(() => listings.id),
+export const articleListings = sqliteTable("article_listings", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  listingId: integer("listing_id")
+    .notNull()
+    .references(() => listings.id),
 });
 
-export const articleDealers = sqliteTable('article_dealers', {
-  articleId: integer('article_id').notNull().references(() => articles.id, { onDelete: 'cascade' }),
-  dealerId: integer('dealer_id').notNull().references(() => dealers.id),
+export const articleDealers = sqliteTable("article_dealers", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  dealerId: integer("dealer_id")
+    .notNull()
+    .references(() => dealers.id),
 });
 
-export const articleTasks = sqliteTable('article_tasks', {
-  articleId: integer('article_id').notNull().references(() => articles.id, { onDelete: 'cascade' }),
-  taskId: integer('task_id').notNull().references(() => tasks.id),
+export const articleTasks = sqliteTable("article_tasks", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  taskId: integer("task_id")
+    .notNull()
+    .references(() => tasks.id),
 });
 
-export const articleExpenses = sqliteTable('article_expenses', {
-  articleId: integer('article_id').notNull().references(() => articles.id, { onDelete: 'cascade' }),
-  expenseId: integer('expense_id').notNull().references(() => expenses.id),
+export const articleExpenses = sqliteTable("article_expenses", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  expenseId: integer("expense_id")
+    .notNull()
+    .references(() => expenses.id),
 });
 
 // ─── Notifications ────────────────────────────────────────────────
 
-export const notifications = sqliteTable('notifications', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull().references(() => users.id),
-  type: text('type').notNull(),
-  entityType: text('entity_type').notNull(),
-  entityId: integer('entity_id').notNull(),
-  title: text('title').notNull(),
-  readAt: text('read_at'),
-  createdAt: text('created_at'),
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  title: text("title").notNull(),
+  readAt: text("read_at"),
+  createdAt: text("created_at"),
 });
 
 // ─── Activity Log ─────────────────────────────────────────────────
 
-export const activityLog = sqliteTable('activity_log', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  entityType: text('entity_type').notNull(),
-  entityId: integer('entity_id').notNull(),
-  action: text('action').notNull(),
-  detail: text('detail'),
-  userId: integer('user_id').references(() => users.id),
-  createdAt: text('created_at'),
+export const activityLog = sqliteTable("activity_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  action: text("action").notNull(),
+  detail: text("detail"),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: text("created_at"),
 });
 
 // ─── Scrape Failures ──────────────────────────────────────────────
 
-export const scrapeFailures = sqliteTable('scrape_failures', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  dealerSlug: text('dealer_slug'),
-  url: text('url').notNull(),
-  source: text('source').notNull(), // 'mobile.bg' | 'cars.bg'
-  retryCount: integer('retry_count'),
-  error: text('error'),
-  createdAt: text('created_at'),
+export const scrapeFailures = sqliteTable("scrape_failures", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  dealerSlug: text("dealer_slug"),
+  url: text("url").notNull(),
+  source: text("source").notNull(), // 'mobile.bg' | 'cars.bg'
+  retryCount: integer("retry_count"),
+  error: text("error"),
+  createdAt: text("created_at"),
 });
 
 // ─── Mobile.bg Backup / Edit / Repost Artifacts ──────────────────
 
-export const mobileBgBackupRuns = sqliteTable('mobilebg_backup_runs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  status: text('status').notNull().default('pending'),
-  sourceUrl: text('source_url'),
-  listingsCount: integer('listings_count').default(0),
-  imagesCount: integer('images_count').default(0),
-  notes: text('notes'),
-  startedAt: text('started_at'),
-  finishedAt: text('finished_at'),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const mobileBgBackupRuns = sqliteTable("mobilebg_backup_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  status: text("status").notNull().default("pending"),
+  sourceUrl: text("source_url"),
+  listingsCount: integer("listings_count").default(0),
+  imagesCount: integer("images_count").default(0),
+  notes: text("notes"),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
-export const mobileBgBackups = sqliteTable('mobilebg_backups', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  runId: integer('run_id').references(() => mobileBgBackupRuns.id),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  listingId: integer('listing_id').references(() => listings.id),
-  mobileId: text('mobile_id'),
-  sourceUrl: text('source_url'),
-  sourceTitle: text('source_title'),
-  rowRefreshText: text('row_refresh_text'),
-  views: integer('views'),
-  viewedSinceDate: text('viewed_since_date'),
-  watching: integer('watching'),
-  make: text('make'),
-  model: text('model'),
-  title: text('title'),
-  priceAmount: integer('price_amount'),
-  priceCurrency: text('price_currency'),
-  vatIncluded: text('vat_included'),
-  year: integer('year'),
-  mileage: integer('mileage'),
-  fuel: text('fuel'),
-  power: integer('power'),
-  engine: text('engine'),
-  color: text('color'),
-  transmission: text('transmission'),
-  category: text('category'),
-  description: text('description'),
-  adStatus: text('ad_status'),
-  kaparo: integer('kaparo').default(0),
-  draftNeedsSync: integer('draft_needs_sync').default(0),
-  lastMobileSyncStatus: text('last_mobile_sync_status'),
-  lastMobileSyncError: text('last_mobile_sync_error'),
-  lastMobileSyncAt: text('last_mobile_sync_at'),
-  phonesJson: text('phones_json'),
-  extrasJson: text('extras_json'),
-  techDataJson: text('tech_data_json'),
-  photoOrderJson: text('photo_order_json'),
-  imageCount: integer('image_count').default(0),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+export const mobileBgBackups = sqliteTable("mobilebg_backups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  runId: integer("run_id").references(() => mobileBgBackupRuns.id),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  listingId: integer("listing_id").references(() => listings.id),
+  mobileId: text("mobile_id"),
+  sourceUrl: text("source_url"),
+  sourceTitle: text("source_title"),
+  rowRefreshText: text("row_refresh_text"),
+  views: integer("views"),
+  viewedSinceDate: text("viewed_since_date"),
+  watching: integer("watching"),
+  make: text("make"),
+  model: text("model"),
+  title: text("title"),
+  priceAmount: integer("price_amount"),
+  priceCurrency: text("price_currency"),
+  vatIncluded: text("vat_included"),
+  year: integer("year"),
+  mileage: integer("mileage"),
+  fuel: text("fuel"),
+  power: integer("power"),
+  engine: text("engine"),
+  color: text("color"),
+  transmission: text("transmission"),
+  category: text("category"),
+  description: text("description"),
+  adStatus: text("ad_status"),
+  kaparo: integer("kaparo").default(0),
+  draftNeedsSync: integer("draft_needs_sync").default(0),
+  lastMobileSyncStatus: text("last_mobile_sync_status"),
+  lastMobileSyncError: text("last_mobile_sync_error"),
+  lastMobileSyncAt: text("last_mobile_sync_at"),
+  phonesJson: text("phones_json"),
+  extrasJson: text("extras_json"),
+  techDataJson: text("tech_data_json"),
+  photoOrderJson: text("photo_order_json"),
+  imageCount: integer("image_count").default(0),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
-export const mobileBgBackupImages = sqliteTable('mobilebg_backup_images', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  backupId: integer('backup_id').notNull().references(() => mobileBgBackups.id, { onDelete: 'cascade' }),
-  sortOrder: integer('sort_order').notNull().default(0),
-  filename: text('filename').notNull(),
-  sourceUrl: text('source_url'),
-  localPath: text('local_path').notNull(),
-  createdAt: text('created_at'),
+export const mobileBgBackupImages = sqliteTable("mobilebg_backup_images", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  backupId: integer("backup_id")
+    .notNull()
+    .references(() => mobileBgBackups.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  filename: text("filename").notNull(),
+  sourceUrl: text("source_url"),
+  localPath: text("local_path").notNull(),
+  createdAt: text("created_at"),
 });
 
-export const mobileBgEditFormSnapshots = sqliteTable('mobilebg_edit_form_snapshots', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  listingId: integer('listing_id').references(() => listings.id),
-  backupId: integer('backup_id').references(() => mobileBgBackups.id),
-  mobileId: text('mobile_id'),
-  sourceUrl: text('source_url'),
-  listingToken: text('listing_token'),
-  rowTitle: text('row_title'),
-  rowPriceText: text('row_price_text'),
-  rowRefreshText: text('row_refresh_text'),
-  views: integer('views'),
-  viewedSinceDate: text('viewed_since_date'),
-  watching: integer('watching'),
-  formUrl: text('form_url'),
-  formsJson: text('forms_json'),
-  fieldsJson: text('fields_json'),
-  checkedBoxesJson: text('checked_boxes_json'),
-  checkedRadiosJson: text('checked_radios_json'),
-  hiddenJson: text('hidden_json'),
-  screenshotPath: text('screenshot_path'),
-  createdAt: text('created_at'),
+export const mobileBgEditFormSnapshots = sqliteTable(
+  "mobilebg_edit_form_snapshots",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    dealerId: integer("dealer_id").references(() => dealers.id),
+    listingId: integer("listing_id").references(() => listings.id),
+    backupId: integer("backup_id").references(() => mobileBgBackups.id),
+    mobileId: text("mobile_id"),
+    sourceUrl: text("source_url"),
+    listingToken: text("listing_token"),
+    rowTitle: text("row_title"),
+    rowPriceText: text("row_price_text"),
+    rowRefreshText: text("row_refresh_text"),
+    views: integer("views"),
+    viewedSinceDate: text("viewed_since_date"),
+    watching: integer("watching"),
+    formUrl: text("form_url"),
+    formsJson: text("forms_json"),
+    fieldsJson: text("fields_json"),
+    checkedBoxesJson: text("checked_boxes_json"),
+    checkedRadiosJson: text("checked_radios_json"),
+    hiddenJson: text("hidden_json"),
+    screenshotPath: text("screenshot_path"),
+    createdAt: text("created_at"),
+  },
+);
+
+export const mobileBgRepostJobs = sqliteTable("mobilebg_repost_jobs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  backupId: integer("backup_id").references(() => mobileBgBackups.id),
+  listingId: integer("listing_id").references(() => listings.id),
+  sourceMobileId: text("source_mobile_id"),
+  targetMobileId: text("target_mobile_id"),
+  status: text("status").notNull().default("pending"),
+  message: text("message"),
+  previewScreenshotPath: text("preview_screenshot_path"),
+  debugDir: text("debug_dir"),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at"),
 });
 
-export const mobileBgRepostJobs = sqliteTable('mobilebg_repost_jobs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerId: integer('dealer_id').references(() => dealers.id),
-  backupId: integer('backup_id').references(() => mobileBgBackups.id),
-  listingId: integer('listing_id').references(() => listings.id),
-  sourceMobileId: text('source_mobile_id'),
-  targetMobileId: text('target_mobile_id'),
-  status: text('status').notNull().default('pending'),
-  message: text('message'),
-  previewScreenshotPath: text('preview_screenshot_path'),
-  debugDir: text('debug_dir'),
-  startedAt: text('started_at'),
-  finishedAt: text('finished_at'),
-  createdAt: text('created_at'),
-});
+export const mobileBgMakeModels = sqliteTable(
+  "mobilebg_make_models",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    searchPath: text("search_path")
+      .notNull()
+      .default("/search/avtomobili-dzhipove"),
+    pubtype: text("pubtype").notNull().default("1,2"),
+    make: text("make").notNull(),
+    model: text("model").notNull().default(""),
+    makeId: integer("make_id"),
+    modelId: integer("model_id"),
+    makeCount: integer("make_count"),
+    modelCount: integer("model_count"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => ({
+    uniqueMakeModel: uniqueIndex(
+      "mobilebg_make_models_scope_make_model_idx",
+    ).on(table.searchPath, table.pubtype, table.make, table.model),
+  }),
+);
 
-export const mobileBgMakeModels = sqliteTable('mobilebg_make_models', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  searchPath: text('search_path').notNull().default('/search/avtomobili-dzhipove'),
-  pubtype: text('pubtype').notNull().default('1,2'),
-  make: text('make').notNull(),
-  model: text('model').notNull().default(''),
-  makeId: integer('make_id'),
-  modelId: integer('model_id'),
-  makeCount: integer('make_count'),
-  modelCount: integer('model_count'),
-  updatedAt: text('updated_at').notNull(),
-}, (table) => ({
-  uniqueMakeModel: uniqueIndex('mobilebg_make_models_scope_make_model_idx').on(
-    table.searchPath,
-    table.pubtype,
-    table.make,
-    table.model,
-  ),
-}));
-
-export const listingSearchResultIgnores = sqliteTable('listing_search_result_ignores', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  ignoredMobileId: text('ignored_mobile_id').notNull(),
-  createdAt: text('created_at'),
-}, (table) => ({
-  uniqueListingMobile: uniqueIndex('listing_search_result_ignores_listing_mobile_idx').on(
-    table.listingId,
-    table.ignoredMobileId,
-  ),
-}));
+export const listingSearchResultIgnores = sqliteTable(
+  "listing_search_result_ignores",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    listingId: integer("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    ignoredMobileId: text("ignored_mobile_id").notNull(),
+    createdAt: text("created_at"),
+  },
+  (table) => ({
+    uniqueListingMobile: uniqueIndex(
+      "listing_search_result_ignores_listing_mobile_idx",
+    ).on(table.listingId, table.ignoredMobileId),
+  }),
+);
 
 // ─── Mobile.bg Crawl Queue (for managing rate limits) ────────────
 
-export const mobileBgCrawlQueue = sqliteTable('mobilebg_crawl_queue', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  dealerId: integer('dealer_id').notNull().references(() => dealers.id),
-  url: text('url').notNull(),
-  urlType: text('url_type').notNull(), // 'dealer_homepage' | 'listing_detail'
-  mobileId: text('mobile_id'), // for listing_detail: the mobile ID; null for dealer_homepage
-  status: text('status').notNull().default('pending'), // 'pending' | 'in_progress' | 'completed' | 'failed'
-  listingsCount: integer('listings_count'), // for dealer_homepage: # of ads found
-  price: integer('price'), // for listing_detail: cached price
-  views: integer('views'), // for listing_detail: cached views
-  lastCrawledAt: text('last_crawled_at'),
-  nextCrawlAt: text('next_crawl_at'),
-  error: text('error'),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
-}, (table) => ({
-  uniqueDealerUrl: uniqueIndex('mobilebg_crawl_queue_dealer_url_idx').on(
-    table.dealerId,
-    table.url,
-  ),
-}));
+export const mobileBgCrawlQueue = sqliteTable(
+  "mobilebg_crawl_queue",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    dealerId: integer("dealer_id")
+      .notNull()
+      .references(() => dealers.id),
+    url: text("url").notNull(),
+    urlType: text("url_type").notNull(), // 'dealer_homepage' | 'listing_detail'
+    mobileId: text("mobile_id"), // for listing_detail: the mobile ID; null for dealer_homepage
+    status: text("status").notNull().default("pending"), // 'pending' | 'in_progress' | 'completed' | 'failed'
+    listingsCount: integer("listings_count"), // for dealer_homepage: # of ads found
+    price: integer("price"), // for listing_detail: cached price
+    views: integer("views"), // for listing_detail: cached views
+    lastCrawledAt: text("last_crawled_at"),
+    nextCrawlAt: text("next_crawl_at"),
+    error: text("error"),
+    createdAt: text("created_at"),
+    updatedAt: text("updated_at"),
+  },
+  (table) => ({
+    uniqueDealerUrl: uniqueIndex("mobilebg_crawl_queue_dealer_url_idx").on(
+      table.dealerId,
+      table.url,
+    ),
+  }),
+);
 
-export const listingSearchProfiles = sqliteTable('listing_search_profiles', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  fieldsJson: text('fields_json').notNull(),
-  updatedAt: text('updated_at'),
-}, (table) => ({
-  uniqueListing: uniqueIndex('listing_search_profiles_listing_idx').on(table.listingId),
-}));
+export const listingSearchProfiles = sqliteTable(
+  "listing_search_profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    listingId: integer("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    fieldsJson: text("fields_json").notNull(),
+    updatedAt: text("updated_at"),
+  },
+  (table) => ({
+    uniqueListing: uniqueIndex("listing_search_profiles_listing_idx").on(
+      table.listingId,
+    ),
+  }),
+);
 
 // ─── Type exports ─────────────────────────────────────────────────
 
@@ -462,7 +550,8 @@ export type Label = typeof labels.$inferSelect;
 export type MobileBgBackupRun = typeof mobileBgBackupRuns.$inferSelect;
 export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
 export type MobileBgBackupImage = typeof mobileBgBackupImages.$inferSelect;
-export type MobileBgEditFormSnapshot = typeof mobileBgEditFormSnapshots.$inferSelect;
+export type MobileBgEditFormSnapshot =
+  typeof mobileBgEditFormSnapshots.$inferSelect;
 export type MobileBgRepostJob = typeof mobileBgRepostJobs.$inferSelect;
 export type MobileBgMakeModel = typeof mobileBgMakeModels.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

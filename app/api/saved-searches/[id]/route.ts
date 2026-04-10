@@ -5,7 +5,7 @@ import {
   listSavedSearchSummaries,
   updateSavedSearch,
 } from '@/lib/mobile-bg/saved-searches';
-import type { SearchField } from '@/lib/mobile-bg/search-prefill';
+import type { SearchField } from '@/lib/mobile-bg/search-form-shared';
 
 function parseId(rawValue: string) {
   const id = Number.parseInt(rawValue, 10);

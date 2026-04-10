@@ -3,14 +3,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Loader2, Plus, Save, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
+import {
+  type SearchPrefillData,
+} from '@/lib/mobile-bg/search-prefill';
 import {
   SEARCH_ACTION,
   buildFirstSevenSearchFields,
   type SearchField,
-  type SearchPrefillData,
-} from '@/lib/mobile-bg/search-prefill';
+} from '@/lib/mobile-bg/search-form-shared';
+import { buildImageList, formatMileage, formatPrice, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
 import type { SavedSearchSummary } from '@/lib/mobile-bg/saved-searches';
 import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
 
@@ -86,6 +90,21 @@ export default function SavedSearchesWorkspace({
   const [locationLoading, setLocationLoading] = useState(false);
 
   const listing = detail?.prefill.listing ?? null;
+  const imageMeta = parseJson<ImageMeta | null>(listing?.imageMeta, null);
+  const thumbKeys = parseJson<string[]>(listing?.thumbKeys ?? null, []);
+  const fullKeys = parseJson<string[]>(listing?.fullKeys ?? null, []);
+  const images = listing?.mobile_id
+    ? buildImageList(
+        listing.mobile_id,
+        fullKeys.length ? fullKeys : thumbKeys,
+        thumbKeys,
+        imageMeta,
+        listing.imagesDownloaded === 1,
+      )
+    : [];
+  const thumbSrc = listing?.mobile_id
+    ? images[0]?.thumb ?? (listing.thumbSaved === 1 ? getThumbProxyUrl(listing.mobile_id, null) : null)
+    : null;
 
   useEffect(() => {
     if (selectedId == null) {
@@ -387,11 +406,46 @@ export default function SavedSearchesWorkspace({
             <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="text-lg font-semibold text-white">
-                    {[listing.make, listing.model].filter(Boolean).join(' ') || 'Saved search'}
-                  </div>
-                  <div className="mt-1 text-sm text-gray-400">
-                    Entry listing: {listing.title || '—'}{listing.mobile_id ? ` • ${listing.mobile_id}` : ''}
+                  <div className="flex items-start gap-3">
+                    {listing.mobile_id && thumbSrc ? (
+                      <div className="relative inline-block w-24 shrink-0">
+                        <a href={`/listings/${listing.mobile_id}`} className="peer block">
+                          <ImageWithFallback
+                            src={thumbSrc}
+                            alt={`${listing.make ?? 'Listing'} ${listing.model ?? ''}`.trim() || 'Listing image'}
+                            className="w-24 rounded object-contain"
+                            style={{ aspectRatio: '4/3' }}
+                            fallbackClassName="w-24 rounded bg-gray-800 text-gray-400"
+                            fallbackLabel="Missing"
+                          />
+                        </a>
+                        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-72 peer-hover:block">
+                          <ImageWithFallback
+                            src={thumbSrc}
+                            alt={`${listing.make ?? 'Listing'} ${listing.model ?? ''}`.trim() || 'Listing image preview'}
+                            className="w-full rounded shadow-xl"
+                            fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                            fallbackLabel="Missing"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-[72px] w-24 shrink-0 rounded bg-gray-800" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-lg font-semibold text-white">
+                        {[listing.make, listing.model].filter(Boolean).join(' ') || 'Saved search'}
+                      </div>
+                      <a
+                        href={listing.mobile_id ? `/listings/${listing.mobile_id}` : undefined}
+                        className="mt-1 block text-sm text-gray-300 hover:text-white"
+                      >
+                        {listing.title || '—'}
+                      </a>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {formatPrice(listing.currentPrice)} • {listing.fuel || '—'} • {formatMileage(listing.mileage)}
+                      </div>
+                    </div>
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     Updated {formatSavedAt(detail.search.updatedAt)} • Created {formatSavedAt(detail.search.createdAt)}
@@ -406,7 +460,7 @@ export default function SavedSearchesWorkspace({
                     disabled={resultsLoading}
                   >
                     <SearchIcon className="mr-2 h-4 w-4" />
-                    Quick Results
+                    First 8 Fields
                   </Button>
                   <Button
                     type="button"
@@ -416,7 +470,7 @@ export default function SavedSearchesWorkspace({
                     disabled={resultsLoading}
                   >
                     {resultsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
-                    Search Here
+                    All Fields
                   </Button>
                   <Button
                     type="button"
