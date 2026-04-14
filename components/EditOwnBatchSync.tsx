@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -637,13 +636,6 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
             )}
             {stopping ? 'Stopping…' : running ? 'Stop' : `Sync all${pendingCount > 0 ? ` (${pendingCount})` : ''}`}
           </button>
-
-          <Link
-            href="/editown"
-            className="rounded-md border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white"
-          >
-            Back to editown
-          </Link>
 
           {currentLabel && (
             <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import EditOwnBatchSync from '@/components/EditOwnBatchSync';
 import { getAllDealers, getEditOwnSyncRows } from '@/lib/queries';
 
@@ -20,16 +19,13 @@ export default async function EditOwnSyncPage({
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
+        <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div>
             <div className="text-sm font-medium text-gray-200">Batch Sync</div>
             <div className="text-xs text-gray-500">
               Sync changed own listings back to Mobile.bg
             </div>
           </div>
-          <Link href="/editown" className="text-sm text-gray-400 hover:text-gray-200">
-            ← Back to editown
-          </Link>
         </div>
       </header>
 

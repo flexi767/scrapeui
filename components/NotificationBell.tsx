@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 
+const NOTIFICATIONS_API_ENABLED = false;
+
 interface NotificationItem {
   id: number;
   type: string;
@@ -30,6 +32,7 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
+    if (!NOTIFICATIONS_API_ENABLED) return;
     loadNotifications();
     const interval = setInterval(loadNotifications, 60000); // poll every 60s
     return () => clearInterval(interval);
@@ -44,6 +47,12 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
+    if (!NOTIFICATIONS_API_ENABLED) {
+      setUnread(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+      return;
+    }
+
     await fetch('/api/notifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
