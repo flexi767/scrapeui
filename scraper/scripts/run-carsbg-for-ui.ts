@@ -755,6 +755,7 @@ async function deepCrawlCarsBgOwnListings(dealer: Record<string, any>, db: Datab
             .replace(/\r/g, '')
             .replace(/Възможност за бартер/g, '')
             .replace(/Възможност за лизинг/g, '')
+            .replace(/Възможност за данъчен кредит/g, '')
             .replace(/[ \t]+\n/g, '\n')
             .replace(/\n{2,}/g, '\n')
             .trim() || null;
