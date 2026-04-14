@@ -874,7 +874,11 @@ export default function SavedSearchesWorkspace({
                               {listing.title || "—"}
                             </a>
                             <div className="mt-1 text-xs text-gray-500">
-                              {formatPrice(listing.currentPrice)} •{" "}
+                              {formatPrice(listing.currentPrice)}
+                              {listing.power != null
+                                ? ` • ${listing.power.toLocaleString("en-US")} PS`
+                                : ""}{" "}
+                              •{" "}
                               {listing.fuel || "—"} •{" "}
                               {formatMileage(listing.mileage)}
                             </div>

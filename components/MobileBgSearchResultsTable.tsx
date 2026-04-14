@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
-import { formatMileage, formatPrice } from '@/lib/utils';
+import { formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
   getOriginalPositionIgnoring,
@@ -49,6 +49,32 @@ function getDisplayTitle(row: MobileBgSearchResultRow) {
   }
 
   return title;
+}
+
+const MONTH_NUMBER_BY_NAME: Record<string, string> = {
+  януари: '01',
+  февруари: '02',
+  март: '03',
+  април: '04',
+  май: '05',
+  юни: '06',
+  юли: '07',
+  август: '08',
+  септември: '09',
+  октомври: '10',
+  ноември: '11',
+  декември: '12',
+};
+
+function formatRegMonthNumber(value: string | null) {
+  if (!value) return '—';
+  const normalized = value.trim().toLowerCase();
+  return MONTH_NUMBER_BY_NAME[normalized] ?? value;
+}
+
+function formatMileageValue(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return value.toLocaleString('en-US');
 }
 
 function VatBadge({ vat }: { vat: MobileBgSearchResultRow['vat_status'] }) {
@@ -125,12 +151,12 @@ export function MobileBgSearchResultsTable({
     const shortLabel = truncateDealerLabel(fullLabel);
     if (row.dealer_url) {
       return (
-        <a href={row.dealer_url} target="_blank" rel="noreferrer" className="text-white hover:text-white" title={fullLabel}>
+        <a href={row.dealer_url} target="_blank" rel="noreferrer" className="text-xs text-white hover:text-white" title={fullLabel}>
           {shortLabel}
         </a>
       );
     }
-    return <span className="text-slate-200/80" title={fullLabel}>{shortLabel}</span>;
+    return <span className="text-xs text-slate-200/80" title={fullLabel}>{shortLabel}</span>;
   }
 
   return (
@@ -161,19 +187,19 @@ export function MobileBgSearchResultsTable({
       </div>
 
       <div className="mobile-bg-results-scroll max-h-[600px] overflow-x-auto overflow-y-auto rounded-b-lg">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[1100px] text-sm">
           <thead>
             <tr className="border-b border-slate-500/60 bg-slate-700/70 text-xs font-medium uppercase tracking-wider text-slate-200/70">
               <th className="w-24 px-3 py-1.5 text-left">Img</th>
               <th className="px-3 py-1.5 text-right">Orig #</th>
-              <th className="px-3 py-1.5 text-left">Make / Model</th>
-              <th className="px-3 py-1.5 text-left">Title</th>
-              <th className="px-3 py-1.5 text-left">Dealer</th>
+              <th className="px-2 py-1.5 text-left">Make / Model</th>
+              <th className="px-2 py-1.5 text-left">Title</th>
+              <th className="px-2 py-1.5 text-left">Dealer</th>
               <th className="px-2 py-1.5 text-center w-14">Paid</th>
               <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
               <th className="px-3 py-1.5 text-center">VAT</th>
-              <th className="px-3 py-1.5 text-right">Month</th>
               <th className="px-3 py-1.5 text-right">Year</th>
+              <th className="px-3 py-1.5 text-right">PS</th>
               <th className="px-3 py-1.5 text-center">Body Type</th>
               <th className="px-3 py-1.5 text-center">Fuel</th>
               <th className="px-3 py-1.5 text-right">KM</th>
@@ -182,7 +208,7 @@ export function MobileBgSearchResultsTable({
           <tbody className="divide-y divide-slate-500/40">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={13} className="py-10 text-center text-slate-200/60">
+                <td colSpan={12} className="py-10 text-center text-slate-200/60">
                   No mobile.bg results found.
                 </td>
               </tr>
@@ -251,7 +277,7 @@ export function MobileBgSearchResultsTable({
                   </div>
                 </td>
 
-                <td className="px-3 py-1">
+                <td className="px-2 py-1">
                   <div className="flex items-center gap-2 font-medium text-white">
                     <span>{row.make || '—'}</span>
                     {isSourceListing && (
@@ -263,15 +289,15 @@ export function MobileBgSearchResultsTable({
                   <div className="text-xs text-slate-200/65">{row.model || '—'}</div>
                 </td>
 
-                <td className="max-w-xs px-3 py-1">
+                <td className="max-w-[13rem] px-2 py-1">
                   <div>
                     <a
                       href={row.url}
                       target="_blank"
                       rel="noreferrer"
                       className={isSourceListing
-                        ? 'line-clamp-2 font-semibold text-yellow-300 hover:text-yellow-200'
-                        : 'line-clamp-2 text-white hover:text-white'}
+                        ? 'line-clamp-2 text-xs font-semibold text-yellow-300 hover:text-yellow-200'
+                        : 'line-clamp-2 text-xs text-white hover:text-white'}
                     >
                       {getDisplayTitle(row)}
                     </a>
@@ -281,7 +307,7 @@ export function MobileBgSearchResultsTable({
                   </div>
                 </td>
 
-                <td className="px-3 py-1">
+                <td className="w-28 px-2 py-1">
                   {renderDealerName(row)}
                 </td>
 
@@ -309,12 +335,13 @@ export function MobileBgSearchResultsTable({
                   <VatBadge vat={row.vat_status} />
                 </td>
 
-                <td className="px-3 py-1 text-right text-slate-200/80">
-                  {row.reg_month ?? '—'}
+                <td className="px-3 py-1 text-right text-xs text-slate-200/80">
+                  <div>{formatRegMonthNumber(row.reg_month)}</div>
+                  <div>{row.reg_year ?? '—'}</div>
                 </td>
 
-                <td className="px-3 py-1 text-right text-slate-200/80">
-                  {row.reg_year ?? '—'}
+                <td className="px-3 py-1 text-right text-xs text-slate-200/80">
+                  {row.power != null ? row.power.toLocaleString('en-US') : '—'}
                 </td>
 
                 <td className="px-3 py-1 text-center">
@@ -325,8 +352,8 @@ export function MobileBgSearchResultsTable({
                   <span className="text-xs text-slate-200/80">{row.fuel ?? '—'}</span>
                 </td>
 
-                <td className="px-3 py-1 text-right text-slate-200/80">
-                  {formatMileage(row.mileage)}
+                <td className="px-3 py-1 text-right text-xs text-slate-200/80">
+                  {formatMileageValue(row.mileage)}
                 </td>
               </tr>
             );
