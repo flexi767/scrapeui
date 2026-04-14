@@ -222,7 +222,10 @@ function normalizeCarsBgDescriptionText(value: string | null | undefined): strin
 }
 
 function sanitizeCarsBgDescription(value: string | null | undefined): string {
-  return normalizeCarsBgDescriptionText(value).trim();
+  return normalizeCarsBgDescriptionText(value)
+    .replace(/(^|\s|[,.!?:;()\-])Възможност\s+за\s+данъчен\s+кредит(?=$|\s|[,.!?:;()\-])/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 function normalizeCarsBgTitleText(value: string | null | undefined): string {
