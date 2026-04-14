@@ -207,7 +207,10 @@ export function getStaleCarsBgListings(db: Database.Database, dealerSlug: string
 }
 
 function normalizeCompareText(value: string | null | undefined): string {
-  return normalizeCarsBgDescriptionText(value)
+  // Treat 💵/📞 (used on mobile.bg) and ✓ (substituted when pushing to cars.bg)
+  // as equivalent by stripping all three before comparison.
+  return String(value || '')
+    .replace(/[💵📞✓]/gu, '')
     .toLowerCase()
     .replace(/[^a-z0-9а-я]+/giu, ' ')
     .replace(/\s+/g, ' ')
@@ -965,8 +968,12 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
     );
     const targetDescription = normalizeCompareText(mobileListing.description);
     const currentDescription = normalizeCompareText(match.description);
+    // Only flag a diff when both sides have a description. If the cars.bg side
+    // was never deep-crawled the field is empty and comparing would mark every
+    // listing as needing sync.
     const descriptionDiff = Boolean(
       targetDescription &&
+      currentDescription &&
       targetDescription !== currentDescription,
     );
 

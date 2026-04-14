@@ -129,6 +129,7 @@ export default async function DeletedListingsPage({
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
+              basePath="/listings/deleted"
               showPageLinks={false}
             />
           </Suspense>

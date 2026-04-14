@@ -77,6 +77,7 @@ interface CarsBgDuplicateProbe {
 interface CarsBgOwnerDetails {
   carsTotalViews: number | null;
   carsImages: string[];
+  description: string | null;
 }
 
 interface ExistingCarsListing {
@@ -428,6 +429,10 @@ function applyCarsBgOwnerDetails(
     );
   }
 
+  const descriptionProvided = typeof details.description === 'string';
+  const descriptionField = descriptionProvided ? 'description = ?,' : '';
+  const descriptionValues: unknown[] = descriptionProvided ? [details.description!.trim() || null] : [];
+
   db.prepare(`
     UPDATE listings
     SET
@@ -435,6 +440,7 @@ function applyCarsBgOwnerDetails(
       cars_images = ?,
       image_count = ?,
       full_keys = ?,
+      ${descriptionField}
       last_seen_at = ?,
       is_active = 1
     WHERE id = ?
@@ -443,6 +449,7 @@ function applyCarsBgOwnerDetails(
     details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
     imageCount,
     fullKeys,
+    ...descriptionValues,
     now,
     existingCars.id,
   );
@@ -739,15 +746,31 @@ async function deepCrawlCarsBgOwnListings(dealer: Record<string, any>, db: Datab
           .map(img => (img.getAttribute('src') || '').trim())
           .filter(Boolean);
 
+        let description: string | null = null;
+        const notesNode = document.querySelector('div.offer-notes');
+        if (notesNode) {
+          const clone = notesNode.cloneNode(true) as HTMLElement;
+          clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+          description = (clone.textContent || '')
+            .replace(/\r/g, '')
+            .replace(/Възможност за бартер/g, '')
+            .replace(/Възможност за лизинг/g, '')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n{2,}/g, '\n')
+            .trim() || null;
+        }
+
         return {
           carsTotalViews,
           carsImages: imageUrls,
+          description,
         };
       });
 
       const normalized: CarsBgOwnerDetails = {
         carsTotalViews: details.carsTotalViews,
         carsImages: normalizeCarsBgImages(details.carsImages),
+        description: details.description,
       };
 
       const ownerUpdate = applyCarsBgOwnerDetails(db, Number(dealer.id), carsId, normalized);
