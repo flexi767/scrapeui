@@ -11,6 +11,7 @@ import {
 } from "@/lib/mobile-bg/makes-models";
 import { captureEditFormSnapshotWithPage } from "@/lib/mobile-bg/edit-form-capture";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
+import { cleanDescription } from "@/lib/mobile-bg/description";
 import type { VatValue } from "@/lib/vat";
 
 export interface DealerBackupConfig {
@@ -448,10 +449,8 @@ async function scrapeListingDetail(
       (colorFromTechData || extract(/Цвят\s+([^\r\n]+)/) || null)
         ?.split(/\r?\n/)[0]
         .trim() || null;
-    const descMatch = body.match(
-      /Допълнителна информация\s*([\s\S]*?)(?:Виж всички обяви|Контакти с продавача|$)/,
-    );
-    const description = descMatch ? descMatch[1].trim() : "";
+    const description =
+      (document.querySelector(".moreInfo") as HTMLElement)?.innerText?.trim() || "";
     const listingId = window.location.href.match(/obiava-(\d+)/)?.[1] || null;
     const phoneMatch = body.match(/тел[.\s]*([0-9\s+\-()]{8,20})/gi);
     const phones = phoneMatch
@@ -582,7 +581,7 @@ async function scrapeListingDetail(
     color: data.color || null,
     transmission: data.transmission || null,
     category: data.category || null,
-    description: data.description,
+    description: cleanDescription(data.description),
     phones: data.phones,
     extras: data.extras,
     techData: data.techData,
