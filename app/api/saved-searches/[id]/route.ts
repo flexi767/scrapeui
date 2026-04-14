@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  deleteSavedSearch,
   getSavedSearchDetail,
   getSavedSearchRecord,
   listSavedSearchSummaries,
@@ -87,6 +88,26 @@ export async function PATCH(
 
   return NextResponse.json({
     detail,
+    searches: listSavedSearchSummaries(),
+  });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const id = parseId((await params).id);
+  if (id == null) {
+    return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
+  }
+
+  if (!getSavedSearchRecord(id)) {
+    return NextResponse.json({ error: 'Saved search not found' }, { status: 404 });
+  }
+
+  deleteSavedSearch(id);
+
+  return NextResponse.json({
     searches: listSavedSearchSummaries(),
   });
 }

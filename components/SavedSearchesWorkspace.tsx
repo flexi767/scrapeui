@@ -1,10 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, Loader2, Plus, Save, SearchIcon } from "lucide-react";
+import {
+  ExternalLink,
+  Loader2,
+  Plus,
+  Save,
+  SearchIcon,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MobileBgSearchResultsTable } from "@/components/MobileBgSearchResultsTable";
 import { type SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import {
@@ -27,7 +42,7 @@ interface SavedSearchDetailResponse {
   detail: {
     search: {
       id: number;
-      listingId: number;
+      listingId: number | null;
       createdAt: string | null;
       updatedAt: string | null;
     };
@@ -45,6 +60,8 @@ interface SavedSearchMutationResponse
 interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
   fallback_note?: string | null;
 }
+
+type SavedSearchDeleteResponse = SavedSearchListResponse;
 
 interface AutocompleteOption {
   value: string;
@@ -101,14 +118,6 @@ function sortMakeOptions(options: AutocompleteOption[]) {
   });
 }
 
-function sortModelOptions(options: AutocompleteOption[]) {
-  return [...options].sort((a, b) => {
-    if ((a.count ?? 0) !== (b.count ?? 0))
-      return (b.count ?? 0) - (a.count ?? 0);
-    return a.value.localeCompare(b.value, "bg");
-  });
-}
-
 function filterAutocompleteOptions(
   options: AutocompleteOption[],
   query: string,
@@ -133,6 +142,18 @@ function filterAutocompleteOptions(
   return filtered;
 }
 
+function getSelectedOptionCount(
+  options: AutocompleteOption[],
+  value: string,
+): number | null {
+  const normalizedValue = normalizeAutocompleteValue(value);
+  if (!normalizedValue) return null;
+  const match = options.find(
+    (option) => normalizeAutocompleteValue(option.value) === normalizedValue,
+  );
+  return match?.count ?? null;
+}
+
 function AutocompleteInput({
   value,
   onChange,
@@ -141,6 +162,8 @@ function AutocompleteInput({
   emptyLabel,
   hideLowCountOnEmpty = false,
   open,
+  focusWhenOpen = false,
+  trailingText,
   onOpenChange,
 }: {
   value: string;
@@ -150,6 +173,8 @@ function AutocompleteInput({
   emptyLabel: string;
   hideLowCountOnEmpty?: boolean;
   open: boolean;
+  focusWhenOpen?: boolean;
+  trailingText?: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const [isTyping, setIsTyping] = useState(false);
@@ -162,6 +187,15 @@ function AutocompleteInput({
   useEffect(() => {
     openRef.current = open;
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !focusWhenOpen) return;
+    window.requestAnimationFrame(() => {
+      if (inputRef.current && document.activeElement !== inputRef.current) {
+        inputRef.current.focus();
+      }
+    });
+  }, [focusWhenOpen, open]);
 
   const visibleOptions = useMemo(
     () =>
@@ -176,6 +210,16 @@ function AutocompleteInput({
       <input
         ref={inputRef}
         value={value}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          if (!open || visibleOptions.length === 0) return;
+          event.preventDefault();
+          const firstOption = visibleOptions[0];
+          onChange(firstOption.value);
+          setIsTyping(false);
+          onOpenChange(false);
+          inputRef.current?.blur();
+        }}
         onChange={(event) => {
           onChange(event.target.value);
           setIsTyping(true);
@@ -206,8 +250,13 @@ function AutocompleteInput({
           }, 120);
         }}
         placeholder={placeholder}
-        className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+        className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 pr-14 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
       />
+      {trailingText ? (
+        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+          {trailingText}
+        </div>
+      ) : null}
       {open && (
         <div className="saved-search-autocomplete-scroll absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-scroll overscroll-contain rounded-md border border-gray-700 bg-gray-900 shadow-xl [scrollbar-gutter:stable]">
           {visibleOptions.length === 0 ? (
@@ -255,19 +304,6 @@ function formatYearRange(search: SavedSearchSummary) {
   return "—";
 }
 
-function formatSavedAt(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-GB", {
-    year: "2-digit",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function SavedSearchesWorkspace({
   initialSearches,
   initialDetail,
@@ -301,12 +337,19 @@ export default function SavedSearchesWorkspace({
   );
   const [saveBusy, setSaveBusy] = useState(false);
   const [cloneBusy, setCloneBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [openAutocomplete, setOpenAutocomplete] = useState<
     "marka" | "model" | null
   >(null);
 
   const listing = detail?.prefill.listing ?? null;
+  const hasLinkedListing = Boolean(listing);
+  const listingLabel =
+    listing && [listing.make, listing.model].filter(Boolean).join(" ")
+      ? [listing.make, listing.model].filter(Boolean).join(" ")
+      : "";
   const imageMeta = parseJson<ImageMeta | null>(listing?.imageMeta, null);
   const thumbKeys = parseJson<string[]>(listing?.thumbKeys ?? null, []);
   const fullKeys = parseJson<string[]>(listing?.fullKeys ?? null, []);
@@ -384,10 +427,15 @@ export default function SavedSearchesWorkspace({
     () => searches.find((entry) => entry.id === selectedId) ?? null,
     [searches, selectedId],
   );
-  const currentFields = useMemo(
-    () => buildSubmissionFields(),
-    [detail, editableFields],
-  );
+  const currentFields = useMemo(() => {
+    if (!detail) return [];
+    return detail.prefill.form.fields.map((field) => {
+      const edited = editableFields.find(
+        (candidate) => candidate.name === field.name,
+      );
+      return edited ?? field;
+    });
+  }, [detail, editableFields]);
   const makeOrModelChanged = useMemo(() => {
     if (!detail) return false;
     const originalMap = new Map(
@@ -508,17 +556,7 @@ export default function SavedSearchesWorkspace({
     updateField(name, "");
   }
 
-  function buildSubmissionFields() {
-    if (!detail) return [];
-    return detail.prefill.form.fields.map((field) => {
-      const edited = editableFields.find(
-        (candidate) => candidate.name === field.name,
-      );
-      return edited ?? field;
-    });
-  }
-
-  function openInMobileBg(fields = buildSubmissionFields()) {
+  function openInMobileBg(fields = currentFields) {
     if (typeof document === "undefined") return;
     const form = document.createElement("form");
     form.method = "POST";
@@ -539,8 +577,8 @@ export default function SavedSearchesWorkspace({
     form.remove();
   }
 
-  async function showResultsHere(fields = buildSubmissionFields()) {
-    if (!detail || !listing) return;
+  async function showResultsHere(fields = currentFields) {
+    if (!detail) return;
     setResultsLoading(true);
     setResultsError("");
 
@@ -552,8 +590,8 @@ export default function SavedSearchesWorkspace({
           action: detail.prefill.form.action,
           method: detail.prefill.form.method,
           fields,
-          sourceListingId: listing.id,
-          sourceMobileId: listing.mobile_id,
+          sourceListingId: listing?.id ?? null,
+          sourceMobileId: listing?.mobile_id ?? null,
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -583,7 +621,7 @@ export default function SavedSearchesWorkspace({
       const res = await fetch(`/api/saved-searches/${detail.search.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: buildSubmissionFields() }),
+        body: JSON.stringify({ fields: currentFields }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -612,10 +650,7 @@ export default function SavedSearchesWorkspace({
       const res = await fetch("/api/saved-searches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: detail.search.listingId,
-          fields: buildSubmissionFields(),
-        }),
+        body: JSON.stringify({ fields: currentFields }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -641,8 +676,48 @@ export default function SavedSearchesWorkspace({
     }
   }
 
+  async function deleteCurrent() {
+    if (!detail) return;
+
+    setDeleteBusy(true);
+    try {
+      const res = await fetch(`/api/saved-searches/${detail.search.id}`, {
+        method: "DELETE",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          (payload as { error?: string }).error || "Failed to delete saved search",
+        );
+      }
+
+      const data = payload as SavedSearchDeleteResponse;
+      const nextSearches = data.searches;
+      setSearches(nextSearches);
+
+      const nextSelectedId =
+        nextSearches.find((search) => search.id !== detail.search.id)?.id ?? null;
+      setSelectedId(nextSelectedId);
+      if (nextSelectedId == null) {
+        setDetail(null);
+        setEditableFields([]);
+        setResults(null);
+        setResultsError("");
+      }
+
+      setDeleteDialogOpen(false);
+      toast.success("Saved search deleted");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete saved search",
+      );
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
       <section className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/70">
         <div className="border-b border-gray-700 px-4 py-3">
           <div className="text-sm font-medium text-gray-200">
@@ -673,15 +748,16 @@ export default function SavedSearchesWorkspace({
                         <div className="truncate text-sm font-medium text-white">
                           {[search.make, search.model]
                             .filter(Boolean)
-                            .join(" ") || "Saved search"}
+                            .join(" ") || search.title || "—"}
                         </div>
                         <div className="truncate text-xs text-gray-400">
                           Year range: {formatYearRange(search)}
                         </div>
-                        <div className="mt-1 truncate text-[11px] text-gray-500">
-                          Entry: {search.title || "—"}
-                          {search.mobileId ? ` • ${search.mobileId}` : ""}
-                        </div>
+                        {search.mobileId ? (
+                          <div className="mt-1 truncate text-[11px] text-gray-500">
+                            Entry: {search.title || "—"} • {search.mobileId}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="shrink-0 text-[11px] text-gray-500">
                         #{search.id}
@@ -701,78 +777,118 @@ export default function SavedSearchesWorkspace({
             <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
             Loading saved search…
           </div>
-        ) : !detail || !listing || !selectedSummary ? (
+        ) : !detail || !selectedSummary ? (
           <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-12 text-center text-sm text-gray-500">
             Select a saved search to edit it.
           </div>
         ) : (
           <>
-            <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-start gap-3">
-                    {listing.mobile_id && thumbSrc ? (
-                      <div className="relative inline-block w-24 shrink-0">
-                        <a
-                          href={`/listings/${listing.mobile_id}`}
-                          className="peer block"
-                        >
-                          <ImageWithFallback
-                            src={thumbSrc}
-                            alt={
-                              `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
-                              "Listing image"
-                            }
-                            className="w-24 rounded object-contain"
-                            style={{ aspectRatio: "4/3" }}
-                            fallbackClassName="w-24 rounded bg-gray-800 text-gray-400"
-                            fallbackLabel="Missing"
-                          />
-                        </a>
-                        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-72 peer-hover:block">
-                          <ImageWithFallback
-                            src={thumbSrc}
-                            alt={
-                              `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
-                              "Listing image preview"
-                            }
-                            className="w-full rounded shadow-xl"
-                            fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
-                            fallbackLabel="Missing"
-                          />
-                        </div>
-                      </div>
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent className="border border-gray-700 bg-gray-900 text-gray-100">
+                <DialogHeader>
+                  <DialogTitle>Delete saved search?</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    This will permanently remove the saved search.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-gray-600 bg-transparent text-gray-200 hover:bg-gray-800 hover:text-white"
+                    onClick={() => setDeleteDialogOpen(false)}
+                    disabled={deleteBusy}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
+                    onClick={() => void deleteCurrent()}
+                    disabled={deleteBusy}
+                  >
+                    {deleteBusy ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                     ) : (
-                      <div className="h-[72px] w-24 shrink-0 rounded bg-gray-800" />
+                      <Trash2 className="mr-1 h-4 w-4" />
                     )}
-                    <div className="min-w-0">
-                      <div className="text-lg font-semibold text-white">
-                        {[listing.make, listing.model]
-                          .filter(Boolean)
-                          .join(" ") || "Saved search"}
-                      </div>
-                      <a
-                        href={
-                          listing.mobile_id
-                            ? `/listings/${listing.mobile_id}`
-                            : undefined
-                        }
-                        className="mt-1 block text-sm text-gray-300 hover:text-white"
-                      >
-                        {listing.title || "—"}
-                      </a>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {formatPrice(listing.currentPrice)} •{" "}
-                        {listing.fuel || "—"} • {formatMileage(listing.mileage)}
+                    Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <div className="rounded-lg border border-gray-700 bg-gray-900/70">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
+                {hasLinkedListing ? (
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-3">
+                      {listing && listing.mobile_id && thumbSrc ? (
+                        <div className="relative inline-block w-24 shrink-0">
+                          <a
+                            href={`/listings/${listing.mobile_id}`}
+                            className="peer block"
+                          >
+                            <ImageWithFallback
+                              src={thumbSrc}
+                              alt={
+                                `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
+                                "Listing image"
+                              }
+                              className="w-24 rounded object-contain"
+                              style={{ aspectRatio: "4/3" }}
+                              fallbackClassName="w-24 rounded bg-gray-800 text-gray-400"
+                              fallbackLabel="Missing"
+                            />
+                          </a>
+                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-72 peer-hover:block">
+                            <ImageWithFallback
+                              src={thumbSrc}
+                              alt={
+                                `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
+                                "Listing image preview"
+                              }
+                              className="w-full rounded shadow-xl"
+                              fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
+                              fallbackLabel="Missing"
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                      <div className="min-w-0">
+                        {listingLabel ? (
+                          <div className="text-sm font-medium text-white">
+                            {listingLabel}
+                          </div>
+                        ) : null}
+                        {listing ? (
+                          <>
+                            <a
+                              href={
+                                listing.mobile_id
+                                  ? `/listings/${listing.mobile_id}`
+                                  : undefined
+                              }
+                              className="mt-1 block text-sm text-gray-300 hover:text-white"
+                            >
+                              {listing.title || "—"}
+                            </a>
+                            <div className="mt-1 text-xs text-gray-500">
+                              {formatPrice(listing.currentPrice)} •{" "}
+                              {listing.fuel || "—"} •{" "}
+                              {formatMileage(listing.mileage)}
+                            </div>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Updated {formatSavedAt(detail.search.updatedAt)} • Created{" "}
-                    {formatSavedAt(detail.search.createdAt)}
+                ) : (
+                  <div className="text-sm font-medium text-gray-200">
+                    Search fields
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
+                )}
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -784,8 +900,8 @@ export default function SavedSearchesWorkspace({
                     }
                     disabled={resultsLoading}
                   >
-                    <SearchIcon className="mr-2 h-4 w-4" />
-                    First 8 Fields
+                    <SearchIcon className="mr-1 h-4 w-4" />
+                    First 8
                   </Button>
                   <Button
                     type="button"
@@ -795,11 +911,11 @@ export default function SavedSearchesWorkspace({
                     disabled={resultsLoading}
                   >
                     {resultsLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                     ) : (
-                      <SearchIcon className="mr-2 h-4 w-4" />
+                      <SearchIcon className="mr-1 h-4 w-4" />
                     )}
-                    All Fields
+                    All
                   </Button>
                   <Button
                     type="button"
@@ -807,7 +923,7 @@ export default function SavedSearchesWorkspace({
                     className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
                     onClick={() => openInMobileBg()}
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="mr-1 h-4 w-4" />
                     Open mobile.bg
                   </Button>
                   {!makeOrModelChanged && (
@@ -819,9 +935,9 @@ export default function SavedSearchesWorkspace({
                       disabled={saveBusy}
                     >
                       {saveBusy ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                       ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-1 h-4 w-4" />
                       )}
                       Save
                     </Button>
@@ -834,36 +950,33 @@ export default function SavedSearchesWorkspace({
                     disabled={cloneBusy}
                   >
                     {cloneBusy ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                     ) : (
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-1 h-4 w-4" />
                     )}
                     Save As New
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={deleteBusy}
+                  >
+                    {deleteBusy ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-1 h-4 w-4" />
+                    )}
+                    Delete
+                  </Button>
                 </div>
               </div>
-
-              <div className="mt-3 text-xs text-gray-500">
-                Reference counts:{" "}
-                {detail.prefill.reference.makeCount != null
-                  ? detail.prefill.reference.makeCount.toLocaleString("en-US")
-                  : "—"}{" "}
-                for make
-                {detail.prefill.reference.modelCount != null
-                  ? ` • ${detail.prefill.reference.modelCount.toLocaleString("en-US")} for model`
-                  : ""}
-              </div>
               {detail.prefill.omitted.length > 0 && (
-                <div className="mt-2 text-xs text-amber-300/80">
+                <div className="px-4 pt-3 text-xs text-amber-300/80">
                   {detail.prefill.omitted.join(" ")}
                 </div>
               )}
-            </div>
-
-            <div className="rounded-lg border border-gray-700 bg-gray-900/70">
-              <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-200">
-                Search fields
-              </div>
               <div className="grid gap-2 p-4 md:grid-cols-2">
                 {editableFields
                   .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
@@ -887,6 +1000,16 @@ export default function SavedSearchesWorkspace({
                         count: option.count,
                       })),
                     );
+                    const selectedMakeCount =
+                      field.name === "marka"
+                        ? getSelectedOptionCount(makeOptions, field.value)
+                        : null;
+                    const selectedModelCount =
+                      field.name === "model"
+                        ? getSelectedOptionCount(modelOptions, field.value)
+                        : null;
+                    const selectedReferenceCount =
+                      selectedMakeCount ?? selectedModelCount;
 
                     return (
                       <div
@@ -905,44 +1028,63 @@ export default function SavedSearchesWorkspace({
                         </div>
                         <div className="min-w-0">
                           {field.name === "marka" ? (
-                            <AutocompleteInput
-                              value={field.value}
-                              onChange={updateMake}
-                              options={makeOptions}
-                              placeholder="Type make"
-                              emptyLabel="No make matches"
-                              hideLowCountOnEmpty
-                              open={openAutocomplete === "marka"}
-                              onOpenChange={(open) => {
-                                if (open) {
-                                  setOpenAutocomplete("marka");
-                                  return;
+                            <>
+                              <AutocompleteInput
+                                value={field.value}
+                                onChange={updateMake}
+                                options={makeOptions}
+                                placeholder="Type make"
+                                emptyLabel="No make matches"
+                                hideLowCountOnEmpty
+                                open={openAutocomplete === "marka"}
+                                trailingText={
+                                  selectedReferenceCount != null
+                                    ? selectedReferenceCount.toLocaleString(
+                                        "en-US",
+                                      )
+                                    : null
                                 }
-                                setOpenAutocomplete((current) =>
-                                  current === "marka" ? null : current,
-                                );
-                              }}
-                            />
+                                onOpenChange={(open) => {
+                                  if (open) {
+                                    setOpenAutocomplete("marka");
+                                    return;
+                                  }
+                                  setOpenAutocomplete((current) =>
+                                    current === "marka" ? null : current,
+                                  );
+                                }}
+                              />
+                            </>
                           ) : field.name === "model" ? (
-                            <AutocompleteInput
-                              value={field.value}
-                              onChange={(value) =>
-                                updateField(field.name, value)
-                              }
-                              options={modelOptions}
-                              placeholder="Type model"
-                              emptyLabel="No model matches"
-                              open={openAutocomplete === "model"}
-                              onOpenChange={(open) => {
-                                if (open) {
-                                  setOpenAutocomplete("model");
-                                  return;
+                            <>
+                              <AutocompleteInput
+                                value={field.value}
+                                onChange={(value) =>
+                                  updateField(field.name, value)
                                 }
-                                setOpenAutocomplete((current) =>
-                                  current === "model" ? null : current,
-                                );
-                              }}
-                            />
+                                options={modelOptions}
+                                placeholder="Type model"
+                                emptyLabel="No model matches"
+                                focusWhenOpen
+                                open={openAutocomplete === "model"}
+                                trailingText={
+                                  selectedReferenceCount != null
+                                    ? selectedReferenceCount.toLocaleString(
+                                        "en-US",
+                                      )
+                                    : null
+                                }
+                                onOpenChange={(open) => {
+                                  if (open) {
+                                    setOpenAutocomplete("model");
+                                    return;
+                                  }
+                                  setOpenAutocomplete((current) =>
+                                    current === "model" ? null : current,
+                                  );
+                                }}
+                              />
+                            </>
                           ) : field.name === "f12" ? (
                             <select
                               value={field.value}
@@ -1106,8 +1248,8 @@ export default function SavedSearchesWorkspace({
                 totalPages={results.total_pages}
                 hasNextPage={results.has_next_page}
                 loadedUntilPage={results.loaded_until_page}
-                sourceListingId={listing.id}
-                sourceMobileId={listing.mobile_id}
+                sourceListingId={listing?.id ?? 0}
+                sourceMobileId={listing?.mobile_id ?? null}
                 initialIgnoredResultIds={results.ignored_search_result_ids}
               />
             )}

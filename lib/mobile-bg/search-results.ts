@@ -233,6 +233,64 @@ function normalizeSummaryText(summaryText: string | null, submittedFields: Mobil
   return normalizedSummary.replace(/Подредени по:\s*[^,]+$/u, `Подредени по: ${sortLabel}`);
 }
 
+function ensureMobileBgSearchDefaults(submittedFields: MobileBgSearchFieldInput[]) {
+  const byName = new Map(submittedFields.map((field) => [field.name, field.value]));
+  if (!byName.has('f21')) {
+    byName.set('f21', '013');
+  }
+  return Array.from(byName.entries()).map(([name, value]) => ({ name, value }));
+}
+
+async function resolveMobileBgSearchAction(
+  action: string,
+  submittedFields: MobileBgSearchFieldInput[],
+) {
+  if (!/mobile\.bg\/pcgi\/mobile\.cgi(?:$|\?)/i.test(action)) {
+    return action;
+  }
+
+  const normalizedFields = ensureMobileBgSearchDefaults(submittedFields);
+  const actsrc = normalizedFields.find((field) => field.name === 'act')?.value || '3';
+  const rewriteFields = normalizedFields.map((field) =>
+    field.name === 'act' ? { name: field.name, value: '11' } : field,
+  );
+  const requestBody = buildWindows1251FormBody([
+    ...rewriteFields,
+    { name: 'actsrc', value: actsrc },
+  ]);
+
+  const { stdout } = await execFileAsync(
+    'curl',
+    [
+      '-sS',
+      '-L',
+      '--http1.1',
+      '-X',
+      'POST',
+      'https://www.mobile.bg/pcgi/subscript.cgi',
+      '-H',
+      'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
+      '-H',
+      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+      '--data-binary',
+      requestBody,
+    ],
+    {
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    },
+  );
+
+  try {
+    const parsed = JSON.parse(stdout) as { result?: unknown };
+    if (typeof parsed.result === 'string' && parsed.result.trim()) {
+      return absoluteMobileBgUrl(parsed.result.trim());
+    }
+  } catch {}
+
+  return action;
+}
+
 export async function fetchMobileBgSearchResults(
   action: string,
   method: string,
@@ -282,14 +340,19 @@ async function fetchMobileBgSearchResultsPage(
   method: string,
   submittedFields: MobileBgSearchFieldInput[],
 ): Promise<MobileBgSearchResultsPagePayload> {
-  const requestBody = buildWindows1251FormBody(submittedFields);
+  const normalizedFields = ensureMobileBgSearchDefaults(submittedFields);
+  const resolvedAction =
+    method.toUpperCase() === 'POST'
+      ? await resolveMobileBgSearchAction(action, normalizedFields)
+      : action;
+  const requestBody = buildWindows1251FormBody(normalizedFields);
   const curlArgs = ['-sS', '-L', '--http1.1'];
 
   if (method.toUpperCase() === 'POST') {
     curlArgs.push(
       '-X',
       'POST',
-      action,
+      resolvedAction,
       '-H',
       'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
       '-H',
@@ -299,7 +362,7 @@ async function fetchMobileBgSearchResultsPage(
     );
   } else {
     curlArgs.push(
-      action,
+      resolvedAction,
       '-H',
       'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
     );
@@ -380,8 +443,8 @@ async function fetchMobileBgSearchResultsPage(
   const hasNextPage = Boolean(nextPageLink);
 
   return {
-    submitted_fields: submittedFields,
-    summary_text: normalizeSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, submittedFields),
+    submitted_fields: normalizedFields,
+    summary_text: normalizeSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, normalizedFields),
     page: currentPage,
     total_pages: totalPages,
     has_next_page: hasNextPage,

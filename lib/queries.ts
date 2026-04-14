@@ -747,8 +747,8 @@ export function getOwnListings(filters: ListingFilters = {}) {
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
-        FROM listing_search_profiles sp
-        WHERE sp.listing_id = l.id
+        FROM saved_searches ss
+        WHERE ss.listing_id = l.id
       ) THEN 1 ELSE 0 END as has_saved_search_profile,
       CASE
         WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
@@ -830,8 +830,8 @@ export function getOwnListingByMobileId(
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
-        FROM listing_search_profiles sp
-        WHERE sp.listing_id = l.id
+        FROM saved_searches ss
+        WHERE ss.listing_id = l.id
       ) THEN 1 ELSE 0 END as has_saved_search_profile,
       CASE
         WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL

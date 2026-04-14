@@ -62,6 +62,22 @@ const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби'
 const STEPPER_FIELDS = new Set(['f10', 'f11', 'f25', 'f26']);
 const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
 
+function normalizeOptionValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getSelectedOptionCount(
+  options: Array<{ value: string; count?: number | null }>,
+  value: string,
+) {
+  const normalizedValue = normalizeOptionValue(value);
+  if (!normalizedValue) return null;
+  const match = options.find(
+    (option) => normalizeOptionValue(option.value) === normalizedValue,
+  );
+  return match?.count ?? null;
+}
+
 type PendingAction = 'open' | 'show-first-7' | null;
 
 export default function ListingSearchPrefillButton({
@@ -423,9 +439,17 @@ export default function ListingSearchPrefillButton({
                       {(() => {
                         const selectedMake = getFieldValue('marka');
                         const modelOptions = data.options.modelsByMake[selectedMake] ?? [];
+                        const makeOptions = data.options.makes;
                         return editableFields
                           .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
-                          .map((field) => (
+                          .map((field) => {
+                            const selectedReferenceCount =
+                              field.name === 'marka'
+                                ? getSelectedOptionCount(makeOptions, field.value)
+                                : field.name === 'model'
+                                  ? getSelectedOptionCount(modelOptions, field.value)
+                                  : null;
+                            return (
                           <div key={field.name} className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-slate-500/60 bg-slate-700/90 px-3 py-2">
                             <div className="min-w-0">
                               <div className="text-sm text-slate-50">{field.name === 'f18' ? subLocationLabel : field.label}</div>
@@ -433,18 +457,27 @@ export default function ListingSearchPrefillButton({
                             </div>
                             <div className="min-w-0">
                               {field.name === 'marka' ? (
-                                <select
-                                  value={field.value}
-                                  onChange={(event) => updateMake(event.target.value)}
-                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                                >
-                                  <option value="">Select make</option>
-                                  {data.options.makes.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                                    </option>
-                                  ))}
-                                </select>
+                                <>
+                                  <div className="relative">
+                                    <select
+                                      value={field.value}
+                                      onChange={(event) => updateMake(event.target.value)}
+                                      className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 pr-14 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      <option value="">Select make</option>
+                                      {data.options.makes.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {selectedReferenceCount != null && (
+                                      <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                                        {selectedReferenceCount.toLocaleString('en-US')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
                               ) : field.name === 'f12' ? (
                                 <select
                                   value={field.value}
@@ -515,18 +548,27 @@ export default function ListingSearchPrefillButton({
                                   )}
                                 </div>
                               ) : field.name === 'model' ? (
-                                <select
-                                  value={field.value}
-                                  onChange={(event) => updateField(field.name, event.target.value)}
-                                  className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
-                                >
-                                  <option value="">Select model</option>
-                                  {modelOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
-                                    </option>
-                                  ))}
-                                </select>
+                                <>
+                                  <div className="relative">
+                                    <select
+                                      value={field.value}
+                                      onChange={(event) => updateField(field.name, event.target.value)}
+                                      className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 pr-14 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      <option value="">Select model</option>
+                                      {modelOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.value}{option.count != null ? ` (${option.count.toLocaleString('en-US')})` : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {selectedReferenceCount != null && (
+                                      <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                                        {selectedReferenceCount.toLocaleString('en-US')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
                               ) : (
                                 <div className="flex items-stretch gap-2">
                                   <input
@@ -569,7 +611,8 @@ export default function ListingSearchPrefillButton({
                               <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-200/60">{field.source}</div>
                             </div>
                           </div>
-                        ));
+                            );
+                          });
                       })()}
                     </div>
                   </div>
