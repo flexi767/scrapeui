@@ -11,7 +11,13 @@ export function cleanDescription(text: string | null): string {
   const start = lines.findIndex(
     (line) => line.trim() === "Допълнителна информация",
   );
-  const trimmed = start === -1 ? lines : lines.slice(start + 4);
+  const trimmed =
+    start === -1
+      ? lines
+      : lines.slice(start + 1).filter((line, index, source) => {
+          if (line.trim()) return true;
+          return source.slice(0, index).some((entry) => entry.trim());
+        });
   const cleaned = trimmed.filter((line) => {
     const normalized = line.trim().toLowerCase();
     if (!normalized) return true;
