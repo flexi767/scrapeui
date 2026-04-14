@@ -986,6 +986,11 @@ export async function backupDealerToDb(
       );
       const savedImages = await downloadAllImages(detail.imageUrls, listingDir);
       insertBackupImages(db, backupId, savedImages);
+      if (savedImages.length > 0) {
+        db.prepare(
+          `UPDATE listings SET images_downloaded = 1 WHERE mobile_id = ?`,
+        ).run(detail.mobileId);
+      }
       let engagement: {
         views: number | null;
         watching: number | null;
