@@ -687,7 +687,8 @@ export default function SavedSearchesWorkspace({
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(
-          (payload as { error?: string }).error || "Failed to delete saved search",
+          (payload as { error?: string }).error ||
+            "Failed to delete saved search",
         );
       }
 
@@ -696,7 +697,8 @@ export default function SavedSearchesWorkspace({
       setSearches(nextSearches);
 
       const nextSelectedId =
-        nextSearches.find((search) => search.id !== detail.search.id)?.id ?? null;
+        nextSearches.find((search) => search.id !== detail.search.id)?.id ??
+        null;
       setSelectedId(nextSelectedId);
       if (nextSelectedId == null) {
         setDetail(null);
@@ -709,7 +711,9 @@ export default function SavedSearchesWorkspace({
       toast.success("Saved search deleted");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete saved search",
+        error instanceof Error
+          ? error.message
+          : "Failed to delete saved search",
       );
     } finally {
       setDeleteBusy(false);
@@ -748,7 +752,9 @@ export default function SavedSearchesWorkspace({
                         <div className="truncate text-sm font-medium text-white">
                           {[search.make, search.model]
                             .filter(Boolean)
-                            .join(" ") || search.title || "—"}
+                            .join(" ") ||
+                            search.title ||
+                            "—"}
                         </div>
                         <div className="truncate text-xs text-gray-400">
                           Year range: {formatYearRange(search)}
@@ -878,8 +884,7 @@ export default function SavedSearchesWorkspace({
                               {listing.power != null
                                 ? ` • ${listing.power.toLocaleString("en-US")} PS`
                                 : ""}{" "}
-                              •{" "}
-                              {listing.fuel || "—"} •{" "}
+                              • {listing.fuel || "—"} •{" "}
                               {formatMileage(listing.mileage)}
                             </div>
                           </>
