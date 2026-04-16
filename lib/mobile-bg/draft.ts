@@ -14,10 +14,17 @@ export interface MobileBgDraftBackupRow {
   transmission: string | null;
   body_type?: string | null;
   description: string | null;
+  tech_data_json?: string | null;
 }
 
 export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Record<string, string | number | null> {
   const engineMatch = backup.engine?.match(/(\d{3,5})/);
+  let techData: Record<string, string> = {};
+  try {
+    techData = backup.tech_data_json ? JSON.parse(backup.tech_data_json) as Record<string, string> : {};
+  } catch {
+    techData = {};
+  }
 
   return {
     f7: backup.title || backup.source_title || null,
@@ -31,6 +38,18 @@ export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Recor
     f21: backup.description || null,
     f30: engineMatch?.[1] || null,
     f31: getMobileBgVatLabel(backup.vat_included),
+    f13: techData.f13 || null,
+    f14: techData.f14 || null,
+    f15: techData.f15 || null,
+    f22: techData.f22 || null,
+    f23: techData.f23 || null,
+    f24: techData.f24 || null,
+    f25: techData.f25 || null,
+    f29: techData.f29 || null,
+    f32: techData.f32 || null,
+    f33: techData.f33 || null,
+    f34: techData.f34 || null,
+    priceneg: techData.priceneg || null,
   };
 }
 
@@ -103,7 +122,10 @@ export async function applyCapturedMobileBgDraft(
 
       if (field.type === 'checkbox') {
         const input = element as HTMLInputElement;
-        input.checked = checkboxSet.has(`${String(field.name)}::${String(field.value)}`);
+        const shouldCheck = overrideValue != null
+          ? String(overrideValue) === String(field.value) || String(overrideValue) === 'true'
+          : checkboxSet.has(`${String(field.name)}::${String(field.value)}`);
+        input.checked = shouldCheck;
         input.dispatchEvent(new Event('change', { bubbles: true }));
         continue;
       }

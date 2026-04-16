@@ -7,6 +7,7 @@ import { chromium, type Page } from 'playwright';
 import { CARS_BG_BASE_URL, loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getCdnImageUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { normalizeVatValue } from '@/lib/vat';
 
 const fsp = fs.promises;
 const MAX_PHOTO_UPLOADS = 15;
@@ -262,6 +263,61 @@ function normalizeLabel(value = ''): string {
     .replace(/[^a-z0-9а-я\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+const EXTRA_LABEL_MAPPINGS: Record<string, string[]> = {
+  [normalizeLabel('Ел. регулиране на седалките')]: ['Ел.седалки'],
+  [normalizeLabel('Подгряване на седалките')]: ['Подгряване на седалки'],
+  [normalizeLabel('Лети джанти')]: ['Алуминиеви джанти'],
+  [normalizeLabel('Антиблокираща система')]: ['ABS'],
+  [normalizeLabel('Електронна програма за стабилизиране')]: ['ESP'],
+  [normalizeLabel('Въздушни възглавници - Предни')]: ['Airbag'],
+  [normalizeLabel('Въздушни възглавници - Задни')]: ['Airbag'],
+  [normalizeLabel('Въздушни възглавници - Странични')]: ['Airbag'],
+  [normalizeLabel('Система за защита от пробуксуване')]: ['ASR/Тракшън контрол'],
+  [normalizeLabel('Аларма')]: ['Имобилайзер'],
+  [normalizeLabel('Централно заключване')]: ['Центр. заключване'],
+  [normalizeLabel('Каско')]: ['Застраховка'],
+  [normalizeLabel('Auto Start Stop function')]: ['Старт-Стоп система'],
+  [normalizeLabel('Steptronic, Tiptronic')]: ['Типтроник/Мултитроник'],
+  [normalizeLabel('Система за контрол на скоростта (автопилот)')]: ['Автопилот'],
+  [normalizeLabel('Серво усилвател на волана')]: ['Серво управление'],
+  [normalizeLabel('Бордкомпютър')]: ['Бордови компютър'],
+  [normalizeLabel('Навигация')]: ['Навигационна система'],
+  [normalizeLabel('Панорамен люк')]: ['Панорамен покрив'],
+  [normalizeLabel('7 места')]: ['7 места (6+1)'],
+};
+
+const EXTRA_BOOLEAN_FIELD_MAPPINGS: Record<string, string[]> = {
+  usageId: [normalizeLabel('Нов внос')],
+  metallic: [normalizeLabel('Металик')],
+};
+
+const EXTRA_BOOLEAN_FIELD_NEGATIONS: Record<string, string[]> = {
+  usageId: [normalizeLabel('С регистрация')],
+};
+
+function expandCarsBgExtraLabels(extraLabels: string[] = []): string[] {
+  const expanded = new Set<string>();
+  for (const label of extraLabels) {
+    const normalized = normalizeLabel(label);
+    if (!normalized) continue;
+    expanded.add(normalized);
+    for (const mapped of EXTRA_LABEL_MAPPINGS[normalized] || []) {
+      const mappedNormalized = normalizeLabel(mapped);
+      if (mappedNormalized) expanded.add(mappedNormalized);
+    }
+  }
+  return Array.from(expanded);
+}
+
+function hasMappedBooleanExtra(extraLabels: string[] = [], fieldName: keyof typeof EXTRA_BOOLEAN_FIELD_MAPPINGS): boolean {
+  const expected = EXTRA_BOOLEAN_FIELD_MAPPINGS[fieldName];
+  if (!expected?.length) return false;
+  const normalized = new Set(extraLabels.map((label) => normalizeLabel(label)).filter(Boolean));
+  const blockedBy = EXTRA_BOOLEAN_FIELD_NEGATIONS[fieldName] || [];
+  if (blockedBy.some((label) => normalized.has(label))) return false;
+  return expected.some((label) => normalized.has(label));
 }
 
 function getExtraLabels(extrasJson: string | null): string[] {
@@ -534,7 +590,7 @@ export async function applyCarsBgExtras(
   extraLabels: string[] = [],
 ): Promise<boolean> {
   const selected = Array.isArray(extrasData?.selected) ? extrasData.selected : [];
-  const normalizedExtraLabels = extraLabels.map((label) => normalizeLabel(label)).filter(Boolean);
+  const normalizedExtraLabels = expandCarsBgExtraLabels(extraLabels);
   if (!selected.length && !normalizedExtraLabels.length) return false;
 
   const href = extrasData?.url || await page.evaluate(() => {
@@ -582,6 +638,24 @@ export async function applyCarsBgExtras(
   return true;
 }
 
+async function applyCarsBgBooleanExtras(page: Page, extraLabels: string[]): Promise<void> {
+  const fieldsToEnable = Object.keys(EXTRA_BOOLEAN_FIELD_MAPPINGS).filter((fieldName) =>
+    hasMappedBooleanExtra(extraLabels, fieldName as keyof typeof EXTRA_BOOLEAN_FIELD_MAPPINGS),
+  );
+  if (fieldsToEnable.length === 0) return;
+
+  await page.evaluate((expectedFields) => {
+    for (const fieldName of expectedFields) {
+      const input =
+        document.querySelector<HTMLInputElement>(`#${fieldName}`) ||
+        document.querySelector<HTMLInputElement>(`input[name="${fieldName}"]`);
+      if (!input || input.checked) continue;
+      input.checked = true;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, fieldsToEnable);
+}
+
 async function ensureCarsBgPriceOptions(page: Page): Promise<void> {
   await page.evaluate(() => {
     const selectors = ['#barter', '#leasing', 'input[name="barter"]', 'input[name="leasing"]'];
@@ -594,11 +668,25 @@ async function ensureCarsBgPriceOptions(page: Page): Promise<void> {
   });
 }
 
+async function applyCarsBgVatFlags(page: Page, vatValue: string | null | undefined): Promise<void> {
+  if (normalizeVatValue(vatValue) !== 'included') return;
+  await page.evaluate(() => {
+    const input =
+      document.querySelector<HTMLInputElement>('#dcredit') ||
+      document.querySelector<HTMLInputElement>('input[name="dcredit"]');
+    if (!input || input.checked) return;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
 async function applyCarsBgSupplementalFields(page: Page, listing: CarsBgSyncListing): Promise<void> {
   if (listing.euronorm != null) {
     await selectRadio(page, 'euroId', listing.euronorm);
   }
   await ensureCarsBgPriceOptions(page);
+  await applyCarsBgVatFlags(page, listing.vat);
+  await applyCarsBgBooleanExtras(page, listing.extraLabels);
   if (listing.carsBgExtras?.selected?.length || listing.extraLabels.length) {
     await applyCarsBgExtras(page, listing.carsBgExtras, listing.extraLabels).catch(() => {});
   }

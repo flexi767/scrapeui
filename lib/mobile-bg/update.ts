@@ -25,6 +25,7 @@ interface BackupRow {
   body_type: string | null;
   description: string | null;
   ad_status: string | null;
+  tech_data_json: string | null;
 }
 
 interface EditSnapshotRow {
@@ -218,7 +219,8 @@ export async function updateBackupOnMobileBg(
       COALESCE(b.transmission, l.transmission) as transmission,
       COALESCE(b.category, l.body_type) as body_type,
       COALESCE(b.description, l.description) as description,
-      COALESCE(b.ad_status, l.ad_status) as ad_status
+      COALESCE(b.ad_status, l.ad_status) as ad_status,
+      b.tech_data_json
     FROM mobilebg_backups b
     LEFT JOIN listings l ON l.id = b.listing_id
     WHERE b.id = ?
