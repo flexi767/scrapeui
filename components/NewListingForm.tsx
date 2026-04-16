@@ -396,8 +396,9 @@ function filterAutocompleteOptions(
   } = {},
 ) {
   const normalizedQuery = normalizeAutocompleteValue(query);
+  const hasVisibleCounts = options.some((option) => option.count != null);
   const visibleBase =
-    !normalizedQuery && hideLowCountOnEmpty
+    !normalizedQuery && hideLowCountOnEmpty && hasVisibleCounts
       ? options.filter((option) => (option.count ?? 0) >= 5)
       : options;
 
@@ -627,7 +628,7 @@ function AutocompleteInput({
         </div>
       ) : null}
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-auto rounded-md border border-gray-700 bg-gray-900 shadow-xl">
+        <div className="saved-search-autocomplete-scroll absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-scroll overscroll-contain rounded-md border border-gray-700 bg-gray-900 shadow-xl [scrollbar-gutter:stable]">
           {visibleOptions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
           ) : (
@@ -645,6 +646,11 @@ function AutocompleteInput({
                 className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
               >
                 <span>{option.value}</span>
+                {option.count != null && (
+                  <span className="text-xs text-gray-500">
+                    {option.count.toLocaleString("en-US")}
+                  </span>
+                )}
               </button>
             ))
           )}

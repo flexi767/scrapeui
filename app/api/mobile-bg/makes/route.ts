@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { raw } from '@/db/client';
 import { fetchMakesModels } from '@/lib/mobile-bg/makes-models';
+import { loadMobileBgMakesMapFromDb } from '@/lib/mobile-bg/reference';
 
 export async function GET(req: NextRequest) {
   const pubtype = req.nextUrl.searchParams.get('pubtype') ?? '1,2';
-  const map = await fetchMakesModels(pubtype);
+  const map = loadMobileBgMakesMapFromDb(raw, { pubtype }) ?? await fetchMakesModels(pubtype);
   const makes = Array.from(map.values()).sort((a, b) => a.make.localeCompare(b.make, 'bg'));
   return NextResponse.json(makes, {
     headers: { 'Cache-Control': 'public, max-age=3600' },

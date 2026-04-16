@@ -1,6 +1,7 @@
 import Link from "next/link";
 import NewListingForm from "@/components/NewListingForm";
 import { fetchMakesModels } from "@/lib/mobile-bg/makes-models";
+import { loadMobileBgMakesMapFromDb } from "@/lib/mobile-bg/reference";
 import { fetchFuelTypes } from "@/lib/mobile-bg/fuel-types";
 import { fetchTransmissionTypes } from "@/lib/mobile-bg/transmission-types";
 import { CANONICAL_BODY_TYPES } from "@/lib/mobile-bg/body-types";
@@ -133,7 +134,9 @@ function getDealerListingsByDealer(): Record<
 
 export default async function NewListingPage() {
   const [makesMap, fuelMap, transmissionMap, regions] = await Promise.all([
-    fetchMakesModels().catch(() => null),
+    Promise.resolve(loadMobileBgMakesMapFromDb(raw) ?? null)
+      .then((map) => map ?? fetchMakesModels())
+      .catch(() => null),
     fetchFuelTypes().catch(() => null),
     fetchTransmissionTypes().catch(() => null),
     fetchRegions().catch(() => []),
