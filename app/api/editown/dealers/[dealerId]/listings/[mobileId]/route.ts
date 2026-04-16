@@ -216,7 +216,7 @@ export async function GET(
       l.mobile_id,
       COALESCE(b.make, l.make) as make,
       COALESCE(b.model, l.model) as model,
-      COALESCE(b.source_title, b.title, l.title) as title,
+      COALESCE(b.title, l.title) as title,
       COALESCE(b.fuel, l.fuel) as fuel,
       COALESCE(b.power, l.power) as power,
       COALESCE(b.transmission, l.transmission) as transmission,
