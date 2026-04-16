@@ -1135,7 +1135,17 @@ export default function NewListingForm({
           ) : null}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1fr_1fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr_1fr_1fr_1fr]">
+          <SelectField
+            label="Основна категория"
+            value={form.pubtype}
+            onChange={onCategoryChange}
+            options={MAIN_CATEGORIES.map((item) => ({
+              value: item.value,
+              label: item.label,
+            }))}
+            required
+          />
           <div className="min-w-0 flex flex-col gap-1">
             <FieldLabel required>
               {makesLoading ? "Марка (зарежда...)" : "Марка"}
@@ -1211,7 +1221,7 @@ export default function NewListingForm({
           />
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr_1.1fr]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr]">
           <InputField
             label="Мощност [к.с.]"
             value={form.power}
@@ -1231,16 +1241,6 @@ export default function NewListingForm({
             onChange={(value) => setField("transmission", value)}
             options={["", ...transmissions.filter(Boolean)]}
             accent
-          />
-          <SelectField
-            label="Основна категория"
-            value={form.pubtype}
-            onChange={onCategoryChange}
-            options={MAIN_CATEGORIES.map((item) => ({
-              value: item.value,
-              label: item.label,
-            }))}
-            required
           />
           <SelectField
             label="Категория"
