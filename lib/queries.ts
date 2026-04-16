@@ -601,7 +601,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
   } = filters;
 
   const wheres: string[] = [
-    "l.is_active = 1",
+    "(l.is_active = 1 OR l.id IS NULL)",
     "d.active = 1",
     "d.own = 1",
     "(l.duplicate = 0 OR l.duplicate IS NULL)",
@@ -762,10 +762,10 @@ export function getOwnListings(filters: ListingFilters = {}) {
       b.search_first_result_price,
       d.name as dealer_name, d.slug as dealer_slug
     FROM ranked_backups b
-    JOIN listings l ON l.id = b.listing_id
+    LEFT JOIN listings l ON l.id = b.listing_id
     LEFT JOIN dealers d ON b.dealer_id = d.id
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
-    ORDER BY ${ownSortCol} ${sortDir}
+    ORDER BY (l.id IS NULL) DESC, ${ownSortCol} ${sortDir}
     LIMIT ? OFFSET ?
   `,
     )
@@ -785,7 +785,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     )
     SELECT COUNT(*) as count
     FROM ranked_backups b
-    JOIN listings l ON l.id = b.listing_id
+    LEFT JOIN listings l ON l.id = b.listing_id
     LEFT JOIN dealers d ON b.dealer_id = d.id
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
   `,
