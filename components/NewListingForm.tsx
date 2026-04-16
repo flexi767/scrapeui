@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import type { MakeEntry } from '@/lib/mobile-bg/makes-models';
 import type { Region, City } from '@/lib/mobile-bg/regions';
+import { formatPrice } from '@/lib/utils';
 
 interface Dealer { id: number; slug: string; name: string; }
 
@@ -15,6 +17,21 @@ interface Props {
   regions: Region[];
   colors: string[];
   dealers: Dealer[];
+  initialDealerListingsByDealer: Record<string, DealerListingSummary[]>;
+}
+
+interface AutocompleteOption {
+  value: string;
+  count?: number | null;
+}
+
+interface DealerListingSummary {
+  mobileId: string;
+  make: string;
+  model: string;
+  title: string;
+  price: number | null;
+  thumb: string | null;
 }
 
 const MAIN_CATEGORIES = [
@@ -314,6 +331,10 @@ const EMPTY: FormState = {
   extras: {},
 };
 
+interface PrefillResponse {
+  form: FormState;
+}
+
 function FieldLabel({ children, required = false, accent = false }: { children: React.ReactNode; required?: boolean; accent?: boolean }) {
   return (
     <label className={`text-xs font-medium ${accent ? 'text-sky-300' : 'text-gray-400'} uppercase tracking-wide`}>
@@ -321,6 +342,48 @@ function FieldLabel({ children, required = false, accent = false }: { children: 
       {required ? <span className="ml-1 text-red-400">*</span> : null}
     </label>
   );
+}
+
+function normalizeAutocompleteValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function sortMakeOptions(options: AutocompleteOption[]) {
+  return [...options].sort((a, b) => {
+    const aHigh = (a.count ?? 0) > 10000 ? 1 : 0;
+    const bHigh = (b.count ?? 0) > 10000 ? 1 : 0;
+    if (aHigh !== bHigh) return bHigh - aHigh;
+    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0)) {
+      return (b.count ?? 0) - (a.count ?? 0);
+    }
+    return a.value.localeCompare(b.value, 'bg');
+  });
+}
+
+function filterAutocompleteOptions(
+  options: AutocompleteOption[],
+  query: string,
+  {
+    hideLowCountOnEmpty = false,
+  }: {
+    hideLowCountOnEmpty?: boolean;
+  } = {},
+) {
+  const normalizedQuery = normalizeAutocompleteValue(query);
+  const visibleBase =
+    !normalizedQuery && hideLowCountOnEmpty
+      ? options.filter((option) => (option.count ?? 0) >= 5)
+      : options;
+
+  if (!normalizedQuery) return visibleBase;
+  return visibleBase.filter((option) => normalizeAutocompleteValue(option.value).includes(normalizedQuery));
+}
+
+function getSelectedOptionCount(options: AutocompleteOption[], value: string): number | null {
+  const normalizedValue = normalizeAutocompleteValue(value);
+  if (!normalizedValue) return null;
+  const match = options.find((option) => normalizeAutocompleteValue(option.value) === normalizedValue);
+  return match?.count ?? null;
 }
 
 function SelectField({
@@ -341,7 +404,7 @@ function SelectField({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="min-w-0 flex flex-col gap-1">
       <FieldLabel required={required} accent={accent}>{label}</FieldLabel>
       <select
         value={value}
@@ -384,7 +447,7 @@ function InputField({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="min-w-0 flex flex-col gap-1">
       <FieldLabel required={required} accent={accent}>{label}</FieldLabel>
       <input
         type={type}
@@ -420,6 +483,129 @@ function CheckboxField({
   );
 }
 
+function AutocompleteInput({
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyLabel,
+  hideLowCountOnEmpty = false,
+  open,
+  focusWhenOpen = false,
+  trailingText,
+  onOpenChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: AutocompleteOption[];
+  placeholder?: string;
+  emptyLabel: string;
+  hideLowCountOnEmpty?: boolean;
+  open: boolean;
+  focusWhenOpen?: boolean;
+  trailingText?: string | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [isTyping, setIsTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectAllOnFocusRef = useRef(false);
+  const openRef = useRef(open);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !focusWhenOpen) return;
+    window.requestAnimationFrame(() => {
+      if (inputRef.current && document.activeElement !== inputRef.current) {
+        inputRef.current.focus();
+      }
+    });
+  }, [focusWhenOpen, open]);
+
+  const visibleOptions = useMemo(
+    () => filterAutocompleteOptions(options, isTyping ? value : '', { hideLowCountOnEmpty }),
+    [hideLowCountOnEmpty, isTyping, options, value],
+  );
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        value={value}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return;
+          if (!open || visibleOptions.length === 0) return;
+          event.preventDefault();
+          const firstOption = visibleOptions[0];
+          onChange(firstOption.value);
+          setIsTyping(false);
+          onOpenChange(false);
+          inputRef.current?.blur();
+        }}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setIsTyping(true);
+          shouldSelectAllOnFocusRef.current = false;
+          onOpenChange(true);
+        }}
+        onFocus={() => {
+          setIsTyping(false);
+          shouldSelectAllOnFocusRef.current = true;
+          onOpenChange(true);
+          window.requestAnimationFrame(() => {
+            if (
+              shouldSelectAllOnFocusRef.current &&
+              inputRef.current &&
+              document.activeElement === inputRef.current
+            ) {
+              inputRef.current.select();
+            }
+          });
+        }}
+        onBlur={() => {
+          shouldSelectAllOnFocusRef.current = false;
+          window.setTimeout(() => {
+            if (openRef.current) onOpenChange(false);
+          }, 120);
+        }}
+        placeholder={placeholder}
+        className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 pr-14 text-sm text-white focus:border-sky-500 focus:outline-none"
+      />
+      {trailingText ? (
+        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+          {trailingText}
+        </div>
+      ) : null}
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-auto rounded-md border border-gray-700 bg-gray-900 shadow-xl">
+          {visibleOptions.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
+          ) : (
+            visibleOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(option.value);
+                  setIsTyping(false);
+                  onOpenChange(false);
+                  inputRef.current?.blur();
+                }}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+              >
+                <span>{option.value}</span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ExtrasColumn({
   category,
   items,
@@ -451,6 +637,125 @@ function ExtrasColumn({
   );
 }
 
+function DealerSelector({
+  dealers,
+  value,
+  onChange,
+}: {
+  dealers: Dealer[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {dealers.map((dealer) => {
+        const selected = value === String(dealer.id);
+        return (
+          <button
+            key={dealer.id}
+            type="button"
+            onClick={() => onChange(selected ? '' : String(dealer.id))}
+            aria-pressed={selected}
+            className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+              selected
+                ? 'border-sky-500 bg-sky-500/15 text-sky-200'
+                : 'border-gray-700 bg-gray-900/80 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+            }`}
+          >
+            {dealer.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DealerListingPicker({
+  listings,
+  loading,
+  selectedMobileId,
+  prefillingMobileId,
+  error,
+  onSelect,
+}: {
+  listings: DealerListingSummary[];
+  loading: boolean;
+  selectedMobileId: string | null;
+  prefillingMobileId: string | null;
+  error: string;
+  onSelect: (mobileId: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">
+        Зареждане на обявите...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-800/60 bg-red-950/30 p-4 text-sm text-red-300">
+        {error}
+      </div>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-500">
+        Няма активни обяви за този дилър.
+      </div>
+    );
+  }
+
+  return (
+    <div className="pr-[30px]">
+      <div className="grid max-h-80 gap-2 overflow-y-auto md:grid-cols-2 xl:grid-cols-3">
+        {listings.map((listing) => {
+          const selected = selectedMobileId === listing.mobileId;
+          const prefilling = prefillingMobileId === listing.mobileId;
+          return (
+            <button
+              key={listing.mobileId}
+              type="button"
+              onClick={() => onSelect(listing.mobileId)}
+              disabled={Boolean(prefillingMobileId)}
+              className={`flex w-full items-center gap-2 rounded-md border px-1.5 py-1 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                selected
+                  ? 'border-sky-500 bg-sky-500/10'
+                  : 'border-gray-700 bg-gray-900/80 hover:border-gray-500 hover:bg-gray-800/80'
+              }`}
+            >
+              {listing.thumb ? (
+                <ImageWithFallback
+                  src={listing.thumb}
+                  alt={`${listing.make} ${listing.model}`.trim() || 'Listing image'}
+                  className="h-12 w-16 rounded object-contain"
+                  style={{ aspectRatio: '4/3' }}
+                  fallbackClassName="h-12 w-16 rounded bg-gray-800 text-gray-400"
+                  fallbackLabel="Missing"
+                />
+              ) : (
+                <div className="h-12 w-16 rounded bg-gray-800" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-white">
+                  {[listing.make, listing.model].filter(Boolean).join(' ') || listing.mobileId}
+                </div>
+                <div className="truncate text-xs text-gray-400">{listing.title || '—'}</div>
+                <div className="text-xs font-medium text-sky-300">
+                  {prefilling ? 'Зареждане...' : formatPrice(listing.price)}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function FormSection({
   title,
   children,
@@ -466,16 +771,26 @@ function FormSection({
   );
 }
 
-export default function NewListingForm({ makes: initialMakes, fuels, transmissions, regions, dealers }: Props) {
+export default function NewListingForm({
+  makes: initialMakes,
+  fuels,
+  transmissions,
+  regions,
+  dealers,
+  initialDealerListingsByDealer,
+}: Props) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [makes, setMakes] = useState<MakeEntry[]>(initialMakes);
   const [makesLoading, setMakesLoading] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
+  const [selectedTemplateMobileId, setSelectedTemplateMobileId] = useState<string | null>(null);
+  const [prefillingMobileId, setPrefillingMobileId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedBackupId, setSavedBackupId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [openAutocomplete, setOpenAutocomplete] = useState<'make' | 'model' | null>(null);
 
   const setField = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -485,15 +800,62 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
   );
 
   const selectedMake = useMemo(
-    () => makes.find((entry) => entry.make === form.make) ?? null,
+    () => makes.find((entry) => normalizeAutocompleteValue(entry.make) === normalizeAutocompleteValue(form.make)) ?? null,
     [form.make, makes],
   );
   const models = selectedMake?.models ?? [];
+  const makeOptions = useMemo(
+    () => sortMakeOptions(makes.map((entry) => ({ value: entry.make, count: entry.count ?? null }))),
+    [makes],
+  );
+  const modelOptions = useMemo(
+    () => models.map((entry) => ({ value: entry.label, count: entry.count ?? null })),
+    [models],
+  );
+  const selectedMakeCount = useMemo(() => getSelectedOptionCount(makeOptions, form.make), [form.make, makeOptions]);
+  const selectedModelCount = useMemo(() => getSelectedOptionCount(modelOptions, form.model), [form.model, modelOptions]);
   const showBatteryFields = BATTERY_FUELS.has(form.fuel);
+  const dealerListings = useMemo(
+    () => (form.dealerId ? (initialDealerListingsByDealer[form.dealerId] ?? []) : []),
+    [form.dealerId, initialDealerListingsByDealer],
+  );
+
+  const loadCities = useCallback(async (regionValue: string) => {
+    if (!regionValue) {
+      setCities([]);
+      return;
+    }
+
+    setCitiesLoading(true);
+    try {
+      const response = await fetch(`/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`);
+      const data: City[] = await response.json();
+      setCities(data);
+    } catch {
+      setCities([]);
+    } finally {
+      setCitiesLoading(false);
+    }
+  }, []);
+
+  const loadMakes = useCallback(async (pubtype: string) => {
+    setMakesLoading(true);
+    try {
+      const response = await fetch(`/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`);
+      const data: MakeEntry[] = await response.json();
+      setMakes(data);
+    } catch {
+      setMakes(initialMakes);
+    } finally {
+      setMakesLoading(false);
+    }
+  }, [initialMakes]);
 
   function resetForm() {
     setForm(EMPTY);
     setCities([]);
+    setSelectedTemplateMobileId(null);
+    setPrefillingMobileId(null);
     setError('');
     setSaved(false);
     setSavedBackupId(null);
@@ -512,35 +874,26 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
   async function onRegionChange(regionValue: string) {
     setField('region', regionValue);
     setField('city', '');
-    setCities([]);
-    if (!regionValue) return;
-
-    setCitiesLoading(true);
-    try {
-      const response = await fetch(`/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`);
-      const data: City[] = await response.json();
-      setCities(data);
-    } catch {
-      setCities([]);
-    } finally {
-      setCitiesLoading(false);
-    }
+    await loadCities(regionValue);
   }
 
   async function onCategoryChange(pubtype: string) {
     setField('pubtype', pubtype);
     setField('make', '');
     setField('model', '');
-    setMakesLoading(true);
-    try {
-      const response = await fetch(`/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`);
-      const data: MakeEntry[] = await response.json();
-      setMakes(data);
-    } catch {
-      setMakes(initialMakes);
-    } finally {
-      setMakesLoading(false);
-    }
+    await loadMakes(pubtype);
+  }
+
+  function updateMake(value: string) {
+    setOpenAutocomplete('model');
+    setForm((prev) => {
+      const selectedEntry =
+        makes.find((entry) => normalizeAutocompleteValue(entry.make) === normalizeAutocompleteValue(value)) ?? null;
+      const validModels = (selectedEntry?.models ?? []).map((entry) => normalizeAutocompleteValue(entry.label));
+      const nextModel =
+        prev.model && validModels.includes(normalizeAutocompleteValue(prev.model)) ? prev.model : '';
+      return { ...prev, make: value, model: nextModel };
+    });
   }
 
   async function onSave() {
@@ -580,6 +933,39 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
     }
   }
 
+  async function prefillFromListing(mobileId: string) {
+    if (!form.dealerId) return;
+
+    setPrefillingMobileId(mobileId);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`);
+      const data = await response.json() as PrefillResponse & { error?: string };
+      if (!response.ok) {
+        setError(data.error || 'Грешка при зареждане на обявата.');
+        return;
+      }
+
+      const nextForm = data.form;
+      if (nextForm.pubtype !== form.pubtype) {
+        await loadMakes(nextForm.pubtype);
+      }
+      if (nextForm.region) {
+        await loadCities(nextForm.region);
+      } else {
+        setCities([]);
+      }
+      setForm(nextForm);
+      setSelectedTemplateMobileId(mobileId);
+      setOpenAutocomplete(null);
+    } catch (prefillError) {
+      setError((prefillError as Error).message);
+    } finally {
+      setPrefillingMobileId(null);
+    }
+  }
+
   if (saved) {
     return (
       <div className="rounded-2xl border border-emerald-700/50 bg-emerald-950/40 p-8 text-center">
@@ -602,14 +988,31 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
     <div className="space-y-6 pb-8">
       <FormSection title="Основни Данни">
         <div className="mb-5">
-          <SelectField
-            label="Дилър"
-            value={form.dealerId}
-            onChange={(value) => setField('dealerId', value)}
-            options={dealers.map((dealer) => ({ value: String(dealer.id), label: dealer.name }))}
-            required
-            accent
-          />
+          <FieldLabel required accent>
+            Дилър
+          </FieldLabel>
+          <div className="mt-2">
+            <DealerSelector
+              dealers={dealers}
+              value={form.dealerId}
+              onChange={(value) => {
+                setField('dealerId', value);
+                setSelectedTemplateMobileId(null);
+              }}
+            />
+          </div>
+          {form.dealerId ? (
+            <div className="mt-3">
+              <DealerListingPicker
+                listings={dealerListings}
+                loading={false}
+                selectedMobileId={selectedTemplateMobileId}
+                prefillingMobileId={prefillingMobileId}
+                error=""
+                onSelect={(mobileId) => void prefillFromListing(mobileId)}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr_1fr_1fr]">
@@ -620,24 +1023,46 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
             options={MAIN_CATEGORIES.map((item) => ({ value: item.value, label: item.label }))}
             required
           />
-          <SelectField
-            label={makesLoading ? 'Марка (зарежда...)' : 'Марка'}
-            value={form.make}
-            onChange={(value) => {
-              setField('make', value);
-              setField('model', '');
-            }}
-            options={['', ...makes.map((entry) => entry.make)]}
-            required
-            disabled={makesLoading}
-          />
-          <SelectField
-            label="Модел"
-            value={form.model}
-            onChange={(value) => setField('model', value)}
-            options={['', ...models.map((entry) => entry.label)]}
-            disabled={!form.make}
-          />
+          <div className="min-w-0 flex flex-col gap-1">
+            <FieldLabel required>{makesLoading ? 'Марка (зарежда...)' : 'Марка'}</FieldLabel>
+            <AutocompleteInput
+              value={form.make}
+              onChange={updateMake}
+              options={makeOptions}
+              placeholder="Type make"
+              emptyLabel="No make matches"
+              hideLowCountOnEmpty
+              open={openAutocomplete === 'make'}
+              trailingText={selectedMakeCount != null ? selectedMakeCount.toLocaleString('en-US') : null}
+              onOpenChange={(open) => {
+                if (open) {
+                  setOpenAutocomplete('make');
+                  return;
+                }
+                setOpenAutocomplete((current) => (current === 'make' ? null : current));
+              }}
+            />
+          </div>
+          <div className="min-w-0 flex flex-col gap-1">
+            <FieldLabel>Модел</FieldLabel>
+            <AutocompleteInput
+              value={form.model}
+              onChange={(value) => setField('model', value)}
+              options={modelOptions}
+              placeholder="Type model"
+              emptyLabel="No model matches"
+              open={openAutocomplete === 'model'}
+              focusWhenOpen
+              trailingText={selectedModelCount != null ? selectedModelCount.toLocaleString('en-US') : null}
+              onOpenChange={(open) => {
+                if (open) {
+                  setOpenAutocomplete('model');
+                  return;
+                }
+                setOpenAutocomplete((current) => (current === 'model' ? null : current));
+              }}
+            />
+          </div>
           <InputField label="Заглавие" value={form.title} onChange={(value) => setField('title', value)} maxLength={50} />
           <SelectField
             label="Състояние"
@@ -695,8 +1120,8 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
       </FormSection>
 
       <FormSection title="Цена И Производство">
-        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr_1fr]">
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
             <div className="grid gap-4 md:grid-cols-[90px_1fr_90px]">
               <InputField label="Цена" value={form.price} onChange={(value) => setField('price', value)} type="number" maxLength={7} accent />
               <SelectField label="ДДС" value={form.vat} onChange={(value) => setField('vat', value)} options={['', 'Частна продажба. / Освободена от ДДС продажба.', 'Цената е с включено ДДС', 'Цената е без ДДС']} accent />
@@ -713,9 +1138,11 @@ export default function NewListingForm({ makes: initialMakes, fuels, transmissio
 
           <InputField label="Пробег [км]" value={form.mileage} onChange={(value) => setField('mileage', value)} type="number" maxLength={7} accent />
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <SelectField label="Месец" value={form.productionMonth} onChange={(value) => setField('productionMonth', value)} options={MONTH_OPTIONS} accent />
-            <SelectField label="Година" value={form.productionYear} onChange={(value) => setField('productionYear', value)} options={PRODUCTION_YEAR_OPTIONS} accent />
+          <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <SelectField label="Месец" value={form.productionMonth} onChange={(value) => setField('productionMonth', value)} options={MONTH_OPTIONS} accent />
+              <SelectField label="Година" value={form.productionYear} onChange={(value) => setField('productionYear', value)} options={PRODUCTION_YEAR_OPTIONS} accent />
+            </div>
           </div>
         </div>
       </FormSection>

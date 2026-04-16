@@ -1,0 +1,85 @@
+import { NextResponse } from 'next/server';
+import { raw } from '@/db/client';
+import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
+
+interface DealerListingSummaryRow {
+  mobile_id: string;
+  make: string | null;
+  model: string | null;
+  title: string | null;
+  price_amount: number | null;
+  thumb_keys: string | null;
+  full_keys: string | null;
+  image_meta: string | null;
+  images_downloaded: number | null;
+  thumb_saved: number | null;
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ dealerId: string }> },
+) {
+  const dealerId = Number((await params).dealerId);
+  if (!Number.isInteger(dealerId) || dealerId <= 0) {
+    return NextResponse.json({ error: 'Invalid dealer ID' }, { status: 400 });
+  }
+
+  const rows = raw.prepare(`
+    WITH ranked_backups AS (
+      SELECT
+        b.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY b.dealer_id, b.mobile_id
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+        ) as row_num
+      FROM mobilebg_backups b
+    )
+    SELECT
+      l.mobile_id,
+      COALESCE(b.make, l.make) as make,
+      COALESCE(b.model, l.model) as model,
+      COALESCE(b.title, l.title) as title,
+      COALESCE(b.price_amount, l.current_price) as price_amount,
+      l.thumb_keys,
+      l.full_keys,
+      l.image_meta,
+      l.images_downloaded,
+      l.thumb_saved
+    FROM listings l
+    LEFT JOIN ranked_backups b
+      ON b.listing_id = l.id
+      AND b.row_num = 1
+    WHERE l.dealer_id = ?
+      AND COALESCE(l.is_active, 1) = 1
+      AND COALESCE(l.source, 'm') = 'm'
+    ORDER BY l.last_edit DESC, l.id DESC
+  `).all(dealerId) as DealerListingSummaryRow[];
+
+  const listings = rows.map((row) => {
+    const imageMeta = parseJson<ImageMeta | null>(row.image_meta, null);
+    const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
+    const fullKeys = parseJson<string[]>(row.full_keys, []);
+    const images = buildImageList(
+      row.mobile_id,
+      fullKeys.length ? fullKeys : thumbKeys,
+      thumbKeys,
+      imageMeta,
+      row.images_downloaded === 1,
+    );
+    const thumb = getThumbProxyUrl(
+      row.mobile_id,
+      images[0]?.thumb ?? null,
+    );
+
+    return {
+      mobileId: row.mobile_id,
+      make: row.make ?? '',
+      model: row.model ?? '',
+      title: row.title ?? '',
+      price: row.price_amount,
+      thumb,
+    };
+  });
+
+  return NextResponse.json({ listings });
+}
