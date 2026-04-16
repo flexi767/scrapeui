@@ -1,23 +1,28 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
-import type { MakeEntry } from '@/lib/mobile-bg/makes-models';
-import type { Region, City } from '@/lib/mobile-bg/regions';
-import { formatPrice } from '@/lib/utils';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
+import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
+import type { Region, City } from "@/lib/mobile-bg/regions";
+import { formatPrice } from "@/lib/utils";
 
-interface Dealer { id: number; slug: string; name: string; }
+interface Dealer {
+  id: number;
+  slug: string;
+  name: string;
+}
 
 interface Props {
   makes: MakeEntry[];
-  fuels: string[];
   transmissions: string[];
+  fuels: string[];
   bodyTypes: string[];
   regions: Region[];
   colors: string[];
   dealers: Dealer[];
   initialDealerListingsByDealer: Record<string, DealerListingSummary[]>;
+  initialDealerId?: string;
 }
 
 interface AutocompleteOption {
@@ -35,235 +40,246 @@ interface DealerListingSummary {
 }
 
 const MAIN_CATEGORIES = [
-  { value: '1,2', label: 'Автомобили и джипове' },
-  { value: '3', label: 'Бусове / Микробуси' },
-  { value: '4', label: 'Товарни автомобили' },
-  { value: '7', label: 'Мотоциклети / Мотопеди' },
-  { value: '9', label: 'Водни МПС' },
-  { value: '11', label: 'Ремаркета' },
-  { value: '12', label: 'Специална техника' },
+  { value: "1,2", label: "Автомобили и джипове" },
+  { value: "3", label: "Бусове / Микробуси" },
+  { value: "4", label: "Товарни автомобили" },
+  { value: "7", label: "Мотоциклети / Мотопеди" },
+  { value: "9", label: "Водни МПС" },
+  { value: "11", label: "Ремаркета" },
+  { value: "12", label: "Специална техника" },
 ];
 
 const CONDITION_OPTIONS = [
-  { value: '1', label: 'Нов', disabled: true },
-  { value: '0', label: 'Употребяван' },
-  { value: '3', label: 'Повреден/ударен' },
-  { value: '2', label: 'За части' },
+  { value: "1", label: "Нов", disabled: true },
+  { value: "0", label: "Употребяван" },
+  { value: "3", label: "Повреден/ударен" },
+  { value: "2", label: "За части" },
 ];
 
-const EURO_OPTIONS = ['', 'Евро 1', 'Евро 2', 'Евро 3', 'Евро 4', 'Евро 5', 'Евро 6'];
-const CURRENCY_OPTIONS = ['EUR', 'USD'];
+const EURO_OPTIONS = [
+  "",
+  "Евро 1",
+  "Евро 2",
+  "Евро 3",
+  "Евро 4",
+  "Евро 5",
+  "Евро 6",
+];
+const CURRENCY_OPTIONS = ["EUR", "USD"];
 const MONTH_OPTIONS = [
-  '',
-  'януари',
-  'февруари',
-  'март',
-  'април',
-  'май',
-  'юни',
-  'юли',
-  'август',
-  'септември',
-  'октомври',
-  'ноември',
-  'декември',
+  "",
+  "януари",
+  "февруари",
+  "март",
+  "април",
+  "май",
+  "юни",
+  "юли",
+  "август",
+  "септември",
+  "октомври",
+  "ноември",
+  "декември",
 ];
 const PRODUCTION_YEAR_OPTIONS = [
-  '',
-  ...Array.from({ length: new Date().getFullYear() - 1929 }, (_, index) => String(new Date().getFullYear() - index)),
+  "",
+  ...Array.from({ length: new Date().getFullYear() - 1929 }, (_, index) =>
+    String(new Date().getFullYear() - index),
+  ),
 ];
 const BODY_TYPE_OPTIONS = [
-  '',
-  'Ван',
-  'Джип',
-  'Кабрио',
-  'Комби',
-  'Купе',
-  'Миниван',
-  'Пикап',
-  'Седан',
-  'Стреч лимузина',
-  'Хечбек',
+  "",
+  "Ван",
+  "Джип",
+  "Кабрио",
+  "Комби",
+  "Купе",
+  "Миниван",
+  "Пикап",
+  "Седан",
+  "Стреч лимузина",
+  "Хечбек",
 ];
 const COLOR_OPTIONS = [
-  '',
-  'Tъмно син',
-  'Банан',
-  'Беата',
-  'Бежов',
-  'Бордо',
-  'Бронз',
-  'Бял',
-  'Винен',
-  'Виолетов',
-  'Вишнев',
-  'Графит',
-  'Жълт',
-  'Зелен',
-  'Златист',
-  'Кафяв',
-  'Керемиден',
-  'Кремав',
-  'Лилав',
-  'Металик',
-  'Оранжев',
-  'Охра',
-  'Пепеляв',
-  'Перла',
-  'Пясъчен',
-  'Резидав',
-  'Розов',
-  'Сахара',
-  'Светло сив',
-  'Светло син',
-  'Сив',
-  'Син',
-  'Слонова кост',
-  'Сребърен',
-  'Т.зелен',
-  'Тъмно сив',
-  'Тъмно син мет.',
-  'Тъмно червен',
-  'Тютюн',
-  'Хамелеон',
-  'Червен',
-  'Черен',
+  "",
+  "Tъмно син",
+  "Банан",
+  "Беата",
+  "Бежов",
+  "Бордо",
+  "Бронз",
+  "Бял",
+  "Винен",
+  "Виолетов",
+  "Вишнев",
+  "Графит",
+  "Жълт",
+  "Зелен",
+  "Златист",
+  "Кафяв",
+  "Керемиден",
+  "Кремав",
+  "Лилав",
+  "Металик",
+  "Оранжев",
+  "Охра",
+  "Пепеляв",
+  "Перла",
+  "Пясъчен",
+  "Резидав",
+  "Розов",
+  "Сахара",
+  "Светло сив",
+  "Светло син",
+  "Сив",
+  "Син",
+  "Слонова кост",
+  "Сребърен",
+  "Т.зелен",
+  "Тъмно сив",
+  "Тъмно син мет.",
+  "Тъмно червен",
+  "Тютюн",
+  "Хамелеон",
+  "Червен",
+  "Черен",
 ];
 
 const EXTRA_SECTIONS = [
   {
-    category: 'Безопасност',
+    category: "Безопасност",
     items: [
-      'GPS система за проследяване',
-      'Автоматичен контрол на стабилността',
-      'Адаптивни предни светлини',
-      'Антиблокираща система',
-      'Въздушни възглавници - Задни',
-      'Въздушни възглавници - Предни',
-      'Въздушни възглавници - Странични',
-      'Ел. разпределяне на спирачното усилие',
-      'Електронна програма за стабилизиране',
-      'Контрол на налягането на гумите',
-      'Парктроник',
-      'Система ISOFIX',
-      'Система за динамична устойчивост',
-      'Система за защита от пробуксуване',
-      'Система за изсушаване на накладките',
-      'Система за контрол на дистанцията',
-      'Система за контрол на спускането',
-      'Система за подпомагане на спирането',
+      "GPS система за проследяване",
+      "Автоматичен контрол на стабилността",
+      "Адаптивни предни светлини",
+      "Антиблокираща система",
+      "Въздушни възглавници - Задни",
+      "Въздушни възглавници - Предни",
+      "Въздушни възглавници - Странични",
+      "Ел. разпределяне на спирачното усилие",
+      "Електронна програма за стабилизиране",
+      "Контрол на налягането на гумите",
+      "Парктроник",
+      "Система ISOFIX",
+      "Система за динамична устойчивост",
+      "Система за защита от пробуксуване",
+      "Система за изсушаване на накладките",
+      "Система за контрол на дистанцията",
+      "Система за контрол на спускането",
+      "Система за подпомагане на спирането",
     ],
   },
   {
-    category: 'Комфорт',
+    category: "Комфорт",
     items: [
-      'Auto Start Stop function',
-      'Bluetooth \\ handsfree система',
-      'DVD, TV',
-      'Steptronic, Tiptronic',
-      'USB, audio\\video, IN\\AUX изводи',
-      'Адаптивно въздушно окачване',
-      'Безключово палене',
-      'Блокаж на диференциала',
-      'Бордкомпютър',
-      'Бързи \\ бавни скорости',
-      'Датчик за светлина',
-      'Ел. Огледала',
-      'Ел. Стъкла',
-      'Ел. регулиране на окачването',
-      'Ел. регулиране на седалките',
-      'Ел. усилвател на волана',
-      'Климатик',
-      'Климатроник',
-      'Мултифункционален волан',
-      'Навигация',
-      'Отопление на волана',
-      'Печка',
-      'Подгряване на предното стъкло',
-      'Подгряване на седалките',
-      'Регулиране на волана',
-      'Сензор за дъжд',
-      'Серво усилвател на волана',
-      'Система за измиване на фаровете',
-      'Система за контрол на скоростта (автопилот)',
-      'Стерео уредба',
-      'Термопомпа',
-      'Хладилна жабка',
+      "Auto Start Stop function",
+      "Bluetooth \\ handsfree система",
+      "DVD, TV",
+      "Steptronic, Tiptronic",
+      "USB, audio\\video, IN\\AUX изводи",
+      "Адаптивно въздушно окачване",
+      "Безключово палене",
+      "Блокаж на диференциала",
+      "Бордкомпютър",
+      "Бързи \\ бавни скорости",
+      "Датчик за светлина",
+      "Ел. Огледала",
+      "Ел. Стъкла",
+      "Ел. регулиране на окачването",
+      "Ел. регулиране на седалките",
+      "Ел. усилвател на волана",
+      "Климатик",
+      "Климатроник",
+      "Мултифункционален волан",
+      "Навигация",
+      "Отопление на волана",
+      "Печка",
+      "Подгряване на предното стъкло",
+      "Подгряване на седалките",
+      "Регулиране на волана",
+      "Сензор за дъжд",
+      "Серво усилвател на волана",
+      "Система за измиване на фаровете",
+      "Система за контрол на скоростта (автопилот)",
+      "Стерео уредба",
+      "Термопомпа",
+      "Хладилна жабка",
     ],
   },
   {
-    category: 'Други',
+    category: "Други",
     items: [
-      '4x4',
-      '7 места',
-      'Buy back',
-      'Бартер',
-      'Газова уредба',
-      'Дълга база',
-      'Капариран\\Продаден',
-      'Катастрофирал',
-      'Къса база',
-      'Лизинг',
-      'Метанова уредба',
-      'На части',
-      'Напълно обслужен',
-      'Нов внос',
-      'С регистрация',
-      'Сервизна книжка',
-      'Тунинг',
+      "4x4",
+      "7 места",
+      "Buy back",
+      "Бартер",
+      "Газова уредба",
+      "Дълга база",
+      "Капариран\\Продаден",
+      "Катастрофирал",
+      "Къса база",
+      "Лизинг",
+      "Метанова уредба",
+      "На части",
+      "Напълно обслужен",
+      "Нов внос",
+      "С регистрация",
+      "Сервизна книжка",
+      "Тунинг",
     ],
   },
   {
-    category: 'Екстериор',
+    category: "Екстериор",
     items: [
-      '2(3) Врати',
-      '4(5) Врати',
-      'LED фарове',
-      'Ксенонови фарове',
-      'Лети джанти',
-      'Металик',
-      'Панорамен люк',
-      'Рейлинг на покрива',
-      'Спойлери',
-      'Теглич',
-      'Халогенни фарове',
-      'Шибедах',
+      "2(3) Врати",
+      "4(5) Врати",
+      "LED фарове",
+      "Ксенонови фарове",
+      "Лети джанти",
+      "Металик",
+      "Панорамен люк",
+      "Рейлинг на покрива",
+      "Спойлери",
+      "Теглич",
+      "Халогенни фарове",
+      "Шибедах",
     ],
   },
   {
-    category: 'Защита',
+    category: "Защита",
     items: [
-      'OFFROAD пакет',
-      'Аларма',
-      'Брониран',
-      'Каско',
-      'Лебедка',
-      'Централно заключване',
+      "OFFROAD пакет",
+      "Аларма",
+      "Брониран",
+      "Каско",
+      "Лебедка",
+      "Централно заключване",
     ],
   },
   {
-    category: 'Интериор',
-    items: [
-      'Велурен салон',
-      'Десен волан',
-      'Кожен салон',
-    ],
+    category: "Интериор",
+    items: ["Велурен салон", "Десен волан", "Кожен салон"],
   },
   {
-    category: 'Специализирани',
+    category: "Специализирани",
     items: [
-      'TAXI',
-      'За хора с увреждания',
-      'Катафалка',
-      'Линейка',
-      'Учебен',
-      'Хладилен',
-      'Хомологация N1',
+      "TAXI",
+      "За хора с увреждания",
+      "Катафалка",
+      "Линейка",
+      "Учебен",
+      "Хладилен",
+      "Хомологация N1",
     ],
   },
 ] as const;
 
-const BATTERY_FUELS = new Set(['Електрически', 'Хибриден', 'Plug-in хибрид', 'Водород']);
+const BATTERY_FUELS = new Set([
+  "Електрически",
+  "Хибриден",
+  "Plug-in хибрид",
+  "Водород",
+]);
 
 type FormState = {
   dealerId: string;
@@ -299,34 +315,34 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
-  dealerId: '',
-  pubtype: '1,2',
-  make: '',
-  model: '',
-  title: '',
-  fuel: '',
-  condition: '0',
-  power: '',
-  euronorm: '',
-  transmission: '',
-  bodyType: '',
-  engineCc: '',
-  batteryRange: '',
-  batteryCapacity: '',
-  price: '',
-  vat: '',
-  currency: 'EUR',
-  mileage: '',
-  productionMonth: '',
-  productionYear: '',
-  color: '',
-  region: '',
-  city: '',
-  vin: '',
-  description: '',
-  phone: '',
-  email: '',
-  website: '',
+  dealerId: "",
+  pubtype: "1,2",
+  make: "",
+  model: "",
+  title: "",
+  fuel: "",
+  condition: "0",
+  power: "",
+  euronorm: "",
+  transmission: "",
+  bodyType: "",
+  engineCc: "",
+  batteryRange: "",
+  batteryCapacity: "",
+  price: "",
+  vat: "",
+  currency: "EUR",
+  mileage: "",
+  productionMonth: "",
+  productionYear: "",
+  color: "",
+  region: "",
+  city: "",
+  vin: "",
+  description: "",
+  phone: "",
+  email: "",
+  website: "",
   priceOnRequest: false,
   extras: {},
 };
@@ -335,9 +351,19 @@ interface PrefillResponse {
   form: FormState;
 }
 
-function FieldLabel({ children, required = false, accent = false }: { children: React.ReactNode; required?: boolean; accent?: boolean }) {
+function FieldLabel({
+  children,
+  required = false,
+  accent = false,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+  accent?: boolean;
+}) {
   return (
-    <label className={`text-xs font-medium ${accent ? 'text-sky-300' : 'text-gray-400'} uppercase tracking-wide`}>
+    <label
+      className={`text-xs font-medium ${accent ? "text-sky-300" : "text-gray-400"} uppercase tracking-wide`}
+    >
       {children}
       {required ? <span className="ml-1 text-red-400">*</span> : null}
     </label>
@@ -356,7 +382,7 @@ function sortMakeOptions(options: AutocompleteOption[]) {
     if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0)) {
       return (b.count ?? 0) - (a.count ?? 0);
     }
-    return a.value.localeCompare(b.value, 'bg');
+    return a.value.localeCompare(b.value, "bg");
   });
 }
 
@@ -376,13 +402,20 @@ function filterAutocompleteOptions(
       : options;
 
   if (!normalizedQuery) return visibleBase;
-  return visibleBase.filter((option) => normalizeAutocompleteValue(option.value).includes(normalizedQuery));
+  return visibleBase.filter((option) =>
+    normalizeAutocompleteValue(option.value).includes(normalizedQuery),
+  );
 }
 
-function getSelectedOptionCount(options: AutocompleteOption[], value: string): number | null {
+function getSelectedOptionCount(
+  options: AutocompleteOption[],
+  value: string,
+): number | null {
   const normalizedValue = normalizeAutocompleteValue(value);
   if (!normalizedValue) return null;
-  const match = options.find((option) => normalizeAutocompleteValue(option.value) === normalizedValue);
+  const match = options.find(
+    (option) => normalizeAutocompleteValue(option.value) === normalizedValue,
+  );
   return match?.count ?? null;
 }
 
@@ -405,7 +438,9 @@ function SelectField({
 }) {
   return (
     <div className="min-w-0 flex flex-col gap-1">
-      <FieldLabel required={required} accent={accent}>{label}</FieldLabel>
+      <FieldLabel required={required} accent={accent}>
+        {label}
+      </FieldLabel>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -413,11 +448,19 @@ function SelectField({
         className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {options.map((option) => {
-          if (typeof option === 'string') {
-            return <option key={`${label}-${option || 'empty'}`} value={option}>{option || ' '}</option>;
+          if (typeof option === "string") {
+            return (
+              <option key={`${label}-${option || "empty"}`} value={option}>
+                {option || " "}
+              </option>
+            );
           }
           return (
-            <option key={`${label}-${option.value}`} value={option.value} disabled={option.disabled}>
+            <option
+              key={`${label}-${option.value}`}
+              value={option.value}
+              disabled={option.disabled}
+            >
               {option.label}
             </option>
           );
@@ -433,7 +476,7 @@ function InputField({
   onChange,
   required = false,
   accent = false,
-  type = 'text',
+  type = "text",
   maxLength,
   disabled = false,
 }: {
@@ -448,7 +491,9 @@ function InputField({
 }) {
   return (
     <div className="min-w-0 flex flex-col gap-1">
-      <FieldLabel required={required} accent={accent}>{label}</FieldLabel>
+      <FieldLabel required={required} accent={accent}>
+        {label}
+      </FieldLabel>
       <input
         type={type}
         value={value}
@@ -525,7 +570,10 @@ function AutocompleteInput({
   }, [focusWhenOpen, open]);
 
   const visibleOptions = useMemo(
-    () => filterAutocompleteOptions(options, isTyping ? value : '', { hideLowCountOnEmpty }),
+    () =>
+      filterAutocompleteOptions(options, isTyping ? value : "", {
+        hideLowCountOnEmpty,
+      }),
     [hideLowCountOnEmpty, isTyping, options, value],
   );
 
@@ -535,7 +583,7 @@ function AutocompleteInput({
         ref={inputRef}
         value={value}
         onKeyDown={(event) => {
-          if (event.key !== 'Enter') return;
+          if (event.key !== "Enter") return;
           if (!open || visibleOptions.length === 0) return;
           event.preventDefault();
           const firstOption = visibleOptions[0];
@@ -622,7 +670,10 @@ function ExtrasColumn({
       <h3 className="mb-3 text-sm font-semibold text-white">{category}</h3>
       <div className="space-y-2">
         {items.map((item) => (
-          <label key={item} className="flex cursor-pointer items-start gap-2 text-xs text-gray-300">
+          <label
+            key={item}
+            className="flex cursor-pointer items-start gap-2 text-xs text-gray-300"
+          >
             <input
               type="checkbox"
               checked={selected.includes(item)}
@@ -654,12 +705,12 @@ function DealerSelector({
           <button
             key={dealer.id}
             type="button"
-            onClick={() => onChange(selected ? '' : String(dealer.id))}
+            onClick={() => onChange(selected ? "" : String(dealer.id))}
             aria-pressed={selected}
             className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
               selected
-                ? 'border-sky-500 bg-sky-500/15 text-sky-200'
-                : 'border-gray-700 bg-gray-900/80 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                ? "border-sky-500 bg-sky-500/15 text-sky-200"
+                : "border-gray-700 bg-gray-900/80 text-gray-400 hover:border-gray-500 hover:text-gray-200"
             }`}
           >
             {dealer.name}
@@ -710,8 +761,8 @@ function DealerListingPicker({
   }
 
   return (
-    <div className="pr-[30px]">
-      <div className="grid max-h-80 gap-2 overflow-y-auto md:grid-cols-2 xl:grid-cols-3">
+    <div className="ml-2.5">
+      <div className="grid max-h-80 w-[calc(100%-10px)] gap-2 overflow-y-auto pr-2.5 md:grid-cols-2 xl:grid-cols-3">
         {listings.map((listing) => {
           const selected = selectedMobileId === listing.mobileId;
           const prefilling = prefillingMobileId === listing.mobileId;
@@ -723,16 +774,18 @@ function DealerListingPicker({
               disabled={Boolean(prefillingMobileId)}
               className={`flex w-full items-center gap-2 rounded-md border px-1.5 py-1 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 selected
-                  ? 'border-sky-500 bg-sky-500/10'
-                  : 'border-gray-700 bg-gray-900/80 hover:border-gray-500 hover:bg-gray-800/80'
+                  ? "border-sky-500 bg-sky-500/10"
+                  : "border-gray-700 bg-gray-900/80 hover:border-gray-500 hover:bg-gray-800/80"
               }`}
             >
               {listing.thumb ? (
                 <ImageWithFallback
                   src={listing.thumb}
-                  alt={`${listing.make} ${listing.model}`.trim() || 'Listing image'}
+                  alt={
+                    `${listing.make} ${listing.model}`.trim() || "Listing image"
+                  }
                   className="h-12 w-16 rounded object-contain"
-                  style={{ aspectRatio: '4/3' }}
+                  style={{ aspectRatio: "4/3" }}
                   fallbackClassName="h-12 w-16 rounded bg-gray-800 text-gray-400"
                   fallbackLabel="Missing"
                 />
@@ -741,11 +794,14 @@ function DealerListingPicker({
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-white">
-                  {[listing.make, listing.model].filter(Boolean).join(' ') || listing.mobileId}
+                  {[listing.make, listing.model].filter(Boolean).join(" ") ||
+                    listing.mobileId}
                 </div>
-                <div className="truncate text-xs text-gray-400">{listing.title || '—'}</div>
+                <div className="truncate text-xs text-gray-400">
+                  {listing.title || "—"}
+                </div>
                 <div className="text-xs font-medium text-sky-300">
-                  {prefilling ? 'Зареждане...' : formatPrice(listing.price)}
+                  {prefilling ? "Зареждане..." : formatPrice(listing.price)}
                 </div>
               </div>
             </button>
@@ -760,12 +816,16 @@ function FormSection({
   title,
   children,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-950/70 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">{title}</h2>
+      {title ? (
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
+          {title}
+        </h2>
+      ) : null}
       {children}
     </section>
   );
@@ -773,24 +833,34 @@ function FormSection({
 
 export default function NewListingForm({
   makes: initialMakes,
-  fuels,
   transmissions,
+  fuels,
   regions,
   dealers,
   initialDealerListingsByDealer,
+  initialDealerId = "",
 }: Props) {
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [form, setForm] = useState<FormState>(() => ({
+    ...EMPTY,
+    dealerId: initialDealerId,
+  }));
   const [makes, setMakes] = useState<MakeEntry[]>(initialMakes);
   const [makesLoading, setMakesLoading] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
   const [citiesLoading, setCitiesLoading] = useState(false);
-  const [selectedTemplateMobileId, setSelectedTemplateMobileId] = useState<string | null>(null);
-  const [prefillingMobileId, setPrefillingMobileId] = useState<string | null>(null);
+  const [selectedTemplateMobileId, setSelectedTemplateMobileId] = useState<
+    string | null
+  >(null);
+  const [prefillingMobileId, setPrefillingMobileId] = useState<string | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedBackupId, setSavedBackupId] = useState<number | null>(null);
-  const [error, setError] = useState('');
-  const [openAutocomplete, setOpenAutocomplete] = useState<'make' | 'model' | null>(null);
+  const [error, setError] = useState("");
+  const [openAutocomplete, setOpenAutocomplete] = useState<
+    "make" | "model" | null
+  >(null);
 
   const setField = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -800,23 +870,45 @@ export default function NewListingForm({
   );
 
   const selectedMake = useMemo(
-    () => makes.find((entry) => normalizeAutocompleteValue(entry.make) === normalizeAutocompleteValue(form.make)) ?? null,
+    () =>
+      makes.find(
+        (entry) =>
+          normalizeAutocompleteValue(entry.make) ===
+          normalizeAutocompleteValue(form.make),
+      ) ?? null,
     [form.make, makes],
   );
-  const models = selectedMake?.models ?? [];
+  const models = useMemo(() => selectedMake?.models ?? [], [selectedMake]);
   const makeOptions = useMemo(
-    () => sortMakeOptions(makes.map((entry) => ({ value: entry.make, count: entry.count ?? null }))),
+    () =>
+      sortMakeOptions(
+        makes.map((entry) => ({
+          value: entry.make,
+          count: entry.count ?? null,
+        })),
+      ),
     [makes],
   );
   const modelOptions = useMemo(
-    () => models.map((entry) => ({ value: entry.label, count: entry.count ?? null })),
+    () =>
+      models.map((entry) => ({
+        value: entry.label,
+        count: entry.count ?? null,
+      })),
     [models],
   );
-  const selectedMakeCount = useMemo(() => getSelectedOptionCount(makeOptions, form.make), [form.make, makeOptions]);
-  const selectedModelCount = useMemo(() => getSelectedOptionCount(modelOptions, form.model), [form.model, modelOptions]);
+  const selectedMakeCount = useMemo(
+    () => getSelectedOptionCount(makeOptions, form.make),
+    [form.make, makeOptions],
+  );
+  const selectedModelCount = useMemo(
+    () => getSelectedOptionCount(modelOptions, form.model),
+    [form.model, modelOptions],
+  );
   const showBatteryFields = BATTERY_FUELS.has(form.fuel);
   const dealerListings = useMemo(
-    () => (form.dealerId ? (initialDealerListingsByDealer[form.dealerId] ?? []) : []),
+    () =>
+      form.dealerId ? (initialDealerListingsByDealer[form.dealerId] ?? []) : [],
     [form.dealerId, initialDealerListingsByDealer],
   );
 
@@ -828,7 +920,9 @@ export default function NewListingForm({
 
     setCitiesLoading(true);
     try {
-      const response = await fetch(`/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`);
+      const response = await fetch(
+        `/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`,
+      );
       const data: City[] = await response.json();
       setCities(data);
     } catch {
@@ -838,25 +932,33 @@ export default function NewListingForm({
     }
   }, []);
 
-  const loadMakes = useCallback(async (pubtype: string) => {
-    setMakesLoading(true);
-    try {
-      const response = await fetch(`/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`);
-      const data: MakeEntry[] = await response.json();
-      setMakes(data);
-    } catch {
-      setMakes(initialMakes);
-    } finally {
-      setMakesLoading(false);
-    }
-  }, [initialMakes]);
+  const loadMakes = useCallback(
+    async (pubtype: string) => {
+      setMakesLoading(true);
+      try {
+        const response = await fetch(
+          `/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`,
+        );
+        const data: MakeEntry[] = await response.json();
+        setMakes(data);
+      } catch {
+        setMakes(initialMakes);
+      } finally {
+        setMakesLoading(false);
+      }
+    },
+    [initialMakes],
+  );
 
   function resetForm() {
-    setForm(EMPTY);
+    setForm({
+      ...EMPTY,
+      dealerId: initialDealerId,
+    });
     setCities([]);
     setSelectedTemplateMobileId(null);
     setPrefillingMobileId(null);
-    setError('');
+    setError("");
     setSaved(false);
     setSavedBackupId(null);
   }
@@ -872,39 +974,48 @@ export default function NewListingForm({
   }
 
   async function onRegionChange(regionValue: string) {
-    setField('region', regionValue);
-    setField('city', '');
+    setField("region", regionValue);
+    setField("city", "");
     await loadCities(regionValue);
   }
 
   async function onCategoryChange(pubtype: string) {
-    setField('pubtype', pubtype);
-    setField('make', '');
-    setField('model', '');
+    setField("pubtype", pubtype);
+    setField("make", "");
+    setField("model", "");
     await loadMakes(pubtype);
   }
 
   function updateMake(value: string) {
-    setOpenAutocomplete('model');
+    setOpenAutocomplete("model");
     setForm((prev) => {
       const selectedEntry =
-        makes.find((entry) => normalizeAutocompleteValue(entry.make) === normalizeAutocompleteValue(value)) ?? null;
-      const validModels = (selectedEntry?.models ?? []).map((entry) => normalizeAutocompleteValue(entry.label));
+        makes.find(
+          (entry) =>
+            normalizeAutocompleteValue(entry.make) ===
+            normalizeAutocompleteValue(value),
+        ) ?? null;
+      const validModels = (selectedEntry?.models ?? []).map((entry) =>
+        normalizeAutocompleteValue(entry.label),
+      );
       const nextModel =
-        prev.model && validModels.includes(normalizeAutocompleteValue(prev.model)) ? prev.model : '';
+        prev.model &&
+        validModels.includes(normalizeAutocompleteValue(prev.model))
+          ? prev.model
+          : "";
       return { ...prev, make: value, model: nextModel };
     });
   }
 
   async function onSave() {
-    setError('');
+    setError("");
 
     if (!form.dealerId) {
-      setError('Изберете дилър.');
+      setError("Изберете дилър.");
       return;
     }
     if (!form.make) {
-      setError('Изберете марка.');
+      setError("Изберете марка.");
       return;
     }
     if (!form.priceOnRequest && !form.price) {
@@ -914,17 +1025,17 @@ export default function NewListingForm({
 
     setSaving(true);
     try {
-      const response = await fetch('/api/editown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/editown", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || 'Грешка при запазване.');
+        setError(data.error || "Грешка при запазване.");
         return;
       }
-      setSavedBackupId(typeof data.id === 'number' ? data.id : null);
+      setSavedBackupId(typeof data.id === "number" ? data.id : null);
       setSaved(true);
     } catch (saveError) {
       setError((saveError as Error).message);
@@ -937,13 +1048,17 @@ export default function NewListingForm({
     if (!form.dealerId) return;
 
     setPrefillingMobileId(mobileId);
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch(`/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`);
-      const data = await response.json() as PrefillResponse & { error?: string };
+      const response = await fetch(
+        `/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`,
+      );
+      const data = (await response.json()) as PrefillResponse & {
+        error?: string;
+      };
       if (!response.ok) {
-        setError(data.error || 'Грешка при зареждане на обявата.');
+        setError(data.error || "Грешка при зареждане на обявата.");
         return;
       }
 
@@ -969,14 +1084,22 @@ export default function NewListingForm({
   if (saved) {
     return (
       <div className="rounded-2xl border border-emerald-700/50 bg-emerald-950/40 p-8 text-center">
-        <p className="text-lg font-semibold text-emerald-300">Черновата е запазена.</p>
+        <p className="text-lg font-semibold text-emerald-300">
+          Черновата е запазена.
+        </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-sm">
           {savedBackupId ? (
-            <Link href={`/mobilebg/backups/${savedBackupId}`} className="text-sky-300 underline hover:text-sky-200">
+            <Link
+              href={`/mobilebg/backups/${savedBackupId}`}
+              className="text-sky-300 underline hover:text-sky-200"
+            >
               Отвори черновата
             </Link>
           ) : null}
-          <button onClick={resetForm} className="text-gray-400 underline hover:text-white">
+          <button
+            onClick={resetForm}
+            className="text-gray-400 underline hover:text-white"
+          >
             Нова обява
           </button>
         </div>
@@ -986,17 +1109,14 @@ export default function NewListingForm({
 
   return (
     <div className="space-y-6 pb-8">
-      <FormSection title="Основни Данни">
+      <FormSection>
         <div className="mb-5">
-          <FieldLabel required accent>
-            Дилър
-          </FieldLabel>
           <div className="mt-2">
             <DealerSelector
               dealers={dealers}
               value={form.dealerId}
               onChange={(value) => {
-                setField('dealerId', value);
+                setField("dealerId", value);
                 setSelectedTemplateMobileId(null);
               }}
             />
@@ -1015,16 +1135,21 @@ export default function NewListingForm({
           ) : null}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr_1fr_1fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr_1fr_1fr_1fr]">
           <SelectField
             label="Основна категория"
             value={form.pubtype}
             onChange={onCategoryChange}
-            options={MAIN_CATEGORIES.map((item) => ({ value: item.value, label: item.label }))}
+            options={MAIN_CATEGORIES.map((item) => ({
+              value: item.value,
+              label: item.label,
+            }))}
             required
           />
           <div className="min-w-0 flex flex-col gap-1">
-            <FieldLabel required>{makesLoading ? 'Марка (зарежда...)' : 'Марка'}</FieldLabel>
+            <FieldLabel required>
+              {makesLoading ? "Марка (зарежда...)" : "Марка"}
+            </FieldLabel>
             <AutocompleteInput
               value={form.make}
               onChange={updateMake}
@@ -1032,14 +1157,20 @@ export default function NewListingForm({
               placeholder="Type make"
               emptyLabel="No make matches"
               hideLowCountOnEmpty
-              open={openAutocomplete === 'make'}
-              trailingText={selectedMakeCount != null ? selectedMakeCount.toLocaleString('en-US') : null}
+              open={openAutocomplete === "make"}
+              trailingText={
+                selectedMakeCount != null
+                  ? selectedMakeCount.toLocaleString("en-US")
+                  : null
+              }
               onOpenChange={(open) => {
                 if (open) {
-                  setOpenAutocomplete('make');
+                  setOpenAutocomplete("make");
                   return;
                 }
-                setOpenAutocomplete((current) => (current === 'make' ? null : current));
+                setOpenAutocomplete((current) =>
+                  current === "make" ? null : current,
+                );
               }}
             />
           </div>
@@ -1047,61 +1178,91 @@ export default function NewListingForm({
             <FieldLabel>Модел</FieldLabel>
             <AutocompleteInput
               value={form.model}
-              onChange={(value) => setField('model', value)}
+              onChange={(value) => setField("model", value)}
               options={modelOptions}
               placeholder="Type model"
               emptyLabel="No model matches"
-              open={openAutocomplete === 'model'}
+              open={openAutocomplete === "model"}
               focusWhenOpen
-              trailingText={selectedModelCount != null ? selectedModelCount.toLocaleString('en-US') : null}
+              trailingText={
+                selectedModelCount != null
+                  ? selectedModelCount.toLocaleString("en-US")
+                  : null
+              }
               onOpenChange={(open) => {
                 if (open) {
-                  setOpenAutocomplete('model');
+                  setOpenAutocomplete("model");
                   return;
                 }
-                setOpenAutocomplete((current) => (current === 'model' ? null : current));
+                setOpenAutocomplete((current) =>
+                  current === "model" ? null : current,
+                );
               }}
             />
           </div>
-          <InputField label="Заглавие" value={form.title} onChange={(value) => setField('title', value)} maxLength={50} />
+          <InputField
+            label="Заглавие"
+            value={form.title}
+            onChange={(value) => setField("title", value)}
+            maxLength={50}
+          />
+          <SelectField
+            label="Двигател"
+            value={form.fuel}
+            onChange={(value) => setField("fuel", value)}
+            options={["", ...fuels.filter(Boolean)]}
+            accent
+          />
           <SelectField
             label="Състояние"
             value={form.condition}
-            onChange={(value) => setField('condition', value)}
+            onChange={(value) => setField("condition", value)}
             options={CONDITION_OPTIONS}
           />
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr]">
-          <InputField label="Мощност [к.с.]" value={form.power} onChange={(value) => setField('power', value)} type="number" maxLength={4} />
+          <InputField
+            label="Мощност [к.с.]"
+            value={form.power}
+            onChange={(value) => setField("power", value)}
+            type="number"
+            maxLength={4}
+          />
           <SelectField
             label="Евростандарт"
             value={form.euronorm}
-            onChange={(value) => setField('euronorm', value)}
+            onChange={(value) => setField("euronorm", value)}
             options={EURO_OPTIONS}
           />
           <SelectField
             label="Скоростна кутия"
             value={form.transmission}
-            onChange={(value) => setField('transmission', value)}
-            options={['', ...transmissions.filter(Boolean)]}
+            onChange={(value) => setField("transmission", value)}
+            options={["", ...transmissions.filter(Boolean)]}
             accent
           />
           <SelectField
             label="Категория"
             value={form.bodyType}
-            onChange={(value) => setField('bodyType', value)}
+            onChange={(value) => setField("bodyType", value)}
             options={BODY_TYPE_OPTIONS}
             accent
           />
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-3">
-          <InputField label="Кубатура [куб.см]" value={form.engineCc} onChange={(value) => setField('engineCc', value)} type="number" maxLength={5} />
+          <InputField
+            label="Кубатура [куб.см]"
+            value={form.engineCc}
+            onChange={(value) => setField("engineCc", value)}
+            type="number"
+            maxLength={5}
+          />
           <InputField
             label="Пробег с едно зареждане (WLTP) [км]"
             value={form.batteryRange}
-            onChange={(value) => setField('batteryRange', value)}
+            onChange={(value) => setField("batteryRange", value)}
             type="number"
             maxLength={4}
             accent
@@ -1110,7 +1271,7 @@ export default function NewListingForm({
           <InputField
             label="Капацитет на батерията [kWh]"
             value={form.batteryCapacity}
-            onChange={(value) => setField('batteryCapacity', value)}
+            onChange={(value) => setField("batteryCapacity", value)}
             type="number"
             maxLength={7}
             accent
@@ -1123,25 +1284,68 @@ export default function NewListingForm({
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
             <div className="grid gap-4 md:grid-cols-[90px_1fr_90px]">
-              <InputField label="Цена" value={form.price} onChange={(value) => setField('price', value)} type="number" maxLength={7} accent />
-              <SelectField label="ДДС" value={form.vat} onChange={(value) => setField('vat', value)} options={['', 'Частна продажба. / Освободена от ДДС продажба.', 'Цената е с включено ДДС', 'Цената е без ДДС']} accent />
-              <SelectField label="Валута" value={form.currency} onChange={(value) => setField('currency', value)} options={CURRENCY_OPTIONS} accent />
+              <InputField
+                label="Цена"
+                value={form.price}
+                onChange={(value) => setField("price", value)}
+                type="number"
+                maxLength={7}
+                accent
+              />
+              <SelectField
+                label="ДДС"
+                value={form.vat}
+                onChange={(value) => setField("vat", value)}
+                options={[
+                  "",
+                  "Частна продажба. / Освободена от ДДС продажба.",
+                  "Цената е с включено ДДС",
+                  "Цената е без ДДС",
+                ]}
+                accent
+              />
+              <SelectField
+                label="Валута"
+                value={form.currency}
+                onChange={(value) => setField("currency", value)}
+                options={CURRENCY_OPTIONS}
+                accent
+              />
             </div>
             <div className="mt-4">
               <CheckboxField
                 label="Цена само при запитване"
                 checked={form.priceOnRequest}
-                onChange={(checked) => setField('priceOnRequest', checked)}
+                onChange={(checked) => setField("priceOnRequest", checked)}
               />
             </div>
           </div>
 
-          <InputField label="Пробег [км]" value={form.mileage} onChange={(value) => setField('mileage', value)} type="number" maxLength={7} accent />
+          <InputField
+            label="Пробег [км]"
+            value={form.mileage}
+            onChange={(value) => setField("mileage", value)}
+            type="number"
+            maxLength={7}
+            accent
+          />
 
           <div className="min-w-0 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <SelectField label="Месец" value={form.productionMonth} onChange={(value) => setField('productionMonth', value)} options={MONTH_OPTIONS} accent />
-              <SelectField label="Година" value={form.productionYear} onChange={(value) => setField('productionYear', value)} options={PRODUCTION_YEAR_OPTIONS} accent />
+              <SelectField
+                label="Месец"
+                value={form.productionMonth}
+                onChange={(value) => setField("productionMonth", value)}
+                options={MONTH_OPTIONS}
+                accent
+              />
+              <SelectField
+                label="Година"
+                value={form.productionYear}
+                onChange={(value) => setField("productionYear", value)}
+                options={PRODUCTION_YEAR_OPTIONS}
+                accent
+              />
             </div>
           </div>
         </div>
@@ -1149,23 +1353,44 @@ export default function NewListingForm({
 
       <FormSection title="Цвят И Локация">
         <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1.1fr]">
-          <SelectField label="Цвят" value={form.color} onChange={(value) => setField('color', value)} options={COLOR_OPTIONS} />
+          <SelectField
+            label="Цвят"
+            value={form.color}
+            onChange={(value) => setField("color", value)}
+            options={COLOR_OPTIONS}
+          />
           <SelectField
             label="Намира се в"
             value={form.region}
             onChange={onRegionChange}
-            options={['', ...regions.map((region) => ({ value: region.value, label: region.label } as const))]}
+            options={[
+              "",
+              ...regions.map(
+                (region) =>
+                  ({ value: region.value, label: region.label }) as const,
+              ),
+            ]}
             accent
           />
           <SelectField
             label="Град"
             value={form.city}
-            onChange={(value) => setField('city', value)}
-            options={['', ...cities.map((city) => ({ value: city.value, label: city.label } as const))]}
+            onChange={(value) => setField("city", value)}
+            options={[
+              "",
+              ...cities.map(
+                (city) => ({ value: city.value, label: city.label }) as const,
+              ),
+            ]}
             accent
             disabled={!form.region || citiesLoading}
           />
-          <InputField label="VIN номер" value={form.vin} onChange={(value) => setField('vin', value)} maxLength={17} />
+          <InputField
+            label="VIN номер"
+            value={form.vin}
+            onChange={(value) => setField("vin", value)}
+            maxLength={17}
+          />
         </div>
       </FormSection>
 
@@ -1189,7 +1414,7 @@ export default function NewListingForm({
             <FieldLabel>Допълнителна информация</FieldLabel>
             <textarea
               value={form.description}
-              onChange={(event) => setField('description', event.target.value)}
+              onChange={(event) => setField("description", event.target.value)}
               rows={10}
               maxLength={11000}
               className="mt-2 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
@@ -1197,13 +1422,34 @@ export default function NewListingForm({
           </div>
 
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <h3 className="mb-4 text-sm font-semibold text-white">Данни за обратна връзка</h3>
+            <h3 className="mb-4 text-sm font-semibold text-white">
+              Данни за обратна връзка
+            </h3>
             <div className="space-y-4">
-              <InputField label="Мобилен телефон" value={form.phone} onChange={(value) => setField('phone', value)} maxLength={14} accent />
-              <InputField label="Електронна поща" value={form.email} onChange={(value) => setField('email', value)} maxLength={40} accent />
-              <InputField label="http://" value={form.website} onChange={(value) => setField('website', value)} maxLength={40} />
+              <InputField
+                label="Мобилен телефон"
+                value={form.phone}
+                onChange={(value) => setField("phone", value)}
+                maxLength={14}
+                accent
+              />
+              <InputField
+                label="Електронна поща"
+                value={form.email}
+                onChange={(value) => setField("email", value)}
+                maxLength={40}
+                accent
+              />
+              <InputField
+                label="http://"
+                value={form.website}
+                onChange={(value) => setField("website", value)}
+                maxLength={40}
+              />
             </div>
-            <p className="mt-6 text-xs text-sky-300">Оцветените в синьо полета са задължителни в Mobile.bg.</p>
+            <p className="mt-6 text-xs text-sky-300">
+              Оцветените в синьо полета са задължителни в Mobile.bg.
+            </p>
           </div>
         </div>
       </FormSection>
@@ -1215,9 +1461,12 @@ export default function NewListingForm({
           disabled={saving}
           className="rounded-full bg-sky-500 px-6 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? 'Запазване...' : 'Запази обявата'}
+          {saving ? "Запазване..." : "Запази обявата"}
         </button>
-        <button onClick={resetForm} className="text-sm text-gray-400 hover:text-white">
+        <button
+          onClick={resetForm}
+          className="text-sm text-gray-400 hover:text-white"
+        >
           Изчисти
         </button>
       </div>
