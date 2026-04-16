@@ -21,8 +21,9 @@ interface DealerRow {
   name: string;
 }
 interface DealerListingSummaryRow {
+  backup_id: number;
   dealer_id: number;
-  mobile_id: string;
+  mobile_id: string | null;
   make: string | null;
   model: string | null;
   title: string | null;
@@ -32,6 +33,7 @@ interface DealerListingSummaryRow {
   image_meta: string | null;
   images_downloaded: number | null;
   thumb_saved: number | null;
+  is_draft: number;
 }
 
 function getOwnDealers(): DealerRow[] {
@@ -42,10 +44,11 @@ function getOwnDealers(): DealerRow[] {
     .all() as DealerRow[];
 }
 
-function getDealerListingsByDealer(): Record<
+function getOwnListingsByDealer(): Record<
   string,
   Array<{
     mobileId: string;
+    backupId: number | null;
     make: string;
     model: string;
     title: string;
@@ -66,7 +69,8 @@ function getDealerListingsByDealer(): Record<
       FROM mobilebg_backups b
     )
     SELECT
-      l.dealer_id,
+      b.id as backup_id,
+      b.dealer_id,
       l.mobile_id,
       COALESCE(b.make, l.make) as make,
       COALESCE(b.model, l.model) as model,
@@ -76,15 +80,16 @@ function getDealerListingsByDealer(): Record<
       l.full_keys,
       l.image_meta,
       l.images_downloaded,
-      l.thumb_saved
-    FROM listings l
-    LEFT JOIN ranked_backups b
-      ON b.listing_id = l.id
-      AND b.row_num = 1
-    WHERE COALESCE(l.is_active, 1) = 1
-      AND COALESCE(l.source, 'm') = 'm'
-      AND l.dealer_id IN (SELECT id FROM dealers WHERE own = 1 AND active = 1)
-    ORDER BY l.dealer_id, l.last_edit DESC, l.id DESC
+      l.thumb_saved,
+      CASE WHEN l.id IS NULL THEN 1 ELSE 0 END as is_draft
+    FROM ranked_backups b
+    LEFT JOIN listings l ON l.id = b.listing_id
+    LEFT JOIN dealers d ON b.dealer_id = d.id
+    WHERE b.row_num = 1
+      AND d.own = 1 AND d.active = 1
+      AND (l.is_active = 1 OR l.id IS NULL)
+      AND (l.duplicate = 0 OR l.duplicate IS NULL)
+    ORDER BY b.dealer_id, is_draft DESC, l.last_edit DESC, b.id DESC
   `,
     )
     .all() as DealerListingSummaryRow[];
@@ -93,6 +98,7 @@ function getDealerListingsByDealer(): Record<
     string,
     Array<{
       mobileId: string;
+      backupId: number | null;
       make: string;
       model: string;
       title: string;
@@ -102,25 +108,27 @@ function getDealerListingsByDealer(): Record<
   > = {};
 
   for (const row of rows) {
+    const mobileId = row.mobile_id ?? "";
     const imageMeta = parseJson<ImageMeta | null>(row.image_meta, null);
     const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
     const fullKeys = parseJson<string[]>(row.full_keys, []);
     const images = buildImageList(
-      row.mobile_id,
+      mobileId,
       fullKeys.length ? fullKeys : thumbKeys,
       thumbKeys,
       imageMeta,
       row.images_downloaded === 1,
     );
     const thumb = images[0]?.thumb
-      ? getThumbProxyUrl(row.mobile_id, images[0].thumb)
+      ? getThumbProxyUrl(mobileId, images[0].thumb)
       : row.thumb_saved === 1
-        ? getThumbProxyUrl(row.mobile_id, null)
+        ? getThumbProxyUrl(mobileId, null)
         : null;
     const key = String(row.dealer_id);
     if (!byDealer[key]) byDealer[key] = [];
     byDealer[key].push({
-      mobileId: row.mobile_id,
+      mobileId,
+      backupId: row.backup_id,
       make: row.make ?? "",
       model: row.model ?? "",
       title: row.title ?? "",
@@ -158,7 +166,7 @@ export default async function NewListingPage() {
   const initialDealerId = dealers.find(
     (dealer) => dealer.slug === "carbros",
   )?.id;
-  const dealerListingsByDealer = getDealerListingsByDealer();
+  const dealerListingsByDealer = getOwnListingsByDealer();
 
   return (
     <div className="min-h-screen bg-[#111827]">

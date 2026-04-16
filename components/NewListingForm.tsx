@@ -32,6 +32,7 @@ interface AutocompleteOption {
 
 interface DealerListingSummary {
   mobileId: string;
+  backupId: number | null;
   make: string;
   model: string;
   title: string;
@@ -376,10 +377,10 @@ function normalizeAutocompleteValue(value: string) {
 
 function sortMakeOptions(options: AutocompleteOption[]) {
   return [...options].sort((a, b) => {
-    const aHigh = (a.count ?? 0) > 10000 ? 1 : 0;
-    const bHigh = (b.count ?? 0) > 10000 ? 1 : 0;
-    if (aHigh !== bHigh) return bHigh - aHigh;
-    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0)) {
+    const aHasCount = a.count != null ? 1 : 0;
+    const bHasCount = b.count != null ? 1 : 0;
+    if (aHasCount !== bHasCount) return bHasCount - aHasCount;
+    if (aHasCount && bHasCount && (a.count ?? 0) !== (b.count ?? 0)) {
       return (b.count ?? 0) - (a.count ?? 0);
     }
     return a.value.localeCompare(b.value, "bg");
@@ -740,7 +741,7 @@ function DealerListingPicker({
   selectedMobileId: string | null;
   prefillingMobileId: string | null;
   error: string;
-  onSelect: (mobileId: string) => void;
+  onSelect: (mobileId: string, backupId: number | null) => void;
 }) {
   if (loading) {
     return (
@@ -770,13 +771,14 @@ function DealerListingPicker({
     <div>
       <div className="grid max-h-80 gap-2 overflow-y-auto pr-2.5 md:grid-cols-2 xl:grid-cols-3">
         {listings.map((listing) => {
-          const selected = selectedMobileId === listing.mobileId;
-          const prefilling = prefillingMobileId === listing.mobileId;
+          const key = listing.mobileId || `b:${listing.backupId}`;
+          const selected = selectedMobileId === (listing.mobileId || String(listing.backupId));
+          const prefilling = prefillingMobileId === (listing.mobileId || String(listing.backupId));
           return (
             <button
-              key={listing.mobileId}
+              key={key}
               type="button"
-              onClick={() => onSelect(listing.mobileId)}
+              onClick={() => onSelect(listing.mobileId, listing.backupId)}
               disabled={Boolean(prefillingMobileId)}
               className={`flex w-full items-center gap-2 rounded-md border px-1.5 py-1 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 selected
@@ -801,7 +803,7 @@ function DealerListingPicker({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-white">
                   {[listing.make, listing.model].filter(Boolean).join(" ") ||
-                    listing.mobileId}
+                    listing.mobileId || "Чернова"}
                 </div>
                 <div className="truncate text-xs text-gray-400">
                   {listing.title || "—"}
@@ -1050,16 +1052,17 @@ export default function NewListingForm({
     }
   }
 
-  async function prefillFromListing(mobileId: string) {
+  async function prefillFromListing(mobileId: string, backupId: number | null) {
     if (!form.dealerId) return;
 
-    setPrefillingMobileId(mobileId);
+    setPrefillingMobileId(mobileId || String(backupId));
     setError("");
 
     try {
-      const response = await fetch(
-        `/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`,
-      );
+      const url = mobileId
+        ? `/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`
+        : `/api/editown/backups/${backupId}`;
+      const response = await fetch(url);
       const data = (await response.json()) as PrefillResponse & {
         error?: string;
       };
@@ -1078,7 +1081,7 @@ export default function NewListingForm({
         setCities([]);
       }
       setForm(nextForm);
-      setSelectedTemplateMobileId(mobileId);
+      setSelectedTemplateMobileId(mobileId || String(backupId));
       setOpenAutocomplete(null);
     } catch (prefillError) {
       setError((prefillError as Error).message);
@@ -1135,7 +1138,7 @@ export default function NewListingForm({
                 selectedMobileId={selectedTemplateMobileId}
                 prefillingMobileId={prefillingMobileId}
                 error=""
-                onSelect={(mobileId) => void prefillFromListing(mobileId)}
+                onSelect={(mobileId, backupId) => void prefillFromListing(mobileId, backupId)}
               />
             </div>
           ) : null}
