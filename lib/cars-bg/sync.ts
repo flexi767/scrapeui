@@ -177,10 +177,14 @@ export function clearCarsId(db: Database.Database, carsId: string): void {
 export function applyCarsBgSyncedContent(
   db: Database.Database,
   listingId: number,
-  content: { title?: string | null; description?: string | null },
+  content: { title?: string | null; description?: string | null; price?: number | null },
 ): void {
   const assignments: string[] = [];
   const values: unknown[] = [];
+  if (content.price !== undefined) {
+    assignments.push('current_price = ?');
+    values.push(content.price ?? null);
+  }
   if (content.title !== undefined) {
     assignments.push('carsbg_title = ?');
     values.push(content.title ?? null);
@@ -971,6 +975,12 @@ function compareListings(mobile: CarsBgSyncListing[], cars: CarsBgSyncListing[])
       match = carsById.get(mobileListing.carsId) ?? null;
       if (match) {
         matchedCars.add(match.id);
+      } else {
+        // The offer is already linked to a cars.bg id, but we don't have the
+        // corresponding `source='c'` crawl row locally yet. Treat it as already
+        // published instead of planning a duplicate create against stale local
+        // data.
+        continue;
       }
     }
 
@@ -1377,6 +1387,14 @@ export async function syncCarsBgDealer(
         result.updated++;
       } else {
         result.failedUpdates++;
+      }
+      if (!diff.mobileBg.carsId && targetId && diff.mobileBg.mobileId) {
+        saveCarsId(db, diff.mobileBg.mobileId, targetId);
+      }
+      if (diff.priceDiff) {
+        applyCarsBgSyncedContent(db, diff.carsBg.id, {
+          price: diff.mobileBg.price.amount ?? null,
+        });
       }
       if (contentUpdated) {
         // Mirror what we just pushed to cars.bg onto the local `source='c'`
