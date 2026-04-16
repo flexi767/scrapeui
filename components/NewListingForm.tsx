@@ -1385,16 +1385,57 @@ export default function NewListingForm({
       </FormSection>
 
       <FormSection title="Екстри">
-        <div className="grid gap-4 xl:grid-cols-5 md:grid-cols-2">
-          {EXTRA_SECTIONS.map((section) => (
+        <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.6fr_0.6fr] md:grid-cols-2">
+          {/* Col 1 — Безопасност */}
+          <ExtrasColumn
+            category={EXTRA_SECTIONS[0].category}
+            items={EXTRA_SECTIONS[0].items}
+            selected={form.extras[EXTRA_SECTIONS[0].category] ?? []}
+            onToggle={(label) => toggleExtra(EXTRA_SECTIONS[0].category, label)}
+          />
+          {/* Col 2 — Комфорт */}
+          <ExtrasColumn
+            category={EXTRA_SECTIONS[1].category}
+            items={EXTRA_SECTIONS[1].items}
+            selected={form.extras[EXTRA_SECTIONS[1].category] ?? []}
+            onToggle={(label) => toggleExtra(EXTRA_SECTIONS[1].category, label)}
+          />
+          {/* Col 3 — Други stacked over Екстериор */}
+          <div className="flex flex-col gap-4">
             <ExtrasColumn
-              key={section.category}
-              category={section.category}
-              items={section.items}
-              selected={form.extras[section.category] ?? []}
-              onToggle={(label) => toggleExtra(section.category, label)}
+              category={EXTRA_SECTIONS[2].category}
+              items={EXTRA_SECTIONS[2].items}
+              selected={form.extras[EXTRA_SECTIONS[2].category] ?? []}
+              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[2].category, label)}
             />
-          ))}
+            <ExtrasColumn
+              category={EXTRA_SECTIONS[3].category}
+              items={EXTRA_SECTIONS[3].items}
+              selected={form.extras[EXTRA_SECTIONS[3].category] ?? []}
+              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[3].category, label)}
+            />
+          </div>
+          {/* Col 4 — Защита + Интериор + Специализирани */}
+          <div className="flex flex-col gap-4">
+            <ExtrasColumn
+              category={EXTRA_SECTIONS[4].category}
+              items={EXTRA_SECTIONS[4].items}
+              selected={form.extras[EXTRA_SECTIONS[4].category] ?? []}
+              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[4].category, label)}
+            />
+            <ExtrasColumn
+              category={EXTRA_SECTIONS[5].category}
+              items={EXTRA_SECTIONS[5].items}
+              selected={form.extras[EXTRA_SECTIONS[5].category] ?? []}
+              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[5].category, label)}
+            />
+            <ExtrasColumn
+              category={EXTRA_SECTIONS[6].category}
+              items={EXTRA_SECTIONS[6].items}
+              selected={form.extras[EXTRA_SECTIONS[6].category] ?? []}
+              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[6].category, label)}
+            />
+          </div>
         </div>
       </FormSection>
 
