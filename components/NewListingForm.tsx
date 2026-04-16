@@ -761,8 +761,8 @@ function DealerListingPicker({
   }
 
   return (
-    <div className="ml-2.5">
-      <div className="grid max-h-80 w-[calc(100%-10px)] gap-2 overflow-y-auto pr-2.5 md:grid-cols-2 xl:grid-cols-3">
+    <div>
+      <div className="grid max-h-80 gap-2 overflow-y-auto pr-2.5 md:grid-cols-2 xl:grid-cols-3">
         {listings.map((listing) => {
           const selected = selectedMobileId === listing.mobileId;
           const prefilling = prefillingMobileId === listing.mobileId;
