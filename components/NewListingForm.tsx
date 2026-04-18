@@ -447,7 +447,7 @@ function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {options.map((option) => {
           if (typeof option === "string") {
@@ -502,7 +502,7 @@ function InputField({
         onChange={(event) => onChange(event.target.value)}
         maxLength={maxLength}
         disabled={disabled}
-        className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       />
     </div>
   );
@@ -621,7 +621,7 @@ function AutocompleteInput({
           }, 120);
         }}
         placeholder={placeholder}
-        className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 pr-14 text-sm text-white focus:border-sky-500 focus:outline-none"
+        className="h-10 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 pr-14 text-sm text-white focus:border-sky-500 focus:outline-none"
       />
       {trailingText ? (
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
@@ -1217,7 +1217,7 @@ export default function NewListingForm({
               value={form.title}
               onChange={(event) => setField("title", event.target.value)}
               maxLength={50}
-              className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+              className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
             />
           </div>
           <SelectField

@@ -9,6 +9,7 @@ import { PlaywrightCrawler } from "crawlee";
 import path from "path";
 import { fileURLToPath } from "url";
 import util from "util";
+import { execSync } from "child_process";
 import Database from "better-sqlite3";
 import {
   fetchMakesModels,
@@ -1044,7 +1045,33 @@ async function scrapeCompetitorForUI(
   return count;
 }
 
+function killOtherInstances() {
+  const myPid = process.pid;
+  try {
+    const out = execSync(
+      `pgrep -f 'run-for-ui\\.ts' || true`,
+      { encoding: "utf-8" },
+    ).trim();
+    if (!out) return;
+    const pids = out
+      .split("\n")
+      .map((s) => parseInt(s, 10))
+      .filter((pid) => pid && pid !== myPid);
+    for (const pid of pids) {
+      try {
+        process.kill(pid, "SIGTERM");
+        emit({ type: "log", message: `Killed previous scrapeui instance (pid ${pid})` });
+      } catch {
+        // already dead
+      }
+    }
+  } catch {
+    // pgrep not available or failed — continue anyway
+  }
+}
+
 async function main() {
+  killOtherInstances();
   const __dirname = fileURLToPath(new URL(".", import.meta.url));
   const db = new Database(
     process.env.DB_PATH ||
