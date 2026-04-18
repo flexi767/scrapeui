@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { getMobileBgEditForms } from '@/lib/queries';
-import { buildImageList, formatDate, getThumbProxyUrl, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
 
 export default function MobileBgEditFormsPage() {
   const rows = getMobileBgEditForms(250);
@@ -42,7 +42,7 @@ export default function MobileBgEditFormsPage() {
                   imageMeta,
                   row.images_downloaded === 1,
                 );
-                const thumb = images[0]?.thumb ?? (row.mobile_id && row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
+                const thumb = getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
 
                 return (
               <tr key={row.id} className="hover:bg-gray-800/40">

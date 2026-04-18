@@ -4,7 +4,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -169,7 +169,9 @@ export default async function DeletedListingsPage({
                 const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
                 const fullKeys = parseJson<string[]>(row.full_keys, []);
                 const images = buildImageList(row.mobile_id, fullKeys.length ? fullKeys : thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
-                const thumb = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
+                const thumb = row.first_backup_image_id
+                  ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
+                  : getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
                   <tr key={listingSlug} className="group bg-red-950/10 transition-colors hover:bg-red-950/20">

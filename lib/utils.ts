@@ -75,6 +75,18 @@ export interface ListingImage {
   thumb: string;
 }
 
+export function getPreferredListingThumbUrl(
+  mobileId: string | null | undefined,
+  remoteThumbUrl: string | null | undefined,
+  thumbSaved: number | null | undefined,
+): string | null {
+  if (!mobileId) return remoteThumbUrl ?? null;
+  if (thumbSaved === 1 || remoteThumbUrl) {
+    return getThumbProxyUrl(mobileId, remoteThumbUrl ?? null);
+  }
+  return null;
+}
+
 function normalizeImageKey(key: string): string {
   return key.trim();
 }

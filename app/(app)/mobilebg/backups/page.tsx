@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { getMobileBgBackups } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
 
 export default function MobileBgBackupsPage() {
   const backups = getMobileBgBackups(250);
@@ -44,10 +44,7 @@ export default function MobileBgBackupsPage() {
               );
               const thumb = backup.first_backup_image_id
                 ? `/api/mobilebg-backup-images/${backup.first_backup_image_id}`
-                : (
-                    images[0]?.thumb
-                    ?? (backup.mobile_id && backup.thumb_saved === 1 ? getThumbProxyUrl(backup.mobile_id, null) : null)
-                  );
+                : getPreferredListingThumbUrl(backup.mobile_id, images[0]?.thumb, backup.thumb_saved);
 
               return (
               <tr key={backup.id} className="hover:bg-gray-800/40">

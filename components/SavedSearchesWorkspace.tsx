@@ -31,7 +31,7 @@ import {
   buildImageList,
   formatMileage,
   formatPrice,
-  getThumbProxyUrl,
+  getPreferredListingThumbUrl,
   parseJson,
   type ImageMeta,
 } from "@/lib/utils";
@@ -363,10 +363,11 @@ export default function SavedSearchesWorkspace({
       )
     : [];
   const thumbSrc = listing?.mobile_id
-    ? (images[0]?.thumb ??
-      (listing.thumbSaved === 1
-        ? getThumbProxyUrl(listing.mobile_id, null)
-        : null))
+    ? getPreferredListingThumbUrl(
+        listing.mobile_id,
+        images[0]?.thumb,
+        listing.thumbSaved,
+      )
     : null;
 
   useEffect(() => {

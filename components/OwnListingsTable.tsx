@@ -8,7 +8,7 @@ import { Check, RefreshCw, SearchIcon, X } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { OwnListingRow } from '@/lib/queries';
-import { formatPrice, formatDate, buildImageList, getThumbProxyUrl, parseJson } from '@/lib/utils';
+import { formatPrice, formatDate, buildImageList, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
@@ -392,15 +392,16 @@ export default function OwnListingsTable({ initialRows }: Props) {
             );
             const thumbSrc = row.first_backup_image_id
               ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-              : (images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null));
+              : getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
 
             const kmFormatted = row.mileage != null
               ? row.mileage.toLocaleString('en-US')
               : '—';
+            const rowKey = row.mobile_id ?? `backup-${row.backup_id}`;
 
             return (
               <tr
-                key={row.mobile_id}
+                key={rowKey}
                 className={`align-middle transition-colors ${
                   editing
                     ? 'bg-gray-800'

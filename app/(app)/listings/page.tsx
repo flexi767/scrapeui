@@ -4,7 +4,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, getThumbProxyUrl, parseJson } from '@/lib/utils';
+import { buildImageList, formatDate, formatPrice, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -250,7 +250,9 @@ export default async function ListingsPage({
                   imageMeta,
                   row.images_downloaded === 1,
                 );
-                const thumb = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
+                const thumb = row.first_backup_image_id
+                  ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
+                  : getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
 
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (

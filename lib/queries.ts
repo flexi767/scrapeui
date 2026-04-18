@@ -32,6 +32,7 @@ export interface ListingRow {
   image_meta: string;
   images_downloaded: number;
   thumb_saved?: number;
+  first_backup_image_id?: number | null;
   dealer_name: string;
   dealer_slug: string;
   is_active: number;
@@ -404,6 +405,14 @@ export function getListings(filters: ListingFilters = {}) {
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
+      (
+        SELECT i.id
+        FROM mobilebg_backups b
+        JOIN mobilebg_backup_images i ON i.backup_id = b.id
+        WHERE b.listing_id = l.id
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
@@ -555,6 +564,14 @@ export function getDeletedListings(filters: ListingFilters = {}) {
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active, l.deleted_at,
+      (
+        SELECT i.id
+        FROM mobilebg_backups b
+        JOIN mobilebg_backup_images i ON i.backup_id = b.id
+        WHERE b.listing_id = l.id
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
@@ -980,6 +997,7 @@ export interface TrackedChangeRow {
   full_keys: string | null;
   images_downloaded: number | null;
   thumb_saved: number | null;
+  first_backup_image_id: number | null;
   snapshot_price: number | null;
   snapshot_vat: string | null;
   snapshot_last_edit: string | null;
@@ -1292,6 +1310,14 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
         l.full_keys,
         l.images_downloaded,
         l.thumb_saved,
+        (
+          SELECT i.id
+          FROM mobilebg_backups b
+          JOIN mobilebg_backup_images i ON i.backup_id = b.id
+          WHERE b.listing_id = l.id
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
+          LIMIT 1
+        ) as first_backup_image_id,
         s.price as snapshot_price,
         s.vat as snapshot_vat,
         s.last_edit as snapshot_last_edit,
