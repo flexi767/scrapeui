@@ -1,6 +1,10 @@
 import { raw } from '@/db/client';
 import { getEditOwnSyncRows } from '@/lib/queries';
-import { updateBackupOnMobileBg } from '@/lib/mobile-bg/update';
+import {
+  closeMobileBgUpdateSession,
+  createMobileBgUpdateSession,
+  updateBackupOnMobileBg,
+} from '@/lib/mobile-bg/update';
 
 interface DealerRow {
   id: number;
@@ -46,107 +50,144 @@ async function main() {
     return;
   }
 
-  for (const row of queue) {
-    const target: SyncTarget = {
-      backup_id: row.backup_id,
-      mobile_id: row.mobile_id,
-      title: row.title,
-      make: row.make,
-      model: row.model,
-      dealer_name: row.dealer_name,
-      dealer_slug: row.dealer_slug,
-    };
+  let activeDealerSlug: string | null = null;
+  let activeSession: Awaited<ReturnType<typeof createMobileBgUpdateSession>> | null = null;
 
-    emit({
-      type: 'checking',
-      total: queue.length,
-      completed,
-      succeeded,
-      failed,
-      target,
-      message: `Syncing ${[row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`}…`,
-    });
+  try {
+    for (const row of queue) {
+      const target: SyncTarget = {
+        backup_id: row.backup_id,
+        mobile_id: row.mobile_id,
+        title: row.title,
+        make: row.make,
+        model: row.model,
+        dealer_name: row.dealer_name,
+        dealer_slug: row.dealer_slug,
+      };
 
-    const dealer = raw.prepare(`
+      emit({
+        type: 'checking',
+        total: queue.length,
+        completed,
+        succeeded,
+        failed,
+        target,
+        message: `Syncing ${[row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`}…`,
+      });
+
+      const dealer = raw.prepare(`
       SELECT id, slug, name, mobile_user, mobile_password
       FROM dealers
       WHERE slug = ?
     `).get(row.dealer_slug) as DealerRow | undefined;
 
-    if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
-      completed += 1;
-      failed += 1;
-      emit({
-        type: 'result',
-        total: queue.length,
-        completed,
-        succeeded,
-        failed,
-        row: {
-          backup_id: row.backup_id,
-          mobile_id: row.mobile_id,
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          error: 'Dealer not found or missing mobile.bg credentials',
-        },
-        message: 'Dealer not found or missing mobile.bg credentials',
-      });
-      continue;
+      if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
+        completed += 1;
+        failed += 1;
+        emit({
+          type: 'result',
+          total: queue.length,
+          completed,
+          succeeded,
+          failed,
+          row: {
+            backup_id: row.backup_id,
+            mobile_id: row.mobile_id,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error: 'Dealer not found or missing mobile.bg credentials',
+          },
+          message: 'Dealer not found or missing mobile.bg credentials',
+        });
+        continue;
+      }
+
+      try {
+        if (activeDealerSlug !== dealer.slug || !activeSession) {
+          if (activeSession) {
+            emit({ type: 'log', level: 'info', message: `Closing mobile.bg session for ${activeDealerSlug}…` });
+            await closeMobileBgUpdateSession(activeSession);
+            activeSession = null;
+          }
+
+          activeDealerSlug = dealer.slug;
+          activeSession = await createMobileBgUpdateSession(
+            {
+              id: dealer.id,
+              slug: dealer.slug,
+              name: dealer.name,
+              mobileUrl: '',
+              mobileUser: dealer.mobile_user,
+              mobilePassword: dealer.mobile_password,
+            },
+            (message) => emit({ type: 'log', level: 'info', dealer_slug: dealer.slug, message }),
+          );
+        }
+
+        await updateBackupOnMobileBg(
+          raw,
+          {
+            id: dealer.id,
+            slug: dealer.slug,
+            name: dealer.name,
+            mobileUrl: '',
+            mobileUser: dealer.mobile_user,
+            mobilePassword: dealer.mobile_password,
+          },
+          row.backup_id,
+          raw.name,
+          {
+            log: (message) => emit({ type: 'log', level: 'info', backup_id: row.backup_id, message }),
+            session: activeSession,
+          },
+        );
+
+        completed += 1;
+        succeeded += 1;
+        emit({
+          type: 'result',
+          total: queue.length,
+          completed,
+          succeeded,
+          failed,
+          row: {
+            backup_id: row.backup_id,
+            mobile_id: row.mobile_id,
+            status: 'success',
+            completed_at: new Date().toISOString(),
+            error: null,
+          },
+          message: `Finished syncing mobile.bg #${row.mobile_id}`,
+        });
+      } catch (error) {
+        if (activeSession && activeDealerSlug === dealer.slug) {
+          await closeMobileBgUpdateSession(activeSession).catch(() => {});
+          activeSession = null;
+        }
+
+        completed += 1;
+        failed += 1;
+        emit({
+          type: 'result',
+          total: queue.length,
+          completed,
+          succeeded,
+          failed,
+          row: {
+            backup_id: row.backup_id,
+            mobile_id: row.mobile_id,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error: error instanceof Error ? error.message : String(error),
+          },
+          message: error instanceof Error ? error.message : 'Sync failed',
+        });
+      }
     }
-
-    try {
-      await updateBackupOnMobileBg(
-        raw,
-        {
-          id: dealer.id,
-          slug: dealer.slug,
-          name: dealer.name,
-          mobileUrl: '',
-          mobileUser: dealer.mobile_user,
-          mobilePassword: dealer.mobile_password,
-        },
-        row.backup_id,
-        raw.name,
-        {
-          log: (message) => emit({ type: 'log', level: 'info', backup_id: row.backup_id, message }),
-        },
-      );
-
-      completed += 1;
-      succeeded += 1;
-      emit({
-        type: 'result',
-        total: queue.length,
-        completed,
-        succeeded,
-        failed,
-        row: {
-          backup_id: row.backup_id,
-          mobile_id: row.mobile_id,
-          status: 'success',
-          completed_at: new Date().toISOString(),
-          error: null,
-        },
-        message: `Finished syncing mobile.bg #${row.mobile_id}`,
-      });
-    } catch (error) {
-      completed += 1;
-      failed += 1;
-      emit({
-        type: 'result',
-        total: queue.length,
-        completed,
-        succeeded,
-        failed,
-        row: {
-          backup_id: row.backup_id,
-          mobile_id: row.mobile_id,
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          error: error instanceof Error ? error.message : String(error),
-        },
-        message: error instanceof Error ? error.message : 'Sync failed',
-      });
+  } finally {
+    if (activeSession) {
+      emit({ type: 'log', level: 'info', message: `Closing mobile.bg session for ${activeDealerSlug}…` });
+      await closeMobileBgUpdateSession(activeSession).catch(() => {});
     }
   }
 

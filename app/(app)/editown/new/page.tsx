@@ -33,6 +33,7 @@ interface DealerListingSummaryRow {
   image_meta: string | null;
   images_downloaded: number | null;
   thumb_saved: number | null;
+  first_backup_image_id: number | null;
   is_draft: number;
 }
 
@@ -81,6 +82,13 @@ function getOwnListingsByDealer(): Record<
       l.image_meta,
       l.images_downloaded,
       l.thumb_saved,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        WHERE i.backup_id = b.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id,
       CASE WHEN l.id IS NULL THEN 1 ELSE 0 END as is_draft
     FROM ranked_backups b
     LEFT JOIN listings l ON l.id = b.listing_id
@@ -119,11 +127,13 @@ function getOwnListingsByDealer(): Record<
       imageMeta,
       row.images_downloaded === 1,
     );
-    const thumb = images[0]?.thumb
-      ? getThumbProxyUrl(mobileId, images[0].thumb)
-      : row.thumb_saved === 1
-        ? getThumbProxyUrl(mobileId, null)
-        : null;
+    const thumb = row.first_backup_image_id
+      ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
+      : images[0]?.thumb
+        ? getThumbProxyUrl(mobileId, images[0].thumb)
+        : row.thumb_saved === 1
+          ? getThumbProxyUrl(mobileId, null)
+          : null;
     const key = String(row.dealer_id);
     if (!byDealer[key]) byDealer[key] = [];
     byDealer[key].push({

@@ -772,8 +772,11 @@ function DealerListingPicker({
       <div className="grid max-h-80 gap-2 overflow-y-auto pr-2.5 md:grid-cols-2 xl:grid-cols-3">
         {listings.map((listing) => {
           const key = listing.mobileId || `b:${listing.backupId}`;
-          const selected = selectedMobileId === (listing.mobileId || String(listing.backupId));
-          const prefilling = prefillingMobileId === (listing.mobileId || String(listing.backupId));
+          const selected =
+            selectedMobileId === (listing.mobileId || String(listing.backupId));
+          const prefilling =
+            prefillingMobileId ===
+            (listing.mobileId || String(listing.backupId));
           return (
             <button
               key={key}
@@ -803,7 +806,8 @@ function DealerListingPicker({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-white">
                   {[listing.make, listing.model].filter(Boolean).join(" ") ||
-                    listing.mobileId || "Чернова"}
+                    listing.mobileId ||
+                    "Чернова"}
                 </div>
                 <div className="truncate text-xs text-gray-400">
                   {listing.title || "—"}
@@ -1138,13 +1142,15 @@ export default function NewListingForm({
                 selectedMobileId={selectedTemplateMobileId}
                 prefillingMobileId={prefillingMobileId}
                 error=""
-                onSelect={(mobileId, backupId) => void prefillFromListing(mobileId, backupId)}
+                onSelect={(mobileId, backupId) =>
+                  void prefillFromListing(mobileId, backupId)
+                }
               />
             </div>
           ) : null}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1fr_1fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_2fr_1fr_1fr]">
           <div className="min-w-0 flex flex-col gap-1">
             <FieldLabel required>
               {makesLoading ? "Марка (зарежда...)" : "Марка"}
@@ -1199,24 +1205,27 @@ export default function NewListingForm({
               }}
             />
           </div>
-          <InputField
-            label="Заглавие"
-            value={form.title}
-            onChange={(value) => setField("title", value)}
-            maxLength={50}
-          />
+          <div className="min-w-0 flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3">
+              <FieldLabel required>Заглавие</FieldLabel>
+              <span className="text-xs text-gray-500">
+                {form.title.length}/50
+              </span>
+            </div>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(event) => setField("title", event.target.value)}
+              maxLength={50}
+              className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+            />
+          </div>
           <SelectField
             label="Двигател"
             value={form.fuel}
             onChange={(value) => setField("fuel", value)}
             options={["", ...fuels.filter(Boolean)]}
             accent
-          />
-          <SelectField
-            label="Състояние"
-            value={form.condition}
-            onChange={(value) => setField("condition", value)}
-            options={CONDITION_OPTIONS}
           />
         </div>
 
@@ -1260,7 +1269,7 @@ export default function NewListingForm({
           />
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <div className="mt-4 grid gap-4 xl:grid-cols-4">
           <InputField
             label="Кубатура [куб.см]"
             value={form.engineCc}
@@ -1268,24 +1277,32 @@ export default function NewListingForm({
             type="number"
             maxLength={5}
           />
-          <InputField
-            label="Пробег с едно зареждане (WLTP) [км]"
-            value={form.batteryRange}
-            onChange={(value) => setField("batteryRange", value)}
-            type="number"
-            maxLength={4}
-            accent
-            disabled={!showBatteryFields}
+          <SelectField
+            label="Състояние"
+            value={form.condition}
+            onChange={(value) => setField("condition", value)}
+            options={CONDITION_OPTIONS}
           />
-          <InputField
-            label="Капацитет на батерията [kWh]"
-            value={form.batteryCapacity}
-            onChange={(value) => setField("batteryCapacity", value)}
-            type="number"
-            maxLength={7}
-            accent
-            disabled={!showBatteryFields}
-          />
+          {showBatteryFields ? (
+            <>
+              <InputField
+                label="Пробег с едно зареждане (WLTP) [км]"
+                value={form.batteryRange}
+                onChange={(value) => setField("batteryRange", value)}
+                type="number"
+                maxLength={4}
+                accent
+              />
+              <InputField
+                label="Капацитет на батерията [kWh]"
+                value={form.batteryCapacity}
+                onChange={(value) => setField("batteryCapacity", value)}
+                type="number"
+                maxLength={7}
+                accent
+              />
+            </>
+          ) : null}
         </div>
       </FormSection>
 
@@ -1415,13 +1432,17 @@ export default function NewListingForm({
               category={EXTRA_SECTIONS[2].category}
               items={EXTRA_SECTIONS[2].items}
               selected={form.extras[EXTRA_SECTIONS[2].category] ?? []}
-              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[2].category, label)}
+              onToggle={(label) =>
+                toggleExtra(EXTRA_SECTIONS[2].category, label)
+              }
             />
             <ExtrasColumn
               category={EXTRA_SECTIONS[3].category}
               items={EXTRA_SECTIONS[3].items}
               selected={form.extras[EXTRA_SECTIONS[3].category] ?? []}
-              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[3].category, label)}
+              onToggle={(label) =>
+                toggleExtra(EXTRA_SECTIONS[3].category, label)
+              }
             />
           </div>
           {/* Col 4 — Защита + Интериор + Специализирани */}
@@ -1430,19 +1451,25 @@ export default function NewListingForm({
               category={EXTRA_SECTIONS[4].category}
               items={EXTRA_SECTIONS[4].items}
               selected={form.extras[EXTRA_SECTIONS[4].category] ?? []}
-              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[4].category, label)}
+              onToggle={(label) =>
+                toggleExtra(EXTRA_SECTIONS[4].category, label)
+              }
             />
             <ExtrasColumn
               category={EXTRA_SECTIONS[5].category}
               items={EXTRA_SECTIONS[5].items}
               selected={form.extras[EXTRA_SECTIONS[5].category] ?? []}
-              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[5].category, label)}
+              onToggle={(label) =>
+                toggleExtra(EXTRA_SECTIONS[5].category, label)
+              }
             />
             <ExtrasColumn
               category={EXTRA_SECTIONS[6].category}
               items={EXTRA_SECTIONS[6].items}
               selected={form.extras[EXTRA_SECTIONS[6].category] ?? []}
-              onToggle={(label) => toggleExtra(EXTRA_SECTIONS[6].category, label)}
+              onToggle={(label) =>
+                toggleExtra(EXTRA_SECTIONS[6].category, label)
+              }
             />
           </div>
         </div>

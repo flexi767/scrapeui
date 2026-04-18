@@ -42,7 +42,12 @@ export default function MobileBgBackupsPage() {
                 imageMeta,
                 backup.images_downloaded === 1,
               );
-              const thumb = images[0]?.thumb ?? (backup.mobile_id && backup.thumb_saved === 1 ? getThumbProxyUrl(backup.mobile_id, null) : null);
+              const thumb = backup.first_backup_image_id
+                ? `/api/mobilebg-backup-images/${backup.first_backup_image_id}`
+                : (
+                    images[0]?.thumb
+                    ?? (backup.mobile_id && backup.thumb_saved === 1 ? getThumbProxyUrl(backup.mobile_id, null) : null)
+                  );
 
               return (
               <tr key={backup.id} className="hover:bg-gray-800/40">

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Design Proposal v2</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f1117; color: #e0e0e0; margin: 0; padding: 20px; }
+  h2 { color: #7dd3fc; margin-bottom: 4px; font-size: 1.1rem; }
+  .subtitle { color: #6b7280; font-size: 0.85rem; margin-bottom: 24px; }
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #9ca3af; margin-bottom: 10px; }
+  .row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .field {
+    flex: 1; min-width: 60px; background: #1e2030; border: 1px solid #3a3d50; border-radius: 6px;
+    padding: 7px 10px; font-size: 0.73rem; color: #c9d1e0; text-align: center;
+  }
+  .field.new { background: #162516; border-color: #22c55e; color: #86efac; }
+  .field.accent { border-color: #38bdf8; color: #7dd3fc; }
+  .field.wide { flex: 2; }
+  .row-label { font-size: 0.62rem; color: #4b5563; text-transform: uppercase; letter-spacing: 0.06em; margin: 8px 0 4px; }
+  .badge { display: inline-block; font-size: 0.6rem; background: #1e3a1e; color: #86efac; border: 1px solid #22c55e; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  .badge.changed { background: #2a2010; color: #fcd34d; border-color: #f59e0b; }
+  .badge.same { background: #1a1d27; color: #6b7280; border-color: #374151; }
+  .checkbox-row { font-size: 0.72rem; color: #94a3b8; padding: 4px 0 2px; }
+
+  /* Extras 4-column layout */
+  .extras-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.6fr 0.6fr;
+    gap: 8px;
+    align-items: start;
+  }
+  .extras-col { display: flex; flex-direction: column; gap: 8px; }
+  .extras-box {
+    background: #1e2030; border: 1px solid #3a3d50; border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .extras-box .cat { font-size: 0.73rem; font-weight: 600; color: #e2e8f0; margin-bottom: 6px; }
+  .extras-box .items { display: flex; flex-direction: column; gap: 3px; }
+  .extras-box .item { font-size: 0.65rem; color: #6b7280; }
+  .extras-box .item-more { font-size: 0.6rem; color: #4b5563; font-style: italic; }
+  .col-label { font-size: 0.6rem; color: #4b5563; text-align: center; margin-bottom: 4px; }
+
+  .change-list { background: #1e1a2e; border: 1px solid #7c3aed; border-radius: 10px; padding: 14px 16px; font-size: 0.8rem; color: #c4b5fd; margin-top: 20px; }
+  .change-list strong { color: #a78bfa; }
+  .change-list ol { margin: 8px 0 0; padding-left: 18px; }
+  .change-list li { margin-bottom: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h2>Proposed Layout — Matching Mobile.bg (v2)</h2>
+<p class="subtitle">Corrected extras: 4 columns, first two wider</p>
+
+<div class="section">
+  <div class="section-title">Section 1 — Vehicle details</div>
+  <div class="row-label">Row 1</div>
+  <div class="row">
+    <div class="field">Основна категория</div>
+    <div class="field">Марка ★</div>
+    <div class="field">Модел</div>
+    <div class="field">Заглавие</div>
+    <div class="field new">Двигател ★ <span class="badge">new</span></div>
+    <div class="field">Състояние</div>
+  </div>
+  <div class="row-label">Row 2</div>
+  <div class="row">
+    <div class="field">Мощност [к.с.]</div>
+    <div class="field">Евростандарт</div>
+    <div class="field accent">Скоростна кутия ★</div>
+    <div class="field accent">Категория ★</div>
+  </div>
+  <div class="row-label">Row 3</div>
+  <div class="row">
+    <div class="field">Кубатура [куб.см]</div>
+    <div class="field accent">Пробег с зареждане ★</div>
+    <div class="field accent">Капацитет батерия ★</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Section 2 — Цена и Производство <span class="badge changed">layout change</span></div>
+  <div class="row-label">Flat row — no nested boxes</div>
+  <div class="row">
+    <div class="field accent">Цена ★</div>
+    <div class="field wide accent">ДДС ★</div>
+    <div class="field accent">Валута ★</div>
+    <div class="field accent">Пробег [км] ★</div>
+    <div class="field accent">Месец ★</div>
+    <div class="field accent">Година ★</div>
+  </div>
+  <div class="checkbox-row">☐ Цена само при запитване</div>
+</div>
+
+<div class="section">
+  <div class="section-title">Section 3 — Цвят и Локация</div>
+  <div class="row">
+    <div class="field">Цвят</div>
+    <div class="field accent">Находится в ★</div>
+    <div class="field accent">Град ★</div>
+    <div class="field">VIN номер</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Section 4 — Екстри <span class="badge changed">layout change</span></div>
+  <div style="font-size:0.65rem;color:#6b7280;margin-bottom:8px">
+    4 columns — cols 1 &amp; 2 wider (1fr each), cols 3 &amp; 4 narrower (0.6fr each)
+  </div>
+
+  <div class="extras-grid">
+    <!-- Col 1: Безопасност -->
+    <div class="extras-col">
+      <div class="col-label">col 1 — wide</div>
+      <div class="extras-box">
+        <div class="cat">Безопасност</div>
+        <div class="items">
+          <div class="item">GPS система за проследяване</div>
+          <div class="item">Антиблокираща система</div>
+          <div class="item">Въздушни възглавници — Задни</div>
+          <div class="item">Въздушни възглавници — Предни</div>
+          <div class="item">Въздушни възглавници — Странични</div>
+          <div class="item-more">+ 13 more…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 2: Комфорт -->
+    <div class="extras-col">
+      <div class="col-label">col 2 — wide</div>
+      <div class="extras-box">
+        <div class="cat">Комфорт</div>
+        <div class="items">
+          <div class="item">Auto Start Stop function</div>
+          <div class="item">Bluetooth / handsfree</div>
+          <div class="item">Климатик</div>
+          <div class="item">Климатроник</div>
+          <div class="item">Навигация</div>
+          <div class="item-more">+ 28 more…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 3: Други stacked over Екстериор -->
+    <div class="extras-col">
+      <div class="col-label">col 3 — narrow</div>
+      <div class="extras-box">
+        <div class="cat">Други</div>
+        <div class="items">
+          <div class="item">4x4</div>
+          <div class="item">7 места</div>
+          <div class="item">Газова уредба</div>
+          <div class="item-more">+ 14 more…</div>
+        </div>
+      </div>
+      <div class="extras-box">
+        <div class="cat">Екстериор</div>
+        <div class="items">
+          <div class="item">LED фарове</div>
+          <div class="item">Лети джанти</div>
+          <div class="item">Панорамен люк</div>
+          <div class="item-more">+ 9 more…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 4: Защита + Интериор + Специализирани -->
+    <div class="extras-col">
+      <div class="col-label">col 4 — narrow</div>
+      <div class="extras-box">
+        <div class="cat">Защита</div>
+        <div class="items">
+          <div class="item">Аларма</div>
+          <div class="item">Каско</div>
+          <div class="item-more">+ 4 more…</div>
+        </div>
+      </div>
+      <div class="extras-box">
+        <div class="cat">Интериор</div>
+        <div class="items">
+          <div class="item">Велурен салон</div>
+          <div class="item">Кожен салон</div>
+          <div class="item">Десен волан</div>
+        </div>
+      </div>
+      <div class="extras-box">
+        <div class="cat">Специализирани</div>
+        <div class="items">
+          <div class="item">TAXI</div>
+          <div class="item">За хора с увреждания</div>
+          <div class="item-more">+ 5 more…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Section 5 — Описание и Контакт</div>
+  <div class="row">
+    <div class="field wide">Описание (textarea)</div>
+    <div class="field">Тел / Email / Сайт</div>
+  </div>
+</div>
+
+<div class="change-list">
+  <strong>3 changes:</strong>
+  <ol>
+    <li><strong>Add Fuel (Двигател)</strong> — new select field after Заглавие in row 1, using the <code>fuels</code> prop (already passed to the component).</li>
+    <li><strong>Flatten price section</strong> — remove nested sub-boxes; one flat row: Цена / ДДС / Валута / Пробег / Месец / Година.</li>
+    <li><strong>Extras: 4 columns</strong> — <code>grid-template-columns: 1fr 1fr 0.6fr 0.6fr</code>. Col 1 = Безопасност, Col 2 = Комфорт, Col 3 = Други + Екстериор stacked, Col 4 = Защита + Интериор + Специализирани stacked.</li>
+  </ol>
+</div>
+
+</body>
+</html>

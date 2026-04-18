@@ -1,7 +1,7 @@
 import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
-import { chromium } from 'playwright';
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
@@ -38,6 +38,14 @@ interface EditSnapshotRow {
 
 interface UpdateBackupOptions {
   log?: (message: string) => void;
+  session?: MobileBgUpdateSession;
+}
+
+export interface MobileBgUpdateSession {
+  browser: Browser;
+  context: BrowserContext;
+  page: Page;
+  dealerSlug: string;
 }
 
 function getLatestEditSnapshot(
@@ -77,6 +85,37 @@ async function gotoMyAds(page: import('playwright').Page): Promise<void> {
       await page.waitForTimeout(1000);
     }
   }
+}
+
+export async function createMobileBgUpdateSession(
+  dealer: DealerBackupConfig,
+  log: (message: string) => void = () => {},
+): Promise<MobileBgUpdateSession> {
+  log('Launching browser session…');
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ userAgent: USER_AGENT });
+  const page = await context.newPage();
+
+  try {
+    log(`Logging into mobile.bg as ${dealer.slug}…`);
+    if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
+      throw new Error(`Login failed for ${dealer.slug}`);
+    }
+
+    return {
+      browser,
+      context,
+      page,
+      dealerSlug: dealer.slug,
+    };
+  } catch (error) {
+    await browser.close().catch(() => {});
+    throw error;
+  }
+}
+
+export async function closeMobileBgUpdateSession(session: MobileBgUpdateSession): Promise<void> {
+  await session.browser.close();
 }
 
 async function readMyAdsPromoState(
@@ -196,6 +235,7 @@ export async function updateBackupOnMobileBg(
   options?: UpdateBackupOptions,
 ): Promise<{ mobileId: string }> {
   const log = options?.log ?? (() => {});
+  const sharedSession = options?.session;
   const backup = db.prepare(`
     SELECT
       b.id,
@@ -246,11 +286,8 @@ export async function updateBackupOnMobileBg(
   const fields = JSON.parse(editSnapshot.fields_json) as Array<Record<string, unknown>>;
   const checkedBoxes = JSON.parse(editSnapshot.checked_boxes_json || '[]').map((x: { name: string; value: string }) => `${x.name}::${x.value}`);
   const fieldOverrides = buildBackupFieldOverrides(backup);
-
-  log('Launching browser session…');
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ userAgent: USER_AGENT });
-  const page = await context.newPage();
+  const ownedSession = sharedSession ?? await createMobileBgUpdateSession(dealer, log);
+  const page = ownedSession.page;
   const updateDir = getUpdateDir(dbPath, dealer.slug, backupId);
   await fsp.mkdir(updateDir, { recursive: true });
   const startedAt = new Date().toISOString();
@@ -261,9 +298,8 @@ export async function updateBackupOnMobileBg(
   `).run(startedAt, backup.id);
 
   try {
-    log(`Logging into mobile.bg as ${dealer.slug}…`);
-    if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
-      throw new Error(`Login failed for ${dealer.slug}`);
+    if (sharedSession && sharedSession.dealerSlug !== dealer.slug) {
+      throw new Error(`Shared mobile.bg session dealer mismatch: expected ${dealer.slug}, got ${sharedSession.dealerSlug}`);
     }
 
     log('Opening listing edit form…');
@@ -363,6 +399,8 @@ export async function updateBackupOnMobileBg(
     `).run(error instanceof Error ? error.message : String(error), new Date().toISOString(), backup.id);
     throw error;
   } finally {
-    await browser.close();
+    if (!sharedSession) {
+      await closeMobileBgUpdateSession(ownedSession);
+    }
   }
 }

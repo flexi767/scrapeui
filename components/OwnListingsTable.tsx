@@ -390,7 +390,9 @@ export default function OwnListingsTable({ initialRows }: Props) {
               imageMeta,
               row.images_downloaded === 1,
             );
-            const thumbSrc = images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null);
+            const thumbSrc = row.first_backup_image_id
+              ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
+              : (images[0]?.thumb ?? (row.thumb_saved === 1 ? getThumbProxyUrl(row.mobile_id, null) : null));
 
             const kmFormatted = row.mileage != null
               ? row.mileage.toLocaleString('en-US')

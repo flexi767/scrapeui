@@ -13,6 +13,7 @@ interface DealerListingSummaryRow {
   image_meta: string | null;
   images_downloaded: number | null;
   thumb_saved: number | null;
+  first_backup_image_id: number | null;
 }
 
 export async function GET(
@@ -44,7 +45,14 @@ export async function GET(
       l.full_keys,
       l.image_meta,
       l.images_downloaded,
-      l.thumb_saved
+      l.thumb_saved,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        WHERE i.backup_id = b.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id
     FROM listings l
     LEFT JOIN ranked_backups b
       ON b.listing_id = l.id
@@ -66,10 +74,12 @@ export async function GET(
       imageMeta,
       row.images_downloaded === 1,
     );
-    const thumb = getThumbProxyUrl(
-      row.mobile_id,
-      images[0]?.thumb ?? null,
-    );
+    const thumb = row.first_backup_image_id
+      ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
+      : getThumbProxyUrl(
+          row.mobile_id,
+          images[0]?.thumb ?? null,
+        );
 
     return {
       mobileId: row.mobile_id,

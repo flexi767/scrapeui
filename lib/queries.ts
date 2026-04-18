@@ -43,6 +43,7 @@ export interface OwnListingRow extends ListingRow {
   watching: number | null;
   needs_sync: number;
   backup_id: number;
+  first_backup_image_id?: number | null;
   has_saved_search_profile: number;
   last_mobile_sync_status: string | null;
   last_mobile_sync_error: string | null;
@@ -112,6 +113,7 @@ export interface MobileBgBackupListRow {
   image_meta: string | null;
   images_downloaded: number | null;
   thumb_saved: number | null;
+  first_backup_image_id: number | null;
 }
 
 export interface MobileBgBackupImageRow {
@@ -744,6 +746,13 @@ export function getOwnListings(filters: ListingFilters = {}) {
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, COALESCE(b.views, l.views) as views, l.cars_total_views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        WHERE i.backup_id = b.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
@@ -827,6 +836,13 @@ export function getOwnListingByMobileId(
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, COALESCE(b.views, l.views) as views, l.cars_total_views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        WHERE i.backup_id = b.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
@@ -2199,7 +2215,14 @@ export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
       b.make, b.model, b.title, b.price_amount, b.price_currency, b.image_count,
       b.created_at, b.updated_at,
       d.name as dealer_name, d.slug as dealer_slug,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        WHERE i.backup_id = b.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id
     FROM ranked b
     LEFT JOIN dealers d ON b.dealer_id = d.id
     LEFT JOIN listings l ON b.listing_id = l.id
