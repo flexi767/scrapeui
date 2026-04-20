@@ -206,12 +206,26 @@ function SyncStateButton({
   );
 }
 
+function FbIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
+    </svg>
+  );
+}
+
 export default function OwnListingsTable({ initialRows }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
+  const [publishingToFbIds, setPublishingToFbIds] = useState<Record<number, boolean>>({});
   const [editForm, setEditForm] = useState<{
     title: string;
     carsbg_title: string;
@@ -252,6 +266,10 @@ export default function OwnListingsTable({ initialRows }: Props) {
     return value;
   }
 
+  function getRowKey(row: OwnListingRow): string {
+    return row.mobile_id ? `mobile-${row.mobile_id}` : `backup-${row.backup_id}`;
+  }
+
   function startEdit(row: OwnListingRow) {
     if (saving) return;
     clearPriceSaveTimeout();
@@ -263,7 +281,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
       kaparo: row.kaparo ?? 0,
       ad_status: row.ad_status ?? "none",
     });
-    setEditingId(row.mobile_id);
+    setEditingKey(getRowKey(row));
   }
 
   async function handleSave(options?: {
@@ -280,7 +298,13 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/listings/${editingId}`, {
+      const editingRow = rows.find((row) => getRowKey(row) === editingKey);
+      if (!editingRow?.mobile_id) {
+        toast.error("Draft listings without a mobile.bg ID cannot be edited inline yet.");
+        return;
+      }
+
+      const res = await fetch(`/api/listings/${editingRow.mobile_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -298,7 +322,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
           prev.map((r) => (r.mobile_id === updated.mobile_id ? updated : r)),
         );
         if (options?.closeAfterSave) {
-          setEditingId(null);
+          setEditingKey(null);
         }
       } else {
         const data = await res.json();
@@ -396,6 +420,31 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
+  async function handlePublishToFB(row: OwnListingRow) {
+    setPublishingToFbIds((prev) => ({ ...prev, [row.backup_id]: true }));
+    try {
+      const res = await fetch("/api/facebook-marketplace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backupId: row.backup_id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to launch Facebook Marketplace");
+      } else {
+        toast.success(
+          data.message ?? "Facebook Marketplace browser launched",
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to launch",
+      );
+    } finally {
+      setPublishingToFbIds((prev) => ({ ...prev, [row.backup_id]: false }));
+    }
+  }
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-700/60">
       <table
@@ -457,7 +506,8 @@ export default function OwnListingsTable({ initialRows }: Props) {
             </tr>
           )}
           {rows.map((row) => {
-            const editing = editingId === row.mobile_id;
+            const rowKey = getRowKey(row);
+            const editing = editingKey === rowKey;
 
             const imageMeta = parseJson<{ cdn: string; shard: string } | null>(
               row.image_meta,
@@ -482,8 +532,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
             const kmFormatted =
               row.mileage != null ? row.mileage.toLocaleString("en-US") : "—";
-            const rowKey = row.mobile_id ?? `backup-${row.backup_id}`;
-
             return (
               <tr
                 key={rowKey}
@@ -531,6 +579,18 @@ export default function OwnListingsTable({ initialRows }: Props) {
                           ✎
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handlePublishToFB(row);
+                        }}
+                        disabled={Boolean(publishingToFbIds[row.backup_id])}
+                        title="Publish to Facebook Marketplace"
+                        aria-label="Publish to Facebook Marketplace"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-600/50 text-[#1877F2] hover:bg-blue-900/30 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <FbIcon className="h-3 w-3" />
+                      </button>
                     </div>
                     <ListingSearchPrefillButton listingId={row.id} />
                     {thumbSrc ? (
