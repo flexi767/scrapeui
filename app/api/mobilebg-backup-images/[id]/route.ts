@@ -10,7 +10,10 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
 };
 
-const ALLOWED_ROOT = '/Users/v/dev/scraped';
+const ALLOWED_ROOTS = [
+  '/Users/v/dev/scraped',
+  path.join(process.cwd(), 'storage'),
+];
 
 export async function GET(
   _request: NextRequest,
@@ -27,7 +30,11 @@ export async function GET(
   if (!filePath) return new Response('Not found', { status: 404 });
 
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(ALLOWED_ROOT + path.sep) && resolved !== ALLOWED_ROOT) {
+  const allowed = ALLOWED_ROOTS.some((root) => {
+    const resolvedRoot = path.resolve(root);
+    return resolved.startsWith(resolvedRoot + path.sep) || resolved === resolvedRoot;
+  });
+  if (!allowed) {
     return new Response('Forbidden', { status: 403 });
   }
 

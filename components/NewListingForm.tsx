@@ -352,6 +352,15 @@ interface PrefillResponse {
   form: FormState;
 }
 
+interface BackupImage {
+  id: number;
+  backupId: number;
+  sortOrder: number;
+  filename: string;
+  url: string;
+  createdAt: string | null;
+}
+
 function FieldLabel({
   children,
   required = false,
@@ -847,6 +856,297 @@ function DealerListingPicker({
   );
 }
 
+function SavedListingSummary({
+  form,
+  mode,
+  onEditDetails,
+  onNewListing,
+}: {
+  form: FormState;
+  mode: "created" | "updated";
+  onEditDetails: () => void;
+  onNewListing: () => void;
+}) {
+  const title = [form.make, form.model].filter(Boolean).join(" ") || "Обява";
+
+  return (
+    <section className="rounded-2xl border border-emerald-700/50 bg-emerald-950/25 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-emerald-300">
+            {mode === "updated"
+              ? "Промените са запазени."
+              : "Черновата е запазена."}
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-white">{title}</h2>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+            {form.title ? (
+              <span className="rounded-full bg-gray-900/70 px-2.5 py-1">
+                {form.title}
+              </span>
+            ) : null}
+            <span className="rounded-full bg-gray-900/70 px-2.5 py-1">
+              {form.priceOnRequest ? "Цена при запитване" : formatPrice(Number(form.price) || null)}
+            </span>
+            {form.productionYear ? (
+              <span className="rounded-full bg-gray-900/70 px-2.5 py-1">
+                {form.productionYear}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onEditDetails}
+            className="rounded-full border border-emerald-500/50 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-300 hover:text-white"
+          >
+            Редактирай данните
+          </button>
+          <button
+            type="button"
+            onClick={onNewListing}
+            className="rounded-full border border-gray-700 px-4 py-2 text-sm text-gray-300 transition hover:border-gray-500 hover:text-white"
+          >
+            Нова обява
+          </button>
+        </div>
+      </div>
+      <details className="mt-4 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-gray-300">
+          Покажи минимизираните полета
+        </summary>
+        <div className="mt-3 grid gap-2 text-sm text-gray-400 md:grid-cols-2 xl:grid-cols-4">
+          <div>Двигател: {form.fuel || "—"}</div>
+          <div>Скорости: {form.transmission || "—"}</div>
+          <div>Пробег: {form.mileage || "—"}</div>
+          <div>Цвят: {form.color || "—"}</div>
+          <div>Регион: {form.region || "—"}</div>
+          <div>Град: {form.city || "—"}</div>
+          <div>VIN: {form.vin || "—"}</div>
+          <div>Телефон: {form.phone || "—"}</div>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+function BackupImageManager({ backupId }: { backupId: number }) {
+  const [images, setImages] = useState<BackupImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [error, setError] = useState("");
+
+  const loadImages = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/editown/backups/${backupId}/images`);
+      const data = (await response.json()) as {
+        images?: BackupImage[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(data.error || "Грешка при зареждане на снимките.");
+        return;
+      }
+      setImages(data.images ?? []);
+    } catch (loadError) {
+      setError((loadError as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backupId]);
+
+  useEffect(() => {
+    void loadImages();
+  }, [loadImages]);
+
+  async function uploadImages(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append("images", file);
+    }
+
+    setUploading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/editown/backups/${backupId}/images`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as {
+        images?: BackupImage[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(data.error || "Грешка при качване на снимките.");
+        return;
+      }
+      setImages(data.images ?? []);
+    } catch (uploadError) {
+      setError((uploadError as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function saveOrder(nextImages: BackupImage[]) {
+    const previous = images;
+    setImages(nextImages);
+    setSavingOrder(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/editown/backups/${backupId}/images`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageIds: nextImages.map((image) => image.id) }),
+      });
+      const data = (await response.json()) as {
+        images?: BackupImage[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setImages(previous);
+        setError(data.error || "Грешка при пренареждане на снимките.");
+        return;
+      }
+      setImages(data.images ?? nextImages);
+    } catch (orderError) {
+      setImages(previous);
+      setError((orderError as Error).message);
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= images.length) return;
+    const next = [...images];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    void saveOrder(next);
+  }
+
+  async function deleteImage(imageId: number) {
+    setDeletingId(imageId);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/editown/backups/${backupId}/images/${imageId}`,
+        { method: "DELETE" },
+      );
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(data.error || "Грешка при изтриване на снимката.");
+        return;
+      }
+      setImages((current) => current.filter((image) => image.id !== imageId));
+    } catch (deleteError) {
+      setError((deleteError as Error).message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-gray-800 bg-gray-950/70 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Снимки</h2>
+          <p className="mt-1 text-sm text-gray-400">
+            Качи нови снимки, подреди ги със стрелките или махни ненужните.
+          </p>
+        </div>
+        <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400">
+          {uploading ? "Качване..." : "Качи снимки"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="sr-only"
+            disabled={uploading}
+            onChange={uploadImages}
+          />
+        </label>
+      </div>
+
+      {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
+      {savingOrder ? (
+        <p className="mt-4 text-sm text-sky-300">Запазване на реда...</p>
+      ) : null}
+
+      {loading ? (
+        <div className="mt-5 rounded-xl border border-gray-800 bg-gray-900/50 p-4 text-sm text-gray-400">
+          Зареждане на снимките...
+        </div>
+      ) : images.length === 0 ? (
+        <div className="mt-5 rounded-xl border border-dashed border-gray-700 bg-gray-900/40 p-8 text-center text-sm text-gray-400">
+          Все още няма снимки към тази обява.
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {images.map((image, index) => (
+            <div
+              key={image.id}
+              className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900/70"
+            >
+              <ImageWithFallback
+                src={image.url}
+                alt={image.filename}
+                className="aspect-[4/3] w-full object-cover"
+                fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
+                fallbackLabel="Missing"
+              />
+              <div className="space-y-3 p-3">
+                <div className="truncate text-xs text-gray-400">
+                  {index + 1}. {image.filename}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => moveImage(index, -1)}
+                      disabled={index === 0 || savingOrder}
+                      className="rounded-full border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(index, 1)}
+                      disabled={index === images.length - 1 || savingOrder}
+                      className="rounded-full border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void deleteImage(image.id)}
+                    disabled={deletingId === image.id}
+                    className="rounded-full px-2 py-1 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId === image.id ? "..." : "Изтрий"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function FormSection({
   title,
   children,
@@ -1087,7 +1387,9 @@ export default function NewListingForm({
         setError(data.error || "Грешка при запазване.");
         return;
       }
-      setSavedBackupId(typeof data.id === "number" ? data.id : null);
+      const nextBackupId = typeof data.id === "number" ? data.id : null;
+      setSavedBackupId(nextBackupId);
+      setSelectedBackupId(nextBackupId);
       setSavedMode("created");
       setSaved(true);
     } catch (saveError) {
@@ -1205,29 +1507,32 @@ export default function NewListingForm({
   }
 
   if (saved) {
+    const backupId = savedBackupId ?? selectedBackupId;
     return (
-      <div className="rounded-2xl border border-emerald-700/50 bg-emerald-950/40 p-8 text-center">
-        <p className="text-lg font-semibold text-emerald-300">
-          {savedMode === "updated"
-            ? "Промените са запазени."
-            : "Черновата е запазена."}
-        </p>
-        <div className="mt-4 flex items-center justify-center gap-4 text-sm">
-          {savedBackupId ? (
-            <Link
-              href={`/mobilebg/backups/${savedBackupId}`}
-              className="text-sky-300 underline hover:text-sky-200"
-            >
-              Отвори черновата
-            </Link>
-          ) : null}
-          <button
-            onClick={resetForm}
-            className="text-gray-400 underline hover:text-white"
-          >
-            Нова обява
-          </button>
-        </div>
+      <div className="space-y-5 pb-8">
+        <SavedListingSummary
+          form={form}
+          mode={savedMode}
+          onEditDetails={() => setSaved(false)}
+          onNewListing={resetForm}
+        />
+        {backupId ? (
+          <>
+            <BackupImageManager backupId={backupId} />
+            <div className="flex items-center gap-4 text-sm">
+              <Link
+                href={`/mobilebg/backups/${backupId}`}
+                className="text-sky-300 underline hover:text-sky-200"
+              >
+                Отвори черновата
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-red-800/60 bg-red-950/30 p-4 text-sm text-red-300">
+            Черновата е запазена, но липсва backup ID за зареждане на снимки.
+          </div>
+        )}
       </div>
     );
   }
