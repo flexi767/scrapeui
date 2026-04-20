@@ -937,6 +937,11 @@ function BackupImageManager({ backupId }: { backupId: number }) {
   const [uploading, setUploading] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [draggedImageId, setDraggedImageId] = useState<number | null>(null);
+  const [dragOverImageId, setDragOverImageId] = useState<number | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(
+    null,
+  );
   const [error, setError] = useState("");
 
   const loadImages = useCallback(async () => {
@@ -1026,12 +1031,55 @@ function BackupImageManager({ backupId }: { backupId: number }) {
     }
   }
 
-  function moveImage(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= images.length) return;
+  function reorderImages(sourceId: number, targetId: number) {
+    if (sourceId === targetId || savingOrder) return;
+
+    const sourceIndex = images.findIndex((image) => image.id === sourceId);
+    const targetIndex = images.findIndex((image) => image.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
     const next = [...images];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
     void saveOrder(next);
+  }
+
+  function handleDragStart(
+    event: React.DragEvent<HTMLDivElement>,
+    imageId: number,
+  ) {
+    setDraggedImageId(imageId);
+    setConfirmingDeleteId(null);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(imageId));
+  }
+
+  function handleDragOver(
+    event: React.DragEvent<HTMLDivElement>,
+    imageId: number,
+  ) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverImageId(imageId);
+  }
+
+  function handleDrop(
+    event: React.DragEvent<HTMLDivElement>,
+    targetImageId: number,
+  ) {
+    event.preventDefault();
+    const sourceImageId =
+      Number(event.dataTransfer.getData("text/plain")) || draggedImageId;
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+    if (sourceImageId) {
+      reorderImages(sourceImageId, targetImageId);
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggedImageId(null);
+    setDragOverImageId(null);
   }
 
   async function deleteImage(imageId: number) {
@@ -1050,6 +1098,7 @@ function BackupImageManager({ backupId }: { backupId: number }) {
         return;
       }
       setImages((current) => current.filter((image) => image.id !== imageId));
+      setConfirmingDeleteId(null);
     } catch (deleteError) {
       setError((deleteError as Error).message);
     } finally {
@@ -1063,7 +1112,7 @@ function BackupImageManager({ backupId }: { backupId: number }) {
         <div>
           <h2 className="text-lg font-semibold text-white">Снимки</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Качи нови снимки, подреди ги със стрелките или махни ненужните.
+            Качи нови снимки, влачи ги за подреждане или махни ненужните.
           </p>
         </div>
         <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400">
@@ -1097,7 +1146,21 @@ function BackupImageManager({ backupId }: { backupId: number }) {
           {images.map((image, index) => (
             <div
               key={image.id}
-              className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900/70"
+              draggable={!savingOrder && deletingId !== image.id}
+              onDragStart={(event) => handleDragStart(event, image.id)}
+              onDragOver={(event) => handleDragOver(event, image.id)}
+              onDragLeave={() => setDragOverImageId(null)}
+              onDrop={(event) => handleDrop(event, image.id)}
+              onDragEnd={handleDragEnd}
+              className={`overflow-hidden rounded-xl border bg-gray-900/70 transition ${
+                dragOverImageId === image.id && draggedImageId !== image.id
+                  ? "border-sky-400 ring-2 ring-sky-500/40"
+                  : "border-gray-800"
+              } ${
+                draggedImageId === image.id
+                  ? "cursor-grabbing opacity-60"
+                  : "cursor-grab"
+              }`}
             >
               <ImageWithFallback
                 src={image.url}
@@ -1106,37 +1169,42 @@ function BackupImageManager({ backupId }: { backupId: number }) {
                 fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
                 fallbackLabel="Missing"
               />
-              <div className="space-y-3 p-3">
-                <div className="truncate text-xs text-gray-400">
-                  {index + 1}. {image.filename}
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => moveImage(index, -1)}
-                      disabled={index === 0 || savingOrder}
-                      className="rounded-full border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveImage(index, 1)}
-                      disabled={index === images.length - 1 || savingOrder}
-                      className="rounded-full border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      ↓
-                    </button>
+              <div className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 truncate text-xs text-gray-400">
+                    {index + 1}. {image.filename}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void deleteImage(image.id)}
-                    disabled={deletingId === image.id}
-                    className="rounded-full px-2 py-1 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {deletingId === image.id ? "..." : "Изтрий"}
-                  </button>
+                  {confirmingDeleteId === image.id ? (
+                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => void deleteImage(image.id)}
+                        disabled={deletingId === image.id}
+                        className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === image.id ? "..." : "Да"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDeleteId(null)}
+                        disabled={deletingId === image.id}
+                        className="rounded-full px-2 py-0.5 text-[11px] text-gray-400 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Не
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDeleteId(image.id)}
+                      disabled={deletingId === image.id}
+                      title="Изтрий снимката"
+                      aria-label="Изтрий снимката"
+                      className="ml-auto inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-base leading-none text-red-400 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1640,13 +1708,14 @@ export default function NewListingForm({
               className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
             />
           </div>
-          <SelectField
-            label="Двигател"
+          <div className="min-w-0 xl:w-28 xl:justify-self-end">
+            <SelectField
+              label="Двигател"
             value={form.fuel}
             onChange={(value) => setField("fuel", value)}
             options={["", ...fuels.filter(Boolean)]}
-            accent
           />
+          </div>
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr_1.1fr]">
@@ -1668,14 +1737,14 @@ export default function NewListingForm({
             />
           </div>
           <SelectField
-            label="Скоростна кутия"
+            label="Кутия"
             value={form.transmission}
             onChange={(value) => setField("transmission", value)}
             options={["", ...transmissions.filter(Boolean)]}
             accent
           />
           <SelectField
-            label="основна кат."
+            label="Основна"
             value={form.pubtype}
             onChange={onCategoryChange}
             options={MAIN_CATEGORIES.map((item) => ({
@@ -1684,17 +1753,19 @@ export default function NewListingForm({
             }))}
             required
           />
-          <SelectField
-            label="Категория"
-            value={form.bodyType}
-            onChange={(value) => setField("bodyType", value)}
-            options={BODY_TYPE_OPTIONS}
-            accent
-          />
+          <div className="min-w-0 xl:w-28 xl:justify-self-end">
+            <SelectField
+              label="Категория"
+              value={form.bodyType}
+              onChange={(value) => setField("bodyType", value)}
+              options={BODY_TYPE_OPTIONS}
+              accent
+            />
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-4">
-          <div className="w-full xl:w-56">
+        <div className="mt-4 flex flex-nowrap gap-4 overflow-x-auto pb-1">
+          <div className="w-56 shrink-0">
             <InputField
               label="Кубатура [куб.см]"
               value={form.engineCc}
@@ -1703,7 +1774,7 @@ export default function NewListingForm({
               maxLength={5}
             />
           </div>
-          <div className="xl:w-56">
+          <div className="w-56 shrink-0">
             <SelectField
               label="Състояние"
               value={form.condition}
@@ -1713,22 +1784,26 @@ export default function NewListingForm({
           </div>
           {showBatteryFields ? (
             <>
-              <InputField
-                label="Пробег с едно зареждане (WLTP) [км]"
-                value={form.batteryRange}
-                onChange={(value) => setField("batteryRange", value)}
-                type="number"
-                maxLength={4}
-                accent
-              />
-              <InputField
-                label="Капацитет на батерията [kWh]"
-                value={form.batteryCapacity}
-                onChange={(value) => setField("batteryCapacity", value)}
-                type="number"
-                maxLength={7}
-                accent
-              />
+              <div className="w-[15.4rem] shrink-0">
+                <InputField
+                  label="Пробег с едно зареждане (WLTP) [км]"
+                  value={form.batteryRange}
+                  onChange={(value) => setField("batteryRange", value)}
+                  type="number"
+                  maxLength={4}
+                  accent
+                />
+              </div>
+              <div className="w-[15.4rem] shrink-0">
+                <InputField
+                  label="Капацитет на батерията [kWh]"
+                  value={form.batteryCapacity}
+                  onChange={(value) => setField("batteryCapacity", value)}
+                  type="number"
+                  maxLength={7}
+                  accent
+                />
+              </div>
             </>
           ) : null}
         </div>
