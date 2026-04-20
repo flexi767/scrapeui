@@ -447,7 +447,7 @@ function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-10 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {options.map((option) => {
           if (typeof option === "string") {
@@ -502,7 +502,7 @@ function InputField({
         onChange={(event) => onChange(event.target.value)}
         maxLength={maxLength}
         disabled={disabled}
-        className="h-10 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-10 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       />
     </div>
   );
@@ -1151,7 +1151,7 @@ export default function NewListingForm({
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_2fr_1fr_1fr]">
-          <div className="min-w-0 flex flex-col gap-1">
+          <div className="min-w-0 w-full flex flex-col gap-1 xl:w-56">
             <FieldLabel required>
               {makesLoading ? "Марка (зарежда...)" : "Марка"}
             </FieldLabel>
@@ -1179,7 +1179,7 @@ export default function NewListingForm({
               }}
             />
           </div>
-          <div className="min-w-0 flex flex-col gap-1">
+          <div className="min-w-0 flex flex-col gap-1 xl:w-56">
             <FieldLabel>Модел</FieldLabel>
             <AutocompleteInput
               value={form.model}
@@ -1230,19 +1230,23 @@ export default function NewListingForm({
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr_1.1fr]">
-          <InputField
-            label="Мощност [к.с.]"
-            value={form.power}
-            onChange={(value) => setField("power", value)}
-            type="number"
-            maxLength={4}
-          />
-          <SelectField
-            label="Евростандарт"
-            value={form.euronorm}
-            onChange={(value) => setField("euronorm", value)}
-            options={EURO_OPTIONS}
-          />
+          <div className="w-full xl:w-56">
+            <InputField
+              label="Мощност [к.с.]"
+              value={form.power}
+              onChange={(value) => setField("power", value)}
+              type="number"
+              maxLength={4}
+            />
+          </div>
+          <div className="xl:w-56">
+            <SelectField
+              label="Евростандарт"
+              value={form.euronorm}
+              onChange={(value) => setField("euronorm", value)}
+              options={EURO_OPTIONS}
+            />
+          </div>
           <SelectField
             label="Скоростна кутия"
             value={form.transmission}
@@ -1251,7 +1255,7 @@ export default function NewListingForm({
             accent
           />
           <SelectField
-            label="Основна категория"
+            label="основна кат."
             value={form.pubtype}
             onChange={onCategoryChange}
             options={MAIN_CATEGORIES.map((item) => ({
@@ -1270,19 +1274,23 @@ export default function NewListingForm({
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-4">
-          <InputField
-            label="Кубатура [куб.см]"
-            value={form.engineCc}
-            onChange={(value) => setField("engineCc", value)}
-            type="number"
-            maxLength={5}
-          />
-          <SelectField
-            label="Състояние"
-            value={form.condition}
-            onChange={(value) => setField("condition", value)}
-            options={CONDITION_OPTIONS}
-          />
+          <div className="w-full xl:w-56">
+            <InputField
+              label="Кубатура [куб.см]"
+              value={form.engineCc}
+              onChange={(value) => setField("engineCc", value)}
+              type="number"
+              maxLength={5}
+            />
+          </div>
+          <div className="xl:w-56">
+            <SelectField
+              label="Състояние"
+              value={form.condition}
+              onChange={(value) => setField("condition", value)}
+              options={CONDITION_OPTIONS}
+            />
+          </div>
           {showBatteryFields ? (
             <>
               <InputField
@@ -1306,7 +1314,7 @@ export default function NewListingForm({
         </div>
       </FormSection>
 
-      <FormSection title="Цена И Производство">
+      <FormSection>
         <div className="grid gap-4 xl:grid-cols-[80px_1.8fr_90px_100px_130px_110px]">
           <InputField
             label="Цена"
@@ -1367,7 +1375,7 @@ export default function NewListingForm({
         </div>
       </FormSection>
 
-      <FormSection title="Цвят И Локация">
+      <FormSection>
         <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1.1fr]">
           <SelectField
             label="Цвят"

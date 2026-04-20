@@ -11,6 +11,13 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
+function normalizeVin(value: string | null | undefined): string {
+  if (!value) return '';
+  const vin = value.trim().toUpperCase();
+  // Keep VIN strict to avoid placeholder values like "bp49".
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
+}
+
 interface BackupRow {
   dealer_id: number;
   make: string | null;
@@ -102,7 +109,7 @@ export async function GET(
       color: row.color ?? '',
       region: techData.region || '',
       city: techData.city || '',
-      vin: techData.f32 || '',
+      vin: normalizeVin(techData.f32),
       description: row.description ?? '',
       phone: techData.f22 || phones[0] || '',
       email: techData.f23 || '',

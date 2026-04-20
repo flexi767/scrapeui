@@ -183,6 +183,20 @@ function toEuroNormLabel(value: string | number | null | undefined): string {
   return `Евро ${String(value).trim()}`;
 }
 
+function normalizeVin(value: string | null | undefined): string {
+  if (!value) return '';
+  const vin = value.trim().toUpperCase();
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
+}
+
+function pickVin(...candidates: Array<string | null | undefined>): string {
+  for (const candidate of candidates) {
+    const vin = normalizeVin(candidate);
+    if (vin) return vin;
+  }
+  return '';
+}
+
 // Extracts the value of a named field from the flat fields_json array in edit form snapshots
 function snapshotField(
   fields: Array<{ name?: string; value?: string }>,
@@ -329,7 +343,7 @@ export async function GET(
       color: row.color ?? '',
       region: techData.region || sf('f18'),
       city: techData.city || sf('f19'),
-      vin: techData.f32 || row.vin || sf('f20'),
+      vin: pickVin(techData.f32, row.vin, sf('f20')),
       description: row.description ?? '',
       phone: techData.f22 || phones[0] || sf('f22'),
       email: techData.f23 || sf('f23'),
