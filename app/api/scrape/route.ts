@@ -10,6 +10,7 @@ let activeScrapeEncoder: TextEncoder | null = null;
 
 function isChildRunning(child: ChildProcess | null) {
   if (!child) return false;
+  if (child.killed) return false;
   return child.exitCode === null && child.signalCode === null;
 }
 
@@ -133,7 +134,9 @@ export async function POST(req: NextRequest) {
       req.signal.addEventListener('abort', () => {
         if (activeScrapeChild === child) {
           sendActiveEvent({ type: 'log', level: 'stderr', message: 'Client disconnected. Stopping scraper…' });
-          child.kill('SIGTERM');
+          const stopped = child.kill('SIGTERM');
+          if (stopped) clearActiveScrape(child);
+          else clearStaleActiveScrape();
         }
       });
     },
@@ -166,6 +169,7 @@ export async function DELETE() {
   const stopped = child.kill('SIGTERM');
 
   if (stopped) {
+    clearActiveScrape(child);
     setTimeout(() => {
       if (activeScrapeChild === child && isChildRunning(child)) {
         sendActiveEvent({ type: 'log', level: 'stderr', message: 'Scraper did not stop in time. Forcing shutdown…' });

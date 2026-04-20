@@ -733,15 +733,19 @@ function DealerListingPicker({
   loading,
   selectedMobileId,
   prefillingMobileId,
+  deletingBackupId,
   error,
   onSelect,
+  onDeleteDraft,
 }: {
   listings: DealerListingSummary[];
   loading: boolean;
   selectedMobileId: string | null;
   prefillingMobileId: string | null;
+  deletingBackupId: number | null;
   error: string;
   onSelect: (mobileId: string, backupId: number | null) => void;
+  onDeleteDraft: (backupId: number) => void;
 }) {
   if (loading) {
     return (
@@ -777,46 +781,65 @@ function DealerListingPicker({
           const prefilling =
             prefillingMobileId ===
             (listing.mobileId || String(listing.backupId));
+          const isDraft = !listing.mobileId && listing.backupId != null;
+          const deleting = isDraft && deletingBackupId === listing.backupId;
           return (
-            <button
+            <div
               key={key}
-              type="button"
-              onClick={() => onSelect(listing.mobileId, listing.backupId)}
-              disabled={Boolean(prefillingMobileId)}
-              className={`flex w-full items-center gap-2 rounded-md border px-1.5 py-1 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`flex w-full items-center gap-1 rounded-md border transition-colors ${
                 selected
                   ? "border-sky-500 bg-sky-500/10"
                   : "border-gray-700 bg-gray-900/80 hover:border-gray-500 hover:bg-gray-800/80"
               }`}
             >
-              {listing.thumb ? (
-                <ImageWithFallback
-                  src={listing.thumb}
-                  alt={
-                    `${listing.make} ${listing.model}`.trim() || "Listing image"
-                  }
-                  className="h-12 w-16 rounded object-contain"
-                  style={{ aspectRatio: "4/3" }}
-                  fallbackClassName="h-12 w-16 rounded bg-gray-800 text-gray-400"
-                  fallbackLabel="Missing"
-                />
-              ) : (
-                <div className="h-12 w-16 rounded bg-gray-800" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-white">
-                  {[listing.make, listing.model].filter(Boolean).join(" ") ||
-                    listing.mobileId ||
-                    "Чернова"}
+              <button
+                type="button"
+                onClick={() => onSelect(listing.mobileId, listing.backupId)}
+                disabled={Boolean(prefillingMobileId) || deleting}
+                className="flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1 text-left disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {listing.thumb ? (
+                  <ImageWithFallback
+                    src={listing.thumb}
+                    alt={
+                      `${listing.make} ${listing.model}`.trim() ||
+                      "Listing image"
+                    }
+                    className="h-12 w-16 rounded object-contain"
+                    style={{ aspectRatio: "4/3" }}
+                    fallbackClassName="h-12 w-16 rounded bg-gray-800 text-gray-400"
+                    fallbackLabel="Missing"
+                  />
+                ) : (
+                  <div className="h-12 w-16 rounded bg-gray-800" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-white">
+                    {[listing.make, listing.model].filter(Boolean).join(" ") ||
+                      listing.mobileId ||
+                      "Чернова"}
+                  </div>
+                  <div className="truncate text-xs text-gray-400">
+                    {listing.title || "—"}
+                  </div>
+                  <div className="text-xs font-medium text-sky-300">
+                    {prefilling ? "Зареждане..." : formatPrice(listing.price)}
+                  </div>
                 </div>
-                <div className="truncate text-xs text-gray-400">
-                  {listing.title || "—"}
-                </div>
-                <div className="text-xs font-medium text-sky-300">
-                  {prefilling ? "Зареждане..." : formatPrice(listing.price)}
-                </div>
-              </div>
-            </button>
+              </button>
+              {isDraft ? (
+                <button
+                  type="button"
+                  onClick={() => onDeleteDraft(listing.backupId as number)}
+                  disabled={deleting || Boolean(prefillingMobileId)}
+                  title="Изтрий черновата"
+                  aria-label="Изтрий черновата"
+                  className="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-base leading-none text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deleting ? "..." : "×"}
+                </button>
+              ) : null}
+            </div>
           );
         })}
       </div>
@@ -863,11 +886,17 @@ export default function NewListingForm({
   const [selectedTemplateMobileId, setSelectedTemplateMobileId] = useState<
     string | null
   >(null);
+  const [selectedBackupId, setSelectedBackupId] = useState<number | null>(null);
   const [prefillingMobileId, setPrefillingMobileId] = useState<string | null>(
     null,
   );
+  const [dealerListingsByDealer, setDealerListingsByDealer] = useState(
+    initialDealerListingsByDealer,
+  );
+  const [deletingBackupId, setDeletingBackupId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedMode, setSavedMode] = useState<"created" | "updated">("created");
   const [savedBackupId, setSavedBackupId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [openAutocomplete, setOpenAutocomplete] = useState<
@@ -919,10 +948,13 @@ export default function NewListingForm({
   );
   const showBatteryFields = BATTERY_FUELS.has(form.fuel);
   const dealerListings = useMemo(
-    () =>
-      form.dealerId ? (initialDealerListingsByDealer[form.dealerId] ?? []) : [],
-    [form.dealerId, initialDealerListingsByDealer],
+    () => (form.dealerId ? (dealerListingsByDealer[form.dealerId] ?? []) : []),
+    [dealerListingsByDealer, form.dealerId],
   );
+
+  useEffect(() => {
+    setDealerListingsByDealer(initialDealerListingsByDealer);
+  }, [initialDealerListingsByDealer]);
 
   const loadCities = useCallback(async (regionValue: string) => {
     if (!regionValue) {
@@ -969,9 +1001,11 @@ export default function NewListingForm({
     });
     setCities([]);
     setSelectedTemplateMobileId(null);
+    setSelectedBackupId(null);
     setPrefillingMobileId(null);
     setError("");
     setSaved(false);
+    setSavedMode("created");
     setSavedBackupId(null);
   }
 
@@ -1019,21 +1053,27 @@ export default function NewListingForm({
     });
   }
 
-  async function onSave() {
+  function validateForm(): boolean {
     setError("");
 
     if (!form.dealerId) {
       setError("Изберете дилър.");
-      return;
+      return false;
     }
     if (!form.make) {
       setError("Изберете марка.");
-      return;
+      return false;
     }
     if (!form.priceOnRequest && !form.price) {
       setError('Въведете цена или маркирайте "Цена само при запитване".');
-      return;
+      return false;
     }
+
+    return true;
+  }
+
+  async function saveNewDraft() {
+    if (!validateForm()) return;
 
     setSaving(true);
     try {
@@ -1048,6 +1088,39 @@ export default function NewListingForm({
         return;
       }
       setSavedBackupId(typeof data.id === "number" ? data.id : null);
+      setSavedMode("created");
+      setSaved(true);
+    } catch (saveError) {
+      setError((saveError as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveExistingListing() {
+    if (!selectedBackupId) {
+      await saveNewDraft();
+      return;
+    }
+    if (!validateForm()) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/editown/backups/${selectedBackupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        id?: number;
+      };
+      if (!response.ok) {
+        setError(data.error || "Грешка при запазване на промените.");
+        return;
+      }
+      setSavedBackupId(typeof data.id === "number" ? data.id : selectedBackupId);
+      setSavedMode("updated");
       setSaved(true);
     } catch (saveError) {
       setError((saveError as Error).message);
@@ -1086,6 +1159,7 @@ export default function NewListingForm({
       }
       setForm(nextForm);
       setSelectedTemplateMobileId(mobileId || String(backupId));
+      setSelectedBackupId(backupId);
       setOpenAutocomplete(null);
     } catch (prefillError) {
       setError((prefillError as Error).message);
@@ -1094,11 +1168,49 @@ export default function NewListingForm({
     }
   }
 
+  async function deleteDraft(backupId: number) {
+    if (!form.dealerId || deletingBackupId != null) return;
+
+    setDeletingBackupId(backupId);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/editown/backups/${backupId}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setError(data.error || "Грешка при изтриване на черновата.");
+        return;
+      }
+
+      setDealerListingsByDealer((prev) => ({
+        ...prev,
+        [form.dealerId]: (prev[form.dealerId] ?? []).filter(
+          (listing) => listing.backupId !== backupId,
+        ),
+      }));
+      if (selectedTemplateMobileId === String(backupId)) {
+        setSelectedTemplateMobileId(null);
+        setSelectedBackupId(null);
+      }
+    } catch (deleteError) {
+      setError((deleteError as Error).message);
+    } finally {
+      setDeletingBackupId(null);
+    }
+  }
+
   if (saved) {
     return (
       <div className="rounded-2xl border border-emerald-700/50 bg-emerald-950/40 p-8 text-center">
         <p className="text-lg font-semibold text-emerald-300">
-          Черновата е запазена.
+          {savedMode === "updated"
+            ? "Промените са запазени."
+            : "Черновата е запазена."}
         </p>
         <div className="mt-4 flex items-center justify-center gap-4 text-sm">
           {savedBackupId ? (
@@ -1131,6 +1243,7 @@ export default function NewListingForm({
               onChange={(value) => {
                 setField("dealerId", value);
                 setSelectedTemplateMobileId(null);
+                setSelectedBackupId(null);
               }}
             />
           </div>
@@ -1141,10 +1254,12 @@ export default function NewListingForm({
                 loading={false}
                 selectedMobileId={selectedTemplateMobileId}
                 prefillingMobileId={prefillingMobileId}
+                deletingBackupId={deletingBackupId}
                 error=""
                 onSelect={(mobileId, backupId) =>
                   void prefillFromListing(mobileId, backupId)
                 }
+                onDeleteDraft={(backupId) => void deleteDraft(backupId)}
               />
             </div>
           ) : null}
@@ -1532,12 +1647,25 @@ export default function NewListingForm({
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       <div className="flex items-center gap-4">
         <button
-          onClick={onSave}
+          onClick={saveExistingListing}
           disabled={saving}
           className="rounded-full bg-sky-500 px-6 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Запазване..." : "Запази обявата"}
+          {saving
+            ? "Запазване..."
+            : selectedBackupId
+              ? "Запази промените"
+              : "Запази обявата"}
         </button>
+        {selectedBackupId ? (
+          <button
+            onClick={saveNewDraft}
+            disabled={saving}
+            className="rounded-full border border-sky-500/60 px-6 py-2.5 text-sm font-semibold text-sky-200 transition hover:border-sky-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Запази нова обява
+          </button>
+        ) : null}
         <button
           onClick={resetForm}
           className="text-sm text-gray-400 hover:text-white"

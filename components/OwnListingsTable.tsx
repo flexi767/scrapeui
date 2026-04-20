@@ -299,28 +299,48 @@ export default function OwnListingsTable({ initialRows }: Props) {
     setSaving(true);
     try {
       const editingRow = rows.find((row) => getRowKey(row) === editingKey);
-      if (!editingRow?.mobile_id) {
-        toast.error("Draft listings without a mobile.bg ID cannot be edited inline yet.");
+      if (!editingRow) {
+        toast.error("No listing is currently being edited.");
         return;
       }
 
-      const res = await fetch(`/api/listings/${editingRow.mobile_id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formToSave.title,
-          carsbg_title: formToSave.carsbg_title,
-          current_price: formToSave.current_price,
-          vat: formToSave.vat,
-          kaparo: formToSave.kaparo,
-          ad_status: formToSave.ad_status,
-        }),
-      });
+      const res = await fetch(
+        editingRow.mobile_id
+          ? `/api/listings/${editingRow.mobile_id}`
+          : `/api/editown/backups/${editingRow.backup_id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formToSave.title,
+            carsbg_title: formToSave.carsbg_title,
+            current_price: formToSave.current_price,
+            vat: formToSave.vat,
+            kaparo: formToSave.kaparo,
+            ad_status: formToSave.ad_status,
+          }),
+        },
+      );
       if (res.ok) {
-        const updated: OwnListingRow = await res.json();
-        setRows((prev) =>
-          prev.map((r) => (r.mobile_id === updated.mobile_id ? updated : r)),
-        );
+        if (editingRow.mobile_id) {
+          const updated: OwnListingRow = await res.json();
+          setRows((prev) =>
+            prev.map((r) => (r.mobile_id === updated.mobile_id ? updated : r)),
+          );
+        } else {
+          const updated = await res.json() as Partial<OwnListingRow>;
+          setRows((prev) =>
+            prev.map((row) =>
+              row.backup_id === editingRow.backup_id
+                ? {
+                    ...row,
+                    ...updated,
+                    carsbg_title: formToSave.carsbg_title,
+                  }
+                : row,
+            ),
+          );
+        }
         if (options?.closeAfterSave) {
           setEditingKey(null);
         }

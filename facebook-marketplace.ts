@@ -18,9 +18,10 @@
  * The session is saved outside the app directory and reused on subsequent runs.
  */
 
-import { chromium, BrowserContext, Page } from "playwright";
+import { chromium, Page } from "playwright";
 import * as path from "path";
 import * as fs from "fs";
+import { execSync } from "child_process";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,6 +71,22 @@ const delay = (min: number, max: number) =>
 // Core
 // ---------------------------------------------------------------------------
 
+/**
+ * Kill any Chrome processes holding the profile dir and remove the lock file.
+ * Chrome refuses to launch a second instance with the same user-data-dir.
+ */
+function clearProfileLock(profileDir: string): void {
+  // Kill every Chrome process whose command line mentions this profile dir
+  try {
+    execSync(`pkill -f ${JSON.stringify(profileDir)} 2>/dev/null || true`);
+  } catch { /* ignore */ }
+  // Brief pause so processes can exit before we launch
+  try { execSync("sleep 0.5"); } catch { /* ignore */ }
+  // Remove stale lock file Chrome leaves behind
+  const lockFile = path.join(profileDir, "SingletonLock");
+  try { fs.unlinkSync(lockFile); } catch { /* not present — fine */ }
+}
+
 export async function postToFacebookMarketplace(
   listing: MarketplaceListing
 ): Promise<{ status: "ready_to_publish" | "error"; message: string }> {
@@ -77,10 +94,20 @@ export async function postToFacebookMarketplace(
     fs.mkdirSync(SESSION_DIR, { recursive: true });
   }
 
-  let context: BrowserContext | null = null;
+  // Tracks the active page so all exit paths can wait for it to close,
+  // keeping the browser window open until the user is done.
+  let page: Page | null = null;
+
+  async function waitForPageClose() {
+    if (page) {
+      await page.waitForEvent("close", { timeout: 0 }).catch(() => {});
+    }
+  }
 
   try {
-    context = await chromium.launchPersistentContext(SESSION_DIR, {
+    clearProfileLock(SESSION_DIR);
+
+    const context = await chromium.launchPersistentContext(SESSION_DIR, {
       headless: HEADLESS,
       slowMo: SLOW_MO,
       viewport: { width: 1280, height: 900 },
@@ -93,7 +120,10 @@ export async function postToFacebookMarketplace(
       ignoreDefaultArgs: ["--enable-automation"],
     });
 
-    const page = await context.newPage();
+    // Reuse the page the persistent context already has open (from the saved
+    // session), rather than opening a new blank tab alongside it.
+    const existingPages = context.pages();
+    page = existingPages.length > 0 ? existingPages[0] : await context.newPage();
 
     // Remove webdriver property that FB checks
     await page.addInitScript(() => {
@@ -101,32 +131,45 @@ export async function postToFacebookMarketplace(
     });
 
     // -----------------------------------------------------------------------
-    // 1. Check login
-    // -----------------------------------------------------------------------
-    await page.goto("https://www.facebook.com", { waitUntil: "domcontentloaded" });
-    await delay(1000, 2000);
-
-    const isLoggedIn = await page
-      .locator('[aria-label="Your profile"]')
-      .isVisible()
-      .catch(() => false);
-
-    if (!isLoggedIn) {
-      return {
-        status: "error",
-        message:
-          "Not logged in. Run with HEADLESS=false, log in manually, then retry. Session will be saved for future runs.",
-      };
-    }
-
-    // -----------------------------------------------------------------------
-    // 2. Navigate to Create Listing
+    // 1. Navigate directly to Create Listing (skipping the feed)
+    //    If the session is expired FB will redirect to /login.
     // -----------------------------------------------------------------------
     await page.goto(
       "https://www.facebook.com/marketplace/create/vehicle",
       { waitUntil: "domcontentloaded" }
     );
     await delay(2000, 3500);
+
+    const afterNavUrl = page.url();
+    const isLoggedIn =
+      !afterNavUrl.includes("/login") &&
+      !afterNavUrl.includes("login.php") &&
+      !afterNavUrl.includes("/checkpoint");
+
+    if (!isLoggedIn) {
+      console.log(
+        "\n⚠️  Not logged in to Facebook.\n" +
+        "   Log in manually in the browser window.\n" +
+        "   The session will be saved for future runs.\n" +
+        "   Close the browser when done.\n"
+      );
+      await waitForPageClose();
+      return {
+        status: "error",
+        message: "Not logged in. Log in manually and try again — session is now saved.",
+      };
+    }
+
+    // If FB redirected us away from the create page (e.g. back to feed),
+    // try navigating once more with networkidle.
+    if (!afterNavUrl.includes("/marketplace/create")) {
+      console.log("⚠️  FB redirected away from create page — retrying…");
+      await page.goto(
+        "https://www.facebook.com/marketplace/create/vehicle",
+        { waitUntil: "networkidle" }
+      );
+      await delay(2000, 3000);
+    }
 
     // -----------------------------------------------------------------------
     // 3. Photos
@@ -136,28 +179,27 @@ export async function postToFacebookMarketplace(
       .filter((p) => fs.existsSync(p));
 
     if (photoPaths.length === 0) {
-      return { status: "error", message: "No valid photo paths provided." };
-    }
-
-    // FB Marketplace "Add photos" button — selector may need updating
-    const photoInput = page.locator('input[type="file"][accept*="image"]').first();
-    if (await photoInput.isVisible().catch(() => false)) {
-      await photoInput.setInputFiles(photoPaths);
+      console.warn("⚠️  No valid local photo paths — skipping upload. Add photos manually in the browser.");
     } else {
-      // Try clicking the visible button which reveals the hidden input
-      const addPhotosBtn = page
-        .locator('[aria-label="Add photos"]')
-        .first();
-      if (await addPhotosBtn.isVisible()) {
-        const [fileChooser] = await Promise.all([
-          page.waitForEvent("filechooser"),
-          addPhotosBtn.click(),
-        ]);
-        await fileChooser.setFiles(photoPaths);
+      // FB Marketplace "Add photos" button — selector may need updating
+      const photoInput = page.locator('input[type="file"][accept*="image"]').first();
+      if (await photoInput.isVisible().catch(() => false)) {
+        await photoInput.setInputFiles(photoPaths);
+      } else {
+        // Try clicking the visible button which reveals the hidden input
+        const addPhotosBtn = page
+          .locator('[aria-label="Add photos"]')
+          .first();
+        if (await addPhotosBtn.isVisible()) {
+          const [fileChooser] = await Promise.all([
+            page.waitForEvent("filechooser"),
+            addPhotosBtn.click(),
+          ]);
+          await fileChooser.setFiles(photoPaths);
+        }
       }
+      await delay(1500, 2500);
     }
-
-    await delay(1500, 2500);
 
     // -----------------------------------------------------------------------
     // 4. Title
@@ -206,8 +248,8 @@ export async function postToFacebookMarketplace(
     console.log("👀  Review the listing in the browser window.");
     console.log("🖱️   Click [ Publish ] when ready.\n");
 
-    // Keep browser open until the process is killed or the page closes
-    await page.waitForEvent("close", { timeout: 0 }).catch(() => {});
+    // Keep browser open until the page closes
+    await waitForPageClose();
 
     return {
       status: "ready_to_publish",
@@ -215,6 +257,8 @@ export async function postToFacebookMarketplace(
     };
   } catch (err: unknown) {
     console.error("facebook-marketplace error:", err);
+    // Keep the browser open so the user can inspect what went wrong
+    await waitForPageClose();
     return {
       status: "error",
       message: err instanceof Error ? err.message : String(err),
