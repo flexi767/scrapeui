@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { formatPrice } from '@/lib/utils';
 import {
@@ -100,6 +101,7 @@ export function MobileBgSearchResultsTable({
   sourceListingId,
   initialIgnoredResultIds,
   sourceMobileId,
+  saveAdMode = false,
 }: {
   rows: MobileBgSearchResultRow[];
   summaryText: string | null;
@@ -110,9 +112,12 @@ export function MobileBgSearchResultsTable({
   sourceListingId?: number | null;
   initialIgnoredResultIds?: string[];
   sourceMobileId: string | null;
+  saveAdMode?: boolean;
 }) {
   const [ignoredResultIds, setIgnoredResultIds] = useState<string[]>(initialIgnoredResultIds ?? []);
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
+  const [savingDraftIds, setSavingDraftIds] = useState<Record<string, boolean>>({});
+  const [savedDraftIds, setSavedDraftIds] = useState<Record<string, number>>({});
 
   const ignoredIdSet = useMemo(() => new Set(ignoredResultIds), [ignoredResultIds]);
   const sortedRows = sortRowsByEffectivePrice(rows);
@@ -143,6 +148,33 @@ export function MobileBgSearchResultsTable({
       console.error(error);
     } finally {
       setSavingIds((prev) => ({ ...prev, [mobileId]: false }));
+    }
+  }
+
+  async function saveAdAsDraft(row: MobileBgSearchResultRow) {
+    if (savingDraftIds[row.mobile_id]) return;
+    setSavingDraftIds((prev) => ({ ...prev, [row.mobile_id]: true }));
+
+    try {
+      const res = await fetch('/api/editown/save-ad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: row.url, dealerSlug: 'carbros' }),
+      });
+      const payload = await res.json().catch(() => ({})) as {
+        backupId?: number;
+        error?: string;
+      };
+      if (!res.ok || typeof payload.backupId !== 'number') {
+        throw new Error(payload.error || 'Failed to save ad as draft');
+      }
+
+      setSavedDraftIds((prev) => ({ ...prev, [row.mobile_id]: payload.backupId as number }));
+      toast.success('Saved ad as Carbros draft');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save ad as draft');
+    } finally {
+      setSavingDraftIds((prev) => ({ ...prev, [row.mobile_id]: false }));
     }
   }
 
@@ -257,7 +289,22 @@ export function MobileBgSearchResultsTable({
 
                 <td className="px-3 py-1 text-right text-slate-200/80">
                   <div className="flex items-center justify-end gap-2">
-                    {!isSourceListing && (
+                    {saveAdMode ? (
+                      <button
+                        type="button"
+                        onClick={() => void saveAdAsDraft(row)}
+                        disabled={savingDraftIds[row.mobile_id] || savedDraftIds[row.mobile_id] != null}
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded border text-[11px] font-semibold leading-none transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                          savedDraftIds[row.mobile_id] != null
+                            ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-200'
+                            : 'border-emerald-500/60 bg-emerald-950/30 text-emerald-200 hover:bg-emerald-900/60'
+                        }`}
+                        title={savedDraftIds[row.mobile_id] != null ? 'Saved as draft' : 'Save ad as Carbros draft'}
+                        aria-label={savedDraftIds[row.mobile_id] != null ? 'Saved as draft' : 'Save ad as Carbros draft'}
+                      >
+                        {savingDraftIds[row.mobile_id] ? '…' : savedDraftIds[row.mobile_id] != null ? '✓' : '+'}
+                      </button>
+                    ) : !isSourceListing && (
                       <button
                         type="button"
                         onClick={() => void toggleIgnored(row.mobile_id, !isIgnored)}

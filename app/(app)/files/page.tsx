@@ -17,17 +17,67 @@ interface UploadRow {
 export default function FilesPage() {
   const [files, setFiles] = useState<UploadRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetch('/api/uploads')
+  function loadFiles() {
+    setLoading(true);
+    return fetch('/api/uploads')
       .then((r) => r.json())
       .then(setFiles)
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    void loadFiles();
   }, []);
+
+  async function uploadFiles(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (selected.length === 0) return;
+
+    const formData = new FormData();
+    for (const file of selected) {
+      formData.append('files', file);
+    }
+
+    setUploading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/uploads', {
+        method: 'POST',
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to upload files');
+      }
+      await loadFiles();
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload files');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Files</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Files</h1>
+        <label className="inline-flex cursor-pointer items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-50">
+          {uploading ? 'Uploading...' : 'Upload files'}
+          <input
+            type="file"
+            multiple
+            className="sr-only"
+            disabled={uploading}
+            onChange={uploadFiles}
+          />
+        </label>
+      </div>
+
+      {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
 
       {loading ? (
         <p className="text-gray-400">Loading...</p>

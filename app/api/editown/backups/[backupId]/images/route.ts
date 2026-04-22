@@ -2,15 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { raw } from '@/db/client';
 
 const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const EXT_BY_MIME: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
+const MOBILEBG_IMAGE_WIDTH = 1600;
+const MOBILEBG_IMAGE_HEIGHT = 1200;
 
 interface ImageRow {
   id: number;
@@ -76,6 +74,19 @@ function refreshImageCount(backupId: number): void {
     .run(backupId, new Date().toISOString(), backupId);
 }
 
+async function resizeToMobileBgImage(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .rotate()
+    .resize({
+      width: MOBILEBG_IMAGE_WIDTH,
+      height: MOBILEBG_IMAGE_HEIGHT,
+      fit: 'inside',
+      withoutEnlargement: false,
+    })
+    .webp({ quality: 90 })
+    .toBuffer();
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
@@ -138,10 +149,9 @@ export async function POST(
 
   const insertedIds: number[] = [];
   for (const file of files) {
-    const ext = EXT_BY_MIME[file.type] ?? (path.extname(file.name).toLowerCase() || '.jpg');
-    const safeName = `${nextSort + 1}-${randomUUID()}${ext}`;
+    const safeName = `${nextSort + 1}-${randomUUID()}.webp`;
     const localPath = path.join(uploadDir, safeName);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await resizeToMobileBgImage(Buffer.from(await file.arrayBuffer()));
     fs.writeFileSync(localPath, buffer);
     const result = insertImage.run(backupId, nextSort, file.name || safeName, localPath, now);
     insertedIds.push(Number(result.lastInsertRowid));

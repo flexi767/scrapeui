@@ -9,6 +9,7 @@ import {
   parseMakeModelSync,
   type MakesMap,
 } from "@/lib/mobile-bg/makes-models";
+import { loadMobileBgMakesMapFromDb } from "@/lib/mobile-bg/reference";
 import { captureEditFormSnapshotWithPage } from "@/lib/mobile-bg/edit-form-capture";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { cleanDescription } from "@/lib/mobile-bg/description";
@@ -57,8 +58,33 @@ interface SavedImage {
   localPath: string;
 }
 
+interface DealerDraftDefaults {
+  region: string;
+  city: string;
+  phone: string;
+  email: string;
+  website: string;
+}
+
 interface ExistingBackupRow {
   id: number;
+}
+
+interface DealerDraftRow {
+  id: number;
+  slug: string;
+  name: string;
+  own: number | null;
+  active: number | null;
+}
+
+interface SnapshotFieldsRow {
+  fields_json: string | null;
+}
+
+interface BackupDefaultsRow {
+  tech_data_json: string | null;
+  phones_json: string | null;
 }
 
 export interface BackupDealerResult {
@@ -87,6 +113,12 @@ export interface BackupProgressEvent {
   runId?: number;
   listingsCount?: number;
   imagesCount?: number;
+}
+
+export interface SavePublicListingDraftResult {
+  backupId: number;
+  mobileId: string;
+  title: string;
 }
 
 const CRAWL_CACHE_TTL_HOURS = 24; // Cache dealer homepage crawls for 24 hours
@@ -232,6 +264,93 @@ function saveCrawlQueueStatus(
       now,
     );
   }
+}
+
+function parseJson<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function getSnapshotFieldValue(
+  fields: Array<{ name?: string; value?: string }>,
+  name: string,
+): string {
+  return fields.find((field) => field.name === name && field.value)?.value ?? "";
+}
+
+function getDealerDraftDefaults(
+  db: Database.Database,
+  dealerId: number,
+): DealerDraftDefaults {
+  const snapshot = db
+    .prepare(
+      `
+      SELECT fields_json
+      FROM mobilebg_edit_form_snapshots
+      WHERE dealer_id = ?
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `,
+    )
+    .get(dealerId) as SnapshotFieldsRow | undefined;
+  const fields = parseJson<Array<{ name?: string; value?: string }>>(
+    snapshot?.fields_json,
+    [],
+  );
+
+  const backup = db
+    .prepare(
+      `
+      SELECT tech_data_json, phones_json
+      FROM mobilebg_backups
+      WHERE dealer_id = ?
+      ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+      LIMIT 1
+    `,
+    )
+    .get(dealerId) as BackupDefaultsRow | undefined;
+  const techData = parseJson<Record<string, string>>(backup?.tech_data_json, {});
+  const phones = parseJson<string[]>(backup?.phones_json, []);
+
+  return {
+    region: getSnapshotFieldValue(fields, "f18") || techData.region || "",
+    city: getSnapshotFieldValue(fields, "f19") || techData.city || "",
+    phone: getSnapshotFieldValue(fields, "f22") || techData.f22 || phones[0] || "",
+    email: getSnapshotFieldValue(fields, "f23") || techData.f23 || "",
+    website: getSnapshotFieldValue(fields, "f24") || techData.f24 || "",
+  };
+}
+
+function buildDraftTechData(
+  detail: ScrapedDetail,
+  defaults: DealerDraftDefaults,
+): Record<string, string> {
+  const techData: Record<string, string> = {};
+  const productionDate = detail.techData["Дата на производство"] ?? "";
+  const productionMatch = productionDate.match(/^(\S+)\s+(\d{4})/u);
+  const euronorm = detail.techData["Евростандарт"]?.match(/\d+/)?.[0] ?? "";
+
+  techData.pubtype = "1,2";
+  techData.f13 = detail.priceCurrency || "EUR";
+  techData.f25 = "0";
+  if (productionMatch) {
+    techData.f14 = productionMatch[1];
+    techData.f15 = productionMatch[2];
+  } else if (detail.year) {
+    techData.f15 = String(detail.year);
+  }
+  if (euronorm) techData.f29 = euronorm;
+  if (defaults.region) techData.region = defaults.region;
+  if (defaults.city) techData.city = defaults.city;
+  if (defaults.phone) techData.f22 = defaults.phone;
+  if (defaults.email) techData.f23 = defaults.email;
+  if (defaults.website) techData.f24 = defaults.website;
+
+  return techData;
 }
 
 async function collectListingLinks(
@@ -387,13 +506,14 @@ async function scrapeListingDetail(
   page: Page,
   url: string,
   makesMap: MakesMap | null,
+  { includeImages = true }: { includeImages?: boolean } = {},
 ): Promise<ScrapedDetail> {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForSelector("h1", { timeout: 15000 }).catch(() => {});
   await page.waitForTimeout(1200);
 
-  const data = await page.evaluate(() => {
-    const normalizeCategoryValue = (value: string | null) => {
+  const data = await page.evaluate(String.raw`(() => {
+    const normalizeCategoryValue = (value) => {
       if (!value) return null;
       return (
         value
@@ -411,7 +531,7 @@ async function scrapeListingDetail(
     const priceMatch = body.match(/([\d\s.,]+)\s*€/);
     const noVat = body.includes("Не се начислява ДДС");
     const hasVat = !noVat && body.includes("начислява ДДС");
-    const readTechDataValue = (label: string) => {
+    const readTechDataValue = (label) => {
       const rows = Array.from(
         document.querySelectorAll(".techData .items .item"),
       );
@@ -425,7 +545,7 @@ async function scrapeListingDetail(
       return null;
     };
 
-    const extract = (pattern: RegExp) => {
+    const extract = (pattern) => {
       const match = body.match(pattern);
       return match ? match[1].trim() : null;
     };
@@ -450,23 +570,20 @@ async function scrapeListingDetail(
         ?.split(/\r?\n/)[0]
         .trim() || null;
     const description =
-      (document.querySelector(".moreInfo") as HTMLElement)?.innerText?.trim() || "";
+      document.querySelector(".moreInfo")?.innerText?.trim() || "";
     const listingId = window.location.href.match(/obiava-(\d+)/)?.[1] || null;
     const phoneMatch = body.match(/тел[.\s]*([0-9\s+\-()]{8,20})/gi);
     const phones = phoneMatch
       ? phoneMatch.map((p) => p.replace(/тел[.\s]*/i, "").trim())
       : [];
 
-    const extras: Record<
-      string,
-      Array<{ label: string; alias: string | null }>
-    > = {};
+    const extras = {};
     const extriEl = document.querySelector(".carExtri");
     if (extriEl) {
-      let currentCategory: string | null = null;
+      let currentCategory = null;
       for (const child of Array.from(extriEl.childNodes)) {
         if (child.nodeType !== 1) continue;
-        const element = child as HTMLElement;
+        const element = child;
         if (element.tagName === "SPAN" && element.classList.contains("Title")) {
           currentCategory = element.textContent?.trim() || null;
           if (currentCategory) extras[currentCategory] = [];
@@ -485,7 +602,7 @@ async function scrapeListingDetail(
       }
     }
 
-    const techData: Record<string, string> = {};
+    const techData = {};
     document.querySelectorAll(".techData .items .item").forEach((item) => {
       const divs = item.querySelectorAll("div");
       if (divs.length >= 2) {
@@ -501,14 +618,14 @@ async function scrapeListingDetail(
     )
       .map((el) => {
         const source =
-          (el as HTMLImageElement).src ||
+          el.src ||
           el.getAttribute("data-lazy") ||
           el.getAttribute("data-src") ||
           "";
         const keyMatch = source.match(/_([^_/]+)\.webp/);
         return keyMatch ? keyMatch[1] : null;
       })
-      .filter((value): value is string => Boolean(value));
+      .filter(Boolean);
 
     const photoThumbUrls = Array.from(
       document.querySelectorAll(
@@ -517,12 +634,12 @@ async function scrapeListingDetail(
     )
       .map(
         (el) =>
-          (el as HTMLImageElement).src ||
+          el.src ||
           el.getAttribute("data-lazy") ||
           el.getAttribute("data-src") ||
           "",
       )
-      .filter((value): value is string => Boolean(value));
+      .filter(Boolean);
 
     return {
       title,
@@ -547,13 +664,15 @@ async function scrapeListingDetail(
       photoOrder,
       photoThumbUrls,
     };
-  });
+  })()`);
 
-  const scrapedImageUrls = await scrapeAllImages(page);
+  const scrapedImageUrls = includeImages ? await scrapeAllImages(page) : [];
   const mobileId =
     url.match(/obiava-(\d+)/)?.[1] || data.listingId || String(Date.now());
   const imageUrls =
-    scrapedImageUrls.length > 0
+    !includeImages
+      ? []
+      : scrapedImageUrls.length > 0
       ? scrapedImageUrls
       : data.photoThumbUrls
           .map((thumbUrl) => toMobileBgFullImageUrl(thumbUrl))
@@ -868,6 +987,131 @@ function insertBackupImages(
   db.prepare(
     `UPDATE mobilebg_backups SET image_count = ?, updated_at = ? WHERE id = ?`,
   ).run(savedImages.length, now, backupId);
+}
+
+export async function savePublicMobileBgListingAsDraft(
+  db: Database.Database,
+  dealerSlug: string,
+  listingUrl: string,
+  _dbPath: string,
+): Promise<SavePublicListingDraftResult> {
+  const normalizedUrl = normalizeImageUrl(listingUrl);
+  if (!normalizedUrl || !/mobile\.bg\/.*obiava-\d+/i.test(normalizedUrl)) {
+    throw new Error("A valid mobile.bg listing URL is required");
+  }
+
+  const dealer = db
+    .prepare(
+      `
+      SELECT id, slug, name, own, active
+      FROM dealers
+      WHERE slug = ?
+      LIMIT 1
+    `,
+    )
+    .get(dealerSlug) as DealerDraftRow | undefined;
+
+  if (!dealer || dealer.own !== 1 || dealer.active !== 1) {
+    throw new Error(`Own active dealer not found: ${dealerSlug}`);
+  }
+
+  const now = new Date().toISOString();
+  const runId = createBackupRun(db, dealer.id, normalizedUrl);
+
+  const makesMap =
+    loadMobileBgMakesMapFromDb(db) ?? (await fetchMakesModels().catch(() => null));
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ userAgent: USER_AGENT });
+  const page = await context.newPage();
+
+  try {
+    const detail = await scrapeListingDetail(page, normalizedUrl, makesMap, {
+      includeImages: false,
+    });
+    const defaults = getDealerDraftDefaults(db, dealer.id);
+    const techData = buildDraftTechData(detail, defaults);
+    const normalizedColor = detail.color
+      ? detail.color.split(/\r?\n/)[0].trim() || null
+      : null;
+
+    const result = db
+      .prepare(
+        `
+        INSERT INTO mobilebg_backups (
+          run_id, dealer_id, listing_id, mobile_id, source_url, source_title, make, model, title,
+          price_amount, price_currency, vat_included, year, mileage, fuel, power, engine, color,
+          transmission, category, description, ad_status, kaparo, draft_needs_sync,
+          phones_json, extras_json, tech_data_json, photo_order_json, image_count, created_at, updated_at
+        ) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'none', 0, 0, ?, ?, ?, ?, 0, ?, ?)
+      `,
+      )
+      .run(
+        runId,
+        dealer.id,
+        detail.url,
+        detail.sourceTitle,
+        detail.make,
+        detail.model,
+        detail.title,
+        detail.priceAmount,
+        detail.priceCurrency,
+        detail.vat,
+        detail.year,
+        detail.mileage,
+        detail.fuel,
+        detail.power,
+        detail.engine,
+        normalizedColor,
+        detail.transmission,
+        detail.category,
+        detail.description,
+        JSON.stringify(defaults.phone ? [defaults.phone] : []),
+        JSON.stringify(detail.extras),
+        JSON.stringify(techData),
+        JSON.stringify(detail.photoOrder),
+        now,
+        now,
+      );
+
+    const backupId = Number(result.lastInsertRowid);
+    saveCrawlQueueStatus(db, dealer.id, normalizedUrl, "listing_detail", {
+      mobileId: detail.mobileId,
+      price: detail.priceAmount ? Math.floor(detail.priceAmount) : undefined,
+      status: "completed",
+    });
+
+    const finishedAt = new Date().toISOString();
+    db.prepare(
+      `
+      UPDATE mobilebg_backup_runs
+      SET status = 'completed', listings_count = 1, images_count = 0, finished_at = ?, updated_at = ?
+      WHERE id = ?
+    `,
+    ).run(finishedAt, finishedAt, runId);
+
+    return {
+      backupId,
+      mobileId: detail.mobileId,
+      title: detail.title || detail.sourceTitle,
+    };
+  } catch (error) {
+    const failedAt = new Date().toISOString();
+    const message = error instanceof Error ? error.message : String(error);
+    db.prepare(
+      `
+      UPDATE mobilebg_backup_runs
+      SET status = 'failed', notes = ?, finished_at = ?, updated_at = ?
+      WHERE id = ?
+    `,
+    ).run(message, failedAt, failedAt, runId);
+    saveCrawlQueueStatus(db, dealer.id, normalizedUrl, "listing_detail", {
+      status: "failed",
+      error: message,
+    });
+    throw error;
+  } finally {
+    await browser.close();
+  }
 }
 
 export async function backupDealerToDb(

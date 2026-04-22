@@ -12,17 +12,36 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
 
     const form = new FormData();
-    form.append('file', file);
+    for (const file of files) {
+      form.append('files', file);
+    }
 
     const res = await fetch('/api/uploads', { method: 'POST', body: form });
     if (!res.ok) return;
 
-    const { url } = await res.json();
-    editor.chain().focus().setImage({ src: url }).run();
+    const payload = (await res.json().catch(() => ({}))) as {
+      uploads?: Array<{ url: string }>;
+      url?: string;
+    };
+    const urls = [
+      ...new Set(
+        [
+          ...(payload.uploads ?? []).map((upload) => upload.url),
+          payload.url,
+        ].filter(
+          (url): url is string =>
+            typeof url === 'string' && url.startsWith('/api/uploads/'),
+        ),
+      ),
+    ];
+
+    for (const url of urls) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
 
     if (fileInput.current) fileInput.current.value = '';
   }
@@ -127,6 +146,7 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
         ref={fileInput}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={handleImageUpload}
       />

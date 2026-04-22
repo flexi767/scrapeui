@@ -557,6 +557,7 @@ function AutocompleteInput({
   open,
   focusWhenOpen = false,
   trailingText,
+  onArrowLeft,
   onOpenChange,
 }: {
   value: string;
@@ -568,9 +569,11 @@ function AutocompleteInput({
   open: boolean;
   focusWhenOpen?: boolean;
   trailingText?: string | null;
+  onArrowLeft?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const [isTyping, setIsTyping] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldSelectAllOnFocusRef = useRef(false);
   const openRef = useRef(open);
@@ -596,29 +599,73 @@ function AutocompleteInput({
     [hideLowCountOnEmpty, isTyping, options, value],
   );
 
+  function selectOption(option: AutocompleteOption) {
+    onChange(option.value);
+    setIsTyping(false);
+    onOpenChange(false);
+    inputRef.current?.blur();
+  }
+
+  const selectedIndex =
+    visibleOptions.length > 0
+      ? Math.min(highlightedIndex, visibleOptions.length - 1)
+      : 0;
+
   return (
     <div className="relative">
       <input
         ref={inputRef}
         value={value}
         onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" && onArrowLeft) {
+            event.preventDefault();
+            onArrowLeft();
+            return;
+          }
+
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            if (!open) onOpenChange(true);
+            if (visibleOptions.length > 0) {
+              setHighlightedIndex((current) =>
+                current >= visibleOptions.length - 1 ? 0 : current + 1,
+              );
+            }
+            return;
+          }
+
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            if (!open) onOpenChange(true);
+            if (visibleOptions.length > 0) {
+              setHighlightedIndex((current) =>
+                current <= 0 ? visibleOptions.length - 1 : current - 1,
+              );
+            }
+            return;
+          }
+
+          if (event.key === "Escape" && open) {
+            event.preventDefault();
+            onOpenChange(false);
+            return;
+          }
+
           if (event.key !== "Enter") return;
           if (!open || visibleOptions.length === 0) return;
           event.preventDefault();
-          const firstOption = visibleOptions[0];
-          onChange(firstOption.value);
-          setIsTyping(false);
-          onOpenChange(false);
-          inputRef.current?.blur();
+          selectOption(visibleOptions[selectedIndex] ?? visibleOptions[0]);
         }}
         onChange={(event) => {
           onChange(event.target.value);
           setIsTyping(true);
+          setHighlightedIndex(0);
           shouldSelectAllOnFocusRef.current = false;
           onOpenChange(true);
         }}
         onFocus={() => {
           setIsTyping(false);
+          setHighlightedIndex(0);
           shouldSelectAllOnFocusRef.current = true;
           onOpenChange(true);
           window.requestAnimationFrame(() => {
@@ -650,18 +697,18 @@ function AutocompleteInput({
           {visibleOptions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
           ) : (
-            visibleOptions.map((option) => (
+            visibleOptions.map((option, index) => (
               <button
                 key={option.value}
                 type="button"
+                onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
                   event.preventDefault();
-                  onChange(option.value);
-                  setIsTyping(false);
-                  onOpenChange(false);
-                  inputRef.current?.blur();
+                  selectOption(option);
                 }}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 ${
+                  selectedIndex === index ? "bg-gray-800" : "hover:bg-gray-800"
+                }`}
               >
                 <span>{option.value}</span>
                 {option.count != null && (
@@ -1721,6 +1768,7 @@ export default function NewListingForm({
               emptyLabel="No make matches"
               hideLowCountOnEmpty
               open={openAutocomplete === "make"}
+              focusWhenOpen
               trailingText={
                 selectedMakeCount != null
                   ? selectedMakeCount.toLocaleString("en-US")
@@ -1747,6 +1795,7 @@ export default function NewListingForm({
               emptyLabel="No model matches"
               open={openAutocomplete === "model"}
               focusWhenOpen
+              onArrowLeft={() => setOpenAutocomplete("make")}
               trailingText={
                 selectedModelCount != null
                   ? selectedModelCount.toLocaleString("en-US")

@@ -15,32 +15,40 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData();
-  const file = formData.get('file') as File | null;
-  if (!file) {
+  const files = [
+    ...formData.getAll('files'),
+    ...formData.getAll('file'),
+  ].filter((value): value is File => value instanceof File && value.size > 0);
+
+  if (files.length === 0) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   }
 
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 20MB)' }, { status: 400 });
+  const tooLarge = files.find((file) => file.size > MAX_SIZE);
+  if (tooLarge) {
+    return NextResponse.json({ error: `${tooLarge.name} is too large (max 20MB)` }, { status: 400 });
   }
-
-  const ext = path.extname(file.name) || '';
-  const storedName = nanoid() + ext;
-  const filePath = path.join(UPLOAD_DIR, storedName);
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  fs.writeFileSync(filePath, buffer);
 
   const entityType = formData.get('entityType') as string | null;
   const entityId = formData.get('entityId') as string | null;
   const now = new Date().toISOString();
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-  const result = raw
+  const insertUpload = raw
     .prepare(
       `INSERT INTO uploads (filename, stored_name, mime_type, size_bytes, entity_type, entity_id, uploaded_by_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
+    );
+  const uploads = [];
+
+  for (const file of files) {
+    const ext = path.extname(file.name) || '';
+    const storedName = nanoid() + ext;
+    const filePath = path.join(UPLOAD_DIR, storedName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(filePath, buffer);
+
+    const result = insertUpload.run(
       file.name,
       storedName,
       file.type || 'application/octet-stream',
@@ -51,11 +59,17 @@ export async function POST(request: NextRequest) {
       now,
     );
 
+    uploads.push({
+      id: result.lastInsertRowid,
+      storedName,
+      filename: file.name,
+      url: `/api/uploads/${storedName}`,
+    });
+  }
+
   return NextResponse.json({
-    id: result.lastInsertRowid,
-    storedName,
-    filename: file.name,
-    url: `/api/uploads/${storedName}`,
+    ...uploads[0],
+    uploads,
   });
 }
 

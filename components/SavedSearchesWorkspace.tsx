@@ -164,6 +164,7 @@ function AutocompleteInput({
   open,
   focusWhenOpen = false,
   trailingText,
+  onArrowLeft,
   onOpenChange,
 }: {
   value: string;
@@ -175,9 +176,11 @@ function AutocompleteInput({
   open: boolean;
   focusWhenOpen?: boolean;
   trailingText?: string | null;
+  onArrowLeft?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const [isTyping, setIsTyping] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldSelectAllOnFocusRef = useRef(false);
   // Keep a ref to the latest `open` value so the blur timeout reads current
@@ -205,29 +208,73 @@ function AutocompleteInput({
     [hideLowCountOnEmpty, isTyping, options, value],
   );
 
+  function selectOption(option: AutocompleteOption) {
+    onChange(option.value);
+    setIsTyping(false);
+    onOpenChange(false);
+    inputRef.current?.blur();
+  }
+
+  const selectedIndex =
+    visibleOptions.length > 0
+      ? Math.min(highlightedIndex, visibleOptions.length - 1)
+      : 0;
+
   return (
     <div className="relative">
       <input
         ref={inputRef}
         value={value}
         onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" && onArrowLeft) {
+            event.preventDefault();
+            onArrowLeft();
+            return;
+          }
+
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            if (!open) onOpenChange(true);
+            if (visibleOptions.length > 0) {
+              setHighlightedIndex((current) =>
+                current >= visibleOptions.length - 1 ? 0 : current + 1,
+              );
+            }
+            return;
+          }
+
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            if (!open) onOpenChange(true);
+            if (visibleOptions.length > 0) {
+              setHighlightedIndex((current) =>
+                current <= 0 ? visibleOptions.length - 1 : current - 1,
+              );
+            }
+            return;
+          }
+
+          if (event.key === "Escape" && open) {
+            event.preventDefault();
+            onOpenChange(false);
+            return;
+          }
+
           if (event.key !== "Enter") return;
           if (!open || visibleOptions.length === 0) return;
           event.preventDefault();
-          const firstOption = visibleOptions[0];
-          onChange(firstOption.value);
-          setIsTyping(false);
-          onOpenChange(false);
-          inputRef.current?.blur();
+          selectOption(visibleOptions[selectedIndex] ?? visibleOptions[0]);
         }}
         onChange={(event) => {
           onChange(event.target.value);
           setIsTyping(true);
+          setHighlightedIndex(0);
           shouldSelectAllOnFocusRef.current = false;
           onOpenChange(true);
         }}
         onFocus={() => {
           setIsTyping(false);
+          setHighlightedIndex(0);
           shouldSelectAllOnFocusRef.current = true;
           onOpenChange(true);
           window.requestAnimationFrame(() => {
@@ -262,23 +309,18 @@ function AutocompleteInput({
           {visibleOptions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
           ) : (
-            visibleOptions.map((option) => (
+            visibleOptions.map((option, index) => (
               <button
                 key={option.value}
                 type="button"
+                onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
                   event.preventDefault();
-                  onChange(option.value);
-                  setIsTyping(false);
-                  // Close the currently active dropdown after selecting an option.
-                  onOpenChange(false);
-                  // Blur the input instead of calling onOpenChange(false) directly.
-                  // This lets the parent's onChange (e.g. updateMake) set the next
-                  // open dropdown first; the blur→timeout will then see open=false
-                  // for this input and skip the redundant close.
-                  inputRef.current?.blur();
+                  selectOption(option);
                 }}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 ${
+                  selectedIndex === index ? "bg-gray-800" : "hover:bg-gray-800"
+                }`}
               >
                 <span>{option.value}</span>
                 {option.count != null && (
@@ -339,6 +381,7 @@ export default function SavedSearchesWorkspace({
   const [cloneBusy, setCloneBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [saveAdMode, setSaveAdMode] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [openAutocomplete, setOpenAutocomplete] = useState<
     "marka" | "model" | null
@@ -375,6 +418,7 @@ export default function SavedSearchesWorkspace({
       setDetail(null);
       setEditableFields([]);
       setResults(null);
+      setSaveAdMode(false);
       return;
     }
 
@@ -384,6 +428,7 @@ export default function SavedSearchesWorkspace({
     setLoadingDetail(true);
     setResults(null);
     setResultsError("");
+    setSaveAdMode(false);
 
     void fetch(`/api/saved-searches/${selectedId}`)
       .then(async (res) => {
@@ -612,6 +657,18 @@ export default function SavedSearchesWorkspace({
       setResults(null);
     } finally {
       setResultsLoading(false);
+    }
+  }
+
+  async function activateSaveAdMode() {
+    if (saveAdMode) {
+      setSaveAdMode(false);
+      return;
+    }
+
+    setSaveAdMode(true);
+    if (!results && !resultsLoading) {
+      await showResultsHere();
     }
   }
 
@@ -936,6 +993,24 @@ export default function SavedSearchesWorkspace({
                     <ExternalLink className="mr-1 h-4 w-4" />
                     Open mobile.bg
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={
+                      saveAdMode
+                        ? "border-emerald-600 bg-emerald-900 text-white hover:bg-emerald-800"
+                        : "border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
+                    }
+                    onClick={() => void activateSaveAdMode()}
+                    disabled={resultsLoading}
+                  >
+                    {resultsLoading && saveAdMode ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-1 h-4 w-4" />
+                    )}
+                    Save Ad
+                  </Button>
                   {!makeOrModelChanged && (
                     <Button
                       type="button"
@@ -1047,6 +1122,7 @@ export default function SavedSearchesWorkspace({
                                 emptyLabel="No make matches"
                                 hideLowCountOnEmpty
                                 open={openAutocomplete === "marka"}
+                                focusWhenOpen
                                 trailingText={
                                   selectedReferenceCount != null
                                     ? selectedReferenceCount.toLocaleString(
@@ -1077,6 +1153,9 @@ export default function SavedSearchesWorkspace({
                                 emptyLabel="No model matches"
                                 focusWhenOpen
                                 open={openAutocomplete === "model"}
+                                onArrowLeft={() =>
+                                  setOpenAutocomplete("marka")
+                                }
                                 trailingText={
                                   selectedReferenceCount != null
                                     ? selectedReferenceCount.toLocaleString(
@@ -1261,6 +1340,7 @@ export default function SavedSearchesWorkspace({
                 sourceListingId={listing?.id ?? 0}
                 sourceMobileId={listing?.mobile_id ?? null}
                 initialIgnoredResultIds={results.ignored_search_result_ids}
+                saveAdMode={saveAdMode}
               />
             )}
           </>
