@@ -29,117 +29,84 @@ async function main() {
   await page.waitForLoadState("networkidle").catch(() => {});
   await new Promise(r => setTimeout(r, 3000));
 
-  // ---- Test 1: click Vehicle Type label combobox and dump options ----
-  console.log("\n=== TEST: Vehicle Type dropdown options ===");
-  const vtHandle = await page.evaluateHandle(() => {
+  // ---- Dump all label[role=combobox] with surrounding label text ----
+  console.log("\n=== All label comboboxes ===");
+  const comboboxes = await page.evaluate(() => {
     const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
-    for (const el of els) {
+    return els.map(el => {
       let node = el.parentElement;
-      for (let d = 0; d < 4 && node; d++) {
-        if (node.textContent?.includes("Тип превозно средство")) return el;
+      const texts: string[] = [];
+      for (let d = 0; d < 6 && node; d++) {
+        const direct = Array.from(node.childNodes)
+          .filter(n => n.nodeType === Node.TEXT_NODE || (n as HTMLElement).tagName === 'SPAN')
+          .map(n => n.textContent?.trim()).filter(Boolean);
+        if (direct.length) texts.push(...(direct as string[]));
         node = node.parentElement;
       }
-    }
-    return null;
-  });
-  const vtEl = vtHandle.asElement();
-  if (vtEl) {
-    await vtEl.click();
-    await new Promise(r => setTimeout(r, 1500));
-    await page.screenshot({ path: "/tmp/fb-vtype-open.png" });
-    const opts = await page.evaluate(() => {
-      // Try many possible selectors for dropdown options
-      const candidates = [
-        '[role="option"]',
-        '[role="menuitem"]',
-        '[role="listitem"]',
-        'li',
-        '[data-value]',
-      ];
-      for (const sel of candidates) {
-        const els = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-        const visible = els.filter(e => e.offsetWidth > 0 && e.offsetHeight > 0);
-        if (visible.length > 0) {
-          return {
-            selector: sel,
-            items: visible.slice(0, 20).map(e => ({
-              role: e.getAttribute("role"),
-              text: e.textContent?.trim().slice(0, 60),
-            })),
-          };
-        }
-      }
-      return null;
+      return {
+        ariaLabel: el.getAttribute('aria-label'),
+        innerText: el.textContent?.trim().slice(0, 60),
+        surroundingText: [...new Set(texts)].slice(0, 8),
+      };
     });
-    console.log("Vehicle type options:", JSON.stringify(opts, null, 2));
-    await page.keyboard.press("Escape");
-    await new Promise(r => setTimeout(r, 500));
-  } else {
-    console.log("Vehicle type combobox not found");
-  }
+  });
+  console.log(JSON.stringify(comboboxes, null, 2));
 
-  // ---- Test 2: click Make input, type "Hyundai", dump what appears ----
-  console.log("\n=== TEST: Make autocomplete suggestions ===");
-  const makeHandle = await page.evaluateHandle(() => {
-    const candidates = Array.from(document.querySelectorAll(
-      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=search])"
+  // ---- Dump all visible text inputs with their labels ----
+  console.log("\n=== All visible text inputs ===");
+  const inputs = await page.evaluate(() => {
+    const els = Array.from(document.querySelectorAll(
+      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=radio]):not([type=search]), textarea"
     )) as HTMLElement[];
-    for (const el of candidates) {
+    return els
+      .filter(e => (e as HTMLInputElement).offsetWidth > 0)
+      .map(el => {
+        let node = el.parentElement;
+        const texts: string[] = [];
+        for (let d = 0; d < 5 && node; d++) {
+          const direct = Array.from(node.childNodes)
+            .filter(n => n.nodeType === Node.TEXT_NODE || (n as HTMLElement).tagName === 'SPAN' || (n as HTMLElement).tagName === 'LABEL')
+            .map(n => n.textContent?.trim()).filter(Boolean);
+          if (direct.length) texts.push(...(direct as string[]));
+          node = node.parentElement;
+        }
+        return {
+          tag: el.tagName,
+          type: (el as HTMLInputElement).type,
+          placeholder: (el as HTMLInputElement).placeholder,
+          ariaLabel: el.getAttribute('aria-label'),
+          value: (el as HTMLInputElement).value?.slice(0, 40),
+          surroundingText: [...new Set(texts)].slice(0, 6),
+        };
+      });
+  });
+  console.log(JSON.stringify(inputs, null, 2));
+
+  // ---- Dump all checkboxes ----
+  console.log("\n=== All checkboxes ===");
+  const checkboxes = await page.evaluate(() => {
+    const els = Array.from(document.querySelectorAll('input[type=checkbox], [role=checkbox], [role=switch]')) as HTMLElement[];
+    return els.filter(e => e.offsetWidth > 0).map(el => {
       let node = el.parentElement;
-      for (let d = 0; d < 4 && node; d++) {
-        if (node.textContent?.includes("Марка")) return el;
+      const texts: string[] = [];
+      for (let d = 0; d < 5 && node; d++) {
+        const t = node.textContent?.trim().slice(0, 80);
+        if (t) texts.push(t);
         node = node.parentElement;
       }
-    }
-    return null;
-  });
-  const makeEl = makeHandle.asElement();
-  if (makeEl) {
-    await makeEl.click({ clickCount: 3 });
-    await makeEl.type("Hyundai", { delay: 80 });
-    await new Promise(r => setTimeout(r, 2000));
-    await page.screenshot({ path: "/tmp/fb-make-open.png" });
-
-    const opts = await page.evaluate(() => {
-      // Scan many selectors to find what appeared after typing
-      const selectors = [
-        '[role="option"]',
-        '[role="menuitem"]',
-        '[role="listitem"]',
-        '[role="presentation"]',
-        'ul li',
-        '[data-value]',
-        // FB-specific
-        '[class*="autocomplete"] li',
-        '[class*="suggest"] div',
-      ];
-      const results: any[] = [];
-      for (const sel of selectors) {
-        try {
-          const els = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-          const visible = els.filter(e => e.offsetWidth > 0 && e.offsetHeight > 0 && e.textContent?.trim());
-          if (visible.length > 0) {
-            results.push({
-              selector: sel,
-              count: visible.length,
-              items: visible.slice(0, 5).map(e => ({
-                tag: e.tagName,
-                role: e.getAttribute("role"),
-                text: e.textContent?.trim().slice(0, 60),
-                class: e.className?.slice(0, 60),
-              })),
-            });
-          }
-        } catch {}
-      }
-      return results;
+      return {
+        role: el.getAttribute('role'),
+        ariaLabel: el.getAttribute('aria-label'),
+        ariaChecked: el.getAttribute('aria-checked'),
+        checked: (el as HTMLInputElement).checked,
+        surroundingText: [...new Set(texts)].slice(0, 3),
+      };
     });
-    console.log("Make autocomplete results:", JSON.stringify(opts, null, 2));
-  } else {
-    console.log("Make input not found");
-  }
+  });
+  console.log(JSON.stringify(checkboxes, null, 2));
 
-  console.log("\nScreenshots: /tmp/fb-vtype-open.png, /tmp/fb-make-open.png");
+  await page.screenshot({ path: "/tmp/fb-inspect.png" });
+  console.log("\nScreenshot: /tmp/fb-inspect.png");
   console.log("Close browser to exit.");
   await page.waitForEvent("close", { timeout: 0 }).catch(() => {});
   await context.close();

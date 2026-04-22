@@ -55,6 +55,7 @@ async function main() {
          b.make,
          b.model,
          b.year,
+         b.mileage,
          b.transmission,
          b.category
        FROM mobilebg_backups b
@@ -68,6 +69,7 @@ async function main() {
         make: string | null;
         model: string | null;
         year: number | null;
+        mileage: number | null;
         transmission: string | null;
         category: string | null;
       }
@@ -85,6 +87,26 @@ async function main() {
     )
     .all(backupId) as { local_path: string }[];
 
+  // Extract city from the edit form snapshot (field f19 = city, f18 = region)
+  const snapshot = db
+    .prepare(
+      `SELECT fields_json FROM mobilebg_edit_form_snapshots WHERE backup_id = ? ORDER BY id DESC LIMIT 1`,
+    )
+    .get(backupId) as { fields_json: string } | undefined;
+
+  let location: string | undefined;
+  if (snapshot?.fields_json) {
+    try {
+      const fields = JSON.parse(snapshot.fields_json) as Array<{ name?: string; value?: string }>;
+      const cityField = fields.find((f) => f.name === "f19");
+      const city = cityField?.value?.trim();
+      if (city) {
+        // "гр. Пловдив" → "Пловдив", "с. Марково" → "Марково"
+        location = city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim();
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
   db.close();
 
   // Construct title as "Make Model <listing title>"
@@ -98,15 +120,17 @@ async function main() {
     make: backup.make ?? undefined,
     model: backup.model ?? undefined,
     year: backup.year ?? undefined,
+    mileage: backup.mileage ?? undefined,
     transmission: backup.transmission ?? undefined,
     vehicleType: mapVehicleType(backup.category),
+    location,
     photos: images.map((img) => img.local_path).filter(Boolean),
   };
 
   console.log(`Publishing backup #${backupId}: ${fullTitle}`);
-  console.log(`  Make: ${backup.make}, Model: ${backup.model}, Year: ${backup.year}`);
+  console.log(`  Make: ${backup.make}, Model: ${backup.model}, Year: ${backup.year}, Mileage: ${backup.mileage}`);
   console.log(`  Type: ${backup.category}, Transmission: ${backup.transmission}`);
-  console.log(`  Price: ${backup.price_amount}, Photos: ${listing.photos.length}`);
+  console.log(`  Location: ${location ?? "(none)"}, Price: ${backup.price_amount}, Photos: ${listing.photos.length}`);
 
   const result = await postToFacebookMarketplace(listing);
   if (result.status === "error") {

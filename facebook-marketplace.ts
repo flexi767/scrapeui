@@ -29,6 +29,7 @@ export interface MarketplaceListing {
   make?: string;
   model?: string;
   year?: number;
+  mileage?: number;      // km
   transmission?: string;
   vehicleType?: string;  // "Тип превозно средство" — e.g. "Джип", "Седан", "Хечбек"
   location?: string;     // overrides the FB account location if provided
@@ -161,7 +162,15 @@ export async function postToFacebookMarketplace(
     }
 
     // -----------------------------------------------------------------------
-    // 5. Price (Цена)
+    // 5. Mileage (Километраж) — plain text input
+    // -----------------------------------------------------------------------
+    if (listing.mileage) {
+      await fillByLabel(page, "Километраж", String(listing.mileage));
+      await delay(400, 600);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. Price (Цена)
     // -----------------------------------------------------------------------
     await fillByLabel(page, "Цена", String(listing.price));
 
@@ -200,7 +209,12 @@ export async function postToFacebookMarketplace(
     if (listing.transmission) {
       await page.evaluate(() => window.scrollBy(0, 400));
       await delay(600, 900);
-      await fillLabelCombobox(page, "Скоростна кутия", listing.transmission);
+      // Try multiple label variants — FB has used different names across locales
+      const transmissionLabels = ["Скоростна кутия", "Трансмисия", "Transmission"];
+      for (const label of transmissionLabels) {
+        const found = await fillLabelCombobox(page, label, listing.transmission);
+        if (found) break;
+      }
     }
 
     // Save a screenshot so we can verify what got filled
@@ -258,14 +272,14 @@ async function fillByLabel(page: Page, labelText: string, value: string): Promis
  * Click a LABEL[role=combobox] dropdown (used by FB for Vehicle Type, Year,
  * Transmission) and select the option matching value.
  */
-async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<void> {
+async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<boolean> {
   const handle = await page.evaluateHandle((label) => {
     // FB renders these as <label role="combobox"> inside a wrapper div that
     // contains the label text as a sibling span.
     const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
     for (const el of els) {
       let node = el.parentElement;
-      for (let depth = 0; depth < 4 && node; depth++) {
+      for (let depth = 0; depth < 6 && node; depth++) {
         if (node.textContent?.includes(label)) return el;
         node = node.parentElement;
       }
@@ -275,8 +289,7 @@ async function fillLabelCombobox(page: Page, labelText: string, value: string): 
 
   const el = handle.asElement();
   if (!el) {
-    console.warn(`⚠️  Could not find combobox for "${labelText}"`);
-    return;
+    return false;
   }
 
   await el.click();
@@ -290,7 +303,7 @@ async function fillLabelCombobox(page: Page, labelText: string, value: string): 
   if (await option.isVisible({ timeout: 4000 }).catch(() => false)) {
     await option.click();
     await delay(300, 500);
-    return;
+    return true;
   }
 
   // Some dropdowns show a search input inside a dialog — try typing to filter
@@ -305,12 +318,13 @@ async function fillLabelCombobox(page: Page, labelText: string, value: string): 
     if (await filtered.isVisible({ timeout: 3000 }).catch(() => false)) {
       await filtered.click();
       await delay(300, 500);
-      return;
+      return true;
     }
   }
 
   console.warn(`⚠️  No option matched "${value}" for "${labelText}" — closing dropdown`);
   await page.keyboard.press("Escape").catch(() => {});
+  return false;
 }
 
 /**
