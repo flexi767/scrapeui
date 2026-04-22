@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { Region, City } from "@/lib/mobile-bg/regions";
 import { formatPrice } from "@/lib/utils";
@@ -745,7 +753,7 @@ function DealerListingPicker({
   deletingBackupId,
   error,
   onSelect,
-  onDeleteDraft,
+  onRequestDeleteDraft,
 }: {
   listings: DealerListingSummary[];
   loading: boolean;
@@ -754,7 +762,7 @@ function DealerListingPicker({
   deletingBackupId: number | null;
   error: string;
   onSelect: (mobileId: string, backupId: number | null) => void;
-  onDeleteDraft: (backupId: number) => void;
+  onRequestDeleteDraft: (backupId: number) => void;
 }) {
   if (loading) {
     return (
@@ -839,7 +847,9 @@ function DealerListingPicker({
               {isDraft ? (
                 <button
                   type="button"
-                  onClick={() => onDeleteDraft(listing.backupId as number)}
+                  onClick={() =>
+                    onRequestDeleteDraft(listing.backupId as number)
+                  }
                   disabled={deleting || Boolean(prefillingMobileId)}
                   title="Изтрий черновата"
                   aria-label="Изтрий черновата"
@@ -1262,6 +1272,9 @@ export default function NewListingForm({
     initialDealerListingsByDealer,
   );
   const [deletingBackupId, setDeletingBackupId] = useState<number | null>(null);
+  const [draftDeleteCandidateId, setDraftDeleteCandidateId] = useState<
+    number | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedMode, setSavedMode] = useState<"created" | "updated">("created");
@@ -1319,6 +1332,13 @@ export default function NewListingForm({
     () => (form.dealerId ? (dealerListingsByDealer[form.dealerId] ?? []) : []),
     [dealerListingsByDealer, form.dealerId],
   );
+  const draftDeleteCandidate = useMemo(
+    () =>
+      dealerListings.find(
+        (listing) => listing.backupId === draftDeleteCandidateId,
+      ) ?? null,
+    [dealerListings, draftDeleteCandidateId],
+  );
 
   useEffect(() => {
     setDealerListingsByDealer(initialDealerListingsByDealer);
@@ -1370,6 +1390,7 @@ export default function NewListingForm({
     setCities([]);
     setSelectedTemplateMobileId(null);
     setSelectedBackupId(null);
+    setDraftDeleteCandidateId(null);
     setPrefillingMobileId(null);
     setError("");
     setSaved(false);
@@ -1567,6 +1588,7 @@ export default function NewListingForm({
         setSelectedTemplateMobileId(null);
         setSelectedBackupId(null);
       }
+      setDraftDeleteCandidateId(null);
     } catch (deleteError) {
       setError((deleteError as Error).message);
     } finally {
@@ -1607,6 +1629,53 @@ export default function NewListingForm({
 
   return (
     <div className="space-y-6 pb-8">
+      <Dialog
+        open={Boolean(draftDeleteCandidate)}
+        onOpenChange={(open) => {
+          if (!open && deletingBackupId == null) {
+            setDraftDeleteCandidateId(null);
+          }
+        }}
+      >
+        <DialogContent className="border border-gray-700 bg-gray-900 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>Изтрий черновата?</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Това ще премахне черновата за{" "}
+              <span className="font-medium text-gray-200">
+                {draftDeleteCandidate
+                  ? [draftDeleteCandidate.make, draftDeleteCandidate.model]
+                      .filter(Boolean)
+                      .join(" ") || "тази обява"
+                  : "тази обява"}
+              </span>
+              . Действието не може да бъде отменено.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setDraftDeleteCandidateId(null)}
+              disabled={deletingBackupId != null}
+              className="rounded-md border border-gray-600 bg-transparent px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Отказ
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (draftDeleteCandidate?.backupId) {
+                  void deleteDraft(draftDeleteCandidate.backupId);
+                }
+              }}
+              disabled={deletingBackupId != null || !draftDeleteCandidate}
+              className="rounded-md border border-red-700 bg-red-950/80 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deletingBackupId != null ? "Изтриване..." : "Изтрий"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <FormSection>
         <div className="mb-5">
           <div className="mt-2">
@@ -1617,6 +1686,7 @@ export default function NewListingForm({
                 setField("dealerId", value);
                 setSelectedTemplateMobileId(null);
                 setSelectedBackupId(null);
+                setDraftDeleteCandidateId(null);
               }}
             />
           </div>
@@ -1632,7 +1702,7 @@ export default function NewListingForm({
                 onSelect={(mobileId, backupId) =>
                   void prefillFromListing(mobileId, backupId)
                 }
-                onDeleteDraft={(backupId) => void deleteDraft(backupId)}
+                onRequestDeleteDraft={setDraftDeleteCandidateId}
               />
             </div>
           ) : null}
