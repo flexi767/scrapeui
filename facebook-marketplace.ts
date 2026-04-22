@@ -5,17 +5,12 @@
  * fills every field, uploads photos, then PAUSES and waits for you to click
  * Publish manually.  Never submits on your behalf.
  *
- * Usage:
- *   npx tsx facebook-marketplace.ts
- *
- * Or import postToFacebookMarketplace() and call it from scrapeui's API route.
- *
  * Prerequisites:
  *   npm install playwright
  *   npx playwright install chromium
  *
  * First run: set HEADLESS=false, log in manually, complete any 2FA.
- * The session is saved outside the app directory and reused on subsequent runs.
+ * The session is saved and reused on subsequent runs.
  */
 
 import { chromium, Page } from "playwright";
@@ -28,28 +23,17 @@ import { execSync } from "child_process";
 // ---------------------------------------------------------------------------
 
 export interface MarketplaceListing {
-  title: string;
-  price: number; // EUR, will be entered as plain number
+  title: string;         // used for display / reference only — FB vehicle form has no title field
+  price: number;
   description: string;
-  category?: MarketplaceCategory;
-  condition?: "new" | "used_like_new" | "used_good" | "used_fair";
-  location?: string; // shown as hint; FB uses account location by default
-  photos: string[]; // absolute local paths, max 10
+  make?: string;
+  model?: string;
+  year?: number;
+  transmission?: string;
+  vehicleType?: string;  // "Тип превозно средство" — e.g. "Джип", "Седан", "Хечбек"
+  location?: string;     // overrides the FB account location if provided
+  photos: string[];
 }
-
-export type MarketplaceCategory =
-  | "vehicles"
-  | "electronics"
-  | "apparel"
-  | "garden"
-  | "hobbies"
-  | "home_sales"
-  | "musical_instruments"
-  | "office_supplies"
-  | "sporting_goods"
-  | "toys_games"
-  | "video_games"
-  | "other";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -58,10 +42,9 @@ export type MarketplaceCategory =
 const SESSION_DIR =
   process.env.FB_SESSION_DIR ||
   path.resolve(__dirname, "storage", "fb-session");
-const HEADLESS = process.env.HEADLESS === "true"; // default: visible
-const SLOW_MO = 120; // ms between actions — looks more human
+const HEADLESS = process.env.HEADLESS === "true";
+const SLOW_MO = 80;
 
-// Human-like random delay
 const delay = (min: number, max: number) =>
   new Promise((r) =>
     setTimeout(r, Math.floor(Math.random() * (max - min + 1)) + min)
@@ -71,20 +54,11 @@ const delay = (min: number, max: number) =>
 // Core
 // ---------------------------------------------------------------------------
 
-/**
- * Kill any Chrome processes holding the profile dir and remove the lock file.
- * Chrome refuses to launch a second instance with the same user-data-dir.
- */
 function clearProfileLock(profileDir: string): void {
-  // Kill every Chrome process whose command line mentions this profile dir
-  try {
-    execSync(`pkill -f ${JSON.stringify(profileDir)} 2>/dev/null || true`);
-  } catch { /* ignore */ }
-  // Brief pause so processes can exit before we launch
-  try { execSync("sleep 0.5"); } catch { /* ignore */ }
-  // Remove stale lock file Chrome leaves behind
+  try { execSync(`pkill -f ${JSON.stringify(profileDir)} 2>/dev/null || true`); } catch { /* ok */ }
+  try { execSync("sleep 0.8"); } catch { /* ok */ }
   const lockFile = path.join(profileDir, "SingletonLock");
-  try { fs.unlinkSync(lockFile); } catch { /* not present — fine */ }
+  try { fs.unlinkSync(lockFile); } catch { /* not present */ }
 }
 
 export async function postToFacebookMarketplace(
@@ -94,14 +68,10 @@ export async function postToFacebookMarketplace(
     fs.mkdirSync(SESSION_DIR, { recursive: true });
   }
 
-  // Tracks the active page so all exit paths can wait for it to close,
-  // keeping the browser window open until the user is done.
   let page: Page | null = null;
 
   async function waitForPageClose() {
-    if (page) {
-      await page.waitForEvent("close", { timeout: 0 }).catch(() => {});
-    }
+    if (page) await page.waitForEvent("close", { timeout: 0 }).catch(() => {});
   }
 
   try {
@@ -112,210 +82,316 @@ export async function postToFacebookMarketplace(
       slowMo: SLOW_MO,
       viewport: { width: 1280, height: 900 },
       locale: "en-US",
-      args: [
-        "--disable-blink-features=AutomationControlled",
-        "--no-sandbox",
-      ],
-      // Suppress "automation" flag
+      args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       ignoreDefaultArgs: ["--enable-automation"],
     });
 
-    // Reuse the page the persistent context already has open (from the saved
-    // session), rather than opening a new blank tab alongside it.
     const existingPages = context.pages();
     page = existingPages.length > 0 ? existingPages[0] : await context.newPage();
 
-    // Remove webdriver property that FB checks
     await page.addInitScript(() => {
       Object.defineProperty(navigator, "webdriver", { get: () => undefined });
     });
 
     // -----------------------------------------------------------------------
-    // 1. Navigate directly to Create Listing (skipping the feed)
-    //    If the session is expired FB will redirect to /login.
+    // 1. Navigate to Create Vehicle Listing
     // -----------------------------------------------------------------------
     await page.goto(
       "https://www.facebook.com/marketplace/create/vehicle",
       { waitUntil: "domcontentloaded" }
     );
-    await delay(2000, 3500);
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await delay(2500, 3500);
 
-    const afterNavUrl = page.url();
+    const url = page.url();
     const isLoggedIn =
-      !afterNavUrl.includes("/login") &&
-      !afterNavUrl.includes("login.php") &&
-      !afterNavUrl.includes("/checkpoint");
+      !url.includes("/login") &&
+      !url.includes("login.php") &&
+      !url.includes("/checkpoint");
 
     if (!isLoggedIn) {
       console.log(
-        "\n⚠️  Not logged in to Facebook.\n" +
-        "   Log in manually in the browser window.\n" +
-        "   The session will be saved for future runs.\n" +
-        "   Close the browser when done.\n"
+        "\n⚠️  Not logged in — log in manually in the browser, then close it.\n"
       );
       await waitForPageClose();
-      return {
-        status: "error",
-        message: "Not logged in. Log in manually and try again — session is now saved.",
-      };
+      return { status: "error", message: "Not logged in. Session saved — retry." };
     }
 
-    // If FB redirected us away from the create page (e.g. back to feed),
-    // try navigating once more with networkidle.
-    if (!afterNavUrl.includes("/marketplace/create")) {
-      console.log("⚠️  FB redirected away from create page — retrying…");
+    if (!page.url().includes("/marketplace/create")) {
+      console.log("⚠️  Redirected away — retrying navigation…");
       await page.goto(
         "https://www.facebook.com/marketplace/create/vehicle",
-        { waitUntil: "networkidle" }
+        { waitUntil: "domcontentloaded" }
       );
-      await delay(2000, 3000);
+      await page.waitForLoadState("networkidle").catch(() => {});
+      await delay(2000, 2500);
     }
 
     // -----------------------------------------------------------------------
-    // 3. Photos
+    // 2. Photos
     // -----------------------------------------------------------------------
-    const photoPaths = listing.photos
-      .slice(0, 10)
-      .filter((p) => fs.existsSync(p));
-
+    const photoPaths = listing.photos.slice(0, 10).filter((p) => fs.existsSync(p));
     if (photoPaths.length === 0) {
-      console.warn("⚠️  No valid local photo paths — skipping upload. Add photos manually in the browser.");
+      console.warn("⚠️  No valid photo paths — skipping upload.");
     } else {
-      // FB Marketplace "Add photos" button — selector may need updating
-      const photoInput = page.locator('input[type="file"][accept*="image"]').first();
-      if (await photoInput.isVisible().catch(() => false)) {
-        await photoInput.setInputFiles(photoPaths);
-      } else {
-        // Try clicking the visible button which reveals the hidden input
-        const addPhotosBtn = page
-          .locator('[aria-label="Add photos"]')
-          .first();
-        if (await addPhotosBtn.isVisible()) {
-          const [fileChooser] = await Promise.all([
-            page.waitForEvent("filechooser"),
-            addPhotosBtn.click(),
-          ]);
-          await fileChooser.setFiles(photoPaths);
-        }
-      }
-      await delay(1500, 2500);
+      const fileInput = page.locator('input[type="file"]').first();
+      await fileInput.setInputFiles(photoPaths).catch((e) =>
+        console.warn("⚠️  Photo upload failed:", e.message)
+      );
+      await delay(2500, 3500);
+    }
+
+    // Fill plain text fields FIRST — before any combobox interactions that
+    // trigger React re-renders and may restructure the DOM.
+
+    // -----------------------------------------------------------------------
+    // 3. Make (Марка) — plain text input
+    // -----------------------------------------------------------------------
+    if (listing.make) {
+      await fillByLabel(page, "Марка", listing.make);
+      await delay(400, 600);
     }
 
     // -----------------------------------------------------------------------
-    // 4. Title
+    // 4. Model (Модел) — plain text input
     // -----------------------------------------------------------------------
-    await fillField(page, [
-      '[aria-label="Title"]',
-      'input[placeholder*="Title"]',
-      'input[name="title"]',
-    ], listing.title);
-
-    // -----------------------------------------------------------------------
-    // 5. Price
-    // -----------------------------------------------------------------------
-    await fillField(page, [
-      '[aria-label="Price"]',
-      'input[placeholder*="Price"]',
-      'input[name="price"]',
-    ], String(listing.price));
-
-    // -----------------------------------------------------------------------
-    // 6. Category (vehicles is default on /create/vehicle; skip if not needed)
-    // -----------------------------------------------------------------------
-    // Category is pre-set via the URL. If you need a different one, uncomment:
-    // await selectCategory(page, listing.category ?? "vehicles");
-
-    // -----------------------------------------------------------------------
-    // 7. Condition
-    // -----------------------------------------------------------------------
-    if (listing.condition) {
-      await selectCondition(page, listing.condition);
+    if (listing.model) {
+      await fillByLabel(page, "Модел", listing.model);
+      await delay(400, 600);
     }
 
     // -----------------------------------------------------------------------
-    // 8. Description
+    // 5. Price (Цена)
     // -----------------------------------------------------------------------
-    await fillField(page, [
-      '[aria-label="Description"]',
-      'textarea[placeholder*="Description"]',
-      'textarea[name="description"]',
-    ], listing.description);
+    await fillByLabel(page, "Цена", String(listing.price));
 
     // -----------------------------------------------------------------------
-    // 9. Done — hand control back to the human
+    // 6. Description (Описание)
     // -----------------------------------------------------------------------
+    await fillByLabel(page, "Описание", listing.description);
+
+    // -----------------------------------------------------------------------
+    // 7. Location (Местоположение) — direct aria-label selector
+    // -----------------------------------------------------------------------
+    if (listing.location) {
+      await fillLocation(page, listing.location);
+      await delay(600, 900);
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. Vehicle Type (Тип превозно средство) — LABEL combobox
+    // -----------------------------------------------------------------------
+    if (listing.vehicleType) {
+      await fillLabelCombobox(page, "Тип превозно средство", listing.vehicleType);
+      await delay(800, 1200);
+    }
+
+    // -----------------------------------------------------------------------
+    // 9. Year (Година) — LABEL combobox
+    // -----------------------------------------------------------------------
+    if (listing.year) {
+      await fillLabelCombobox(page, "Година", String(listing.year));
+      await delay(800, 1200);
+    }
+
+    // -----------------------------------------------------------------------
+    // 10. Transmission — scroll down and look for it (may appear after Year)
+    // -----------------------------------------------------------------------
+    if (listing.transmission) {
+      await page.evaluate(() => window.scrollBy(0, 400));
+      await delay(600, 900);
+      await fillLabelCombobox(page, "Скоростна кутия", listing.transmission);
+    }
+
+    // Save a screenshot so we can verify what got filled
+    await page.screenshot({ path: "/tmp/fb-filled.png" }).catch(() => {});
+    console.log("📸  Screenshot saved to /tmp/fb-filled.png");
+
     console.log("\n✅  Form pre-filled.");
     console.log("👀  Review the listing in the browser window.");
     console.log("🖱️   Click [ Publish ] when ready.\n");
 
-    // Keep browser open until the page closes
     await waitForPageClose();
-
-    return {
-      status: "ready_to_publish",
-      message: "Form filled. Waiting for manual publish.",
-    };
+    return { status: "ready_to_publish", message: "Form filled. Waiting for manual publish." };
   } catch (err: unknown) {
     console.error("facebook-marketplace error:", err);
-    // Keep the browser open so the user can inspect what went wrong
     await waitForPageClose();
-    return {
-      status: "error",
-      message: err instanceof Error ? err.message : String(err),
-    };
+    return { status: "error", message: err instanceof Error ? err.message : String(err) };
   }
-  // Do NOT close context — we're leaving the browser open for the human
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function fillField(
-  page: Page,
-  selectors: string[],
-  value: string
-): Promise<void> {
-  for (const sel of selectors) {
-    const el = page.locator(sel).first();
-    if (await el.isVisible().catch(() => false)) {
-      await el.click({ clickCount: 3 }); // select all existing text
-      await delay(200, 400);
-      await el.fill(value);
-      await delay(300, 600);
+/**
+ * Fill a plain text input or textarea found by walking up ≤4 parent levels
+ * looking for the label text.
+ */
+async function fillByLabel(page: Page, labelText: string, value: string): Promise<void> {
+  const handle = await page.evaluateHandle((label) => {
+    const candidates = Array.from(document.querySelectorAll(
+      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=search]), textarea"
+    )) as HTMLElement[];
+    for (const el of candidates) {
+      let node = el.parentElement;
+      for (let depth = 0; depth < 4 && node; depth++) {
+        if (node.textContent?.includes(label)) return el;
+        node = node.parentElement;
+      }
+    }
+    return null;
+  }, labelText);
+
+  const el = handle.asElement();
+  if (!el) {
+    console.warn(`⚠️  Could not find field with label "${labelText}"`);
+    return;
+  }
+  await el.click({ clickCount: 3 }).catch(() => {});
+  await delay(150, 250);
+  await el.fill(value).catch(() => {});
+  await delay(200, 400);
+}
+
+/**
+ * Click a LABEL[role=combobox] dropdown (used by FB for Vehicle Type, Year,
+ * Transmission) and select the option matching value.
+ */
+async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<void> {
+  const handle = await page.evaluateHandle((label) => {
+    // FB renders these as <label role="combobox"> inside a wrapper div that
+    // contains the label text as a sibling span.
+    const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
+    for (const el of els) {
+      let node = el.parentElement;
+      for (let depth = 0; depth < 4 && node; depth++) {
+        if (node.textContent?.includes(label)) return el;
+        node = node.parentElement;
+      }
+    }
+    return null;
+  }, labelText);
+
+  const el = handle.asElement();
+  if (!el) {
+    console.warn(`⚠️  Could not find combobox for "${labelText}"`);
+    return;
+  }
+
+  await el.click();
+  await delay(600, 900);
+
+  // Options may be rendered at page root (portal) — search broadly
+  const option = page.locator('[role="option"]')
+    .filter({ hasText: new RegExp(value, "i") })
+    .first();
+
+  if (await option.isVisible({ timeout: 4000 }).catch(() => false)) {
+    await option.click();
+    await delay(300, 500);
+    return;
+  }
+
+  // Some dropdowns show a search input inside a dialog — try typing to filter
+  const dialog = page.locator('[role="dialog"], [role="listbox"]');
+  const searchInput = dialog.locator("input").first();
+  if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await searchInput.type(value, { delay: 60 });
+    await delay(900, 1300);
+    const filtered = page.locator('[role="option"]')
+      .filter({ hasText: new RegExp(value, "i") })
+      .first();
+    if (await filtered.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await filtered.click();
+      await delay(300, 500);
       return;
     }
   }
-  console.warn(`⚠️  Could not find field for selectors: ${selectors.join(", ")}`);
+
+  console.warn(`⚠️  No option matched "${value}" for "${labelText}" — closing dropdown`);
+  await page.keyboard.press("Escape").catch(() => {});
 }
 
-async function selectCondition(
-  page: Page,
-  condition: MarketplaceListing["condition"]
-): Promise<void> {
-  const labelMap: Record<string, string> = {
-    new: "New",
-    used_like_new: "Used - Like New",
-    used_good: "Used - Good",
-    used_fair: "Used - Fair",
-  };
-  const label = labelMap[condition!];
-  if (!label) return;
+/**
+ * Fill an autocomplete text input (Make, Model): type the value slowly,
+ * wait for suggestions, click the match.
+ */
+async function fillAutocomplete(page: Page, labelText: string, value: string): Promise<void> {
+  const handle = await page.evaluateHandle((label) => {
+    const candidates = Array.from(document.querySelectorAll(
+      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=search])"
+    )) as HTMLElement[];
+    for (const el of candidates) {
+      let node = el.parentElement;
+      for (let depth = 0; depth < 4 && node; depth++) {
+        if (node.textContent?.includes(label)) return el;
+        node = node.parentElement;
+      }
+    }
+    return null;
+  }, labelText);
 
-  // Try a listbox / combobox first
-  const conditionSelect = page
-    .locator('[aria-label="Condition"]')
+  const el = handle.asElement();
+  if (!el) {
+    console.warn(`⚠️  Could not find autocomplete for "${labelText}"`);
+    return;
+  }
+
+  await el.click({ clickCount: 3 }).catch(() => {});
+  await delay(150, 250);
+  await el.fill("").catch(() => {});
+  await el.type(value, { delay: 70 }).catch(async () => {
+    await el.fill(value).catch(() => {});
+  });
+  await delay(1500, 2000);
+
+  // Wait for suggestions to appear
+  try {
+    await page.waitForSelector('[role="option"]', { timeout: 3000 });
+  } catch {
+    // No suggestions appeared
+  }
+
+  const option = page.locator('[role="option"]')
+    .filter({ hasText: new RegExp(value, "i") })
     .first();
 
-  if (await conditionSelect.isVisible().catch(() => false)) {
-    await conditionSelect.click();
-    await delay(400, 700);
-    await page
-      .locator(`[role="option"]:has-text("${label}")`)
-      .first()
-      .click()
-      .catch(() => {});
+  if (await option.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await option.click();
+    await delay(400, 600);
+    return;
   }
+
+  // Fallback: ArrowDown + Enter to accept the first suggestion
+  console.warn(`⚠️  No option matched "${value}" for "${labelText}" — trying ArrowDown+Enter`);
+  await el.press("ArrowDown").catch(() => {});
+  await delay(300, 400);
+  await el.press("Enter").catch(() => {});
+  await delay(300, 400);
+}
+
+/**
+ * Fill the location autocomplete using its aria-label.
+ */
+async function fillLocation(page: Page, location: string): Promise<void> {
+  const input = page.locator('[aria-label="Местоположение"]').first();
+  if (!await input.isVisible({ timeout: 3000 }).catch(() => false)) {
+    console.warn("⚠️  Location field not visible");
+    return;
+  }
+  await input.click({ clickCount: 3 });
+  await delay(150, 250);
+  await input.fill(location);
+  await delay(1200, 1800);
+
+  const option = page.locator('[role="option"]').first();
+  if (await option.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await option.click();
+  } else {
+    await input.press("Enter");
+  }
+  await delay(300, 500);
 }
 
 // ---------------------------------------------------------------------------
@@ -323,20 +399,16 @@ async function selectCondition(
 // ---------------------------------------------------------------------------
 
 if (require.main === module) {
-  // Example listing — replace with real data or wire up to scrapeui's DB
   const example: MarketplaceListing = {
-    title: "BMW 320d 2019 – Automatic – Full Service History",
+    title: "BMW 320d 2019",
     price: 25000,
-    description:
-      "One owner. Full dealer service history. No accidents. " +
-      "Sunroof, heated seats, LED headlights. Available for test drive.",
-    category: "vehicles",
-    condition: "used_good",
-    photos: [
-      // Replace with absolute paths to actual images
-      // path.resolve(__dirname, "photos/car1.jpg"),
-      // path.resolve(__dirname, "photos/car2.jpg"),
-    ],
+    make: "BMW",
+    model: "3 Series",
+    year: 2019,
+    transmission: "Автоматична",
+    vehicleType: "Седан",
+    description: "One owner. Full dealer service history. No accidents.",
+    photos: [],
   };
 
   postToFacebookMarketplace(example).then((result) => {

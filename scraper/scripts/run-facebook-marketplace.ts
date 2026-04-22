@@ -3,9 +3,6 @@
  * Facebook Marketplace publisher runner for scrapeui.
  *
  * Usage: tsx scraper/scripts/run-facebook-marketplace.ts --backup-id <id>
- *
- * Queries the backup DB for listing data and images, then opens a browser
- * pre-filled with the listing. The human clicks Publish.
  */
 
 import path from "path";
@@ -28,6 +25,19 @@ if (isNaN(backupId)) {
   process.exit(1);
 }
 
+/** Map mobile.bg body category to FB Marketplace vehicle type option text. */
+function mapVehicleType(category: string | null): string {
+  if (!category) return "Автомобил/камион";
+  const c = category.toLowerCase();
+  if (c.includes("мотоциклет") || c.includes("мото")) return "Мотоциклет";
+  if (c.includes("каравана") || c.includes("кемпер")) return "Каравана/кемпер";
+  if (c.includes("ремарке")) return "Ремарке";
+  if (c.includes("лодка")) return "Лодка";
+  if (c.includes("търговски") || c.includes("бус") || c.includes("ван")) return "Търговски/индустриални";
+  // Джип, Седан, Хечбек, Купе, Комби, Лифтбек, Миниван → Car/Truck
+  return "Автомобил/камион";
+}
+
 async function main() {
   const __dirname = fileURLToPath(new URL(".", import.meta.url));
   const db = new Database(
@@ -38,13 +48,28 @@ async function main() {
 
   const backup = db
     .prepare(
-      `SELECT title, price_amount, description FROM mobilebg_backups WHERE id = ?`,
+      `SELECT
+         b.title,
+         b.price_amount,
+         b.description,
+         b.make,
+         b.model,
+         b.year,
+         b.transmission,
+         b.category
+       FROM mobilebg_backups b
+       WHERE b.id = ?`,
     )
     .get(backupId) as
     | {
         title: string | null;
         price_amount: number | null;
         description: string | null;
+        make: string | null;
+        model: string | null;
+        year: number | null;
+        transmission: string | null;
+        category: string | null;
       }
     | undefined;
 
@@ -62,19 +87,30 @@ async function main() {
 
   db.close();
 
+  // Construct title as "Make Model <listing title>"
+  const titleParts = [backup.make, backup.model, backup.title].filter(Boolean);
+  const fullTitle = titleParts.join(" ");
+
   const listing: MarketplaceListing = {
-    title: backup.title ?? "",
+    title: fullTitle,
     price: backup.price_amount ?? 0,
     description: backup.description ?? "",
-    category: "vehicles",
-    condition: "used_good",
+    make: backup.make ?? undefined,
+    model: backup.model ?? undefined,
+    year: backup.year ?? undefined,
+    transmission: backup.transmission ?? undefined,
+    vehicleType: mapVehicleType(backup.category),
     photos: images.map((img) => img.local_path).filter(Boolean),
   };
+
+  console.log(`Publishing backup #${backupId}: ${fullTitle}`);
+  console.log(`  Make: ${backup.make}, Model: ${backup.model}, Year: ${backup.year}`);
+  console.log(`  Type: ${backup.category}, Transmission: ${backup.transmission}`);
+  console.log(`  Price: ${backup.price_amount}, Photos: ${listing.photos.length}`);
 
   const result = await postToFacebookMarketplace(listing);
   if (result.status === "error") {
     console.error("Facebook Marketplace error:", result.message);
-    process.exit(1);
   }
   console.log("Done:", result.message);
 }

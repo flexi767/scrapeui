@@ -1168,8 +1168,8 @@ function BackupImageManager({ backupId }: { backupId: number }) {
                   : "border-gray-800"
               } ${
                 draggedImageId === image.id
-                  ? "cursor-grabbing opacity-60"
-                  : "cursor-grab"
+                  ? "cursor-grabbing opacity-60 active:cursor-grabbing"
+                  : "cursor-grab active:cursor-grabbing"
               }`}
             >
               <ImageWithFallback
