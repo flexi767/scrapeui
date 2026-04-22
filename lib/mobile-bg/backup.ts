@@ -333,6 +333,15 @@ function buildDraftTechData(
   const productionDate = detail.techData["Дата на производство"] ?? "";
   const productionMatch = productionDate.match(/^(\S+)\s+(\d{4})/u);
   const euronorm = detail.techData["Евростандарт"]?.match(/\d+/)?.[0] ?? "";
+  const batteryRange =
+    detail.techData["Пробег с едно зареждане (WLTP) [км]"] ||
+    detail.techData["Пробег с едно зареждане (WLTP)"] ||
+    detail.techData["Пробег с едно зареждане"] ||
+    "";
+  const batteryCapacity =
+    detail.techData["Капацитет на батерията [kWh]"] ||
+    detail.techData["Капацитет на батерията"] ||
+    "";
 
   techData.pubtype = "1,2";
   techData.f13 = detail.priceCurrency || "EUR";
@@ -344,6 +353,8 @@ function buildDraftTechData(
     techData.f15 = String(detail.year);
   }
   if (euronorm) techData.f29 = euronorm;
+  if (batteryRange) techData.f33 = batteryRange.match(/\d{2,4}/)?.[0] ?? batteryRange;
+  if (batteryCapacity) techData.f34 = batteryCapacity.match(/\d{1,4}/)?.[0] ?? batteryCapacity;
   if (defaults.region) techData.region = defaults.region;
   if (defaults.city) techData.city = defaults.city;
   if (defaults.phone) techData.f22 = defaults.phone;

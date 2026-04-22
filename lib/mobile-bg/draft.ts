@@ -13,8 +13,79 @@ export interface MobileBgDraftBackupRow {
   color: string | null;
   transmission: string | null;
   body_type?: string | null;
+  category?: string | null;
   description: string | null;
   tech_data_json?: string | null;
+}
+
+function pickFirstValue(record: Record<string, string>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function extractKmValue(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const rangeMatch = value.match(/(\d{2,4})\s*[-–]\s*(\d{2,4})\s*(?:км|km)?/iu);
+  if (rangeMatch) return rangeMatch[2];
+  const singleMatch = value.match(/(\d{2,4})\s*(?:км|km)/iu);
+  if (singleMatch) return singleMatch[1];
+  const plainNumberMatch = value.trim().match(/^\d{2,4}$/u);
+  return plainNumberMatch ? plainNumberMatch[0] : null;
+}
+
+function inferBatteryRangeKm(
+  backup: MobileBgDraftBackupRow,
+  techData: Record<string, string>,
+): string | null {
+  const explicitValue = pickFirstValue(techData, [
+    'f33',
+    'Пробег с едно зареждане (WLTP) [км]',
+    'Пробег с едно зареждане (WLTP)',
+    'Пробег с едно зареждане',
+    'WLTP',
+  ]);
+  const explicitRange = extractKmValue(explicitValue);
+  if (explicitRange) return explicitRange;
+
+  const isElectric = (backup.fuel || '').toLowerCase().includes('електр');
+  if (!isElectric) return null;
+
+  const description = backup.description || '';
+  const contextualMatch = description.match(
+    /(?:wltp|зареждане|пробег)[^\d]{0,80}(\d{2,4})(?:\s*[-–]\s*(\d{2,4}))?\s*(?:км|km)/iu,
+  );
+  if (contextualMatch) return contextualMatch[2] || contextualMatch[1];
+
+  return null;
+}
+
+function inferBatteryCapacityKwh(
+  backup: MobileBgDraftBackupRow,
+  techData: Record<string, string>,
+): string | null {
+  const explicitValue = pickFirstValue(techData, [
+    'f34',
+    'Капацитет на батерията [kWh]',
+    'Капацитет на батерията',
+  ]);
+  const explicitCapacity = explicitValue?.match(/\d{1,4}/)?.[0] ?? null;
+  if (explicitCapacity) return explicitCapacity;
+
+  const isElectric = (backup.fuel || '').toLowerCase().includes('електр');
+  if (!isElectric) return null;
+
+  const text = `${backup.make ?? ''} ${backup.model ?? ''} ${backup.title ?? ''} ${backup.description ?? ''}`;
+  const contextualMatch = text.match(/(\d{2,3})\s*(?:kwh|квтч|квт\.ч|квт ч)/iu);
+  if (contextualMatch) return contextualMatch[1];
+
+  if ((backup.make || '').toLowerCase() === 'tesla' && /model\s*y/i.test(backup.model || '')) {
+    return '75';
+  }
+
+  return null;
 }
 
 export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Record<string, string | number | null> {
@@ -31,7 +102,7 @@ export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Recor
     f8: backup.fuel || null,
     f9: backup.power ?? null,
     f10: backup.transmission || null,
-    f11: backup.body_type || null,
+    f11: backup.body_type || backup.category || null,
     f12: backup.price_amount ?? null,
     f16: backup.mileage ?? null,
     f17: backup.color || null,
@@ -47,8 +118,8 @@ export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Recor
     f25: techData.f25 || null,
     f29: techData.f29 || null,
     f32: techData.f32 || null,
-    f33: techData.f33 || null,
-    f34: techData.f34 || null,
+    f33: inferBatteryRangeKm(backup, techData),
+    f34: inferBatteryCapacityKwh(backup, techData),
     priceneg: techData.priceneg || null,
   };
 }

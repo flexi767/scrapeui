@@ -75,6 +75,7 @@ const EURO_OPTIONS = [
   "Евро 6",
 ];
 const CURRENCY_OPTIONS = ["EUR", "USD"];
+const IMAGE_UPLOAD_BATCH_SIZE = 5;
 const MONTH_OPTIONS = [
   "",
   "януари",
@@ -1031,27 +1032,29 @@ function BackupImageManager({ backupId }: { backupId: number }) {
     event.target.value = "";
     if (files.length === 0) return;
 
-    const formData = new FormData();
-    for (const file of files) {
-      formData.append("images", file);
-    }
-
     setUploading(true);
     setError("");
     try {
-      const response = await fetch(`/api/editown/backups/${backupId}/images`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await response.json()) as {
-        images?: BackupImage[];
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(data.error || "Грешка при качване на снимките.");
-        return;
+      for (let index = 0; index < files.length; index += IMAGE_UPLOAD_BATCH_SIZE) {
+        const formData = new FormData();
+        for (const file of files.slice(index, index + IMAGE_UPLOAD_BATCH_SIZE)) {
+          formData.append("images", file);
+        }
+
+        const response = await fetch(`/api/editown/backups/${backupId}/images`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = (await response.json().catch(() => ({}))) as {
+          images?: BackupImage[];
+          error?: string;
+        };
+        if (!response.ok) {
+          setError(data.error || "Грешка при качване на снимките.");
+          return;
+        }
+        setImages(data.images ?? []);
       }
-      setImages(data.images ?? []);
     } catch (uploadError) {
       setError((uploadError as Error).message);
     } finally {

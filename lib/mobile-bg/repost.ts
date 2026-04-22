@@ -117,6 +117,24 @@ async function applyBlankDraftExtras(page: import('playwright').Page, labels: st
   }, labels);
 }
 
+async function assertUploadInputAvailable(
+  page: import('playwright').Page,
+  repostDir: string,
+  phase: string,
+): Promise<void> {
+  const selector = 'input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]';
+  const input = page.locator(selector).first();
+  if (await input.count() > 0) return;
+
+  await fsp.mkdir(repostDir, { recursive: true });
+  const screenshotPath = path.join(repostDir, `${phase}-missing-upload-input.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+
+  const pageText = ((await page.textContent('body').catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+  const message = pageText ? ` Mobile.bg page text: ${pageText.slice(0, 500)}` : '';
+  throw new Error(`Mobile.bg did not show the image upload step after submitting the listing details.${message}`);
+}
+
 async function publishDraftBackupFromDb(
   db: Database.Database,
   dealer: DealerBackupConfig,
@@ -225,6 +243,7 @@ async function publishDraftBackupFromDb(
     await acceptMobileBgCookies(page);
 
     if (images.length > 0) {
+      await assertUploadInputAvailable(page, repostDir, 'draft-publish');
       const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
       for (const image of images) {
         const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
@@ -455,12 +474,15 @@ export async function repostBackupFromDb(
     await page.waitForTimeout(2000);
     await acceptMobileBgCookies(page);
 
-    const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
-    for (const image of images) {
-      const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
-      await uploadInput.setInputFiles(image.local_path);
-      await responsePromise;
-      await page.waitForTimeout(300);
+    if (images.length > 0) {
+      await assertUploadInputAvailable(page, repostDir, 'repost');
+      const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
+      for (const image of images) {
+        const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
+        await uploadInput.setInputFiles(image.local_path);
+        await responsePromise;
+        await page.waitForTimeout(300);
+      }
     }
 
     const previewScreenshotPath = path.join(repostDir, 'repost-preview.png');

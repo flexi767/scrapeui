@@ -18,6 +18,31 @@ function normalizeVin(value: string | null | undefined): string {
   return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
 }
 
+function inferBatteryRangeKm(fuel: string | null, description: string | null): string {
+  if (!fuel?.toLowerCase().includes('електр')) return '';
+  const match = (description || '').match(
+    /(?:wltp|зареждане|пробег)[^\d]{0,80}(\d{2,4})(?:\s*[-–]\s*(\d{2,4}))?\s*(?:км|km)/iu,
+  );
+  return match ? (match[2] || match[1]) : '';
+}
+
+function inferBatteryCapacityKwh(
+  fuel: string | null,
+  make: string | null,
+  model: string | null,
+  title: string | null,
+  description: string | null,
+): string {
+  if (!fuel?.toLowerCase().includes('електр')) return '';
+  const text = `${make ?? ''} ${model ?? ''} ${title ?? ''} ${description ?? ''}`;
+  const match = text.match(/(\d{2,3})\s*(?:kwh|квтч|квт\.ч|квт ч)/iu);
+  if (match) return match[1];
+  if ((make || '').toLowerCase() === 'tesla' && /model\s*y/i.test(model || '')) {
+    return '75';
+  }
+  return '';
+}
+
 interface BackupRow {
   dealer_id: number;
   make: string | null;
@@ -199,8 +224,14 @@ export async function GET(
       transmission: row.transmission ?? '',
       bodyType: row.category ?? '',
       engineCc,
-      batteryRange: techData.f33 || '',
-      batteryCapacity: techData.f34 || '',
+      batteryRange: techData.f33 || inferBatteryRangeKm(row.fuel, row.description),
+      batteryCapacity: techData.f34 || inferBatteryCapacityKwh(
+        row.fuel,
+        row.make,
+        row.model,
+        row.title,
+        row.description,
+      ),
       price: row.price_amount != null ? String(row.price_amount) : '',
       vat: getMobileBgVatLabel(row.vat_included) ?? '',
       currency: techData.f13 || row.price_currency || 'EUR',

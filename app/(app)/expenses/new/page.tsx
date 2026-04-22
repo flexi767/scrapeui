@@ -20,7 +20,7 @@ export default function NewExpensePage() {
   const [notes, setNotes] = useState('');
   const [selectedListings, setSelectedListings] = useState<number[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<number[]>([]);
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   const [labels, setLabels] = useState<LabelOption[]>([]);
@@ -49,10 +49,12 @@ export default function NewExpensePage() {
     if (res.ok) {
       const { id: expenseId } = await res.json();
 
-      // Upload invoice if provided
-      if (invoiceFile) {
+      // Upload invoice/receipt files if provided
+      if (invoiceFiles.length > 0) {
         const form = new FormData();
-        form.append('file', invoiceFile);
+        for (const file of invoiceFiles) {
+          form.append('files', file);
+        }
         form.append('entityType', 'expense');
         form.append('entityId', String(expenseId));
         await fetch('/api/uploads', { method: 'POST', body: form });
@@ -108,9 +110,20 @@ export default function NewExpensePage() {
 
         <div className="space-y-2">
           <Label>Invoice / Receipt</Label>
-          <Input type="file" onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
-            accept=".pdf,.jpg,.jpeg,.png,.webp" />
-          {invoiceFile && <p className="text-xs text-gray-400">{invoiceFile.name}</p>}
+          <input
+            type="file"
+            multiple
+            onChange={(e) => setInvoiceFiles(Array.from(e.target.files ?? []))}
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className="block h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30"
+          />
+          {invoiceFiles.length > 0 && (
+            <div className="space-y-1 text-xs text-gray-400">
+              {invoiceFiles.map((file) => (
+                <p key={`${file.name}-${file.size}`}>{file.name}</p>
+              ))}
+            </div>
+          )}
         </div>
 
         <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
