@@ -29,6 +29,29 @@ async function main() {
   await page.waitForLoadState("networkidle").catch(() => {});
   await new Promise(r => setTimeout(r, 3000));
 
+  // Select "Автомобил/камион" vehicle type first so other fields appear
+  const vtEls = await page.evaluate(() => {
+    const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
+    const vt = els.find(e => e.textContent?.includes("Тип превозно средство"));
+    if (vt) { vt.click(); return true; }
+    return false;
+  });
+  if (vtEls) {
+    await new Promise(r => setTimeout(r, 1000));
+    await page.evaluate(() => {
+      const opts = Array.from(document.querySelectorAll('[role="option"]')) as HTMLElement[];
+      const auto = opts.find(e => e.textContent?.trim() === "Автомобил/камион");
+      if (auto) auto.click();
+    });
+    await new Promise(r => setTimeout(r, 500));
+    // Close dropdown by clicking heading
+    await page.locator('h1, h2, [role="heading"]').first().click({ force: true }).catch(() =>
+      page.mouse.click(640, 40)
+    );
+    await new Promise(r => setTimeout(r, 1500));
+    console.log("  ✓ Selected Автомобил/камион, dumping fields after selection...");
+  }
+
   // ---- Dump all label[role=combobox] with surrounding label text ----
   console.log("\n=== All label comboboxes ===");
   const comboboxes = await page.evaluate(() => {

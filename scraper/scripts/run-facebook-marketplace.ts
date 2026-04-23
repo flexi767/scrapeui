@@ -17,15 +17,16 @@ const args = process.argv.slice(2);
 const backupIdIdx = args.indexOf("--backup-id");
 const backupId =
   backupIdIdx !== -1 ? parseInt(args[backupIdIdx + 1], 10) : NaN;
+const skipPhotos = args.includes("--no-photos");
 
 if (isNaN(backupId)) {
   console.error(
-    "Usage: tsx scraper/scripts/run-facebook-marketplace.ts --backup-id <id>",
+    "Usage: tsx scraper/scripts/run-facebook-marketplace.ts --backup-id <id> [--no-photos]",
   );
   process.exit(1);
 }
 
-/** Map mobile.bg body category to FB Marketplace vehicle type option text. */
+/** Map mobile.bg body category to FB "Тип превозно средство" option text. */
 function mapVehicleType(category: string | null): string {
   if (!category) return "Автомобил/камион";
   const c = category.toLowerCase();
@@ -34,8 +35,54 @@ function mapVehicleType(category: string | null): string {
   if (c.includes("ремарке")) return "Ремарке";
   if (c.includes("лодка")) return "Лодка";
   if (c.includes("търговски") || c.includes("бус") || c.includes("ван")) return "Търговски/индустриални";
-  // Джип, Седан, Хечбек, Купе, Комби, Лифтбек, Миниван → Car/Truck
   return "Автомобил/камион";
+}
+
+/** Map mobile.bg fuel string to FB "Тип гориво" option text. */
+function mapFuel(fuel: string | null): string | undefined {
+  if (!fuel) return undefined;
+  const f = fuel.toLowerCase();
+  if (f.includes("дизел")) return "Дизел";
+  if (f.includes("бензин")) return "Бензин";
+  if (f.includes("хибрид") && f.includes("plug")) return "Plug-in хибрид";
+  if (f.includes("хибрид")) return "Хибрид";
+  if (f.includes("електр")) return "Електрически";
+  if (f.includes("газ") || f.includes("lpg") || f.includes("lng")) return "Газ";
+  return fuel;
+}
+
+/** Map mobile.bg color to FB "Цвят" option text. */
+function mapColor(color: string | null): string | undefined {
+  if (!color) return undefined;
+  const map: Record<string, string> = {
+    "бял": "Бяло",
+    "черен": "Черно",
+    "сив": "Сиво",
+    "червен": "Червено",
+    "син": "Синьо",
+    "зелен": "Зелено",
+    "жълт": "Жълто",
+    "оранжев": "Оранжево",
+    "кафяв": "Кафяво",
+    "бежов": "Бежово",
+    "виолетов": "Виолетово",
+    "златист": "Златисто",
+    "сребрист": "Сребристо",
+  };
+  const c = color.toLowerCase();
+  for (const [key, val] of Object.entries(map)) {
+    if (c.includes(key)) return val;
+  }
+  return color;
+}
+
+/** Map mobile.bg transmission to FB option text. */
+function mapTransmission(t: string | null): string | undefined {
+  if (!t) return undefined;
+  const l = t.toLowerCase();
+  if (l.includes("автомат")) return "Автоматична";
+  if (l.includes("ръчна") || l.includes("механ")) return "Ръчна";
+  return t;
 }
 
 async function main() {
@@ -56,6 +103,8 @@ async function main() {
          b.model,
          b.year,
          b.mileage,
+         b.fuel,
+         b.color,
          b.transmission,
          b.category
        FROM mobilebg_backups b
@@ -70,6 +119,8 @@ async function main() {
         model: string | null;
         year: number | null;
         mileage: number | null;
+        fuel: string | null;
+        color: string | null;
         transmission: string | null;
         category: string | null;
       }
@@ -121,16 +172,21 @@ async function main() {
     model: backup.model ?? undefined,
     year: backup.year ?? undefined,
     mileage: backup.mileage ?? undefined,
-    transmission: backup.transmission ?? undefined,
+    fuel: mapFuel(backup.fuel),
+    color: mapColor(backup.color),
+    bodyType: backup.category ?? undefined,
+    transmission: mapTransmission(backup.transmission),
+    condition: "Отлично",
+    noDamage: true,
     vehicleType: mapVehicleType(backup.category),
     location,
-    photos: images.map((img) => img.local_path).filter(Boolean),
+    photos: skipPhotos ? [] : images.map((img) => img.local_path).filter(Boolean),
   };
 
   console.log(`Publishing backup #${backupId}: ${fullTitle}`);
-  console.log(`  Make: ${backup.make}, Model: ${backup.model}, Year: ${backup.year}, Mileage: ${backup.mileage}`);
+  console.log(`  Make: ${backup.make}, Model: ${backup.model}, Year: ${backup.year}, Mileage: ${backup.mileage}, Fuel: ${backup.fuel}, Color: ${backup.color}`);
   console.log(`  Type: ${backup.category}, Transmission: ${backup.transmission}`);
-  console.log(`  Location: ${location ?? "(none)"}, Price: ${backup.price_amount}, Photos: ${listing.photos.length}`);
+  console.log(`  Location: ${location ?? "(none)"}, Price: ${backup.price_amount}, Photos: ${listing.photos.length}${skipPhotos ? " (skipped)" : ""}`);
 
   const result = await postToFacebookMarketplace(listing);
   if (result.status === "error") {

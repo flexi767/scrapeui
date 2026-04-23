@@ -30,8 +30,13 @@ export interface MarketplaceListing {
   model?: string;
   year?: number;
   mileage?: number;      // km
+  fuel?: string;
+  color?: string;
+  bodyType?: string;     // "Тип каросерия" — e.g. "Хечбек", "Седан", "Джип"
   transmission?: string;
-  vehicleType?: string;  // "Тип превозно средство" — e.g. "Джип", "Седан", "Хечбек"
+  condition?: string;    // "Състояние" — e.g. "Отлично"
+  noDamage?: boolean;    // "Без повреди" checkbox
+  vehicleType?: string;  // "Тип превозно средство" — e.g. "Автомобил/камион"
   location?: string;     // overrides the FB account location if provided
   photos: string[];
 }
@@ -142,9 +147,6 @@ export async function postToFacebookMarketplace(
       await delay(2500, 3500);
     }
 
-    // Fill plain text fields FIRST — before any combobox interactions that
-    // trigger React re-renders and may restructure the DOM.
-
     // -----------------------------------------------------------------------
     // 3. Make (Марка) — plain text input
     // -----------------------------------------------------------------------
@@ -162,15 +164,7 @@ export async function postToFacebookMarketplace(
     }
 
     // -----------------------------------------------------------------------
-    // 5. Mileage (Километраж) — plain text input
-    // -----------------------------------------------------------------------
-    if (listing.mileage) {
-      await fillByLabel(page, "Километраж", String(listing.mileage));
-      await delay(400, 600);
-    }
-
-    // -----------------------------------------------------------------------
-    // 6. Price (Цена)
+    // 5. Price (Цена)
     // -----------------------------------------------------------------------
     await fillByLabel(page, "Цена", String(listing.price));
 
@@ -188,33 +182,116 @@ export async function postToFacebookMarketplace(
     }
 
     // -----------------------------------------------------------------------
-    // 8. Vehicle Type (Тип превозно средство) — LABEL combobox
+    // 8. Vehicle Type (Тип превозно средство) — step 1 of the wizard
     // -----------------------------------------------------------------------
     if (listing.vehicleType) {
       await fillLabelCombobox(page, "Тип превозно средство", listing.vehicleType);
-      await delay(800, 1200);
+      await delay(600, 900);
     }
 
+    // Click the page heading to close the Vehicle Type dropdown before filling other fields
+    await page.locator('h1, h2, [role="heading"]').first().click({ force: true }).catch(() =>
+      page.mouse.click(640, 40)
+    );
+    await delay(600, 900);
+
     // -----------------------------------------------------------------------
-    // 9. Year (Година) — LABEL combobox
+    // 9. Year (Година)
     // -----------------------------------------------------------------------
     if (listing.year) {
       await fillLabelCombobox(page, "Година", String(listing.year));
-      await delay(800, 1200);
+      await delay(1500, 2000); // wait for dynamic fields to appear
     }
 
     // -----------------------------------------------------------------------
-    // 10. Transmission — scroll down and look for it (may appear after Year)
+    // 10. Fields that appear after Year is selected — scroll to reveal them
     // -----------------------------------------------------------------------
-    if (listing.transmission) {
-      await page.evaluate(() => window.scrollBy(0, 400));
+    await page.evaluate(() => window.scrollBy(0, 400));
+    await delay(600, 900);
+
+    if (listing.mileage) {
+      await fillByLabel(page, "Километраж", String(listing.mileage));
+      await delay(400, 600);
+    }
+
+    if (listing.bodyType) {
+      await fillLabelCombobox(page, "Тип каросерия", listing.bodyType);
       await delay(600, 900);
-      // Try multiple label variants — FB has used different names across locales
+    }
+
+    if (listing.fuel) {
+      await fillLabelCombobox(page, "Тип гориво", listing.fuel);
+      await delay(600, 900);
+    }
+
+    if (listing.color) {
+      const colorLabels = ["Цвят на екстериора", "Цвят"];
+      for (const label of colorLabels) {
+        const found = await fillLabelCombobox(page, label, listing.color);
+        if (found) break;
+      }
+      await delay(600, 900);
+    }
+
+    if (listing.transmission) {
       const transmissionLabels = ["Скоростна кутия", "Трансмисия", "Transmission"];
       for (const label of transmissionLabels) {
         const found = await fillLabelCombobox(page, label, listing.transmission);
         if (found) break;
       }
+      await delay(600, 900);
+    }
+
+    if (listing.condition) {
+      await fillLabelCombobox(page, "Състояние", listing.condition);
+      await delay(600, 900);
+    }
+
+    // "Без повреди" — checkbox/switch
+    if (listing.noDamage) {
+      const noDamageEl = page.locator('[role="switch"], [role="checkbox"]').filter({
+        hasText: /без повреди/i,
+      }).first();
+      const noDamageByLabel = page.locator(
+        '[role="switch"][aria-label*="Без повреди"], [role="checkbox"][aria-label*="Без повреди"]'
+      ).first();
+      const nd = (await noDamageEl.isVisible({ timeout: 1500 }).catch(() => false))
+        ? noDamageEl : noDamageByLabel;
+      if (await nd.isVisible({ timeout: 1500 }).catch(() => false)) {
+        const checked = await nd.getAttribute("aria-checked");
+        if (checked !== "true") { await nd.click(); await delay(300, 500); }
+        console.log("✓  Enabled: Без повреди");
+      } else {
+        console.warn("⚠️  Could not find Без повреди checkbox");
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 11. "Опции за обявата" — enable "Показване на обявата на всички"
+    // -----------------------------------------------------------------------
+    await page.evaluate(() => window.scrollBy(0, 600));
+    await delay(600, 900);
+    const visibilitySwitch = page.locator('[role="switch"]').filter({
+      hasText: /показване на обявата на всички/i,
+    }).first();
+    // Also try by aria-label in case hasText doesn't match the switch element itself
+    const visibilitySwitchByLabel = page.locator(
+      '[role="switch"][aria-label*="Показване на обявата на всички"]'
+    ).first();
+    const sw = (await visibilitySwitch.isVisible({ timeout: 2000 }).catch(() => false))
+      ? visibilitySwitch
+      : visibilitySwitchByLabel;
+    if (await sw.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const isOn = await sw.getAttribute("aria-checked");
+      if (isOn !== "true") {
+        await sw.click();
+        await delay(300, 500);
+        console.log("✓  Enabled: Показване на обявата на всички");
+      } else {
+        console.log("✓  Already enabled: Показване на обявата на всички");
+      }
+    } else {
+      console.warn("⚠️  Could not find visibility switch");
     }
 
     // Save a screenshot so we can verify what got filled
@@ -274,10 +351,11 @@ async function fillByLabel(page: Page, labelText: string, value: string): Promis
  */
 async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<boolean> {
   const handle = await page.evaluateHandle((label) => {
-    // FB renders these as <label role="combobox"> inside a wrapper div that
-    // contains the label text as a sibling span.
+    // FB renders the label text directly as the label element's innerText.
+    // Also check parents in case the text is in a sibling span.
     const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
     for (const el of els) {
+      if (el.textContent?.includes(label)) return el;
       let node = el.parentElement;
       for (let depth = 0; depth < 6 && node; depth++) {
         if (node.textContent?.includes(label)) return el;
@@ -293,33 +371,80 @@ async function fillLabelCombobox(page: Page, labelText: string, value: string): 
   }
 
   await el.click();
-  await delay(600, 900);
+  await delay(1200, 1600);
 
-  // Options may be rendered at page root (portal) — search broadly
-  const option = page.locator('[role="option"]')
-    .filter({ hasText: new RegExp(value, "i") })
-    .first();
+  // Use JS evaluation to find and click a visible item whose trimmed text matches.
+  // This is more reliable than Playwright locators for FB portal dropdowns.
+  const clicked = await page.evaluate((val) => {
+    const selectors = ['[role="option"]', 'li', '[role="listitem"]', 'div[tabindex]', 'span[tabindex]', 'div[role="button"]'];
+    for (const sel of selectors) {
+      const items = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
+      const visible = items.filter(
+        (e) => e.offsetWidth > 0 && e.offsetHeight > 0
+      );
+      // Exact match
+      const exact = visible.find(
+        (e) => e.textContent?.trim() === val
+      );
+      if (exact) { exact.click(); return `exact:${sel}`; }
+      // Partial match — only if text is short enough to avoid false positives
+      const partial = visible.find(
+        (e) => {
+          const t = e.textContent?.trim() ?? "";
+          return t.length < 60 && t.toLowerCase().includes(val.toLowerCase());
+        }
+      );
+      if (partial) { partial.click(); return `partial:${sel}`; }
+    }
+    return null;
+  }, value);
 
-  if (await option.isVisible({ timeout: 4000 }).catch(() => false)) {
-    await option.click();
-    await delay(300, 500);
+  // Debug: if not found, log what IS visible and take a screenshot
+  if (!clicked) {
+    const visible = await page.evaluate(() => {
+      const selectors = ['[role="option"]', 'li', 'div[tabindex]'];
+      const found: string[] = [];
+      for (const sel of selectors) {
+        const items = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
+        const texts = items
+          .filter(e => e.offsetWidth > 0 && e.offsetHeight > 0)
+          .map(e => e.textContent?.trim().slice(0, 40))
+          .filter(Boolean).slice(0, 10);
+        if (texts.length) found.push(`${sel}: ${texts.join(" | ")}`);
+      }
+      return found;
+    });
+    if (visible.length) console.log(`  Visible options: ${visible.join("\n    ")}`);
+    await page.screenshot({ path: `/tmp/fb-dropdown-${labelText}.png` }).catch(() => {});
+  }
+
+  if (clicked) {
+    console.log(`  ✓ Selected "${value}" via ${clicked}`);
+    await delay(400, 600);
+    // Dismiss the dropdown — FB keeps it open after selection
+    await page.keyboard.press("Escape").catch(() => {});
+    await delay(400, 600);
     return true;
   }
 
-  // Some dropdowns show a search input inside a dialog — try typing to filter
+  // Fallback: type to filter (some dropdowns have a search input)
   const dialog = page.locator('[role="dialog"], [role="listbox"]');
   const searchInput = dialog.locator("input").first();
   if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await searchInput.type(value, { delay: 60 });
+    await searchInput.fill(value);
     await delay(900, 1300);
-    const filtered = page.locator('[role="option"]')
-      .filter({ hasText: new RegExp(value, "i") })
-      .first();
-    if (await filtered.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await filtered.click();
-      await delay(300, 500);
-      return true;
-    }
+    const clicked2 = await page.evaluate((val) => {
+      const items = Array.from(document.querySelectorAll('[role="option"], li')) as HTMLElement[];
+      const match = items.filter(e => e.offsetWidth > 0).find(
+        e => {
+          const t = e.textContent?.trim() ?? "";
+          return t.length < 60 && t.toLowerCase().includes(val.toLowerCase());
+        }
+      );
+      if (match) { match.click(); return true; }
+      return false;
+    }, value);
+    if (clicked2) { await delay(300, 500); return true; }
   }
 
   console.warn(`⚠️  No option matched "${value}" for "${labelText}" — closing dropdown`);
