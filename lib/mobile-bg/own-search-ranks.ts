@@ -4,7 +4,7 @@ import { getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
 import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
-import { buildImageList, parseJson, type ImageMeta } from '@/lib/utils';
+import { buildImageList, getPreferredListingThumbUrl, parseJson, type ImageMeta } from '@/lib/utils';
 
 interface OwnSearchRankTarget {
   backup_id: number;
@@ -102,7 +102,16 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
       l.thumb_keys,
       l.full_keys,
       l.image_meta,
-      l.images_downloaded
+      l.images_downloaded,
+      l.thumb_saved,
+      (
+        SELECT i.id
+        FROM mobilebg_backup_images i
+        JOIN mobilebg_backups ib ON ib.id = i.backup_id
+        WHERE ib.listing_id = l.id
+        ORDER BY i.sort_order ASC, i.id ASC
+        LIMIT 1
+      ) as first_backup_image_id
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
     JOIN dealers d ON d.id = b.dealer_id
@@ -120,6 +129,8 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
     full_keys: string | null;
     image_meta: string | null;
     images_downloaded: number | null;
+    thumb_saved: number | null;
+    first_backup_image_id: number | null;
   }>;
 }
 
@@ -128,6 +139,8 @@ function withPreview(targets: Array<OwnSearchRankTarget & {
   full_keys: string | null;
   image_meta: string | null;
   images_downloaded: number | null;
+  thumb_saved: number | null;
+  first_backup_image_id: number | null;
 }>): OwnSearchRankTarget[] {
   return targets.map((target) => {
     const thumbKeys = parseJson<string[]>(target.thumb_keys, []);
@@ -150,7 +163,9 @@ function withPreview(targets: Array<OwnSearchRankTarget & {
       title: target.title,
       make: target.make,
       model: target.model,
-      thumb_url: images[0]?.thumb || null,
+      thumb_url: target.first_backup_image_id
+        ? `/api/mobilebg-backup-images/${target.first_backup_image_id}`
+        : getPreferredListingThumbUrl(target.mobile_id, images[0]?.thumb, target.thumb_saved),
       listing_url: target.mobile_id ? `/listings/${target.mobile_id}` : null,
     };
   });

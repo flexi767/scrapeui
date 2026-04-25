@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 type RankLogLevel = 'stderr' | 'info';
 
@@ -110,11 +111,12 @@ function PreviewThumb({
   label: string;
 }) {
   const content = thumbUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <ImageWithFallback
       src={thumbUrl}
       alt={label}
       className="h-14 w-[76px] rounded object-cover bg-gray-800"
+      fallbackClassName="flex h-14 w-[76px] items-center justify-center rounded bg-gray-800 text-[10px] uppercase tracking-wide text-gray-500"
+      fallbackLabel="No image"
       style={{ aspectRatio: '4/3' }}
     />
   ) : (
