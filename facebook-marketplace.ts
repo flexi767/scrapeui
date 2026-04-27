@@ -148,10 +148,10 @@ export async function postToFacebookMarketplace(
     }
 
     // -----------------------------------------------------------------------
-    // 3. Make (Марка) — plain text input
+    // 3. Make (Марка) — combobox with predefined FB options
     // -----------------------------------------------------------------------
     if (listing.make) {
-      await fillByLabel(page, "Марка", listing.make);
+      await fillLabelCombobox(page, "Марка", listing.make);
       await delay(400, 600);
     }
 
@@ -210,7 +210,7 @@ export async function postToFacebookMarketplace(
     await delay(600, 900);
 
     if (listing.mileage) {
-      await fillByLabel(page, "Километраж", String(listing.mileage));
+      await fillByLabel(page, "Пробег", String(listing.mileage));
       await delay(400, 600);
     }
 
@@ -243,23 +243,21 @@ export async function postToFacebookMarketplace(
     }
 
     if (listing.condition) {
+      // FB label includes colon: "Състояние на превозното средство:"
       await fillLabelCombobox(page, "Състояние", listing.condition);
       await delay(600, 900);
     }
 
-    // "Без повреди" — checkbox/switch
+    // "Без повреди" — native checkbox with specific aria-label
     if (listing.noDamage) {
-      const noDamageEl = page.locator('[role="switch"], [role="checkbox"]').filter({
-        hasText: /без повреди/i,
-      }).first();
-      const noDamageByLabel = page.locator(
-        '[role="switch"][aria-label*="Без повреди"], [role="checkbox"][aria-label*="Без повреди"]'
+      const nd = page.locator(
+        'input[aria-label*="Без повреди"], [role="checkbox"][aria-label*="Без повреди"]'
       ).first();
-      const nd = (await noDamageEl.isVisible({ timeout: 1500 }).catch(() => false))
-        ? noDamageEl : noDamageByLabel;
-      if (await nd.isVisible({ timeout: 1500 }).catch(() => false)) {
-        const checked = await nd.getAttribute("aria-checked");
-        if (checked !== "true") { await nd.click(); await delay(300, 500); }
+      if (await nd.isVisible({ timeout: 2000 }).catch(() => false)) {
+        const checked = await nd.evaluate((el) =>
+          (el as HTMLInputElement).checked || el.getAttribute("aria-checked") === "true"
+        );
+        if (!checked) { await nd.click(); await delay(300, 500); }
         console.log("✓  Enabled: Без повреди");
       } else {
         console.warn("⚠️  Could not find Без повреди checkbox");
@@ -347,108 +345,115 @@ async function fillByLabel(page: Page, labelText: string, value: string): Promis
 
 /**
  * Click a LABEL[role=combobox] dropdown (used by FB for Vehicle Type, Year,
- * Transmission) and select the option matching value.
+ * Transmission, etc.) and select the option matching value.
+ *
+ * FB renders dropdown options in a [role="listbox"] portal that is separate
+ * from the always-present vehicle-type sidebar [role="option"] items. We must
+ * wait for that listbox to appear and search exclusively within it.
  */
 async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<boolean> {
+  // Dismiss any currently open dropdown before starting
+  await page.keyboard.press("Escape").catch(() => {});
+  await delay(300, 400);
+
   const handle = await page.evaluateHandle((label) => {
-    // FB renders the label text directly as the label element's innerText.
-    // Also check parents in case the text is in a sibling span.
     const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
     for (const el of els) {
       if (el.textContent?.includes(label)) return el;
-      let node = el.parentElement;
-      for (let depth = 0; depth < 6 && node; depth++) {
-        if (node.textContent?.includes(label)) return el;
-        node = node.parentElement;
-      }
     }
     return null;
   }, labelText);
 
   const el = handle.asElement();
-  if (!el) {
-    return false;
-  }
+  if (!el) return false;
 
+  // Scroll into view before clicking — some fields are below the fold
+  await el.evaluate((node) => node.scrollIntoView({ block: "center" })).catch(() => {});
+  await delay(200, 300);
   await el.click();
-  await delay(1200, 1600);
 
-  // Use JS evaluation to find and click a visible item whose trimmed text matches.
-  // This is more reliable than Playwright locators for FB portal dropdowns.
+  // Wait for FB's dropdown portal (listbox) to appear
+  const listboxAppeared = await page
+    .waitForSelector('[role="listbox"]', { timeout: 3000 })
+    .then(() => true)
+    .catch(() => false);
+
+  await delay(listboxAppeared ? 400 : 1200, listboxAppeared ? 600 : 1600);
+
+  // Search within the listbox portal first to avoid the always-present
+  // vehicle-type sidebar [role="option"] items polluting results
   const clicked = await page.evaluate((val) => {
-    const selectors = ['[role="option"]', 'li', '[role="listitem"]', 'div[tabindex]', 'span[tabindex]', 'div[role="button"]'];
-    for (const sel of selectors) {
-      const items = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-      const visible = items.filter(
-        (e) => e.offsetWidth > 0 && e.offsetHeight > 0
-      );
-      // Exact match
-      const exact = visible.find(
-        (e) => e.textContent?.trim() === val
-      );
-      if (exact) { exact.click(); return `exact:${sel}`; }
-      // Partial match — only if text is short enough to avoid false positives
-      const partial = visible.find(
-        (e) => {
+    const listbox = document.querySelector('[role="listbox"]');
+    const roots: (Element | Document)[] = listbox ? [listbox] : [document];
+
+    for (const root of roots) {
+      for (const sel of ['[role="option"]', 'li', 'div[tabindex="0"]']) {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        const visible = items.filter((e) => e.offsetWidth > 0 && e.offsetHeight > 0);
+
+        const exact = visible.find((e) => e.textContent?.trim() === val);
+        if (exact) { exact.click(); return `exact:${sel}`; }
+
+        const partial = visible.find((e) => {
           const t = e.textContent?.trim() ?? "";
-          return t.length < 60 && t.toLowerCase().includes(val.toLowerCase());
-        }
-      );
-      if (partial) { partial.click(); return `partial:${sel}`; }
+          return t.length < 80 && t.toLowerCase().includes(val.toLowerCase());
+        });
+        if (partial) { partial.click(); return `partial:${sel}`; }
+      }
     }
     return null;
   }, value);
 
-  // Debug: if not found, log what IS visible and take a screenshot
-  if (!clicked) {
-    const visible = await page.evaluate(() => {
-      const selectors = ['[role="option"]', 'li', 'div[tabindex]'];
-      const found: string[] = [];
-      for (const sel of selectors) {
-        const items = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-        const texts = items
-          .filter(e => e.offsetWidth > 0 && e.offsetHeight > 0)
-          .map(e => e.textContent?.trim().slice(0, 40))
-          .filter(Boolean).slice(0, 10);
-        if (texts.length) found.push(`${sel}: ${texts.join(" | ")}`);
-      }
-      return found;
-    });
-    if (visible.length) console.log(`  Visible options: ${visible.join("\n    ")}`);
-    await page.screenshot({ path: `/tmp/fb-dropdown-${labelText}.png` }).catch(() => {});
-  }
-
   if (clicked) {
     console.log(`  ✓ Selected "${value}" via ${clicked}`);
     await delay(400, 600);
-    // Dismiss the dropdown — FB keeps it open after selection
     await page.keyboard.press("Escape").catch(() => {});
-    await delay(400, 600);
+    await delay(300, 500);
     return true;
   }
 
-  // Fallback: type to filter (some dropdowns have a search input)
-  const dialog = page.locator('[role="dialog"], [role="listbox"]');
-  const searchInput = dialog.locator("input").first();
-  if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await searchInput.fill(value);
-    await delay(900, 1300);
-    const clicked2 = await page.evaluate((val) => {
-      const items = Array.from(document.querySelectorAll('[role="option"], li')) as HTMLElement[];
-      const match = items.filter(e => e.offsetWidth > 0).find(
-        e => {
+  // Fallback: type to filter if the listbox has a search input
+  if (listboxAppeared) {
+    const searchInput = page.locator('[role="listbox"] input').first();
+    if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await searchInput.fill(value);
+      await delay(900, 1300);
+      const clicked2 = await page.evaluate((val) => {
+        const lb = document.querySelector('[role="listbox"]');
+        if (!lb) return false;
+        const items = Array.from(lb.querySelectorAll('[role="option"], li')) as HTMLElement[];
+        const match = items.filter((e) => e.offsetWidth > 0).find((e) => {
           const t = e.textContent?.trim() ?? "";
-          return t.length < 60 && t.toLowerCase().includes(val.toLowerCase());
-        }
-      );
-      if (match) { match.click(); return true; }
-      return false;
-    }, value);
-    if (clicked2) { await delay(300, 500); return true; }
+          return t.length < 80 && t.toLowerCase().includes(val.toLowerCase());
+        });
+        if (match) { match.click(); return true; }
+        return false;
+      }, value);
+      if (clicked2) {
+        console.log(`  ✓ Selected "${value}" via search input`);
+        await delay(300, 500);
+        return true;
+      }
+    }
   }
 
-  console.warn(`⚠️  No option matched "${value}" for "${labelText}" — closing dropdown`);
+  // Debug: log what is actually visible in the listbox
+  const visibleOptions = await page.evaluate(() => {
+    const lb = document.querySelector('[role="listbox"]');
+    if (!lb) return "(no listbox)";
+    const items = Array.from(lb.querySelectorAll('[role="option"], li')) as HTMLElement[];
+    return items
+      .filter((e) => e.offsetWidth > 0)
+      .map((e) => e.textContent?.trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 15)
+      .join(" | ");
+  });
+  console.log(`  Listbox options for "${labelText}": ${visibleOptions}`);
+  await page.screenshot({ path: `/tmp/fb-dropdown-${labelText}.png` }).catch(() => {});
   await page.keyboard.press("Escape").catch(() => {});
+  await delay(300, 400);
+  console.warn(`⚠️  No option matched "${value}" for "${labelText}"`);
   return false;
 }
 
