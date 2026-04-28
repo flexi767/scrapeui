@@ -103,9 +103,47 @@ const CATEGORY_OPTIONS = [
   "Хечбек",
 ];
 const STEPPER_FIELDS = new Set(["f10", "f11", "f25", "f26"]);
+const HEADER_STEPPER_FIELDS: Record<string, number> = {
+  f10: 1,
+  f11: 1,
+  f25: 10,
+  f26: 10,
+};
 const CLEARABLE_FIELDS = new Set(["f25", "f26", "f7", "f8", "f15"]);
+const FIELD_LAYOUT_CLASS: Record<string, string> = {
+  marka: "md:col-span-1 xl:col-span-2",
+  model: "md:col-span-1 xl:col-span-2",
+  f17: "md:col-span-1 xl:col-span-2",
+  f18: "md:col-span-1 xl:col-span-2",
+};
 
-function formatYearRange(search: SavedSearchSummary) {
+function fieldLayoutClass(name: string) {
+  return FIELD_LAYOUT_CLASS[name] ?? "";
+}
+
+function displayFieldLabel(field: SearchField, subLocationLabel: string) {
+  if (field.name === "f18") return subLocationLabel;
+  if (field.name === "f25" || field.name === "f26") {
+    return field.label.replace(/\s*\[к\.с\.\]\s*/g, "");
+  }
+  return field.label;
+}
+
+function orderFieldsForDisplay(fields: SearchField[]) {
+  const categoryIndex = fields.findIndex((field) => field.name === "f14");
+  const mileageIndex = fields.findIndex((field) => field.name === "f15");
+  if (categoryIndex === -1 || mileageIndex === -1) return fields;
+
+  const orderedFields = [...fields];
+  const [mileageField] = orderedFields.splice(mileageIndex, 1);
+  const updatedCategoryIndex = orderedFields.findIndex(
+    (field) => field.name === "f14",
+  );
+  orderedFields.splice(updatedCategoryIndex + 1, 0, mileageField);
+  return orderedFields;
+}
+
+function formatYear(search: SavedSearchSummary) {
   if (search.yearFrom && search.yearTo)
     return `${search.yearFrom} - ${search.yearTo}`;
   if (search.yearFrom) return `from ${search.yearFrom}`;
@@ -583,7 +621,7 @@ export default function SavedSearchesWorkspace({
                             "—"}
                         </div>
                         <div className="truncate text-xs text-gray-400">
-                          Year range: {formatYearRange(search)}
+                          Year: {formatYear(search)}
                         </div>
                         {search.mobileId ? (
                           <div className="mt-1 truncate text-[11px] text-gray-500">
@@ -830,9 +868,12 @@ export default function SavedSearchesWorkspace({
                   {detail.prefill.omitted.join(" ")}
                 </div>
               )}
-              <div className="grid gap-2 p-4 md:grid-cols-2">
-                {editableFields
-                  .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name))
+              <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
+                {orderFieldsForDisplay(
+                  editableFields.filter(
+                    (field) => !HIDDEN_FIELD_NAMES.has(field.name),
+                  ),
+                )
                   .map((field) => {
                     const selectedMake = getFieldValue("marka");
                     const matchedMakeKey =
@@ -863,21 +904,50 @@ export default function SavedSearchesWorkspace({
                         : null;
                     const selectedReferenceCount =
                       selectedMakeCount ?? selectedModelCount;
+                    const fieldLabel = displayFieldLabel(
+                      field,
+                      subLocationLabel,
+                    );
+                    const headerStepperDelta =
+                      HEADER_STEPPER_FIELDS[field.name] ?? null;
 
                     return (
                       <div
                         key={field.name}
-                        className="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)] items-center gap-3 rounded border border-gray-700 bg-gray-800/70 px-3 py-2"
+                        className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${fieldLayoutClass(field.name)}`}
                       >
-                        <div className="min-w-0">
-                          <div className="text-sm text-gray-100">
-                            {field.name === "f18"
-                              ? subLocationLabel
-                              : field.label}
+                        <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                          <div className="truncate text-xs font-medium text-gray-300">
+                            {fieldLabel}
                           </div>
-                          <div className="text-xs uppercase tracking-wide text-gray-500">
-                            {field.name}
-                          </div>
+                          {headerStepperDelta != null ? (
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                                onClick={() =>
+                                  nudgeField(field.name, -headerStepperDelta)
+                                }
+                                aria-label={`Decrease ${fieldLabel}`}
+                              >
+                                -{headerStepperDelta}
+                              </button>
+                              <button
+                                type="button"
+                                className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                                onClick={() =>
+                                  nudgeField(field.name, headerStepperDelta)
+                                }
+                                aria-label={`Increase ${fieldLabel}`}
+                              >
+                                +{headerStepperDelta}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                              {field.name}
+                            </div>
+                          )}
                         </div>
                         <div className="min-w-0">
                           {field.name === "marka" ? (
@@ -948,7 +1018,7 @@ export default function SavedSearchesWorkspace({
                               onChange={(event) =>
                                 updateField(field.name, event.target.value)
                               }
-                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                              className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                             >
                               {ENGINE_OPTIONS.map((option) => (
                                 <option
@@ -965,7 +1035,7 @@ export default function SavedSearchesWorkspace({
                               onChange={(event) =>
                                 updateField(field.name, event.target.value)
                               }
-                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                              className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                             >
                               {TRANSMISSION_OPTIONS.map((option) => (
                                 <option
@@ -982,7 +1052,7 @@ export default function SavedSearchesWorkspace({
                               onChange={(event) =>
                                 updateField(field.name, event.target.value)
                               }
-                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                              className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                             >
                               {CATEGORY_OPTIONS.map((option) => (
                                 <option
@@ -999,7 +1069,7 @@ export default function SavedSearchesWorkspace({
                               onChange={(event) =>
                                 void updateLocation(event.target.value)
                               }
-                              className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                              className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                             >
                               {detail.prefill.options.locations.map(
                                 (option) => (
@@ -1020,7 +1090,7 @@ export default function SavedSearchesWorkspace({
                                   updateField(field.name, event.target.value)
                                 }
                                 disabled={locationLoading}
-                                className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
+                                className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
                               >
                                 <option value="">всички</option>
                                 {subLocationOptions
@@ -1045,9 +1115,10 @@ export default function SavedSearchesWorkspace({
                                 onChange={(event) =>
                                   updateField(field.name, event.target.value)
                                 }
-                                className="min-w-0 flex-1 rounded border border-gray-500 bg-gray-100 px-3 py-2 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                className="h-9 min-w-0 flex-1 rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
                               />
-                              {STEPPER_FIELDS.has(field.name) && (
+                              {STEPPER_FIELDS.has(field.name) &&
+                                headerStepperDelta == null && (
                                 <>
                                   <button
                                     type="button"
@@ -1064,7 +1135,7 @@ export default function SavedSearchesWorkspace({
                                     +1
                                   </button>
                                 </>
-                              )}
+                                )}
                               {CLEARABLE_FIELDS.has(field.name) &&
                                 field.value && (
                                   <button
