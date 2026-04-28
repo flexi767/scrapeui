@@ -15,6 +15,7 @@ export default function LoginPage() {
   // Auto-login in development mode
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     signIn("credentials", {
       username: "",

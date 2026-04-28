@@ -33,6 +33,7 @@ export default function ExpensesPage() {
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/expenses?${params}`)
       .then((r) => r.json())

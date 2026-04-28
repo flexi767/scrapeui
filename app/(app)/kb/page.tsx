@@ -23,6 +23,7 @@ export default function KBPage() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/articles?${params}`)
       .then((r) => r.json())

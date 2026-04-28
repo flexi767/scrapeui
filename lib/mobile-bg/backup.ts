@@ -52,6 +52,28 @@ interface ScrapedDetail {
   imageUrls: string[];
 }
 
+interface ScrapedListingPageData {
+  title: string;
+  price: string | null;
+  noVat: boolean;
+  hasVat: boolean;
+  year: string | null;
+  fuel: string | null;
+  power: string | null;
+  engine: string | null;
+  transmission: string | null;
+  category: string | null;
+  mileage: string | null;
+  color: string | null;
+  description: string;
+  listingId: string | null;
+  phones: string[];
+  extras: Record<string, Array<{ label: string; alias: string | null }>>;
+  techData: Record<string, string>;
+  photoOrder: string[];
+  photoThumbUrls: string[];
+}
+
 interface SavedImage {
   filename: string;
   url: string;
@@ -675,7 +697,7 @@ async function scrapeListingDetail(
       photoOrder,
       photoThumbUrls,
     };
-  })()`);
+  })()`) as ScrapedListingPageData;
 
   const scrapedImageUrls = includeImages ? await scrapeAllImages(page) : [];
   const mobileId =

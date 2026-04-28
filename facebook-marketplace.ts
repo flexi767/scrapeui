@@ -190,8 +190,9 @@ export async function postToFacebookMarketplace(
     }
 
     // Click the page heading to close the Vehicle Type dropdown before filling other fields
-    await page.locator('h1, h2, [role="heading"]').first().click({ force: true }).catch(() =>
-      page.mouse.click(640, 40)
+    const activePage = page;
+    await activePage.locator('h1, h2, [role="heading"]').first().click({ force: true }).catch(() =>
+      activePage.mouse.click(640, 40)
     );
     await delay(600, 900);
 

@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { raw } from '@/db/client';
+import { auth } from '@/lib/auth';
 
 interface TestResult {
   ok: boolean;
@@ -48,9 +49,23 @@ function runTest(slug: string): Promise<Record<string, TestResult>> {
   });
 }
 
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return null;
+}
+
 // POST /api/dealers/test-logins — body: { ids: number[] }
 // Tests each dealer and returns results keyed by dealer id
 export async function POST(req: NextRequest) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   const { ids } = await req.json() as { ids: number[] };
   if (!Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ error: 'ids required' }, { status: 400 });

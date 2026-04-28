@@ -34,6 +34,7 @@ export default function TasksPage() {
     if (priority) params.set('priority', priority);
     if (search) params.set('search', search);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/tasks?${params}`)
       .then((r) => r.json())

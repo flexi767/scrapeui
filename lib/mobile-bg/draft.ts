@@ -4,6 +4,8 @@ import { getMobileBgVatLabel } from '@/lib/vat';
 export interface MobileBgDraftBackupRow {
   title: string | null;
   source_title: string | null;
+  make?: string | null;
+  model?: string | null;
   price_amount: number | null;
   vat_included: string | null;
   mileage: number | null;

@@ -1,5 +1,6 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
 interface DealerRow {
   id: number;
@@ -16,12 +17,29 @@ interface DealerRow {
   created_at: string | null;
 }
 
-export function GET() {
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return null;
+}
+
+export async function GET() {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   const rows = raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
   return NextResponse.json(rows);
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   const { name, slug, mobile_url, own = false, priority = 0, mobile_user = null, mobile_password = null, cars_url = null, cars_user = null, cars_password = null } = await req.json();
   if (!name || !slug || !mobile_url) {
     return NextResponse.json({ error: 'name, slug, mobile_url required' }, { status: 400 });

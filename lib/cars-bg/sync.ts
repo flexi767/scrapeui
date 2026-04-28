@@ -699,8 +699,8 @@ async function applyCarsBgSupplementalFields(page: Page, listing: CarsBgSyncList
 async function getSharp() {
   if (sharpModule !== undefined) return sharpModule;
   try {
-    const module = await import('sharp');
-    sharpModule = ('default' in module ? module.default : module) as typeof import('sharp');
+    const sharpImport = await import('sharp');
+    sharpModule = ('default' in sharpImport ? sharpImport.default : sharpImport) as typeof import('sharp');
   } catch {
     sharpModule = null;
   }

@@ -52,6 +52,74 @@ const HOMEPAGE_CATEGORY_OPTIONS = new Set([
   "Хечбек",
 ]);
 
+interface ScrapedListingInput {
+  url: string;
+  title?: string | null;
+  adStatus?: string | null;
+  kaparo?: boolean | number | null;
+  bodyType?: string | null;
+  color?: string | null;
+  year?: string | null;
+  euronorm?: number | null;
+  mileage?: number | null;
+  fuel?: string | null;
+  transmission?: string | null;
+  thumb?: string | null;
+  price?: { amount?: number | null; currency?: string | null } | null;
+  vat?: string | null;
+  lastEdit?: string | null;
+  views?: number | null;
+  isNew?: boolean | number | null;
+  imageCount?: number | null;
+  images?: {
+    meta: unknown;
+    thumbKeys: string[];
+    fullKeys: string[];
+  } | null;
+  vin?: string | null;
+  extras?: unknown;
+  power?: number | null;
+  description?: string | null;
+  scrapedAt?: string;
+  source?: string;
+  dealer?: string;
+  snapshotDate?: string;
+}
+
+interface ExistingListingRow {
+  id: number;
+  url: string | null;
+  title: string | null;
+  description: string | null;
+  current_price: number | null;
+  price_change: number | null;
+  vat: string | null;
+  last_edit: string | null;
+  views: number | null;
+  ad_status: string | null;
+  kaparo: number | null;
+  thumb_saved: number | null;
+  reg_month: string | null;
+  reg_year: string | null;
+  fuel: string | null;
+  body_type: string | null;
+  transmission: string | null;
+  color: string | null;
+  vin: string | null;
+  euronorm: number | null;
+  power: number | null;
+  mileage: number | null;
+  extras_json: string | null;
+  is_new: number | null;
+}
+
+interface DealerRow {
+  id: number;
+  slug: string;
+  name: string;
+  mobileBg: string;
+}
+
 function emit(obj: object) {
   process.stdout.write(JSON.stringify(obj) + "\n");
 }
@@ -225,7 +293,7 @@ function saveCrawlQueueStatus(
 async function upsertListing(
   db: Database.Database,
   dealerId: number,
-  listing: Record<string, any>,
+  listing: ScrapedListingInput,
   makesMap: MakesMap | null,
   fuelMap: Map<string, string> | null,
   transmissionMap: Map<string, string> | null,
@@ -244,11 +312,11 @@ async function upsertListing(
     make,
     model,
   }).catch(() => ({ carsMakeId: null, carsModelId: null }));
-  const { regMonth, regYear } = parseReg(listing.year);
-  const fuel = normalizeFuelSync(listing.fuel, fuelMap);
-  const bodyType = normalizeBodyTypeSync(listing.bodyType, getBodyTypeMap());
+  const { regMonth, regYear } = parseReg(listing.year ?? null);
+  const fuel = normalizeFuelSync(listing.fuel ?? null, fuelMap);
+  const bodyType = normalizeBodyTypeSync(listing.bodyType ?? null, getBodyTypeMap());
   const transmission = normalizeTransmissionSync(
-    listing.transmission,
+    listing.transmission ?? null,
     transmissionMap,
   );
   const vin: string | null = listing.vin ?? null;
@@ -272,7 +340,7 @@ async function upsertListing(
 
   const existing = db
     .prepare("SELECT * FROM listings WHERE mobile_id = ?")
-    .get(mobileId) as Record<string, any> | undefined;
+    .get(mobileId) as ExistingListingRow | undefined;
   let thumbSaved = existing?.thumb_saved === 1;
   if (!thumbSaved && listing.thumb) {
     try {
@@ -282,7 +350,7 @@ async function upsertListing(
     }
   }
   const isDeep =
-    (listing.images?.meta && listing.images?.thumbKeys?.length > 0) ||
+    (listing.images?.meta && listing.images.thumbKeys.length > 0) ||
     !!listing.lastEdit ||
     !!listing.description;
 
@@ -360,21 +428,24 @@ async function upsertListing(
       });
     }
 
-    const hasImages =
-      listing.images?.meta && listing.images?.thumbKeys?.length > 0;
+    const imageData =
+      listing.images?.meta && listing.images.thumbKeys.length > 0
+        ? listing.images
+        : null;
+    const hasImages = Boolean(imageData);
     const imageFields = hasImages
       ? "image_count = ?, image_meta = ?, thumb_keys = ?, full_keys = ?,"
       : "";
     const imageValues = hasImages
       ? [
           listing.imageCount || 0,
-          JSON.stringify(listing.images.meta),
-          JSON.stringify(listing.images.thumbKeys),
-          JSON.stringify(listing.images.fullKeys || []),
+          JSON.stringify(imageData!.meta),
+          JSON.stringify(imageData!.thumbKeys),
+          JSON.stringify(imageData!.fullKeys || []),
         ]
       : [];
     const priceChangeDelta = priceChanged
-      ? price! - existing.current_price
+      ? price! - (existing.current_price ?? 0)
       : (existing.price_change ?? null);
 
     db.prepare(
@@ -497,7 +568,7 @@ async function upsertListing(
 }
 
 async function scrapeCompetitorForUI(
-  dealer: Record<string, any>,
+  dealer: DealerRow,
   db: Database.Database,
   makesMap: MakesMap | null,
   fuelMap: Map<string, string> | null,
@@ -1091,11 +1162,11 @@ async function main() {
     FROM dealers WHERE active = 1 AND mobile_url IS NOT NULL ORDER BY name
   `,
     )
-    .all() as Record<string, unknown>[];
+    .all() as DealerRow[];
 
   const selected =
     requestedSlugs.length > 0
-      ? dealers.filter((d) => requestedSlugs.includes(d.slug as string))
+      ? dealers.filter((d) => requestedSlugs.includes(d.slug))
       : dealers;
 
   if (selected.length === 0) {
@@ -1108,7 +1179,7 @@ async function main() {
     emit({ type: "log", message: `Starting scrape: ${dealer.name}` });
     try {
       const count = await scrapeCompetitorForUI(
-        dealer as Record<string, any>,
+        dealer,
         db,
         makesMap,
         fuelMap,
