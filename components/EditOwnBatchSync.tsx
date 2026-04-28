@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatDate, formatPrice } from '@/lib/utils';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface OwnDealer {
@@ -301,13 +302,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     }
 
     if (!res.ok || !res.body) {
-      let message = 'Failed to start batch sync';
-      try {
-        const data = await res.json();
-        message = data.error || message;
-      } catch {
-        // ignore JSON parse failure
-      }
+      const message = await readJsonError(res, 'Failed to start batch sync');
       toast.error(message);
       setLogs([{ kind: 'error', message }]);
       setRunning(false);
@@ -316,26 +311,8 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          const line = chunk.trim();
-          if (!line.startsWith('data: ')) continue;
-
-          try {
-            const event = JSON.parse(line.slice(6)) as StreamEntry;
-
+      await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start') {
               setStats({
                 total: event.total,
@@ -344,7 +321,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
                 failed: event.failed,
               });
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'checking') {
@@ -361,7 +338,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
                 runError: null,
               } : row));
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'result') {
@@ -385,7 +362,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
                   message: event.message,
                 });
               }
-              continue;
+              return;
             }
 
             if (event.type === 'log') {
@@ -395,14 +372,14 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
                   message: event.message,
                 });
               }
-              continue;
+              return;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Batch sync failed';
               appendLog({ kind: 'error', message });
               toast.error(message);
-              continue;
+              return;
             }
 
             if (event.type === 'complete') {
@@ -425,13 +402,9 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
                 toast.error(`Synced ${event.succeeded}, ${event.failed} failed`);
               }
               router.refresh();
-              continue;
+              return;
             }
-          } catch {
-            // ignore malformed SSE lines
-          }
-        }
-      }
+      });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Batch sync failed';
@@ -507,8 +480,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     }
 
     if (!res.ok || !res.body) {
-      let message = 'Failed to start renew & reset';
-      try { const data = await res.json(); message = data.error || message; } catch { /* ignore */ }
+      const message = await readJsonError(res, 'Failed to start renew & reset');
       toast.error(message);
       setRenewRunning(false);
       setRenewStopping(false);
@@ -516,24 +488,8 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          const line = chunk.trim();
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6)) as StreamEntry;
-
+      await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start' || event.type === 'checking' || event.type === 'result' || event.type === 'complete') {
               const s = { total: (event as RunStats).total ?? 0, completed: (event as RunStats).completed ?? 0, succeeded: (event as RunStats).succeeded ?? 0, failed: (event as RunStats).failed ?? 0 };
               setRenewStats(s);
@@ -554,9 +510,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
               const ok = event.type === 'result' && 'row' in event ? (event.row as { status: string }).status === 'success' : undefined;
               appendRenewLog({ kind, ok, message: event.message });
             }
-          } catch { /* ignore */ }
-        }
-      }
+      });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         toast.error(error instanceof Error ? error.message : 'Renew & reset failed');

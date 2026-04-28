@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ExternalLink,
   Loader2,
@@ -35,6 +35,12 @@ import {
   parseJson,
   type ImageMeta,
 } from "@/lib/utils";
+import {
+  AutocompleteInput,
+  getSelectedOptionCount,
+  normalizeAutocompleteValue,
+  sortMakeOptions,
+} from "@/components/new-listing-form/ui";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
 
@@ -62,11 +68,6 @@ interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
 }
 
 type SavedSearchDeleteResponse = SavedSearchListResponse;
-
-interface AutocompleteOption {
-  value: string;
-  count?: number | null;
-}
 
 const HIDDEN_FIELD_NAMES = new Set([
   "topmenu",
@@ -103,239 +104,6 @@ const CATEGORY_OPTIONS = [
 ];
 const STEPPER_FIELDS = new Set(["f10", "f11", "f25", "f26"]);
 const CLEARABLE_FIELDS = new Set(["f25", "f26", "f7", "f8", "f15"]);
-function normalizeAutocompleteValue(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function sortMakeOptions(options: AutocompleteOption[]) {
-  return [...options].sort((a, b) => {
-    const aHigh = (a.count ?? 0) > 10000 ? 1 : 0;
-    const bHigh = (b.count ?? 0) > 10000 ? 1 : 0;
-    if (aHigh !== bHigh) return bHigh - aHigh;
-    if (aHigh && bHigh && (a.count ?? 0) !== (b.count ?? 0))
-      return (b.count ?? 0) - (a.count ?? 0);
-    return a.value.localeCompare(b.value, "bg");
-  });
-}
-
-function filterAutocompleteOptions(
-  options: AutocompleteOption[],
-  query: string,
-  {
-    hideLowCountOnEmpty = false,
-  }: {
-    hideLowCountOnEmpty?: boolean;
-  } = {},
-) {
-  const normalizedQuery = normalizeAutocompleteValue(query);
-  const visibleBase =
-    !normalizedQuery && hideLowCountOnEmpty
-      ? options.filter((option) => (option.count ?? 0) >= 5)
-      : options;
-
-  const filtered = normalizedQuery
-    ? visibleBase.filter((option) =>
-        normalizeAutocompleteValue(option.value).includes(normalizedQuery),
-      )
-    : visibleBase;
-
-  return filtered;
-}
-
-function getSelectedOptionCount(
-  options: AutocompleteOption[],
-  value: string,
-): number | null {
-  const normalizedValue = normalizeAutocompleteValue(value);
-  if (!normalizedValue) return null;
-  const match = options.find(
-    (option) => normalizeAutocompleteValue(option.value) === normalizedValue,
-  );
-  return match?.count ?? null;
-}
-
-function AutocompleteInput({
-  value,
-  onChange,
-  options,
-  placeholder,
-  emptyLabel,
-  hideLowCountOnEmpty = false,
-  open,
-  focusWhenOpen = false,
-  trailingText,
-  onArrowLeft,
-  onOpenChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: AutocompleteOption[];
-  placeholder?: string;
-  emptyLabel: string;
-  hideLowCountOnEmpty?: boolean;
-  open: boolean;
-  focusWhenOpen?: boolean;
-  trailingText?: string | null;
-  onArrowLeft?: () => void;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const [isTyping, setIsTyping] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const shouldSelectAllOnFocusRef = useRef(false);
-  // Keep a ref to the latest `open` value so the blur timeout reads current
-  // state rather than a stale closure (avoids closing a sibling dropdown that
-  // the parent opened after this input's onBlur was scheduled).
-  const openRef = useRef(open);
-  useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || !focusWhenOpen) return;
-    window.requestAnimationFrame(() => {
-      if (inputRef.current && document.activeElement !== inputRef.current) {
-        inputRef.current.focus();
-      }
-    });
-  }, [focusWhenOpen, open]);
-
-  const visibleOptions = useMemo(
-    () =>
-      filterAutocompleteOptions(options, isTyping ? value : "", {
-        hideLowCountOnEmpty,
-      }),
-    [hideLowCountOnEmpty, isTyping, options, value],
-  );
-
-  function selectOption(option: AutocompleteOption) {
-    onChange(option.value);
-    setIsTyping(false);
-    onOpenChange(false);
-    inputRef.current?.blur();
-  }
-
-  const selectedIndex =
-    visibleOptions.length > 0
-      ? Math.min(highlightedIndex, visibleOptions.length - 1)
-      : 0;
-
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        value={value}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft" && onArrowLeft) {
-            event.preventDefault();
-            onArrowLeft();
-            return;
-          }
-
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            if (!open) onOpenChange(true);
-            if (visibleOptions.length > 0) {
-              setHighlightedIndex((current) =>
-                current >= visibleOptions.length - 1 ? 0 : current + 1,
-              );
-            }
-            return;
-          }
-
-          if (event.key === "ArrowUp") {
-            event.preventDefault();
-            if (!open) onOpenChange(true);
-            if (visibleOptions.length > 0) {
-              setHighlightedIndex((current) =>
-                current <= 0 ? visibleOptions.length - 1 : current - 1,
-              );
-            }
-            return;
-          }
-
-          if (event.key === "Escape" && open) {
-            event.preventDefault();
-            onOpenChange(false);
-            return;
-          }
-
-          if (event.key !== "Enter") return;
-          if (!open || visibleOptions.length === 0) return;
-          event.preventDefault();
-          selectOption(visibleOptions[selectedIndex] ?? visibleOptions[0]);
-        }}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setIsTyping(true);
-          setHighlightedIndex(0);
-          shouldSelectAllOnFocusRef.current = false;
-          onOpenChange(true);
-        }}
-        onFocus={() => {
-          setIsTyping(false);
-          setHighlightedIndex(0);
-          shouldSelectAllOnFocusRef.current = true;
-          onOpenChange(true);
-          window.requestAnimationFrame(() => {
-            if (
-              shouldSelectAllOnFocusRef.current &&
-              inputRef.current &&
-              document.activeElement === inputRef.current
-            ) {
-              inputRef.current.select();
-            }
-          });
-        }}
-        onBlur={() => {
-          shouldSelectAllOnFocusRef.current = false;
-          // Only close if we're still the active dropdown by the time the
-          // timeout fires — the parent may have opened a sibling (e.g. model
-          // opens after make is selected) before the 120 ms elapses.
-          window.setTimeout(() => {
-            if (openRef.current) onOpenChange(false);
-          }, 120);
-        }}
-        placeholder={placeholder}
-        className="w-full rounded border border-gray-500 bg-gray-100 px-3 py-2 pr-14 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-      />
-      {trailingText ? (
-        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-          {trailingText}
-        </div>
-      ) : null}
-      {open && (
-        <div className="saved-search-autocomplete-scroll absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 max-h-64 overflow-y-scroll overscroll-contain rounded-md border border-gray-700 bg-gray-900 shadow-xl [scrollbar-gutter:stable]">
-          {visibleOptions.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-gray-500">{emptyLabel}</div>
-          ) : (
-            visibleOptions.map((option, index) => (
-              <button
-                key={option.value}
-                type="button"
-                onMouseEnter={() => setHighlightedIndex(index)}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  selectOption(option);
-                }}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 ${
-                  selectedIndex === index ? "bg-gray-800" : "hover:bg-gray-800"
-                }`}
-              >
-                <span>{option.value}</span>
-                {option.count != null && (
-                  <span className="text-xs text-gray-500">
-                    {option.count.toLocaleString("en-US")}
-                  </span>
-                )}
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function formatYearRange(search: SavedSearchSummary) {
   if (search.yearFrom && search.yearTo)

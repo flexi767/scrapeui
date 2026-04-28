@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 
 type RankLogLevel = 'stderr' | 'info';
 
@@ -198,13 +199,7 @@ export default function SearchPositionsRunner() {
     }
 
     if (!res.ok || !res.body) {
-      let message = 'Failed to start search-position run';
-      try {
-        const data = await res.json();
-        message = data.error || message;
-      } catch {
-        // ignore JSON parse failure
-      }
+      const message = await readJsonError(res, 'Failed to start search-position run');
       toast.error(message);
       setLogs([{ kind: 'error', message }]);
       setRunning(false);
@@ -214,30 +209,12 @@ export default function SearchPositionsRunner() {
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          const line = chunk.trim();
-          if (!line.startsWith('data: ')) continue;
-
-          try {
-            const event = JSON.parse(line.slice(6)) as StreamEntry;
-
+      await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start') {
               setStats(event.stats);
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'checking') {
@@ -245,7 +222,7 @@ export default function SearchPositionsRunner() {
               setCurrentLabel(labelForTarget(event.target));
               setCurrentPreview({ thumbUrl: event.target.thumb_url, listingUrl: event.target.listing_url });
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'result') {
@@ -261,21 +238,21 @@ export default function SearchPositionsRunner() {
                 originalPosition: event.row.original_position,
                 pricePosition: event.row.price_position,
               });
-              continue;
+              return;
             }
 
             if (event.type === 'log') {
               if (event.message) {
                 appendLog({ kind: 'log', message: event.message });
               }
-              continue;
+              return;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Search-position run failed';
               appendLog({ kind: 'error', message });
               toast.error(message);
-              continue;
+              return;
             }
 
             if (event.type === 'complete') {
@@ -288,13 +265,9 @@ export default function SearchPositionsRunner() {
               abortRef.current = null;
               toast.success(`Checked ${event.total} listings • found ${event.found} • missing ${event.notFound}`);
               router.refresh();
-              continue;
+              return;
             }
-          } catch {
-            // ignore malformed SSE lines
-          }
-        }
-      }
+      });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Search-position run failed';

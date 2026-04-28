@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
@@ -146,13 +147,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     }
 
     if (!res.ok || !res.body) {
-      let message = 'Failed to start scraper';
-      try {
-        const data = await res.json();
-        message = data.error || message;
-      } catch {
-        // ignore JSON parse failure
-      }
+      const message = await readJsonError(res, 'Failed to start scraper');
       setLog([{ type: 'error', message }]);
       setRunning(false);
       setStopping(false);
@@ -160,35 +155,17 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
     try {
-      while (true) {
-        const { done: readerDone, value } = await reader.read();
-        if (readerDone) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() ?? '';
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const obj = JSON.parse(line.slice(6)) as LogEntry;
-            setLog(prev => [...prev, obj]);
-            if (obj.type === 'complete') {
-              setDone(true);
-              setRunning(false);
-              setStopping(false);
-              runAbortRef.current = null;
-            }
-            scrollToBottom();
-          } catch {
-            // ignore malformed SSE lines
-          }
+      await streamJsonEvents<LogEntry>(res, (obj) => {
+        setLog(prev => [...prev, obj]);
+        if (obj.type === 'complete') {
+          setDone(true);
+          setRunning(false);
+          setStopping(false);
+          runAbortRef.current = null;
         }
-      }
+        scrollToBottom();
+      });
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         setLog((prev) => [...prev, { type: 'error', message: String(err) }]);

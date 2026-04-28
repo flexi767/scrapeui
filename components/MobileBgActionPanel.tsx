@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 
 interface DealerOption {
   slug: string;
@@ -92,39 +93,24 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
       });
 
       if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.error || 'Backup failed');
+        toast.error(await readJsonError(res, 'Backup failed'));
         return;
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
       let completed = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() ?? '';
+      await streamJsonEvents<BackupLogEntry>(res, (payload) => {
+        setBackupLog((prev) => [...prev, payload]);
 
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data: ')) continue;
-          const payload = JSON.parse(line.slice(6)) as BackupLogEntry;
-          setBackupLog((prev) => [...prev, payload]);
-
-          if (payload.type === 'error') {
-            toast.error(payload.message || 'Backup failed');
-          }
-
-          if (payload.type === 'complete') {
-            completed = true;
-            toast.success(`Backup completed: ${payload.listingsCount ?? 0} listings, ${payload.imagesCount ?? 0} images`);
-          }
+        if (payload.type === 'error') {
+          toast.error(payload.message || 'Backup failed');
         }
-      }
+
+        if (payload.type === 'complete') {
+          completed = true;
+          toast.success(`Backup completed: ${payload.listingsCount ?? 0} listings, ${payload.imagesCount ?? 0} images`);
+        }
+      });
 
       if (!completed) {
         toast.error('Backup ended without a completion event');

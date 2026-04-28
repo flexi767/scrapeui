@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 
 interface SyncLogEntry {
   type: 'status' | 'make' | 'complete' | 'error' | 'log' | 'exit';
@@ -49,46 +50,30 @@ export default function MobileBgMakeModelSyncRunner() {
       });
 
       if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        toast.error((data as { error?: string }).error || 'Sync failed to start');
+        toast.error(await readJsonError(res, 'Sync failed to start'));
         setRunning(false);
         return;
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
       let sawComplete = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() ?? '';
+      await streamJsonEvents<SyncLogEntry>(res, (entry) => {
+        setLog((prev) => [...prev, entry]);
 
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data: ')) continue;
-
-          const entry = JSON.parse(line.slice(6)) as SyncLogEntry;
-          setLog((prev) => [...prev, entry]);
-
-          if (entry.type === 'error') {
-            toast.error(entry.message || 'Sync failed');
-          }
-
-          if (entry.type === 'complete') {
-            sawComplete = true;
-            setCompleted(entry);
-            toast.success(`Sync completed: ${entry.makesProcessed ?? 0} makes, ${entry.modelsProcessed ?? 0} models`);
-          }
-
-          if (entry.type === 'exit' && entry.code && !sawComplete) {
-            toast.error(`Sync exited with code ${entry.code}`);
-          }
+        if (entry.type === 'error') {
+          toast.error(entry.message || 'Sync failed');
         }
-      }
+
+        if (entry.type === 'complete') {
+          sawComplete = true;
+          setCompleted(entry);
+          toast.success(`Sync completed: ${entry.makesProcessed ?? 0} makes, ${entry.modelsProcessed ?? 0} models`);
+        }
+
+        if (entry.type === 'exit' && entry.code && !sawComplete) {
+          toast.error(`Sync exited with code ${entry.code}`);
+        }
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Sync failed');
     } finally {

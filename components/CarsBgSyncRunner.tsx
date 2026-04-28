@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
+import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 
 type StreamEntry =
   | { type: 'start'; message?: string; dryRun: boolean }
@@ -160,13 +161,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     }
 
     if (!res.ok || !res.body) {
-      let message = 'Failed to start cars.bg sync';
-      try {
-        const data = await res.json();
-        message = data.error || message;
-      } catch {
-        // ignore JSON parse failure
-      }
+      const message = await readJsonError(res, 'Failed to start cars.bg sync');
       setLogs([{ kind: 'error', message }]);
       toast.error(message);
       setRunning(false);
@@ -175,35 +170,17 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          const line = chunk.trim();
-          if (!line.startsWith('data: ')) continue;
-
-          try {
-            const event = JSON.parse(line.slice(6)) as StreamEntry;
-
+      await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start') {
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'dealer') {
               setCurrentDealer(event.dealer);
               if (event.message) appendLog({ kind: 'status', message: event.message });
-              continue;
+              return;
             }
 
             if (event.type === 'summary') {
@@ -217,7 +194,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 kind: 'status',
                 message: `${event.dealer}: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`,
               });
-              continue;
+              return;
             }
 
             if (event.type === 'listing') {
@@ -231,7 +208,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 price: event.price,
                 url: event.url,
               }]);
-              continue;
+              return;
             }
 
             if (event.type === 'diff') {
@@ -253,12 +230,12 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 newDescription: event.newDescription ?? null,
                 url: event.url,
               }]);
-              continue;
+              return;
             }
 
             if (event.type === 'stale') {
               setStaleCarsIds((prev) => [...prev, { dealer: event.dealer, carsId: event.carsId }]);
-              continue;
+              return;
             }
 
             if (event.type === 'done') {
@@ -275,7 +252,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                 kind: 'status',
                 message: `${event.dealer}: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`,
               });
-              continue;
+              return;
             }
 
             if (event.type === 'log') {
@@ -285,14 +262,14 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
                   message: event.dealer ? `${event.dealer}: ${event.message}` : event.message,
                 });
               }
-              continue;
+              return;
             }
 
             if (event.type === 'error') {
               const message = event.message || 'Cars.bg sync failed';
               appendLog({ kind: 'error', message });
               toast.error(message);
-              continue;
+              return;
             }
 
             if (event.type === 'end') {
@@ -323,13 +300,9 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
               } else {
                 toast.success(`Cars.bg plan ready: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`);
               }
-              continue;
+              return;
             }
-          } catch {
-            // ignore malformed SSE lines
-          }
-        }
-      }
+      });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         const message = error instanceof Error ? error.message : 'Cars.bg sync failed';

@@ -13,6 +13,7 @@ import { loadMobileBgMakesMapFromDb } from "@/lib/mobile-bg/reference";
 import { captureEditFormSnapshotWithPage } from "@/lib/mobile-bg/edit-form-capture";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { cleanDescription } from "@/lib/mobile-bg/description";
+import { normalizeImageUrl, toMobileBgFullImageUrl } from "@/lib/mobile-bg/backup-images";
 import type { VatValue } from "@/lib/vat";
 
 export interface DealerBackupConfig {
@@ -511,28 +512,6 @@ async function scrapeAllImages(page: Page): Promise<string[]> {
     }
     return imgs;
   });
-}
-
-function normalizeImageUrl(value: string): string | null {
-  if (!value) return null;
-
-  try {
-    return new URL(value).toString();
-  } catch {
-    try {
-      return new URL(value, "https://www.mobile.bg").toString();
-    } catch {
-      return null;
-    }
-  }
-}
-
-function toMobileBgFullImageUrl(value: string): string | null {
-  const normalized = normalizeImageUrl(value);
-  if (!normalized) return null;
-  return normalized
-    .replace(/(\/mobile\/photosorg\/\d+)\/(\d+)\/(?!big1)/, "$1/$2/big1/")
-    .replace(/\/(\d+)\/big1\/big1\//, "/$1/big1/");
 }
 
 async function scrapeListingDetail(
