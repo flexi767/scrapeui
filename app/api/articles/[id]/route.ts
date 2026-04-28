@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { raw } from '@/db/client';
+import { replaceJoinRows } from '@/lib/api/db-helpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -26,17 +27,8 @@ export async function PATCH(
     raw.prepare(`UPDATE articles SET ${updates.join(', ')} WHERE id = ?`).run(...values, articleId);
   }
 
-  if (body.labelIds) {
-    raw.prepare('DELETE FROM article_labels WHERE article_id = ?').run(articleId);
-    const link = raw.prepare('INSERT INTO article_labels (article_id, label_id) VALUES (?, ?)');
-    for (const lid of body.labelIds) link.run(articleId, lid);
-  }
-
-  if (body.listingIds) {
-    raw.prepare('DELETE FROM article_listings WHERE article_id = ?').run(articleId);
-    const link = raw.prepare('INSERT INTO article_listings (article_id, listing_id) VALUES (?, ?)');
-    for (const lid of body.listingIds) link.run(articleId, lid);
-  }
+  replaceJoinRows(raw, 'article_labels', 'article_id', 'label_id', articleId, body.labelIds);
+  replaceJoinRows(raw, 'article_listings', 'article_id', 'listing_id', articleId, body.listingIds);
 
   return NextResponse.json({ ok: true });
 }

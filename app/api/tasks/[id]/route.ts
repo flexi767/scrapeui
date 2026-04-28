@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { raw } from '@/db/client';
 import { getTaskById } from '@/lib/queries';
+import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function GET(
   _request: NextRequest,
@@ -33,50 +34,21 @@ export async function PATCH(
   const current = raw.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as Record<string, unknown> | undefined;
   if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const updates: string[] = [];
-  const values: (string | number | null)[] = [];
-
-  const fields = ['title', 'description', 'status', 'priority', 'assignee_id', 'parent_id', 'deadline', 'is_recurring', 'recur_rule'] as const;
   const bodyMap: Record<string, string> = {
     title: 'title', description: 'description', status: 'status',
     priority: 'priority', assigneeId: 'assignee_id', parentId: 'parent_id',
     deadline: 'deadline', isRecurring: 'is_recurring', recurRule: 'recur_rule',
   };
 
-  for (const [bodyKey, dbCol] of Object.entries(bodyMap)) {
-    if (bodyKey in body) {
-      updates.push(`${dbCol} = ?`);
-      values.push(body[bodyKey] ?? null);
-    }
-  }
-
-  if (updates.length === 0 && !body.listingIds && !body.labelIds) {
+  const hasFieldUpdate = Object.keys(bodyMap).some((key) => key in body);
+  if (!hasFieldUpdate && !body.listingIds && !body.labelIds) {
     return NextResponse.json({ error: 'No updates' }, { status: 400 });
   }
 
-  if (updates.length > 0) {
-    updates.push('updated_at = ?');
-    values.push(now);
-    raw.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values, taskId);
-  }
+  runMappedUpdate(raw, 'tasks', 'id', taskId, body, bodyMap, { updated_at: now });
 
-  // Update listings if provided
-  if (body.listingIds) {
-    raw.prepare('DELETE FROM task_listings WHERE task_id = ?').run(taskId);
-    const linkListing = raw.prepare('INSERT INTO task_listings (task_id, listing_id) VALUES (?, ?)');
-    for (const lid of body.listingIds) {
-      linkListing.run(taskId, lid);
-    }
-  }
-
-  // Update labels if provided
-  if (body.labelIds) {
-    raw.prepare('DELETE FROM task_labels WHERE task_id = ?').run(taskId);
-    const linkLabel = raw.prepare('INSERT INTO task_labels (task_id, label_id) VALUES (?, ?)');
-    for (const lid of body.labelIds) {
-      linkLabel.run(taskId, lid);
-    }
-  }
+  replaceJoinRows(raw, 'task_listings', 'task_id', 'listing_id', taskId, body.listingIds);
+  replaceJoinRows(raw, 'task_labels', 'task_id', 'label_id', taskId, body.labelIds);
 
   // Log status changes
   if (body.status && body.status !== current.status) {

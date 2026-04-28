@@ -8,7 +8,6 @@
 import { PlaywrightCrawler } from "crawlee";
 import path from "path";
 import { fileURLToPath } from "url";
-import util from "util";
 import { execSync } from "child_process";
 import Database from "better-sqlite3";
 import {
@@ -29,16 +28,9 @@ import {
 import { cleanDescription } from "@/lib/mobile-bg/description";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { saveListingThumb } from "@/lib/listing-thumbs";
+import { emit, formatError, parseRunnerArgs } from "@/scraper/lib/runner";
 
-// Parse args
-const args = process.argv.slice(2);
-const dealersIdx = args.indexOf("--dealers");
-const dealerArg =
-  dealersIdx !== -1 && args[dealersIdx + 1] ? args[dealersIdx + 1] : "";
-const deepCrawl = args.includes("--deep");
-const requestedSlugs = dealerArg
-  ? dealerArg.split(",").map((s) => s.trim())
-  : [];
+const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const HOMEPAGE_CATEGORY_OPTIONS = new Set([
   "Ван",
   "Джип",
@@ -118,26 +110,6 @@ interface DealerRow {
   slug: string;
   name: string;
   mobileBg: string;
-}
-
-function emit(obj: object) {
-  process.stdout.write(JSON.stringify(obj) + "\n");
-}
-
-function formatError(err: unknown): string {
-  if (!err) return "Unknown error";
-  if (typeof err === "string") return err;
-  const e = err as Record<string, unknown>;
-  const isDev = process.env.NODE_ENV !== "production";
-  if (!isDev) return (e.message as string) || "Scrape failed";
-  if (Array.isArray(e.errors) && e.errors.length > 0)
-    return e.errors.map(formatError).filter(Boolean).join(" | ");
-  if (e.cause) {
-    const cause = formatError(e.cause);
-    if (cause && cause !== e.message) return `${e.message}: ${cause}`;
-  }
-  if (e.message) return e.message as string;
-  return util.inspect(err, { depth: 4, breakLength: 120 });
 }
 
 function extractMobileId(url: string): string | null {
