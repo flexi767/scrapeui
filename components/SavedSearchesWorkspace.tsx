@@ -110,11 +110,31 @@ const HEADER_STEPPER_FIELDS: Record<string, number> = {
   f26: 10,
 };
 const CLEARABLE_FIELDS = new Set(["f25", "f26", "f7", "f8", "f15"]);
+const PAIRED_FIELD_END_NAMES = new Set([
+  "f11",
+  "f26",
+  "f8",
+  "f13",
+  "f18",
+  "f15",
+]);
+const PAIRED_FIELD_NAMES: Record<string, string> = {
+  f10: "f11",
+  f25: "f26",
+  f7: "f8",
+  f12: "f13",
+  f17: "f18",
+  f14: "f15",
+};
 const FIELD_LAYOUT_CLASS: Record<string, string> = {
   marka: "md:col-span-1 xl:col-span-2",
   model: "md:col-span-1 xl:col-span-2",
-  f17: "md:col-span-1 xl:col-span-2",
-  f18: "md:col-span-1 xl:col-span-2",
+  f10: "md:col-span-2 xl:col-span-2",
+  f25: "md:col-span-2 xl:col-span-2",
+  f7: "md:col-span-2 xl:col-span-2",
+  f12: "md:col-span-2 xl:col-span-2",
+  f17: "md:col-span-2 xl:col-span-2",
+  f14: "md:col-span-2 xl:col-span-2",
 };
 
 function fieldLayoutClass(name: string) {
@@ -875,6 +895,15 @@ export default function SavedSearchesWorkspace({
                   ),
                 )
                   .map((field) => {
+                    if (PAIRED_FIELD_END_NAMES.has(field.name)) return null;
+
+                    const pairedField =
+                      PAIRED_FIELD_NAMES[field.name] != null
+                        ? editableFields.find(
+                            (item) =>
+                              item.name === PAIRED_FIELD_NAMES[field.name],
+                          )
+                        : null;
                     const selectedMake = getFieldValue("marka");
                     const matchedMakeKey =
                       Object.keys(detail.prefill.options.modelsByMake).find(
@@ -910,6 +939,207 @@ export default function SavedSearchesWorkspace({
                     );
                     const headerStepperDelta =
                       HEADER_STEPPER_FIELDS[field.name] ?? null;
+
+                    if (pairedField) {
+                      return (
+                        <div
+                          key={field.name}
+                          className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${fieldLayoutClass(field.name)}`}
+                        >
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {[field, pairedField].map((rangeField) => {
+                              const rangeLabel = displayFieldLabel(
+                                rangeField,
+                                subLocationLabel,
+                              );
+                              const rangeStepperDelta =
+                                HEADER_STEPPER_FIELDS[rangeField.name] ?? null;
+
+                              return (
+                                <div
+                                  key={rangeField.name}
+                                  className="min-w-0"
+                                >
+                                  <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                                    <div className="truncate text-xs font-medium text-gray-300">
+                                      {rangeLabel}
+                                    </div>
+                                    {rangeStepperDelta != null ? (
+                                      <div className="flex shrink-0 items-center gap-1">
+                                        <button
+                                          type="button"
+                                          className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                                          onClick={() =>
+                                            nudgeField(
+                                              rangeField.name,
+                                              -rangeStepperDelta,
+                                            )
+                                          }
+                                          aria-label={`Decrease ${rangeLabel}`}
+                                        >
+                                          -{rangeStepperDelta}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                                          onClick={() =>
+                                            nudgeField(
+                                              rangeField.name,
+                                              rangeStepperDelta,
+                                            )
+                                          }
+                                          aria-label={`Increase ${rangeLabel}`}
+                                        >
+                                          +{rangeStepperDelta}
+                                        </button>
+                                      </div>
+                                    ) : CLEARABLE_FIELDS.has(
+                                        rangeField.name,
+                                      ) && rangeField.value ? (
+                                      <button
+                                        type="button"
+                                        className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                                        onClick={() =>
+                                          clearField(rangeField.name)
+                                        }
+                                      >
+                                        Clear
+                                      </button>
+                                    ) : (
+                                      <div className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                                        {rangeField.name}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {rangeField.name === "f12" ? (
+                                    <select
+                                      value={rangeField.value}
+                                      onChange={(event) =>
+                                        updateField(
+                                          rangeField.name,
+                                          event.target.value,
+                                        )
+                                      }
+                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      {ENGINE_OPTIONS.map((option) => (
+                                        <option
+                                          key={option || "engine-all"}
+                                          value={option}
+                                        >
+                                          {option || "Всички типове"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : rangeField.name === "f13" ? (
+                                    <select
+                                      value={rangeField.value}
+                                      onChange={(event) =>
+                                        updateField(
+                                          rangeField.name,
+                                          event.target.value,
+                                        )
+                                      }
+                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      {TRANSMISSION_OPTIONS.map((option) => (
+                                        <option
+                                          key={option || "trans-all"}
+                                          value={option}
+                                        >
+                                          {option || "Без значение"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : rangeField.name === "f14" ? (
+                                    <select
+                                      value={rangeField.value}
+                                      onChange={(event) =>
+                                        updateField(
+                                          rangeField.name,
+                                          event.target.value,
+                                        )
+                                      }
+                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      {CATEGORY_OPTIONS.map((option) => (
+                                        <option
+                                          key={option || "cat-all"}
+                                          value={option}
+                                        >
+                                          {option || "всички категории"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : rangeField.name === "f17" ? (
+                                    <select
+                                      value={rangeField.value}
+                                      onChange={(event) =>
+                                        void updateLocation(event.target.value)
+                                      }
+                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                    >
+                                      {detail.prefill.options.locations.map(
+                                        (option) => (
+                                          <option
+                                            key={`${option.value || "loc-all"}-${option.label}`}
+                                            value={option.value}
+                                          >
+                                            {option.label}
+                                          </option>
+                                        ),
+                                      )}
+                                    </select>
+                                  ) : rangeField.name === "f18" ? (
+                                    <div className="relative">
+                                      <select
+                                        value={rangeField.value}
+                                        onChange={(event) =>
+                                          updateField(
+                                            rangeField.name,
+                                            event.target.value,
+                                          )
+                                        }
+                                        disabled={locationLoading}
+                                        className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
+                                      >
+                                        <option value="">всички</option>
+                                        {subLocationOptions
+                                          .filter(
+                                            (option) => option.value !== "",
+                                          )
+                                          .map((option) => (
+                                            <option
+                                              key={`${option.value}-${option.label}`}
+                                              value={option.value}
+                                            >
+                                              {option.label}
+                                            </option>
+                                          ))}
+                                      </select>
+                                      {locationLoading && (
+                                        <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <input
+                                      value={rangeField.value}
+                                      onChange={(event) =>
+                                        updateField(
+                                          rangeField.name,
+                                          event.target.value,
+                                        )
+                                      }
+                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div
