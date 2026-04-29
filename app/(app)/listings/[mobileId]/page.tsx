@@ -1,21 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EmblaCarousel from '@/components/EmblaCarousel';
+import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
-}
-
-function AdStatusBadge({ status }: { status: string }) {
-  if (!status || status === 'none') return null;
-  if (status.toUpperCase() === 'TOP')
-    return <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-white" style={{backgroundColor:'#1a6496'}}>TOP</span>;
-  if (status.toUpperCase() === 'VIP')
-    return <span className="rounded-full px-2.5 py-1 text-xs font-semibold text-white" style={{backgroundColor:'#c0392b'}}>VIP</span>;
-  return <span className="rounded-full bg-gray-700 px-2.5 py-1 text-xs text-gray-300">{status}</span>;
 }
 
 function SpecRow({ label, value }: { label: string; value?: string | number | null }) {
@@ -119,7 +111,11 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listing.vat === 'excluded' && (
                   <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">+ДДС</span>
                 )}
-                <AdStatusBadge status={listing.ad_status} />
+                <AdStatusBadge
+                  status={listing.ad_status}
+                  empty="none"
+                  className="text-xs"
+                />
                 {listing.kaparo ? (
                   <span className="rounded-full bg-orange-900/70 px-2.5 py-1 text-xs text-orange-200">капаро</span>
                 ) : null}

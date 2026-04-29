@@ -6,16 +6,8 @@ export interface SearchField {
 }
 
 export const SEARCH_ACTION = "https://www.mobile.bg/pcgi/mobile.cgi";
-export const HIDDEN_FIELD_NAMES = new Set([
-  "topmenu",
-  "rub",
-  "act",
-  "rub_pub_save",
-  "pubtype",
-  "f20",
-  "f9",
-]);
-export const ALWAYS_INCLUDED_FIELD_NAMES = new Set(["f17"]);
+export const HIDDEN_FIELD_NAMES = MOBILE_BG_HIDDEN_FIELD_NAMES;
+export const ALWAYS_INCLUDED_FIELD_NAMES = MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES;
 
 export function buildFirstSevenSearchFields(fields: SearchField[]) {
   const hiddenFields = fields.filter((field) =>
@@ -33,3 +25,7 @@ export function buildFirstSevenSearchFields(fields: SearchField[]) {
     .slice(0, 7);
   return [...hiddenFields, ...alwaysIncludedFields, ...firstSevenVisibleFields];
 }
+import {
+  MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES,
+  MOBILE_BG_HIDDEN_FIELD_NAMES,
+} from "@/lib/mobile-bg/search-field-config";

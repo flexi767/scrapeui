@@ -2,9 +2,17 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
+import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { SortLink } from '@/components/listings/SortLink';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
+import {
+  buildListingParams,
+  listingPageHref,
+  LISTING_EXTRA_OPTIONS,
+  toParamArray,
+} from '@/lib/listing-url';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
@@ -29,39 +37,7 @@ interface SearchParams {
   page?: string;
 }
 
-const EXTRA_OPTIONS = ['4x4', 'С регистрация', 'Нов внос', 'Кожен салон'];
-
-function AdStatusBadge({ status }: { status: string }) {
-  if (!status || status === 'none') return <span className="text-gray-600">—</span>;
-  if (status.toUpperCase() === 'TOP') return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#1a6496' }}>TOP</span>;
-  if (status.toUpperCase() === 'VIP') return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#c0392b' }}>VIP</span>;
-  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
-}
-
-function SortLink({
-  label,
-  sortKey,
-  currentSort,
-  currentOrder,
-  params,
-}: {
-  label: string;
-  sortKey: string;
-  currentSort: string;
-  currentOrder: string;
-  params: URLSearchParams;
-}) {
-  const p = new URLSearchParams(params.toString());
-  p.delete('page');
-  if (currentSort === sortKey) {
-    p.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-  } else {
-    p.set('sort', sortKey);
-    p.set('order', 'desc');
-  }
-  const arrow = currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
-  return <Link href={`/listings/deleted?${p.toString()}`} className="hover:text-white">{label}{arrow}</Link>;
-}
+const BASE_PATH = '/listings/deleted';
 
 export default async function DeletedListingsPage({
   searchParams,
@@ -71,13 +47,13 @@ export default async function DeletedListingsPage({
   const sp = await searchParams;
   const make = sp.make ?? '';
   const model = sp.model ?? '';
-  const dealerSlugs = sp.dealer ? (Array.isArray(sp.dealer) ? sp.dealer : [sp.dealer]) : [];
-  const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
-  const categories = sp.category ? (Array.isArray(sp.category) ? sp.category : [sp.category]) : [];
-  const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
-  const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
-  const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
-  const extras = sp.extra ? (Array.isArray(sp.extra) ? sp.extra : [sp.extra]) : [];
+  const dealerSlugs = toParamArray(sp.dealer);
+  const years = toParamArray(sp.year);
+  const categories = toParamArray(sp.category);
+  const statuses = toParamArray(sp.status);
+  const vatValues = toParamArray(sp.vat);
+  const fuels = toParamArray(sp.fuel);
+  const extras = toParamArray(sp.extra);
   const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
   const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
@@ -96,20 +72,21 @@ export default async function DeletedListingsPage({
   const makeModels = getMakeModels();
   const allDealers = getAllDealers();
   const makes = Object.keys(makeModels).sort();
-  const currentParams = new URLSearchParams();
-  for (const s of statuses) currentParams.append('status', s);
-  for (const v of vatValues) currentParams.append('vat', v);
-  for (const c of categories) currentParams.append('category', c);
-  for (const f of fuels) currentParams.append('fuel', f);
-  for (const e of extras) currentParams.append('extra', e);
-  if (kaparo) currentParams.set('kaparo', kaparo);
-  if (make) currentParams.set('make', make);
-  if (model) currentParams.set('model', model);
-  for (const d of dealerSlugs) currentParams.append('dealer', d);
-  for (const y of years) currentParams.append('year', y);
-  if (search) currentParams.set('search', search);
-  currentParams.set('sort', sort);
-  currentParams.set('order', order);
+  const currentParams = buildListingParams({
+    statuses,
+    vatValues,
+    categories,
+    fuels,
+    extras,
+    kaparo,
+    make,
+    model,
+    dealerSlugs,
+    years,
+    search,
+    sort,
+    order,
+  });
 
   const totalPages = Math.ceil(total / 50);
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -126,11 +103,11 @@ export default async function DeletedListingsPage({
               allYears={getDistinctYears()}
               allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
-              allExtras={EXTRA_OPTIONS}
+              allExtras={LISTING_EXTRA_OPTIONS}
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
-              basePath="/listings/deleted"
+              basePath={BASE_PATH}
               showPageLinks={false}
             />
           </Suspense>
@@ -145,20 +122,20 @@ export default async function DeletedListingsPage({
                 <th className="w-24 px-3 py-1.5 text-left">Img</th>
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
-                <th className="px-3 py-1.5 text-left"><SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} /></th>
-                <th className="px-2 py-1.5 text-center w-14"><SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} /></th>
-                <th className="pl-1 pr-3 py-1.5 text-right"><SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-left"><SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="pl-1 pr-3 py-1.5 text-right"><SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
-                <th className="px-2 py-1.5 text-center w-14"><SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
                 <th className="px-3 py-1.5 text-right">Views</th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
                 <th className="px-3 py-1.5 text-right">Deleted</th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
                 <th className="px-3 py-1.5 text-right">Month</th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
                 <th className="px-3 py-1.5 text-center">Body Type</th>
-                <th className="px-3 py-1.5 text-center"><SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} /></th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} /></th>
+                <th className="px-3 py-1.5 text-center"><SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-right"><SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -219,7 +196,7 @@ export default async function DeletedListingsPage({
           <div className="mt-4 flex items-center justify-center gap-2 text-sm">
             {page > 1 && (
               <Link
-                href={`/listings/deleted?${new URLSearchParams({ ...Object.fromEntries(currentParams.entries()), page: String(page - 1) }).toString()}`}
+                href={listingPageHref(BASE_PATH, currentParams, page - 1)}
                 className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800"
               >
                 Prev
@@ -236,7 +213,7 @@ export default async function DeletedListingsPage({
               ) : (
                 <Link
                   key={pageNumber}
-                  href={`/listings/deleted?${new URLSearchParams({ ...Object.fromEntries(currentParams.entries()), page: String(pageNumber) }).toString()}`}
+                  href={listingPageHref(BASE_PATH, currentParams, pageNumber)}
                   className="min-w-9 rounded border border-gray-700 px-3 py-1.5 text-center text-gray-300 hover:bg-gray-800"
                 >
                   {pageNumber}
@@ -245,7 +222,7 @@ export default async function DeletedListingsPage({
             ))}
             {page < totalPages && (
               <Link
-                href={`/listings/deleted?${new URLSearchParams({ ...Object.fromEntries(currentParams.entries()), page: String(page + 1) }).toString()}`}
+                href={listingPageHref(BASE_PATH, currentParams, page + 1)}
                 className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800"
               >
                 Next

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
+import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
@@ -12,19 +13,6 @@ import {
 } from '@/lib/mobile-bg/search-ranking';
 import { getVatBadgeLabel } from '@/lib/vat';
 import type { MobileBgSearchResultRow } from '@/lib/mobile-bg/search-results';
-
-function AdStatusBadge({ status }: { status: string }) {
-  if (!status || status === 'none') {
-    return <span className="text-gray-600">—</span>;
-  }
-  if (status.toUpperCase() === 'TOP') {
-    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#1a6496' }}>TOP</span>;
-  }
-  if (status.toUpperCase() === 'VIP') {
-    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: '#c0392b' }}>VIP</span>;
-  }
-  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
-}
 
 function truncateDealerLabel(value: string, maxLength = 20) {
   if (value.length <= maxLength) return value;

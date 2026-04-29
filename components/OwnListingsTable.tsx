@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Check, RefreshCw, SearchIcon, X } from "lucide-react";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
+import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
+import { formatDateOnly } from "@/lib/date-format";
 import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -56,29 +58,6 @@ function SortHeader({
       {arrow}
     </Link>
   );
-}
-
-function AdStatusBadge({ status }: { status: string }) {
-  if (!status || status === "none") return null;
-  if (status.toUpperCase() === "TOP")
-    return (
-      <span
-        className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-        style={{ backgroundColor: "#1a6496" }}
-      >
-        TOP
-      </span>
-    );
-  if (status.toUpperCase() === "VIP")
-    return (
-      <span
-        className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-        style={{ backgroundColor: "#c0392b" }}
-      >
-        VIP
-      </span>
-    );
-  return null;
 }
 
 function VatBadge({ vat }: { vat: string | null }) {
@@ -245,20 +224,6 @@ export default function OwnListingsTable({ initialRows }: Props) {
       window.clearTimeout(priceSaveTimeoutRef.current);
       priceSaveTimeoutRef.current = null;
     }
-  }
-
-  function formatDateOnly(value: string | null | undefined): string {
-    if (!value) return "—";
-    const plain = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (plain) return `${plain[3]}.${plain[2]}.${plain[1].slice(2)}`;
-    const d = new Date(value);
-    if (!Number.isNaN(d.getTime())) {
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const yy = String(d.getFullYear()).slice(2);
-      return `${dd}.${mm}.${yy}`;
-    }
-    return value;
   }
 
   function getRowKey(row: OwnListingRow): string {
@@ -701,7 +666,11 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       <option value="VIP">VIP</option>
                     </select>
                   ) : (
-                    <AdStatusBadge status={row.ad_status ?? "none"} />
+                    <AdStatusBadge
+                      status={row.ad_status ?? "none"}
+                      empty="none"
+                      className="text-xs"
+                    />
                   )}
                 </td>
 

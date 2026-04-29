@@ -2,9 +2,19 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
+import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { SortLink } from '@/components/listings/SortLink';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
+import { formatDateOnly } from '@/lib/date-format';
+import {
+  buildListingParams,
+  listingHref,
+  listingPageHref,
+  LISTING_EXTRA_OPTIONS,
+  toParamArray,
+} from '@/lib/listing-url';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
@@ -29,64 +39,7 @@ interface SearchParams {
   page?: string;
 }
 
-const EXTRA_OPTIONS = ['4x4', 'С регистрация', 'Нов внос', 'Кожен салон'];
-
-function AdStatusBadge({ status }: { status: string }) {
-  if (!status || status === 'none') {
-    return <span className="text-gray-600">—</span>;
-  }
-  if (status.toUpperCase() === 'TOP') {
-    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{backgroundColor:'#1a6496'}}>TOP</span>;
-  }
-  if (status.toUpperCase() === 'VIP') {
-    return <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{backgroundColor:'#c0392b'}}>VIP</span>;
-  }
-  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">{status}</span>;
-}
-
-function SortLink({
-  label,
-  sortKey,
-  currentSort,
-  currentOrder,
-  params,
-}: {
-  label: string;
-  sortKey: string;
-  currentSort: string;
-  currentOrder: string;
-  params: URLSearchParams;
-}) {
-  const p = new URLSearchParams(params.toString());
-  p.delete('page');
-  if (currentSort === sortKey) {
-    p.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-  } else {
-    p.set('sort', sortKey);
-    p.set('order', 'desc');
-  }
-  const arrow =
-    currentSort === sortKey ? (currentOrder === 'asc' ? ' ↑' : ' ↓') : '';
-  return (
-    <Link href={`/listings?${p.toString()}`} className="hover:text-white">
-      {label}{arrow}
-    </Link>
-  );
-}
-
-function formatDateOnly(value: string | null | undefined): string {
-  if (!value) return '—';
-  const plain = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (plain) return `${plain[3]}.${plain[2]}.${plain[1].slice(2)}`;
-  const d = new Date(value);
-  if (!Number.isNaN(d.getTime())) {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yy = String(d.getFullYear()).slice(2);
-    return `${dd}.${mm}.${yy}`;
-  }
-  return value;
-}
+const BASE_PATH = '/listings';
 
 export default async function ListingsPage({
   searchParams,
@@ -97,17 +50,13 @@ export default async function ListingsPage({
 
   const make = sp.make ?? '';
   const model = sp.model ?? '';
-  const dealerSlugs = sp.dealer
-    ? Array.isArray(sp.dealer)
-      ? sp.dealer
-      : [sp.dealer]
-    : [];
-  const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
-  const categories = sp.category ? (Array.isArray(sp.category) ? sp.category : [sp.category]) : [];
-  const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
-  const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
-  const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
-  const extras = sp.extra ? (Array.isArray(sp.extra) ? sp.extra : [sp.extra]) : [];
+  const dealerSlugs = toParamArray(sp.dealer);
+  const years = toParamArray(sp.year);
+  const categories = toParamArray(sp.category);
+  const statuses = toParamArray(sp.status);
+  const vatValues = toParamArray(sp.vat);
+  const fuels = toParamArray(sp.fuel);
+  const extras = toParamArray(sp.extra);
   const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
   const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
   const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
@@ -145,20 +94,21 @@ export default async function ListingsPage({
   const makes = Object.keys(makeModels).sort();
 
   // Build URL params object for sort links
-  const currentParams = new URLSearchParams();
-  for (const s of statuses) currentParams.append('status', s);
-  for (const v of vatValues) currentParams.append('vat', v);
-  for (const c of categories) currentParams.append('category', c);
-  for (const f of fuels) currentParams.append('fuel', f);
-  for (const e of extras) currentParams.append('extra', e);
-  if (kaparo) currentParams.set('kaparo', kaparo);
-  if (make) currentParams.set('make', make);
-  if (model) currentParams.set('model', model);
-  for (const d of dealerSlugs) currentParams.append('dealer', d);
-  for (const y of years) currentParams.append('year', y);
-  if (search) currentParams.set('search', search);
-  currentParams.set('sort', sort);
-  currentParams.set('order', order);
+  const currentParams = buildListingParams({
+    statuses,
+    vatValues,
+    categories,
+    fuels,
+    extras,
+    kaparo,
+    make,
+    model,
+    dealerSlugs,
+    years,
+    search,
+    sort,
+    order,
+  });
 
   const totalPages = Math.ceil(total / 50);
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -176,7 +126,7 @@ export default async function ListingsPage({
               allYears={getDistinctYears()}
               allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
-              allExtras={EXTRA_OPTIONS}
+              allExtras={LISTING_EXTRA_OPTIONS}
               total={total}
               priceChangeRange={getPriceChangeRange()}
               priceRange={getPriceRange()}
@@ -196,39 +146,39 @@ export default async function ListingsPage({
                 <th className="px-3 py-1.5 text-left">Make / Model</th>
                 <th className="px-3 py-1.5 text-left">Title</th>
                 <th className="px-3 py-1.5 text-left">
-                  <SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-2 py-1.5 text-center w-14">
-                  <SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="pl-1 pr-3 py-1.5 text-right">
-                  <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-3 py-1.5 text-center">VAT</th>
                 <th className="px-2 py-1.5 text-center w-14">
-                  <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
-                  <SortLink label="Views" sortKey="views" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Views" sortKey="views" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
-                  <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
-                  <SortLink label="cars.bg created" sortKey="carsbg_created_date" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="cars.bg created" sortKey="carsbg_created_date" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-2 py-1.5 text-center w-12">New</th>
                 <th className="px-3 py-1.5 text-right">
-                  <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="w-16 px-2 py-1.5 text-left">
                   <span className="block whitespace-pre-line leading-tight">Body{`\n`}Type</span>
                 </th>
                 <th className="w-20 px-2 py-1.5 text-left">
-                  <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
                 <th className="px-3 py-1.5 text-right">
-                  <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} />
+                  <SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} />
                 </th>
               </tr>
             </thead>
@@ -266,7 +216,7 @@ export default async function ListingsPage({
                     <td className="px-2 py-1.5 whitespace-nowrap">
                       {row.make ? (
                         <Link
-                          href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make]]).toString()}`}
+                          href={listingHref(BASE_PATH, currentParams, { make: row.make }, ['make', 'model'])}
                           className="block font-medium text-white no-underline hover:text-white hover:no-underline"
                         >
                           {row.make}
@@ -274,7 +224,7 @@ export default async function ListingsPage({
                       ) : <div className="font-medium text-white">—</div>}
                       {row.model ? (
                         <Link
-                          href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'make' && k !== 'model' && k !== 'page'), ['make', row.make ?? ''], ['model', row.model]]).toString()}`}
+                          href={listingHref(BASE_PATH, currentParams, { make: row.make ?? '', model: row.model }, ['make', 'model'])}
                           className="block text-xs text-gray-400 no-underline hover:text-white hover:no-underline"
                         >
                           {row.model}
@@ -297,7 +247,7 @@ export default async function ListingsPage({
                       <div className="flex items-center gap-1.5">
                         {row.dealer_slug ? (
                           <Link
-                            href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'dealer' && k !== 'page'), ['dealer', row.dealer_slug]]).toString()}`}
+                            href={listingHref(BASE_PATH, currentParams, { dealer: row.dealer_slug }, ['dealer'])}
                             className="whitespace-nowrap text-gray-400 no-underline hover:text-white hover:no-underline"
                           >
                             {row.dealer_name ?? '—'}
@@ -311,7 +261,7 @@ export default async function ListingsPage({
 
                     {/* Ad Status */}
                     <td className="px-2 py-1 text-center">
-                      <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page'), ...(!statuses.includes(row.ad_status || 'none') ? [['status', row.ad_status || 'none'] as [string,string]] : [])]).toString()}`}>
+                      <Link href={statuses.includes(row.ad_status || 'none') ? listingHref(BASE_PATH, currentParams, {}) : listingHref(BASE_PATH, currentParams, { status: row.ad_status || 'none' })}>
                         <AdStatusBadge status={row.ad_status} />
                       </Link>
                     </td>
@@ -342,7 +292,7 @@ export default async function ListingsPage({
 
                     {/* VAT */}
                     <td className="px-3 py-1 text-center">
-                      <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'vat'), ['vat', row.vat || 'null']]).toString()}`}>
+                      <Link href={listingHref(BASE_PATH, currentParams, { vat: row.vat || 'null' }, ['vat'])}>
                         {row.vat === 'included' ? (
                           <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
                         ) : row.vat === 'exempt' ? (
@@ -357,7 +307,7 @@ export default async function ListingsPage({
 
                     {/* капаро */}
                     <td className="px-2 py-1 text-center">
-                      <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'kaparo'), ['kaparo', row.kaparo ? 'yes' : 'no']]).toString()}`}>
+                      <Link href={listingHref(BASE_PATH, currentParams, { kaparo: row.kaparo ? 'yes' : 'no' }, ['kaparo'])}>
                         {row.kaparo ? (
                           <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span>
                         ) : (
@@ -402,7 +352,7 @@ export default async function ListingsPage({
                       <div>{row.reg_month ?? '—'}</div>
                       <div>
                         {row.reg_year ? (
-                          <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()), ['year', row.reg_year]]).toString()}`} className="text-gray-400 hover:text-white">
+                          <Link href={listingHref(BASE_PATH, currentParams, { year: row.reg_year })} className="text-gray-400 hover:text-white">
                             {row.reg_year}
                           </Link>
                         ) : <span className="text-gray-600">—</span>}
@@ -412,7 +362,7 @@ export default async function ListingsPage({
                     {/* Category */}
                     <td className="w-16 px-2 py-1.5 text-gray-400 text-xs">
                       {row.body_type ? (
-                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'category'), ['category', row.body_type]]).toString()}`}>
+                        <Link href={listingHref(BASE_PATH, currentParams, { category: row.body_type }, ['category'])}>
                           <span className="block whitespace-normal wrap-break-word leading-tight text-xs text-gray-400 hover:text-gray-400">{row.body_type}</span>
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
@@ -421,7 +371,7 @@ export default async function ListingsPage({
                     {/* Fuel */}
                     <td className="w-20 px-2 py-1.5 text-xs text-gray-400">
                       {row.fuel ? (
-                        <Link href={`/listings?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([k]) => k !== 'page' && k !== 'fuel'), ['fuel', row.fuel]]).toString()}`}>
+                        <Link href={listingHref(BASE_PATH, currentParams, { fuel: row.fuel }, ['fuel'])}>
                           <span className="block whitespace-normal break-words leading-tight text-xs text-gray-400 hover:text-gray-400">{row.fuel}</span>
                         </Link>
                       ) : <span className="text-gray-600">—</span>}
@@ -442,7 +392,7 @@ export default async function ListingsPage({
           <div className="mt-4 flex items-center justify-center gap-2 text-sm">
             {page > 1 && (
               <Link
-                href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page - 1) }).toString()}`}
+                href={listingPageHref(BASE_PATH, currentParams, page - 1)}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
                 Prev
@@ -459,7 +409,7 @@ export default async function ListingsPage({
               ) : (
                 <Link
                   key={pageNumber}
-                  href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(pageNumber) }).toString()}`}
+                  href={listingPageHref(BASE_PATH, currentParams, pageNumber)}
                   className="min-w-9 rounded border border-gray-600 px-3 py-1.5 text-center text-gray-300 hover:border-gray-400 hover:text-white"
                 >
                   {pageNumber}
@@ -468,7 +418,7 @@ export default async function ListingsPage({
             ))}
             {page < totalPages && (
               <Link
-                href={`/listings?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page + 1) }).toString()}`}
+                href={listingPageHref(BASE_PATH, currentParams, page + 1)}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
                 Next

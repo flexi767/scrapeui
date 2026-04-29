@@ -6,6 +6,15 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
+import {
+  MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES as ALWAYS_INCLUDED_FIELD_NAMES,
+  MOBILE_BG_CATEGORY_OPTIONS as CATEGORY_OPTIONS,
+  MOBILE_BG_CLEARABLE_FIELDS as CLEARABLE_FIELDS,
+  MOBILE_BG_ENGINE_OPTIONS as ENGINE_OPTIONS,
+  MOBILE_BG_HIDDEN_FIELD_NAMES as HIDDEN_FIELD_NAMES,
+  MOBILE_BG_STEPPER_FIELDS as STEPPER_FIELDS,
+  MOBILE_BG_TRANSMISSION_OPTIONS as TRANSMISSION_OPTIONS,
+} from '@/lib/mobile-bg/search-field-config';
 import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
 
 interface SearchField {
@@ -53,14 +62,6 @@ interface SearchPrefillResponse {
 interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
   fallback_note?: string | null;
 }
-
-const HIDDEN_FIELD_NAMES = new Set(['topmenu', 'rub', 'act', 'rub_pub_save', 'pubtype', 'f20', 'f9']);
-const ALWAYS_INCLUDED_FIELD_NAMES = new Set(['f17']);
-const ENGINE_OPTIONS = ['', 'Бензинов', 'Дизелов', 'Електрически', 'Хибриден', 'Plug-in хибрид', 'Газ', 'Водород'];
-const TRANSMISSION_OPTIONS = ['', 'Ръчна', 'Автоматична', 'Полуавтоматична'];
-const CATEGORY_OPTIONS = ['', 'Ван', 'Джип', 'Кабрио', 'Комби', 'Купе', 'Миниван', 'Пикап', 'Седан', 'Стреч лимузина', 'Хечбек'];
-const STEPPER_FIELDS = new Set(['f10', 'f11', 'f25', 'f26']);
-const CLEARABLE_FIELDS = new Set(['f25', 'f26', 'f7', 'f8', 'f15']);
 
 function normalizeOptionValue(value: string) {
   return value.trim().toLowerCase();
