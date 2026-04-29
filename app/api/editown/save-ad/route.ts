@@ -1,4 +1,3 @@
-import path from "path";
 import { NextResponse } from "next/server";
 import { raw } from "@/db/client";
 import { savePublicMobileBgListingAsDraft } from "@/lib/mobile-bg/backup";
@@ -21,14 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "url required" }, { status: 400 });
     }
 
-    const dbPath =
-      process.env.DB_PATH || path.join(process.cwd(), "../scraped/listings.db");
-    const result = await savePublicMobileBgListingAsDraft(
-      raw,
-      dealerSlug,
-      url,
-      dbPath,
-    );
+    const result = await savePublicMobileBgListingAsDraft(raw, dealerSlug, url);
 
     return NextResponse.json(result);
   } catch (error) {

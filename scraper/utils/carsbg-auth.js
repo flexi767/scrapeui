@@ -56,7 +56,7 @@ async function acceptCarsBgConsent(page) {
         }
       }
     }
-  } catch (_) {}
+  } catch {}
   return false;
 }
 

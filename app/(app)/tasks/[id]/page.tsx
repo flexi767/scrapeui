@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -58,23 +58,23 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [timeDesc, setTimeDesc] = useState('');
   const [timeDate, setTimeDate] = useState(new Date().toISOString().split('T')[0]);
 
-  function loadTask() {
+  const loadTask = useCallback(() => {
     fetch(`/api/tasks/${id}`).then(r => r.json()).then(setTask);
-  }
+  }, [id]);
 
-  function loadComments() {
+  const loadComments = useCallback(() => {
     fetch(`/api/tasks/${id}/comments`).then(r => r.json()).then(setComments);
-  }
+  }, [id]);
 
-  function loadTimeEntries() {
+  const loadTimeEntries = useCallback(() => {
     fetch(`/api/tasks/${id}/time`).then(r => r.json()).then(setTimeEntries);
-  }
+  }, [id]);
 
   useEffect(() => {
     loadTask();
     loadComments();
     loadTimeEntries();
-  }, [id]);
+  }, [loadComments, loadTask, loadTimeEntries]);
 
   async function handleStatusChange(newStatus: string) {
     await fetch(`/api/tasks/${id}`, {

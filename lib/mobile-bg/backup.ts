@@ -897,7 +897,6 @@ export async function savePublicMobileBgListingAsDraft(
   db: Database.Database,
   dealerSlug: string,
   listingUrl: string,
-  _dbPath: string,
 ): Promise<SavePublicListingDraftResult> {
   const normalizedUrl = normalizeImageUrl(listingUrl);
   if (!normalizedUrl || !/mobile\.bg\/.*obiava-\d+/i.test(normalizedUrl)) {
