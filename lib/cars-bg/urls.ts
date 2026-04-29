@@ -14,10 +14,6 @@ export function buildCarsBgEditUrl(offerId: string, objectTypeId = CARS_BG_OBJEC
   return `${CARS_BG_BASE_URL}/editcar.php?objectId=${offerId}&object_typeId=${objectTypeId}`;
 }
 
-export function buildCarsBgEditPhotosUrl(offerId: string, objectTypeId = CARS_BG_OBJECT_TYPE_CAR): string {
-  return `${CARS_BG_BASE_URL}/editphoto.php?objectId=${offerId}&object_typeId=${objectTypeId}`;
-}
-
 export function extractOfferId(input = ""): string | null {
   const value = String(input || "");
   const direct = value.match(/^[a-z0-9]{12,}$/i);
