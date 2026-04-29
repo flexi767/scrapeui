@@ -459,64 +459,6 @@ async function fillLabelCombobox(page: Page, labelText: string, value: string): 
 }
 
 /**
- * Fill an autocomplete text input (Make, Model): type the value slowly,
- * wait for suggestions, click the match.
- */
-async function fillAutocomplete(page: Page, labelText: string, value: string): Promise<void> {
-  const handle = await page.evaluateHandle((label) => {
-    const candidates = Array.from(document.querySelectorAll(
-      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=search])"
-    )) as HTMLElement[];
-    for (const el of candidates) {
-      let node = el.parentElement;
-      for (let depth = 0; depth < 4 && node; depth++) {
-        if (node.textContent?.includes(label)) return el;
-        node = node.parentElement;
-      }
-    }
-    return null;
-  }, labelText);
-
-  const el = handle.asElement();
-  if (!el) {
-    console.warn(`⚠️  Could not find autocomplete for "${labelText}"`);
-    return;
-  }
-
-  await el.click({ clickCount: 3 }).catch(() => {});
-  await delay(150, 250);
-  await el.fill("").catch(() => {});
-  await el.type(value, { delay: 70 }).catch(async () => {
-    await el.fill(value).catch(() => {});
-  });
-  await delay(1500, 2000);
-
-  // Wait for suggestions to appear
-  try {
-    await page.waitForSelector('[role="option"]', { timeout: 3000 });
-  } catch {
-    // No suggestions appeared
-  }
-
-  const option = page.locator('[role="option"]')
-    .filter({ hasText: new RegExp(value, "i") })
-    .first();
-
-  if (await option.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await option.click();
-    await delay(400, 600);
-    return;
-  }
-
-  // Fallback: ArrowDown + Enter to accept the first suggestion
-  console.warn(`⚠️  No option matched "${value}" for "${labelText}" — trying ArrowDown+Enter`);
-  await el.press("ArrowDown").catch(() => {});
-  await delay(300, 400);
-  await el.press("Enter").catch(() => {});
-  await delay(300, 400);
-}
-
-/**
  * Fill the location autocomplete using its aria-label.
  */
 async function fillLocation(page: Page, location: string): Promise<void> {

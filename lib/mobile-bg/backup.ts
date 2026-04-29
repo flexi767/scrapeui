@@ -1107,14 +1107,6 @@ export async function backupDealerToDb(
     for (let index = 0; index < links.length; index += 1) {
       const link = links[index];
 
-      // Check if listing detail page is cached
-      const listingCache = checkCrawlCache(
-        db,
-        dealer.id,
-        link,
-        "listing_detail",
-      );
-
       const detail = await scrapeListingDetail(page, link, makesMap);
 
       // Save listing detail crawl results to cache

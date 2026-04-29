@@ -46,21 +46,12 @@ interface TimeEntryItem {
   user_name: string;
 }
 
-interface ActivityItem {
-  id: number;
-  action: string;
-  detail: string | null;
-  user_name: string | null;
-  created_at: string;
-}
-
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntryItem[]>([]);
-  const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   const [commentBody, setCommentBody] = useState('');
   const [timeDuration, setTimeDuration] = useState('');
@@ -83,10 +74,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     loadTask();
     loadComments();
     loadTimeEntries();
-    // Activity is derived from the activity_log API - we'll query inline for now
-    fetch(`/api/tasks/${id}`).then(r => r.json()).then(() => {
-      // Load activity separately (using the task's entity)
-    });
   }, [id]);
 
   async function handleStatusChange(newStatus: string) {

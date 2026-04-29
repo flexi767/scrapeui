@@ -14,19 +14,16 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<number[]>([]);
-  const [selectedListings, setSelectedListings] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   const [labels, setLabels] = useState<{ id: number; name: string; color: string }[]>([]);
-  const [listings, setListings] = useState<{ id: number; make: string; model: string; title: string; mobile_id: string }[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/articles?search=${encodeURIComponent(slug)}&limit=1`).then(r => r.json()),
       fetch('/api/labels').then(r => r.json()),
-      fetch('/api/listings?limit=500').then(r => r.json()),
-    ]).then(([articlesData, labelsData, listingsData]) => {
+    ]).then(([articlesData, labelsData]) => {
       const article = articlesData.data?.find((a: { slug: string }) => a.slug === slug);
       if (article) {
         setArticleId(article.id);
@@ -34,7 +31,6 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
         setContent(article.body || '');
       }
       setLabels(labelsData);
-      setListings(listingsData.data || []);
       setLoaded(true);
     });
   }, [slug]);
@@ -48,7 +44,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title, content, labelIds: selectedLabels, listingIds: selectedListings,
+        title, content, labelIds: selectedLabels,
       }),
     });
 

@@ -35,9 +35,6 @@ import {
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
-import {
-  MOBILE_BG_HIDDEN_FIELD_NAMES as HIDDEN_FIELD_NAMES,
-} from "@/lib/mobile-bg/search-field-config";
 
 interface SavedSearchDetailResponse {
   detail: {

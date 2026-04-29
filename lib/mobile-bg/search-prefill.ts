@@ -3,7 +3,6 @@ import { load } from "cheerio";
 import iconv from "iconv-lite";
 import { getSavedSearchProfile } from "@/lib/mobile-bg/search-profiles";
 import {
-  ALWAYS_INCLUDED_FIELD_NAMES,
   HIDDEN_FIELD_NAMES,
   SEARCH_ACTION,
   type SearchField,
