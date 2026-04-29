@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
@@ -260,31 +260,14 @@ export function MobileBgSearchResultsTable({
                   : 'transition-colors hover:bg-slate-700/50'}
               >
                 <td className="px-3 py-1">
-                  {row.thumb ? (
-                    <div className="relative inline-block w-16">
-                      <a href={row.url} target="_blank" rel="noreferrer" className="peer block">
-                        <ImageWithFallback
-                          src={row.thumb}
-                          alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
-                          className="w-16 rounded object-contain"
-                          style={{ aspectRatio: '4/3' }}
-                          fallbackClassName="w-16 rounded bg-slate-900 text-slate-300"
-                          fallbackLabel="Missing"
-                        />
-                      </a>
-                      <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                        <ImageWithFallback
-                          src={row.thumb}
-                          alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
-                          className="w-full rounded shadow-xl"
-                          fallbackClassName="w-full rounded bg-slate-900 text-slate-300 shadow-xl"
-                          fallbackLabel="Missing"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="h-10 w-14 rounded bg-slate-900" />
-                  )}
+                  <ListingThumbPreview
+                    src={row.thumb}
+                    href={row.url}
+                    alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
+                    previewAlt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
+                    placeholderClassName="h-10 w-14 rounded bg-slate-900"
+                    fallbackLabel="Missing"
+                  />
                 </td>
 
                 <td className="px-3 py-1 text-right text-slate-200/80">

@@ -5,16 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Check, RefreshCw, SearchIcon, X } from "lucide-react";
-import { ImageWithFallback } from "@/components/ImageWithFallback";
+import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
+import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
-import {
-  formatPrice,
-  formatDate,
-  buildImageList,
-  getPreferredListingThumbUrl,
-  parseJson,
-} from "@/lib/utils";
+import { formatPrice, formatDate } from "@/lib/utils";
 import { getPriceWithVat } from "@/lib/vat";
 
 interface Props {
@@ -529,26 +524,8 @@ export default function OwnListingsTable({ initialRows }: Props) {
             const rowKey = getRowKey(row);
             const editing = editingKey === rowKey;
 
-            const imageMeta = parseJson<{ cdn: string; shard: string } | null>(
-              row.image_meta,
-              null,
-            );
-            const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-            const fullKeys = parseJson<string[]>(row.full_keys, []);
-            const images = buildImageList(
-              row.mobile_id,
-              fullKeys.length ? fullKeys : thumbKeys,
-              thumbKeys,
-              imageMeta,
-              row.images_downloaded === 1,
-            );
-            const thumbSrc = row.first_backup_image_id
-              ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-              : getPreferredListingThumbUrl(
-                  row.mobile_id,
-                  images[0]?.thumb,
-                  row.thumb_saved,
-                );
+            const thumbSrc = getListingThumbSrc(row);
+            const thumbAlt = getListingThumbAlt(row);
 
             const kmFormatted =
               row.mileage != null ? row.mileage.toLocaleString("en-US") : "—";
@@ -613,35 +590,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       </button>
                     </div>
                     <ListingSearchPrefillButton listingId={row.id} />
-                    {thumbSrc ? (
-                      <div className="relative inline-block w-16">
-                        <ImageWithFallback
-                          src={thumbSrc}
-                          alt={
-                            `${row.make ?? "Listing"} ${row.model ?? ""}`.trim() ||
-                            "Listing image"
-                          }
-                          className="peer w-16 rounded object-contain"
-                          style={{ aspectRatio: "4/3" }}
-                          fallbackClassName="peer w-16 rounded bg-gray-800 text-gray-400"
-                          fallbackLabel="Missing"
-                        />
-                        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                          <ImageWithFallback
-                            src={thumbSrc}
-                            alt={
-                              `${row.make ?? "Listing"} ${row.model ?? ""}`.trim() ||
-                              "Listing image preview"
-                            }
-                            className="w-full rounded shadow-xl"
-                            fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
-                            fallbackLabel="Missing"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-12 w-16 rounded bg-gray-700" />
-                    )}
+                    <ListingThumbPreview
+                      src={thumbSrc}
+                      alt={thumbAlt}
+                      previewAlt={`${thumbAlt} preview`}
+                      placeholderClassName="h-12 w-16 rounded bg-gray-700"
+                    />
                   </div>
                 </td>
 

@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { getMobileBgEditForms } from '@/lib/queries';
-import { buildImageList, formatDate, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
+import { getListingThumbSrc } from '@/lib/listing-thumb';
+import { formatDate } from '@/lib/utils';
 
 export default function MobileBgEditFormsPage() {
   const rows = getMobileBgEditForms(250);
@@ -32,37 +33,19 @@ export default function MobileBgEditFormsPage() {
               </tr>
             ) : rows.map((row) => (
               (() => {
-                const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
-                const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-                const fullKeys = parseJson<string[]>(row.full_keys, []);
-                const images = buildImageList(
-                  row.mobile_id || '',
-                  fullKeys.length ? fullKeys : thumbKeys,
-                  thumbKeys,
-                  imageMeta,
-                  row.images_downloaded === 1,
-                );
-                const thumb = getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
+                const thumb = getListingThumbSrc(row);
 
                 return (
               <tr key={row.id} className="hover:bg-gray-800/40">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Link href={`/mobilebg/edit-forms/${row.id}`} className="block shrink-0">
-                      <div className="overflow-hidden rounded-md border border-gray-700 bg-gray-900">
-                        {thumb ? (
-                          <ImageWithFallback
-                            src={thumb}
-                            alt={row.row_title || row.mobile_id || `Snapshot ${row.id}`}
-                            className="h-12 w-16 object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-12 w-16 items-center justify-center text-[10px] text-gray-500">
-                            No image
-                          </div>
-                        )}
-                      </div>
-                    </Link>
+                    <ListingThumbPreview
+                      src={thumb}
+                      href={`/mobilebg/edit-forms/${row.id}`}
+                      alt={row.row_title || row.mobile_id || `Snapshot ${row.id}`}
+                      imageClassName="h-12 w-16 rounded-md border border-gray-700 object-cover"
+                      placeholderClassName="flex h-12 w-16 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-[10px] text-gray-500"
+                    />
                     <div className="min-w-0">
                       <Link href={`/mobilebg/edit-forms/${row.id}`} className="block truncate font-medium text-white hover:text-blue-300">
                         {row.row_title || row.mobile_id || `Snapshot #${row.id}`}

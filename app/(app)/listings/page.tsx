@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
+import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
+import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -240,20 +241,8 @@ export default async function ListingsPage({
                 </tr>
               )}
               {rows.map((row) => {
-                const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
-                const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-                const fullKeys = parseJson<string[]>(row.full_keys, []);
-                const images = buildImageList(
-                  row.mobile_id,
-                  fullKeys.length ? fullKeys : thumbKeys,
-                  thumbKeys,
-                  imageMeta,
-                  row.images_downloaded === 1,
-                );
-                const thumb = row.first_backup_image_id
-                  ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-                  : getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
-
+                const thumb = getListingThumbSrc(row);
+                const thumbAlt = getListingThumbAlt(row);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
                   <tr
@@ -264,32 +253,12 @@ export default async function ListingsPage({
                     <td className="px-3 py-1">
                       <div className="flex items-start gap-2">
                         <ListingSearchPrefillButton listingId={row.id} />
-                        {thumb ? (
-                          <div className="relative inline-block w-16">
-                            <Link href={`/listings/${listingSlug}`} className="peer block">
-                              <ImageWithFallback
-                                src={thumb}
-                                alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
-                                className="w-16 rounded object-contain"
-                                style={{aspectRatio:'4/3'}}
-                                fallbackClassName="w-16 rounded bg-gray-800 text-gray-400"
-                                fallbackLabel="Missing"
-                              />
-                            </Link>
-                            <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-64 peer-hover:block">
-                              <ImageWithFallback
-                                src={thumb}
-                                alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
-                                className="w-full rounded shadow-xl"
-                                style={{aspectRatio:'4/3'}}
-                                fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
-                                fallbackLabel="Missing"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-10 w-14 rounded bg-gray-700" />
-                        )}
+                        <ListingThumbPreview
+                          src={thumb}
+                          href={`/listings/${listingSlug}`}
+                          alt={thumbAlt}
+                          previewAlt={`${thumbAlt} preview`}
+                        />
                       </div>
                     </td>
 

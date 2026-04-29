@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ImageWithFallback } from "@/components/ImageWithFallback";
+import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,13 +28,10 @@ import {
   type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
 import {
-  buildImageList,
   formatMileage,
   formatPrice,
-  getPreferredListingThumbUrl,
-  parseJson,
-  type ImageMeta,
 } from "@/lib/utils";
+import { getListingThumbSrc } from "@/lib/listing-thumb";
 import {
   AutocompleteInput,
   getSelectedOptionCount,
@@ -126,6 +123,7 @@ const PAIRED_FIELD_NAMES: Record<string, string> = {
   f17: "f18",
   f14: "f15",
 };
+const HIDDEN_FIELD_CODE_NAMES = new Set(["f13", "f15", "f18"]);
 const FIELD_LAYOUT_CLASS: Record<string, string> = {
   marka: "md:col-span-1 xl:col-span-2",
   model: "md:col-span-1 xl:col-span-2",
@@ -150,17 +148,231 @@ function displayFieldLabel(field: SearchField, subLocationLabel: string) {
 }
 
 function orderFieldsForDisplay(fields: SearchField[]) {
-  const categoryIndex = fields.findIndex((field) => field.name === "f14");
-  const mileageIndex = fields.findIndex((field) => field.name === "f15");
-  if (categoryIndex === -1 || mileageIndex === -1) return fields;
+  const fieldsByName = new Map(fields.map((field) => [field.name, field]));
+  const priorityNames = ["f14", "f15", "f17", "f18", "f10", "f11"];
+  const priorityFields = priorityNames
+    .map((name) => fieldsByName.get(name))
+    .filter((field): field is SearchField => field != null);
+  if (priorityFields.length === 0) return fields;
 
-  const orderedFields = [...fields];
-  const [mileageField] = orderedFields.splice(mileageIndex, 1);
-  const updatedCategoryIndex = orderedFields.findIndex(
-    (field) => field.name === "f14",
+  const orderedFields = fields.filter(
+    (field) => !priorityNames.includes(field.name),
   );
-  orderedFields.splice(updatedCategoryIndex + 1, 0, mileageField);
+  const modelIndex = orderedFields.findIndex((field) => field.name === "model");
+  if (modelIndex === -1) return fields;
+
+  const [categoryFrom, mileageTo, locationFrom, locationTo, yearFrom, yearTo] =
+    priorityFields;
+  orderedFields.splice(
+    modelIndex + 1,
+    0,
+    ...[categoryFrom, mileageTo, locationFrom, locationTo].filter(
+      (field): field is SearchField => field != null,
+    ),
+  );
+
+  const engineIndex = orderedFields.findIndex((field) => field.name === "f12");
+  if (engineIndex !== -1) {
+    orderedFields.splice(
+      engineIndex + 1,
+      0,
+      ...[yearFrom, yearTo].filter((field): field is SearchField => field != null),
+    );
+    return orderedFields;
+  }
+
+  orderedFields.push(
+    ...[yearFrom, yearTo].filter((field): field is SearchField => field != null),
+  );
   return orderedFields;
+}
+
+function PairedSearchField({
+  fields,
+  className,
+  subLocationLabel,
+  locationOptions,
+  subLocationOptions,
+  locationLoading,
+  onClear,
+  onNudge,
+  onUpdateField,
+  onUpdateLocation,
+}: {
+  fields: [SearchField, SearchField];
+  className: string;
+  subLocationLabel: string;
+  locationOptions: SearchPrefillData["options"]["locations"];
+  subLocationOptions: SearchPrefillData["options"]["subLocations"]["options"];
+  locationLoading: boolean;
+  onClear: (name: string) => void;
+  onNudge: (name: string, delta: number) => void;
+  onUpdateField: (name: string, value: string) => void;
+  onUpdateLocation: (value: string) => void | Promise<void>;
+}) {
+  function renderInput(field: SearchField) {
+    const inputClassName =
+      "h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none";
+
+    if (field.name === "f12") {
+      return (
+        <select
+          value={field.value}
+          onChange={(event) => onUpdateField(field.name, event.target.value)}
+          className={inputClassName}
+        >
+          {ENGINE_OPTIONS.map((option) => (
+            <option key={option || "engine-all"} value={option}>
+              {option || "Всички типове"}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.name === "f13") {
+      return (
+        <select
+          value={field.value}
+          onChange={(event) => onUpdateField(field.name, event.target.value)}
+          className={inputClassName}
+        >
+          {TRANSMISSION_OPTIONS.map((option) => (
+            <option key={option || "trans-all"} value={option}>
+              {option || "Без значение"}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.name === "f14") {
+      return (
+        <select
+          value={field.value}
+          onChange={(event) => onUpdateField(field.name, event.target.value)}
+          className={inputClassName}
+        >
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option || "cat-all"} value={option}>
+              {option || "всички категории"}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.name === "f17") {
+      return (
+        <select
+          value={field.value}
+          onChange={(event) => void onUpdateLocation(event.target.value)}
+          className={inputClassName}
+        >
+          {locationOptions.map((option) => (
+            <option
+              key={`${option.value || "loc-all"}-${option.label}`}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.name === "f18") {
+      return (
+        <div className="relative">
+          <select
+            value={field.value}
+            onChange={(event) => onUpdateField(field.name, event.target.value)}
+            disabled={locationLoading}
+            className={`${inputClassName} pr-10 disabled:cursor-wait`}
+          >
+            <option value="">всички</option>
+            {subLocationOptions
+              .filter((option) => option.value !== "")
+              .map((option) => (
+                <option
+                  key={`${option.value}-${option.label}`}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+          </select>
+          {locationLoading && (
+            <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <input
+        value={field.value}
+        onChange={(event) => onUpdateField(field.name, event.target.value)}
+        className={inputClassName}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${className}`}
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        {fields.map((field) => {
+          const label = displayFieldLabel(field, subLocationLabel);
+          const stepperDelta = HEADER_STEPPER_FIELDS[field.name] ?? null;
+
+          return (
+            <div key={field.name} className="min-w-0">
+              <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                <div className="truncate text-xs font-medium text-gray-300">
+                  {label}
+                </div>
+                {stepperDelta != null ? (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                      onClick={() => onNudge(field.name, -stepperDelta)}
+                      aria-label={`Decrease ${label}`}
+                    >
+                      -{stepperDelta}
+                    </button>
+                    <button
+                      type="button"
+                      className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                      onClick={() => onNudge(field.name, stepperDelta)}
+                      aria-label={`Increase ${label}`}
+                    >
+                      +{stepperDelta}
+                    </button>
+                  </div>
+                ) : CLEARABLE_FIELDS.has(field.name) && field.value ? (
+                  <button
+                    type="button"
+                    className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
+                    onClick={() => onClear(field.name)}
+                  >
+                    Clear
+                  </button>
+                ) : HIDDEN_FIELD_CODE_NAMES.has(field.name) ? null : (
+                  <div className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
+                    {field.name}
+                  </div>
+                )}
+              </div>
+              {renderInput(field)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function formatYear(search: SavedSearchSummary) {
@@ -219,24 +431,15 @@ export default function SavedSearchesWorkspace({
     listing && [listing.make, listing.model].filter(Boolean).join(" ")
       ? [listing.make, listing.model].filter(Boolean).join(" ")
       : "";
-  const imageMeta = parseJson<ImageMeta | null>(listing?.imageMeta, null);
-  const thumbKeys = parseJson<string[]>(listing?.thumbKeys ?? null, []);
-  const fullKeys = parseJson<string[]>(listing?.fullKeys ?? null, []);
-  const images = listing?.mobile_id
-    ? buildImageList(
-        listing.mobile_id,
-        fullKeys.length ? fullKeys : thumbKeys,
-        thumbKeys,
-        imageMeta,
-        listing.imagesDownloaded === 1,
-      )
-    : [];
   const thumbSrc = listing?.mobile_id
-    ? getPreferredListingThumbUrl(
-        listing.mobile_id,
-        images[0]?.thumb,
-        listing.thumbSaved,
-      )
+    ? getListingThumbSrc({
+        mobile_id: listing.mobile_id,
+        thumb_keys: listing.thumbKeys,
+        full_keys: listing.fullKeys,
+        image_meta: listing.imageMeta,
+        images_downloaded: listing.imagesDownloaded,
+        thumb_saved: listing.thumbSaved,
+      })
     : null;
 
   useEffect(() => {
@@ -714,36 +917,17 @@ export default function SavedSearchesWorkspace({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-3">
                       {listing && listing.mobile_id && thumbSrc ? (
-                        <div className="relative inline-block w-24 shrink-0">
-                          <a
-                            href={`/listings/${listing.mobile_id}`}
-                            className="peer block"
-                          >
-                            <ImageWithFallback
-                              src={thumbSrc}
-                              alt={
-                                `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
-                                "Listing image"
-                              }
-                              className="w-24 rounded object-contain"
-                              style={{ aspectRatio: "4/3" }}
-                              fallbackClassName="w-24 rounded bg-gray-800 text-gray-400"
-                              fallbackLabel="Missing"
-                            />
-                          </a>
-                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 hidden w-72 peer-hover:block">
-                            <ImageWithFallback
-                              src={thumbSrc}
-                              alt={
-                                `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
-                                "Listing image preview"
-                              }
-                              className="w-full rounded shadow-xl"
-                              fallbackClassName="w-full rounded bg-gray-800 text-gray-400 shadow-xl"
-                              fallbackLabel="Missing"
-                            />
-                          </div>
-                        </div>
+                        <ListingThumbPreview
+                          src={thumbSrc}
+                          href={`/listings/${listing.mobile_id}`}
+                          alt={
+                            `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
+                            "Listing image"
+                          }
+                          widthClassName="w-24 shrink-0"
+                          previewWidthClassName="w-72"
+                          imageClassName="w-24 rounded object-contain"
+                        />
                       ) : null}
                       <div className="min-w-0">
                         {listingLabel ? (
@@ -942,202 +1126,19 @@ export default function SavedSearchesWorkspace({
 
                     if (pairedField) {
                       return (
-                        <div
+                        <PairedSearchField
                           key={field.name}
-                          className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${fieldLayoutClass(field.name)}`}
-                        >
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            {[field, pairedField].map((rangeField) => {
-                              const rangeLabel = displayFieldLabel(
-                                rangeField,
-                                subLocationLabel,
-                              );
-                              const rangeStepperDelta =
-                                HEADER_STEPPER_FIELDS[rangeField.name] ?? null;
-
-                              return (
-                                <div
-                                  key={rangeField.name}
-                                  className="min-w-0"
-                                >
-                                  <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
-                                    <div className="truncate text-xs font-medium text-gray-300">
-                                      {rangeLabel}
-                                    </div>
-                                    {rangeStepperDelta != null ? (
-                                      <div className="flex shrink-0 items-center gap-1">
-                                        <button
-                                          type="button"
-                                          className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
-                                          onClick={() =>
-                                            nudgeField(
-                                              rangeField.name,
-                                              -rangeStepperDelta,
-                                            )
-                                          }
-                                          aria-label={`Decrease ${rangeLabel}`}
-                                        >
-                                          -{rangeStepperDelta}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
-                                          onClick={() =>
-                                            nudgeField(
-                                              rangeField.name,
-                                              rangeStepperDelta,
-                                            )
-                                          }
-                                          aria-label={`Increase ${rangeLabel}`}
-                                        >
-                                          +{rangeStepperDelta}
-                                        </button>
-                                      </div>
-                                    ) : CLEARABLE_FIELDS.has(
-                                        rangeField.name,
-                                      ) && rangeField.value ? (
-                                      <button
-                                        type="button"
-                                        className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
-                                        onClick={() =>
-                                          clearField(rangeField.name)
-                                        }
-                                      >
-                                        Clear
-                                      </button>
-                                    ) : (
-                                      <div className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                                        {rangeField.name}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {rangeField.name === "f12" ? (
-                                    <select
-                                      value={rangeField.value}
-                                      onChange={(event) =>
-                                        updateField(
-                                          rangeField.name,
-                                          event.target.value,
-                                        )
-                                      }
-                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                                    >
-                                      {ENGINE_OPTIONS.map((option) => (
-                                        <option
-                                          key={option || "engine-all"}
-                                          value={option}
-                                        >
-                                          {option || "Всички типове"}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : rangeField.name === "f13" ? (
-                                    <select
-                                      value={rangeField.value}
-                                      onChange={(event) =>
-                                        updateField(
-                                          rangeField.name,
-                                          event.target.value,
-                                        )
-                                      }
-                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                                    >
-                                      {TRANSMISSION_OPTIONS.map((option) => (
-                                        <option
-                                          key={option || "trans-all"}
-                                          value={option}
-                                        >
-                                          {option || "Без значение"}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : rangeField.name === "f14" ? (
-                                    <select
-                                      value={rangeField.value}
-                                      onChange={(event) =>
-                                        updateField(
-                                          rangeField.name,
-                                          event.target.value,
-                                        )
-                                      }
-                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                                    >
-                                      {CATEGORY_OPTIONS.map((option) => (
-                                        <option
-                                          key={option || "cat-all"}
-                                          value={option}
-                                        >
-                                          {option || "всички категории"}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : rangeField.name === "f17" ? (
-                                    <select
-                                      value={rangeField.value}
-                                      onChange={(event) =>
-                                        void updateLocation(event.target.value)
-                                      }
-                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                                    >
-                                      {detail.prefill.options.locations.map(
-                                        (option) => (
-                                          <option
-                                            key={`${option.value || "loc-all"}-${option.label}`}
-                                            value={option.value}
-                                          >
-                                            {option.label}
-                                          </option>
-                                        ),
-                                      )}
-                                    </select>
-                                  ) : rangeField.name === "f18" ? (
-                                    <div className="relative">
-                                      <select
-                                        value={rangeField.value}
-                                        onChange={(event) =>
-                                          updateField(
-                                            rangeField.name,
-                                            event.target.value,
-                                          )
-                                        }
-                                        disabled={locationLoading}
-                                        className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
-                                      >
-                                        <option value="">всички</option>
-                                        {subLocationOptions
-                                          .filter(
-                                            (option) => option.value !== "",
-                                          )
-                                          .map((option) => (
-                                            <option
-                                              key={`${option.value}-${option.label}`}
-                                              value={option.value}
-                                            >
-                                              {option.label}
-                                            </option>
-                                          ))}
-                                      </select>
-                                      {locationLoading && (
-                                        <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <input
-                                      value={rangeField.value}
-                                      onChange={(event) =>
-                                        updateField(
-                                          rangeField.name,
-                                          event.target.value,
-                                        )
-                                      }
-                                      className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                                    />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                          fields={[field, pairedField]}
+                          className={fieldLayoutClass(field.name)}
+                          subLocationLabel={subLocationLabel}
+                          locationOptions={detail.prefill.options.locations}
+                          subLocationOptions={subLocationOptions}
+                          locationLoading={locationLoading}
+                          onClear={clearField}
+                          onNudge={nudgeField}
+                          onUpdateField={updateField}
+                          onUpdateLocation={updateLocation}
+                        />
                       );
                     }
 

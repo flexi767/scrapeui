@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
-import { buildImageList, formatDate, formatPrice, getPreferredListingThumbUrl, parseJson } from '@/lib/utils';
+import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
+import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface SearchParams {
@@ -165,24 +166,20 @@ export default async function DeletedListingsPage({
                 <tr><td colSpan={17} className="py-16 text-center text-gray-500">No deleted listings found</td></tr>
               )}
               {rows.map((row) => {
-                const imageMeta = parseJson<{ cdn: string; shard: string } | null>(row.image_meta, null);
-                const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-                const fullKeys = parseJson<string[]>(row.full_keys, []);
-                const images = buildImageList(row.mobile_id, fullKeys.length ? fullKeys : thumbKeys, thumbKeys, imageMeta, row.images_downloaded === 1);
-                const thumb = row.first_backup_image_id
-                  ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-                  : getPreferredListingThumbUrl(row.mobile_id, images[0]?.thumb, row.thumb_saved);
+                const thumb = getListingThumbSrc(row);
+                const thumbAlt = getListingThumbAlt(row);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (
                   <tr key={listingSlug} className="group bg-red-950/10 transition-colors hover:bg-red-950/20">
                     <td className="px-3 py-1">
                       <div className="flex items-start gap-2">
                         <ListingSearchPrefillButton listingId={row.id} />
-                        {thumb ? (
-                          <Link href={`/listings/${listingSlug}`} className="block">
-                            <ImageWithFallback src={thumb} alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'} className="w-16 rounded object-contain" style={{ aspectRatio: '4/3' }} fallbackClassName="w-16 rounded bg-gray-800 text-gray-400" fallbackLabel="Missing" />
-                          </Link>
-                        ) : <div className="h-10 w-14 rounded bg-gray-700" />}
+                        <ListingThumbPreview
+                          src={thumb}
+                          href={`/listings/${listingSlug}`}
+                          alt={thumbAlt}
+                          previewAlt={`${thumbAlt} preview`}
+                        />
                       </div>
                     </td>
                     <td className="px-2 py-1.5 whitespace-nowrap">
