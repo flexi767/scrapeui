@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  ExternalLink,
-  Loader2,
-  Plus,
-  Save,
-  SearchIcon,
-  Trash2,
-} from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MobileBgSearchResultsTable } from "@/components/MobileBgSearchResultsTable";
+import { SavedSearchEditorHeader } from "@/components/saved-searches/SavedSearchEditorHeader";
 import { SavedSearchFields } from "@/components/saved-searches/SavedSearchFields";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
 import { type SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
@@ -29,11 +22,6 @@ import {
   buildFirstSevenSearchFields,
   type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
-import {
-  formatMileage,
-  formatPrice,
-} from "@/lib/utils";
-import { getListingThumbSrc } from "@/lib/listing-thumb";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
 
@@ -104,21 +92,6 @@ export default function SavedSearchesWorkspace({
   >(null);
 
   const listing = detail?.prefill.listing ?? null;
-  const hasLinkedListing = Boolean(listing);
-  const listingLabel =
-    listing && [listing.make, listing.model].filter(Boolean).join(" ")
-      ? [listing.make, listing.model].filter(Boolean).join(" ")
-      : "";
-  const thumbSrc = listing?.mobile_id
-    ? getListingThumbSrc({
-        mobile_id: listing.mobile_id,
-        thumb_keys: listing.thumbKeys,
-        full_keys: listing.fullKeys,
-        image_meta: listing.imageMeta,
-        images_downloaded: listing.imagesDownloaded,
-        thumb_saved: listing.thumbSaved,
-      })
-    : null;
 
   useEffect(() => {
     if (selectedId == null) {
@@ -541,161 +514,24 @@ export default function SavedSearchesWorkspace({
               </DialogContent>
             </Dialog>
             <div className="rounded-lg border border-gray-700 bg-gray-900/70">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
-                {hasLinkedListing ? (
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-3">
-                      {listing && listing.mobile_id && thumbSrc ? (
-                        <ListingThumbPreview
-                          src={thumbSrc}
-                          href={`/listings/${listing.mobile_id}`}
-                          alt={
-                            `${listing.make ?? "Listing"} ${listing.model ?? ""}`.trim() ||
-                            "Listing image"
-                          }
-                          widthClassName="w-24 shrink-0"
-                          previewWidthClassName="w-72"
-                          imageClassName="w-24 rounded object-contain"
-                        />
-                      ) : null}
-                      <div className="min-w-0">
-                        {listingLabel ? (
-                          <div className="text-sm font-medium text-white">
-                            {listingLabel}
-                          </div>
-                        ) : null}
-                        {listing ? (
-                          <>
-                            <a
-                              href={
-                                listing.mobile_id
-                                  ? `/listings/${listing.mobile_id}`
-                                  : undefined
-                              }
-                              className="mt-1 block text-sm text-gray-300 hover:text-white"
-                            >
-                              {listing.title || "—"}
-                            </a>
-                            <div className="mt-1 text-xs text-gray-500">
-                              {formatPrice(listing.currentPrice)}
-                              {listing.power != null
-                                ? ` • ${listing.power.toLocaleString("en-US")} PS`
-                                : ""}{" "}
-                              • {listing.fuel || "—"} •{" "}
-                              {formatMileage(listing.mileage)}
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm font-medium text-gray-200">
-                    Search fields
-                  </div>
-                )}
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-                    onClick={() =>
-                      void showResultsHere(
-                        buildFirstSevenSearchFields(currentFields),
-                      )
-                    }
-                    disabled={resultsLoading}
-                  >
-                    <SearchIcon className="mr-1 h-4 w-4" />
-                    First 8
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
-                    onClick={() => void showResultsHere()}
-                    disabled={resultsLoading}
-                  >
-                    {resultsLoading ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <SearchIcon className="mr-1 h-4 w-4" />
-                    )}
-                    All
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-                    onClick={() => openInMobileBg()}
-                  >
-                    <ExternalLink className="mr-1 h-4 w-4" />
-                    Open mobile.bg
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={
-                      saveAdMode
-                        ? "border-emerald-600 bg-emerald-900 text-white hover:bg-emerald-800"
-                        : "border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
-                    }
-                    onClick={() => void activateSaveAdMode()}
-                    disabled={resultsLoading}
-                  >
-                    {resultsLoading && saveAdMode ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-1 h-4 w-4" />
-                    )}
-                    Save Ad
-                  </Button>
-                  {!makeOrModelChanged && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
-                      onClick={() => void saveCurrent()}
-                      disabled={saveBusy}
-                    >
-                      {saveBusy ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-1 h-4 w-4" />
-                      )}
-                      Save
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-amber-700 bg-amber-950/80 text-amber-200 hover:bg-amber-900 hover:text-white"
-                    onClick={() => void saveAsNew()}
-                    disabled={cloneBusy}
-                  >
-                    {cloneBusy ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-1 h-4 w-4" />
-                    )}
-                    Save As New
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    disabled={deleteBusy}
-                  >
-                    {deleteBusy ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-1 h-4 w-4" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
-              </div>
+              <SavedSearchEditorHeader
+                listing={listing}
+                resultsLoading={resultsLoading}
+                saveAdMode={saveAdMode}
+                makeOrModelChanged={makeOrModelChanged}
+                saveBusy={saveBusy}
+                cloneBusy={cloneBusy}
+                deleteBusy={deleteBusy}
+                onShowFirst={() =>
+                  void showResultsHere(buildFirstSevenSearchFields(currentFields))
+                }
+                onShowAll={() => void showResultsHere()}
+                onOpenMobileBg={() => openInMobileBg()}
+                onSaveAd={() => void activateSaveAdMode()}
+                onSave={() => void saveCurrent()}
+                onSaveAsNew={() => void saveAsNew()}
+                onDelete={() => setDeleteDialogOpen(true)}
+              />
               {detail.prefill.omitted.length > 0 && (
                 <div className="px-4 pt-3 text-xs text-amber-300/80">
                   {detail.prefill.omitted.join(" ")}
