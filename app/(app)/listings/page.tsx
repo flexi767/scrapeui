@@ -3,7 +3,9 @@ import { Suspense } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { ListingPriceCell } from '@/components/listings/ListingPriceCell';
 import { SortLink } from '@/components/listings/SortLink';
+import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
@@ -15,8 +17,7 @@ import {
   LISTING_EXTRA_OPTIONS,
   toParamArray,
 } from '@/lib/listing-url';
-import { formatDate, formatPrice } from '@/lib/utils';
-import { getPriceWithVat } from '@/lib/vat';
+import { formatDate } from '@/lib/utils';
 
 interface SearchParams {
   make?: string;
@@ -268,51 +269,26 @@ export default async function ListingsPage({
 
                     {/* Price */}
                     <td className="pl-1 pr-3 py-1 text-right">
-                      <span className="flex items-center justify-end gap-1 font-semibold text-green-400">
-                        {row.price_change != null && (
-                          <Link href={`/listings/${row.mobile_id}/history`} title={`${row.price_change > 0 ? '+' : ''}${row.price_change}`} className="text-sm">
-                            <span className={row.price_change < 0 ? 'text-green-400' : 'text-red-400'}>
-                              {row.price_change < 0 ? '↘' : '↗'}
-                            </span>
-                          </Link>
-                        )}
-                        {formatPrice(row.current_price)}
-                      </span>
-                      {getPriceWithVat(row.current_price, row.vat) != null && (
-                        <div className="text-xs text-emerald-200/85">
-                          {formatPrice(getPriceWithVat(row.current_price, row.vat))}
-                        </div>
-                      )}
-                      {row.cars_price != null && row.cars_price !== row.current_price && (
-                        <div className="text-xs text-orange-200/85">
-                          cars {formatPrice(row.cars_price)}
-                        </div>
-                      )}
+                      <ListingPriceCell
+                        price={row.current_price}
+                        vat={row.vat}
+                        priceChange={row.price_change}
+                        carsPrice={row.cars_price}
+                        historyHref={row.mobile_id ? `/listings/${row.mobile_id}/history` : null}
+                      />
                     </td>
 
                     {/* VAT */}
                     <td className="px-3 py-1 text-center">
                       <Link href={listingHref(BASE_PATH, currentParams, { vat: row.vat || 'null' }, ['vat'])}>
-                        {row.vat === 'included' ? (
-                          <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
-                        ) : row.vat === 'exempt' ? (
-                          <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
-                        ) : row.vat === 'excluded' ? (
-                          <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
-                        ) : (
-                          <span className="text-gray-600">—</span>
-                        )}
+                        <VatBadge vat={row.vat} />
                       </Link>
                     </td>
 
                     {/* капаро */}
                     <td className="px-2 py-1 text-center">
                       <Link href={listingHref(BASE_PATH, currentParams, { kaparo: row.kaparo ? 'yes' : 'no' }, ['kaparo'])}>
-                        {row.kaparo ? (
-                          <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span>
-                        ) : (
-                          <span className="text-gray-600">—</span>
-                        )}
+                        <KaparoBadge kaparo={row.kaparo} />
                       </Link>
                     </td>
 

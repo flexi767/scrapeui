@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { VatBadge } from '@/components/listings/VatBadge';
 import { formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
@@ -64,19 +65,6 @@ function formatRegMonthNumber(value: string | null) {
 function formatMileageValue(value: number | null) {
   if (value == null || !Number.isFinite(value)) return '—';
   return value.toLocaleString('en-US');
-}
-
-function VatBadge({ vat }: { vat: MobileBgSearchResultRow['vat_status'] }) {
-  if (vat === 'included') {
-    return <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>;
-  }
-  if (vat === 'exempt') {
-    return <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>;
-  }
-  if (vat === 'excluded') {
-    return <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>;
-  }
-  return <span className="text-gray-600">—</span>;
 }
 
 export function MobileBgSearchResultsTable({

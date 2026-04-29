@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EmblaCarousel from '@/components/EmblaCarousel';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
@@ -102,23 +103,13 @@ export default async function ListingDetailPage({ params }: Props) {
                     {formatPrice(getPriceWithVat(listing.current_price, listing.vat))}
                   </span>
                 )}
-                {listing.vat === 'included' && (
-                  <span className="rounded-full bg-blue-900/70 px-2.5 py-1 text-xs text-blue-200">има</span>
-                )}
-                {listing.vat === 'exempt' && (
-                  <span className="rounded-full bg-green-900/70 px-2.5 py-1 text-xs text-green-200">няма</span>
-                )}
-                {listing.vat === 'excluded' && (
-                  <span className="rounded-full bg-red-900/70 px-2.5 py-1 text-xs text-red-200">+ДДС</span>
-                )}
+                <VatBadge vat={listing.vat} />
                 <AdStatusBadge
                   status={listing.ad_status}
                   empty="none"
                   className="text-xs"
                 />
-                {listing.kaparo ? (
-                  <span className="rounded-full bg-orange-900/70 px-2.5 py-1 text-xs text-orange-200">капаро</span>
-                ) : null}
+                <KaparoBadge kaparo={listing.kaparo} label="капаро" empty="none" />
               </div>
               {lastPriceSnapshot && lastPriceSnapshot.price !== listing.current_price && (
                 <div className="mt-1 flex items-center gap-2 text-sm">

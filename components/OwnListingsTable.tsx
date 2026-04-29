@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Check, RefreshCw, SearchIcon, X } from "lucide-react";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
+import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
 import { formatDateOnly } from "@/lib/date-format";
 import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
@@ -57,37 +58,6 @@ function SortHeader({
       {label}
       {arrow}
     </Link>
-  );
-}
-
-function VatBadge({ vat }: { vat: string | null }) {
-  if (vat === "included")
-    return (
-      <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">
-        има
-      </span>
-    );
-  if (vat === "exempt")
-    return (
-      <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">
-        няма
-      </span>
-    );
-  if (vat === "excluded")
-    return (
-      <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">
-        +ДДС
-      </span>
-    );
-  return <span className="text-gray-600">—</span>;
-}
-
-function KaparoBadge({ kaparo }: { kaparo: number }) {
-  if (!kaparo) return null;
-  return (
-    <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-xs text-orange-200">
-      К
-    </span>
   );
 }
 
@@ -817,7 +787,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                       <option value={1}>К</option>
                     </select>
                   ) : (
-                    <KaparoBadge kaparo={row.kaparo} />
+                    <KaparoBadge kaparo={row.kaparo} empty="none" />
                   )}
                 </td>
 

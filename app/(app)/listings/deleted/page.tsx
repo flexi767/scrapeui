@@ -3,7 +3,9 @@ import { Suspense } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
+import { ListingPriceCell } from '@/components/listings/ListingPriceCell';
 import { SortLink } from '@/components/listings/SortLink';
+import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
@@ -13,8 +15,7 @@ import {
   LISTING_EXTRA_OPTIONS,
   toParamArray,
 } from '@/lib/listing-url';
-import { formatDate, formatPrice } from '@/lib/utils';
-import { getPriceWithVat } from '@/lib/vat';
+import { formatDate } from '@/lib/utils';
 
 interface SearchParams {
   make?: string;
@@ -169,13 +170,12 @@ export default async function DeletedListingsPage({
                     <td className="px-2 py-1.5 text-gray-400">{row.dealer_name ?? '—'}</td>
                     <td className="px-2 py-1 text-center"><AdStatusBadge status={row.ad_status} /></td>
                     <td className="pl-1 pr-3 py-1 text-right">
-                      <span className="flex items-center justify-end gap-1 font-semibold text-green-400">{formatPrice(row.current_price)}</span>
-                      {getPriceWithVat(row.current_price, row.vat) != null && <div className="text-xs text-emerald-200/85">{formatPrice(getPriceWithVat(row.current_price, row.vat))}</div>}
+                      <ListingPriceCell price={row.current_price} vat={row.vat} />
                     </td>
                     <td className="px-3 py-1 text-center">
-                      {row.vat === 'included' ? <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span> : row.vat === 'exempt' ? <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span> : row.vat === 'excluded' ? <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span> : <span className="text-gray-600">—</span>}
+                      <VatBadge vat={row.vat} />
                     </td>
-                    <td className="px-2 py-1 text-center">{row.kaparo ? <span className="rounded-full bg-orange-900/70 px-2 py-0.5 text-[11px] text-orange-200">К</span> : <span className="text-gray-600">—</span>}</td>
+                    <td className="px-2 py-1 text-center"><KaparoBadge kaparo={row.kaparo} /></td>
                     <td className="px-3 py-1 text-right text-xs text-gray-300">{row.views != null ? row.views.toLocaleString('en-US') : '—'}</td>
                     <td className="w-20 px-2 py-1 text-right text-xs text-gray-400"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.last_edit).replace(/,\s+/, '\n')}</span></td>
                     <td className="w-20 px-2 py-1 text-right text-xs text-red-300"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.deleted_at).replace(/,\s+/, '\n')}</span></td>
