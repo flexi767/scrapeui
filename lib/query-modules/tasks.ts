@@ -158,32 +158,6 @@ export function getTaskById(id: number) {
   return { ...task, listings, labels, subtasks, deps };
 }
 
-export function getTaskLabels(taskId: number): LabelRow[] {
-  return raw
-    .prepare(
-      `
-    SELECT lb.id, lb.name, lb.color
-    FROM task_labels tl
-    JOIN labels lb ON lb.id = tl.label_id
-    WHERE tl.task_id = ?
-  `,
-    )
-    .all(taskId) as LabelRow[];
-}
-
-export function getTaskListings(taskId: number): ListingSummary[] {
-  return raw
-    .prepare(
-      `
-    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
-    FROM task_listings tl
-    JOIN listings l ON l.id = tl.listing_id
-    WHERE tl.task_id = ?
-  `,
-    )
-    .all(taskId) as ListingSummary[];
-}
-
 // ─── Comments ─────────────────────────────────────────────────────
 
 export interface CommentRow {
@@ -235,35 +209,4 @@ export function getTaskTimeEntries(taskId: number): TimeEntryRow[] {
   `,
     )
     .all(taskId) as TimeEntryRow[];
-}
-
-// ─── Activity Log ─────────────────────────────────────────────────
-
-export interface ActivityRow {
-  id: number;
-  entity_type: string;
-  entity_id: number;
-  action: string;
-  detail: string | null;
-  user_id: number | null;
-  created_at: string;
-  user_name: string | null;
-}
-
-export function getActivityLog(
-  entityType: string,
-  entityId: number,
-): ActivityRow[] {
-  return raw
-    .prepare(
-      `
-    SELECT al.*, u.name as user_name
-    FROM activity_log al
-    LEFT JOIN users u ON u.id = al.user_id
-    WHERE al.entity_type = ? AND al.entity_id = ?
-    ORDER BY al.created_at DESC
-    LIMIT 100
-  `,
-    )
-    .all(entityType, entityId) as ActivityRow[];
 }
