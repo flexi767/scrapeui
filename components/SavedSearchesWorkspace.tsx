@@ -8,39 +8,22 @@ import { SavedSearchEditorHeader } from "@/components/saved-searches/SavedSearch
 import { SavedSearchFields } from "@/components/saved-searches/SavedSearchFields";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
 import { SavedSearchResultsPanel } from "@/components/saved-searches/SavedSearchResultsPanel";
-import { type SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+import {
+  createSavedSearch,
+  deleteSavedSearch,
+  fetchLocationOptions,
+  fetchMobileBgSearchResults,
+  fetchSavedSearchDetail,
+  type MobileBgSearchResultsResponse,
+  type SavedSearchDetailResponse,
+  updateSavedSearch,
+} from "@/components/saved-searches/api";
 import {
   SEARCH_ACTION,
   buildFirstSevenSearchFields,
   type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
-import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
-
-interface SavedSearchDetailResponse {
-  detail: {
-    search: {
-      id: number;
-      listingId: number | null;
-      createdAt: string | null;
-      updatedAt: string | null;
-    };
-    prefill: SearchPrefillData;
-  };
-}
-
-interface SavedSearchListResponse {
-  searches: SavedSearchSummary[];
-}
-
-interface SavedSearchMutationResponse
-  extends SavedSearchListResponse, SavedSearchDetailResponse {}
-
-interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
-  fallback_note?: string | null;
-}
-
-type SavedSearchDeleteResponse = SavedSearchListResponse;
 
 export default function SavedSearchesWorkspace({
   initialSearches,
@@ -102,17 +85,7 @@ export default function SavedSearchesWorkspace({
     setResultsError("");
     setSaveAdMode(false);
 
-    void fetch(`/api/saved-searches/${selectedId}`)
-      .then(async (res) => {
-        const payload = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(
-            (payload as { error?: string }).error ||
-              "Failed to load saved search",
-          );
-        }
-        return payload as SavedSearchDetailResponse;
-      })
+    void fetchSavedSearchDetail(selectedId)
       .then((payload) => {
         if (cancelled) return;
         setDetail(payload.detail);
@@ -228,13 +201,7 @@ export default function SavedSearchesWorkspace({
     );
 
     try {
-      const params = new URLSearchParams();
-      if (value) params.set("location", value);
-      const res = await fetch(
-        `/api/mobile-bg/location-options?${params.toString()}`,
-      );
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) return;
+      const payload = await fetchLocationOptions(value);
 
       const nextLabel =
         typeof payload.label === "string" && payload.label
@@ -301,25 +268,14 @@ export default function SavedSearchesWorkspace({
     setResultsError("");
 
     try {
-      const res = await fetch("/api/mobile-bg/search-results", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: detail.prefill.form.action,
-          method: detail.prefill.form.method,
-          fields,
-          sourceListingId: listing?.id ?? null,
-          sourceMobileId: listing?.mobile_id ?? null,
-        }),
+      const payload = await fetchMobileBgSearchResults({
+        action: detail.prefill.form.action,
+        method: detail.prefill.form.method,
+        fields,
+        sourceListingId: listing?.id ?? null,
+        sourceMobileId: listing?.mobile_id ?? null,
       });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string }).error ||
-            "Failed to load mobile.bg results",
-        );
-      }
-      setResults(payload as MobileBgSearchResultsResponse);
+      setResults(payload);
     } catch (error) {
       setResultsError(
         error instanceof Error
@@ -348,19 +304,7 @@ export default function SavedSearchesWorkspace({
     if (!detail) return;
     setSaveBusy(true);
     try {
-      const res = await fetch(`/api/saved-searches/${detail.search.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: currentFields }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string }).error || "Failed to save search",
-        );
-      }
-
-      const data = payload as SavedSearchMutationResponse;
+      const data = await updateSavedSearch(detail.search.id, currentFields);
       setSearches(data.searches);
       syncFromDetail(data.detail);
       toast.success("Saved search updated");
@@ -377,20 +321,7 @@ export default function SavedSearchesWorkspace({
     if (!detail) return;
     setCloneBusy(true);
     try {
-      const res = await fetch("/api/saved-searches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: currentFields }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string }).error ||
-            "Failed to create saved search",
-        );
-      }
-
-      const data = payload as SavedSearchMutationResponse;
+      const data = await createSavedSearch(currentFields);
       setSearches(data.searches);
       syncFromDetail(data.detail);
       setSelectedId(data.detail.search.id);
@@ -411,18 +342,7 @@ export default function SavedSearchesWorkspace({
 
     setDeleteBusy(true);
     try {
-      const res = await fetch(`/api/saved-searches/${detail.search.id}`, {
-        method: "DELETE",
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string }).error ||
-            "Failed to delete saved search",
-        );
-      }
-
-      const data = payload as SavedSearchDeleteResponse;
+      const data = await deleteSavedSearch(detail.search.id);
       const nextSearches = data.searches;
       setSearches(nextSearches);
 

@@ -1,11 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { MobileBgSearchResultsTable } from "@/components/MobileBgSearchResultsTable";
-import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
+import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
-
-interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
-  fallback_note?: string | null;
-}
 
 export function SavedSearchResultsPanel({
   error,
