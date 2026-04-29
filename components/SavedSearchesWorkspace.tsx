@@ -1,21 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { MobileBgSearchResultsTable } from "@/components/MobileBgSearchResultsTable";
+import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
 import { SavedSearchEditorHeader } from "@/components/saved-searches/SavedSearchEditorHeader";
 import { SavedSearchFields } from "@/components/saved-searches/SavedSearchFields";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
+import { SavedSearchResultsPanel } from "@/components/saved-searches/SavedSearchResultsPanel";
 import { type SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import {
   SEARCH_ACTION,
@@ -478,41 +470,13 @@ export default function SavedSearchesWorkspace({
           </div>
         ) : (
           <>
-            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <DialogContent className="border border-gray-700 bg-gray-900 text-gray-100">
-                <DialogHeader>
-                  <DialogTitle>Delete saved search?</DialogTitle>
-                  <DialogDescription className="text-gray-400">
-                    This will permanently remove the saved search.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gray-600 bg-transparent text-gray-200 hover:bg-gray-800 hover:text-white"
-                    onClick={() => setDeleteDialogOpen(false)}
-                    disabled={deleteBusy}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
-                    onClick={() => void deleteCurrent()}
-                    disabled={deleteBusy}
-                  >
-                    {deleteBusy ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-1 h-4 w-4" />
-                    )}
-                    Delete
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <SavedSearchDeleteDialog
+              open={deleteDialogOpen}
+              busy={deleteBusy}
+              onOpenChange={setDeleteDialogOpen}
+              onCancel={() => setDeleteDialogOpen(false)}
+              onConfirm={() => void deleteCurrent()}
+            />
             <div className="rounded-lg border border-gray-700 bg-gray-900/70">
               <SavedSearchEditorHeader
                 listing={listing}
@@ -554,33 +518,13 @@ export default function SavedSearchesWorkspace({
               />
             </div>
 
-            {resultsError && (
-              <div className="rounded-lg border border-red-700/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-                {resultsError}
-              </div>
-            )}
-
-            {resultsLoading && (
-              <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-10 text-center text-sm text-gray-400">
-                <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-                Loading mobile.bg results…
-              </div>
-            )}
-
-            {results && !resultsLoading && (
-              <MobileBgSearchResultsTable
-                rows={results.rows}
-                summaryText={results.summary_text}
-                page={results.page}
-                totalPages={results.total_pages}
-                hasNextPage={results.has_next_page}
-                loadedUntilPage={results.loaded_until_page}
-                sourceListingId={listing?.id ?? 0}
-                sourceMobileId={listing?.mobile_id ?? null}
-                initialIgnoredResultIds={results.ignored_search_result_ids}
-                saveAdMode={saveAdMode}
-              />
-            )}
+            <SavedSearchResultsPanel
+              error={resultsError}
+              loading={resultsLoading}
+              results={results}
+              listing={listing}
+              saveAdMode={saveAdMode}
+            />
           </>
         )}
       </section>
