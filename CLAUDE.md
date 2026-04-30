@@ -34,7 +34,6 @@ app/                 # Next.js App Router
 components/         # Reusable React components
   Dashboard.tsx     # Dashboard homepage (stats + quick links)
   AppSidebar.tsx    # Navigation sidebar
-  TopBar.tsx        # Top navigation bar
   ui/               # shadcn/ui components (auto-generated)
   shared/           # Custom shared components (badges, selectors)
   editor/           # TipTap editor components
@@ -119,7 +118,6 @@ scripts/            # Migration & seed scripts
 
 - **Dashboard:** homepage with project stats (listing counts, last scraping time) and quick links
 - **AppSidebar:** main navigation with nav items (routes & icons)
-- **TopBar:** header with user menu
 - **SessionProvider:** wraps app for NextAuth context
 - **Editor components:** TipTapEditor, TiptapViewer, TiptapToolbar for rich text
 
