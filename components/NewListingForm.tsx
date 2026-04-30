@@ -19,7 +19,6 @@ import {
   BATTERY_FUELS,
   EMPTY,
   type FormState,
-  type PrefillResponse,
 } from "@/components/new-listing-form/constants";
 import { DescriptionContactSection } from "@/components/new-listing-form/DescriptionContactSection";
 import { ExtrasSection } from "@/components/new-listing-form/ExtrasSection";
@@ -27,6 +26,14 @@ import { LocationSection } from "@/components/new-listing-form/LocationSection";
 import { PricingSection } from "@/components/new-listing-form/PricingSection";
 import { SubmitActions } from "@/components/new-listing-form/SubmitActions";
 import { VehicleDetailsSection } from "@/components/new-listing-form/VehicleDetailsSection";
+import {
+  createDraft,
+  deleteDraftById,
+  fetchCities,
+  fetchListingPrefill,
+  fetchMakes,
+  updateDraft,
+} from "@/components/new-listing-form/api";
 interface Props {
   makes: MakeEntry[];
   transmissions: string[];
@@ -148,11 +155,7 @@ export default function NewListingForm({
 
     setCitiesLoading(true);
     try {
-      const response = await fetch(
-        `/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`,
-      );
-      const data: City[] = await response.json();
-      setCities(data);
+      setCities(await fetchCities(regionValue));
     } catch {
       setCities([]);
     } finally {
@@ -164,11 +167,7 @@ export default function NewListingForm({
     async (pubtype: string) => {
       setMakesLoading(true);
       try {
-        const response = await fetch(
-          `/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`,
-        );
-        const data: MakeEntry[] = await response.json();
-        setMakes(data);
+        setMakes(await fetchMakes(pubtype));
       } catch {
         setMakes(initialMakes);
       } finally {
@@ -262,16 +261,7 @@ export default function NewListingForm({
 
     setSaving(true);
     try {
-      const response = await fetch("/api/editown", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.error || "Грешка при запазване.");
-        return;
-      }
+      const data = await createDraft(form);
       const nextBackupId = typeof data.id === "number" ? data.id : null;
       setSavedBackupId(nextBackupId);
       setSelectedBackupId(nextBackupId);
@@ -293,19 +283,7 @@ export default function NewListingForm({
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/editown/backups/${selectedBackupId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        id?: number;
-      };
-      if (!response.ok) {
-        setError(data.error || "Грешка при запазване на промените.");
-        return;
-      }
+      const data = await updateDraft(selectedBackupId, form);
       setSavedBackupId(typeof data.id === "number" ? data.id : selectedBackupId);
       setSavedMode("updated");
       setSaved(true);
@@ -323,18 +301,11 @@ export default function NewListingForm({
     setError("");
 
     try {
-      const url = mobileId
-        ? `/api/editown/dealers/${encodeURIComponent(form.dealerId)}/listings/${encodeURIComponent(mobileId)}`
-        : `/api/editown/backups/${backupId}`;
-      const response = await fetch(url);
-      const data = (await response.json()) as PrefillResponse & {
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(data.error || "Грешка при зареждане на обявата.");
-        return;
-      }
-
+      const data = await fetchListingPrefill({
+        dealerId: form.dealerId,
+        mobileId,
+        backupId,
+      });
       const nextForm = data.form;
       if (nextForm.pubtype !== form.pubtype) {
         await loadMakes(nextForm.pubtype);
@@ -362,17 +333,7 @@ export default function NewListingForm({
     setError("");
 
     try {
-      const response = await fetch(`/api/editown/backups/${backupId}`, {
-        method: "DELETE",
-      });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setError(data.error || "Грешка при изтриване на черновата.");
-        return;
-      }
+      await deleteDraftById(backupId);
 
       setDealerListingsByDealer((prev) => ({
         ...prev,
