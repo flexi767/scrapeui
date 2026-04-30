@@ -6,6 +6,10 @@ import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { VatBadge } from '@/components/listings/VatBadge';
 import {
+  saveAdAsCarbrosDraft,
+  setIgnoredSearchResult,
+} from '@/components/mobile-bg-search-results/api';
+import {
   formatMileageValue,
   formatRegMonthNumber,
   getDisplayTitle,
@@ -61,16 +65,7 @@ export function MobileBgSearchResultsTable({
     setSavingIds((prev) => ({ ...prev, [mobileId]: true }));
 
     try {
-      const res = await fetch(`/api/listings/by-id/${sourceListingId}/ignored-search-results`, {
-        method: nextIgnored ? 'POST' : 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ignoredMobileId: mobileId }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to update ignored search result');
-      }
-
+      await setIgnoredSearchResult({ sourceListingId, mobileId, ignored: nextIgnored });
       setIgnoredResultIds((prev) => (
         nextIgnored ? [...new Set([...prev, mobileId])] : prev.filter((id) => id !== mobileId)
       ));
@@ -86,20 +81,8 @@ export function MobileBgSearchResultsTable({
     setSavingDraftIds((prev) => ({ ...prev, [row.mobile_id]: true }));
 
     try {
-      const res = await fetch('/api/editown/save-ad', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: row.url, dealerSlug: 'carbros' }),
-      });
-      const payload = await res.json().catch(() => ({})) as {
-        backupId?: number;
-        error?: string;
-      };
-      if (!res.ok || typeof payload.backupId !== 'number') {
-        throw new Error(payload.error || 'Failed to save ad as draft');
-      }
-
-      setSavedDraftIds((prev) => ({ ...prev, [row.mobile_id]: payload.backupId as number }));
+      const backupId = await saveAdAsCarbrosDraft(row.url);
+      setSavedDraftIds((prev) => ({ ...prev, [row.mobile_id]: backupId }));
       toast.success('Saved ad as Carbros draft');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save ad as draft');
