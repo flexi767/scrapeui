@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { Region, City } from "@/lib/mobile-bg/regions";
+import {
+  DealerTemplateSection,
+  type DealerOption,
+} from "@/components/new-listing-form/DealerTemplateSection";
 import { DraftDeleteDialog } from "@/components/new-listing-form/DraftDeleteDialog";
 import { SavedDraftView } from "@/components/new-listing-form/SavedDraftView";
 import {
   AutocompleteInput,
   CheckboxField,
-  DealerListingPicker,
-  DealerSelector,
   ExtrasColumn,
   FieldLabel,
   FormSection,
@@ -35,12 +37,6 @@ import {
   type FormState,
   type PrefillResponse,
 } from "@/components/new-listing-form/constants";
-interface Dealer {
-  id: number;
-  slug: string;
-  name: string;
-}
-
 interface Props {
   makes: MakeEntry[];
   transmissions: string[];
@@ -48,7 +44,7 @@ interface Props {
   bodyTypes: string[];
   regions: Region[];
   colors: string[];
-  dealers: Dealer[];
+  dealers: DealerOption[];
   initialDealerListingsByDealer: Record<string, DealerListingSummary[]>;
   initialDealerId?: string;
 }
@@ -432,38 +428,26 @@ export default function NewListingForm({
         onCancel={() => setDraftDeleteCandidateId(null)}
         onConfirm={(backupId) => void deleteDraft(backupId)}
       />
-      <FormSection>
-        <div className="mb-5">
-          <div className="mt-2">
-            <DealerSelector
-              dealers={dealers}
-              value={form.dealerId}
-              onChange={(value) => {
-                setField("dealerId", value);
-                setSelectedTemplateMobileId(null);
-                setSelectedBackupId(null);
-                setDraftDeleteCandidateId(null);
-              }}
-            />
-          </div>
-          {form.dealerId ? (
-            <div className="mt-3">
-              <DealerListingPicker
-                listings={dealerListings}
-                loading={false}
-                selectedMobileId={selectedTemplateMobileId}
-                prefillingMobileId={prefillingMobileId}
-                deletingBackupId={deletingBackupId}
-                error=""
-                onSelect={(mobileId, backupId) =>
-                  void prefillFromListing(mobileId, backupId)
-                }
-                onRequestDeleteDraft={setDraftDeleteCandidateId}
-              />
-            </div>
-          ) : null}
-        </div>
+      <DealerTemplateSection
+        dealers={dealers}
+        dealerId={form.dealerId}
+        listings={dealerListings}
+        selectedMobileId={selectedTemplateMobileId}
+        prefillingMobileId={prefillingMobileId}
+        deletingBackupId={deletingBackupId}
+        onDealerChange={(value) => {
+          setField("dealerId", value);
+          setSelectedTemplateMobileId(null);
+          setSelectedBackupId(null);
+          setDraftDeleteCandidateId(null);
+        }}
+        onSelectListing={(mobileId, backupId) =>
+          void prefillFromListing(mobileId, backupId)
+        }
+        onRequestDeleteDraft={setDraftDeleteCandidateId}
+      />
 
+      <FormSection>
         <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_2fr_1fr_1fr]">
           <div className="min-w-0 w-full flex flex-col gap-1 xl:w-56">
             <FieldLabel required>
