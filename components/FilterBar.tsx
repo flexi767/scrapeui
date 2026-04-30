@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
+import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 import PriceChangeFilter from './PriceChangeFilter';
 import RangeFilter from './RangeFilter';
 
@@ -40,20 +41,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const currentSort = searchParams.get('sort') ?? 'price';
   const currentOrder = searchParams.get('order') ?? 'desc';
 
-  const [dealerOpen, setDealerOpen] = useState(false);
-  const dealerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Close dealer dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dealerRef.current && !dealerRef.current.contains(e.target as Node)) {
-        setDealerOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
     const p = new URLSearchParams();
@@ -111,16 +99,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   const availableModels = currentMake ? (makeModels[currentMake] ?? []) : [];
-  const [yearOpen, setYearOpen] = useState(false);
-  const yearRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (yearRef.current && !yearRef.current.contains(e.target as Node)) setYearOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   function onYearToggle(year: string) {
     const next = currentYears.includes(year)
@@ -128,19 +106,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       : [...currentYears, year];
     router.push(`${basePath}?${buildParams({ year: next })}`);
   }
-
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const categoryRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false);
-      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) setCategoryOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   function onStatusToggle(s: string) {
     const next = currentStatuses.includes(s) ? currentStatuses.filter(x => x !== s) : [...currentStatuses, s];
@@ -160,16 +125,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     { value: 'none', label: 'None' },
   ];
 
-  const [vatOpen, setVatOpen] = useState(false);
-  const vatRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (vatRef.current && !vatRef.current.contains(e.target as Node)) setVatOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
   function onVatToggle(v: string) {
     const next = currentVat.includes(v) ? currentVat.filter(x => x !== v) : [...currentVat, v];
     router.push(`${basePath}?${buildParams({ vat: next })}`);
@@ -181,19 +136,6 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
     { value: 'excluded', label: '+ДДС' },
     { value: 'null', label: '—' },
   ];
-
-  const [fuelOpen, setFuelOpen] = useState(false);
-  const [extrasOpen, setExtrasOpen] = useState(false);
-  const fuelRef = useRef<HTMLDivElement>(null);
-  const extrasRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (fuelRef.current && !fuelRef.current.contains(e.target as Node)) setFuelOpen(false);
-      if (extrasRef.current && !extrasRef.current.contains(e.target as Node)) setExtrasOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   function onFuelToggle(f: string) {
     const next = currentFuels.includes(f) ? currentFuels.filter(x => x !== f) : [...currentFuels, f];
@@ -246,94 +188,39 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         ))}
       </select>
 
-      {/* Dealer dropdown (multi-select) */}
-      <div className="relative" ref={dealerRef}>
-        <button
-          onClick={() => setDealerOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentDealers.length > 0
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentDealers.length === 0 ? 'Dealers' : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} dealers`}
-          <span className="text-gray-400">{dealerOpen ? '▲' : '▼'}</span>
-        </button>
-        {dealerOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allDealers.map((d) => {
-              const checked = currentDealers.includes(d.slug);
-              return (
-                <label key={d.slug} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                  <input type="checkbox" checked={checked} onChange={() => onDealerToggle(d.slug)} className="accent-blue-500" />
-                  <span>{d.name}</span>
-                  {Boolean(d.own) && <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>}
-                </label>
-              );
-            })}
-            {currentDealers.length > 0 && (
-              <button onClick={() => { onDealerToggle(''); router.push(`${basePath}?${buildParams({ dealer: [] })}`); setDealerOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear dealers
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentDealers.length === 0 ? 'Dealers' : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} dealers`}
+        clearLabel="Clear dealers"
+        options={allDealers.map((dealer) => ({
+          value: dealer.slug,
+          label: dealer.name,
+          badge: dealer.own ? 'own' : undefined,
+        }))}
+        selectedValues={currentDealers}
+        onToggle={onDealerToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ dealer: [] })}`)}
+        minWidthClassName="min-w-[180px]"
+      />
 
-      <div className="relative" ref={categoryRef}>
-        <button
-          onClick={() => setCategoryOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentCategories.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentCategories.length === 0 ? 'Body' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
-          <span className="text-gray-400">{categoryOpen ? '▲' : '▼'}</span>
-        </button>
-        {categoryOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allCategories.map(category => (
-              <label key={category} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input type="checkbox" checked={currentCategories.includes(category)} onChange={() => onCategoryToggle(category)} className="accent-blue-500" />
-                <span>{category}</span>
-              </label>
-            ))}
-            {currentCategories.length > 0 && (
-              <button onClick={() => { router.push(`${basePath}?${buildParams({ category: [] })}`); setCategoryOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear body
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentCategories.length === 0 ? 'Body' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
+        clearLabel="Clear body"
+        options={allCategories.map((category) => ({ value: category, label: category }))}
+        selectedValues={currentCategories}
+        onToggle={onCategoryToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ category: [] })}`)}
+        minWidthClassName="min-w-[180px]"
+      />
 
-      {/* Status multi-select dropdown */}
-      <div className="relative" ref={statusRef}>
-        <button
-          onClick={() => setStatusOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentStatuses.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentStatuses.length === 0 ? 'Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
-          <span className="text-gray-400">{statusOpen ? '▲' : '▼'}</span>
-        </button>
-        {statusOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[120px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {STATUS_OPTIONS.map(opt => (
-              <label key={opt.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input type="checkbox" checked={currentStatuses.includes(opt.value)} onChange={() => onStatusToggle(opt.value)} className="accent-blue-500" />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-            {currentStatuses.length > 0 && (
-              <button onClick={() => { router.push(`${basePath}?${buildParams({ status: [] })}`); setStatusOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear paid
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentStatuses.length === 0 ? 'Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
+        clearLabel="Clear paid"
+        options={STATUS_OPTIONS}
+        selectedValues={currentStatuses}
+        onToggle={onStatusToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ status: [] })}`)}
+        minWidthClassName="min-w-[120px]"
+      />
 
       {/* Price range slider */}
       {priceRange && (
@@ -341,121 +228,47 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
           fmt={v => `€${(v/1000).toFixed(0)}k`} basePath={basePath} />
       )}
 
-      {/* VAT multi-select dropdown */}
-      <div className="relative" ref={vatRef}>
-        <button
-          onClick={() => setVatOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentVat.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentVat.length === 0 ? 'VAT' : currentVat.length === 1 ? 'VAT' : `VAT (${currentVat.length})`}
-          <span className="text-gray-400">{vatOpen ? '▲' : '▼'}</span>
-        </button>
-        {vatOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[120px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {VAT_OPTIONS.map(opt => (
-              <label key={opt.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input type="checkbox" checked={currentVat.includes(opt.value)} onChange={() => onVatToggle(opt.value)} className="accent-blue-500" />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-            {currentVat.length > 0 && (
-              <button onClick={() => { router.push(`${basePath}?${buildParams({ vat: [] })}`); setVatOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear VAT
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentVat.length === 0 ? 'VAT' : currentVat.length === 1 ? 'VAT' : `VAT (${currentVat.length})`}
+        clearLabel="Clear VAT"
+        options={VAT_OPTIONS}
+        selectedValues={currentVat}
+        onToggle={onVatToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ vat: [] })}`)}
+        minWidthClassName="min-w-[120px]"
+      />
 
-      {/* Fuel multi-select dropdown */}
-      <div className="relative" ref={fuelRef}>
-        <button
-          onClick={() => setFuelOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentFuels.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentFuels.length === 0 ? 'Fuel' : `Fuel (${currentFuels.length})`}
-          <span className="text-gray-400">{fuelOpen ? '▲' : '▼'}</span>
-        </button>
-        {fuelOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[160px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allFuels.map(f => (
-              <label key={f} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input type="checkbox" checked={currentFuels.includes(f)} onChange={() => onFuelToggle(f)} className="accent-blue-500" />
-                <span>{f}</span>
-              </label>
-            ))}
-            {currentFuels.length > 0 && (
-              <button onClick={() => { router.push(`${basePath}?${buildParams({ fuel: [] })}`); setFuelOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear Fuel
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentFuels.length === 0 ? 'Fuel' : `Fuel (${currentFuels.length})`}
+        clearLabel="Clear Fuel"
+        options={allFuels.map((fuel) => ({ value: fuel, label: fuel }))}
+        selectedValues={currentFuels}
+        onToggle={onFuelToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ fuel: [] })}`)}
+      />
 
       {/* Extras multi-select dropdown */}
       {allExtras.length > 0 && (
-        <div className="relative" ref={extrasRef}>
-          <button
-            onClick={() => setExtrasOpen(o => !o)}
-            className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-              currentExtras.length > 0 ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-            }`}
-          >
-            {currentExtras.length === 0 ? 'Extras' : `Extras (${currentExtras.length})`}
-            <span className="text-gray-400">{extrasOpen ? '▲' : '▼'}</span>
-          </button>
-          {extrasOpen && (
-            <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-              {allExtras.map(extra => (
-                <label key={extra} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                  <input type="checkbox" checked={currentExtras.includes(extra)} onChange={() => onExtraToggle(extra)} className="accent-blue-500" />
-                  <span>{extra}</span>
-                </label>
-              ))}
-              {currentExtras.length > 0 && (
-                <button onClick={() => { router.push(`${basePath}?${buildParams({ extra: [] })}`); setExtrasOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                  Clear extras
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <MultiSelectDropdown
+          buttonText={currentExtras.length === 0 ? 'Extras' : `Extras (${currentExtras.length})`}
+          clearLabel="Clear extras"
+          options={allExtras.map((extra) => ({ value: extra, label: extra }))}
+          selectedValues={currentExtras}
+          onToggle={onExtraToggle}
+          onClear={() => router.push(`${basePath}?${buildParams({ extra: [] })}`)}
+          minWidthClassName="min-w-[180px]"
+        />
       )}
 
-      {/* Year multi-select dropdown */}
-      <div className="relative" ref={yearRef}>
-        <button
-          onClick={() => setYearOpen(o => !o)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentYears.length > 0
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentYears.length === 0 ? 'Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
-          <span className="text-gray-400">{yearOpen ? '▲' : '▼'}</span>
-        </button>
-        {yearOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[120px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allYears.map(y => (
-              <label key={y} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input type="checkbox" checked={currentYears.includes(y)} onChange={() => onYearToggle(y)} className="accent-blue-500" />
-                <span>{y}</span>
-              </label>
-            ))}
-            {currentYears.length > 0 && (
-              <button onClick={() => { router.push(`${basePath}?${buildParams({ year: [] })}`); setYearOpen(false); }} className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white">
-                Clear years
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        buttonText={currentYears.length === 0 ? 'Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
+        clearLabel="Clear years"
+        options={allYears.map((year) => ({ value: year, label: year }))}
+        selectedValues={currentYears}
+        onToggle={onYearToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ year: [] })}`)}
+        minWidthClassName="min-w-[120px]"
+      />
 
       {/* Price change slider */}
       {priceChangeRange && (
