@@ -4,9 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
-import { formatDate, formatPrice } from '@/lib/utils';
 import { streamJsonEvents } from '@/lib/streaming-job';
-import { getPriceWithVat } from '@/lib/vat';
 import {
   revertDraftToSource,
   startBatchSync,
@@ -14,10 +12,10 @@ import {
   stopBatchSync,
   stopRenewResetJob,
 } from './edit-own-batch-sync/api';
+import { ChangedListingsTable } from './edit-own-batch-sync/ChangedListingsTable';
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
-import { SyncBadge } from './edit-own-batch-sync/SyncBadge';
+import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import {
-  buildChangeRows,
   labelForRow,
   toBatchRow,
 } from './edit-own-batch-sync/helpers';
@@ -406,117 +404,14 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
         </div>
       )}
 
-      {recentResults.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-hidden">
-          <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Recent results</div>
-          <div className="divide-y divide-gray-800">
-            {recentResults.map((row) => (
-              <div key={row.backup_id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                <div className="min-w-0">
-                  <div className="truncate text-gray-200">{labelForRow(row)}</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {row.mobile_id ? `mobile.bg #${row.mobile_id}` : `backup ${row.backup_id}`}
-                    {row.completedAt ? ` • ${formatDate(row.completedAt)}` : ''}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {row.runError && <div className="max-w-xs truncate text-xs text-red-300">{row.runError}</div>}
-                  <SyncBadge status={row.runStatus} error={row.runError} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <RecentResults rows={recentResults} />
 
-      <div className="overflow-hidden rounded-xl border border-gray-700/60">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-800/70 text-xs uppercase tracking-wider text-gray-400">
-            <tr>
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-left">Listing</th>
-              <th className="px-3 py-2 text-left">Changes</th>
-              <th className="px-3 py-2 text-left">Dealer</th>
-              <th className="px-3 py-2 text-right">Price</th>
-              <th className="px-3 py-2 text-right">Updated</th>
-              <th className="px-3 py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700/50 bg-gray-900/40">
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
-                  No changed listings are waiting for sync.
-                </td>
-              </tr>
-            )}
-            {rows.map((row) => {
-              const changes = buildChangeRows(row);
-              const canRevert = !running && row.needs_sync === 1 && changes.length > 0;
-
-              return (
-              <tr key={row.backup_id} className="align-top">
-                <td className="px-3 py-3">
-                  <div className="space-y-1">
-                    <SyncBadge status={row.runStatus} error={row.runError} />
-                    {row.runError && (
-                      <div className="max-w-xs text-xs text-red-300">{row.runError}</div>
-                    )}
-                  </div>
-                </td>
-                <td className="px-3 py-3">
-                  <div className="font-medium text-white">{row.make ?? '—'} {row.model ?? ''}</div>
-                  <div className="text-xs text-gray-400">{row.title || '—'}</div>
-                  <div className="text-[11px] text-gray-500">mobile.bg #{row.mobile_id}</div>
-                </td>
-                <td className="px-3 py-3">
-                  {changes.length > 0 ? (
-                    <div className="space-y-1 text-xs">
-                      {changes.map((change) => (
-                        <div key={change.label}>
-                          <div>
-                            <span className="text-gray-500">{change.label}:</span>{' '}
-                            <span className="text-gray-400">{change.oldValue}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">→</span>{' '}
-                            <span className="text-gray-200">{change.newValue}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-600">No pending field changes</span>
-                  )}
-                </td>
-                <td className="px-3 py-3 text-gray-300">{row.dealer_name ?? '—'}</td>
-                <td className="px-3 py-3 text-right">
-                  <div className="font-medium text-green-400">
-                    {formatPrice(row.current_price)}
-                  </div>
-                  {getPriceWithVat(row.current_price, row.vat) != null && (
-                    <div className="text-xs text-emerald-200/85">
-                      {formatPrice(getPriceWithVat(row.current_price, row.vat))}
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-3 text-right text-xs text-gray-400">
-                  {row.completedAt ? formatDate(row.completedAt) : '—'}
-                </td>
-                <td className="px-3 py-3 text-right">
-                  <button
-                    onClick={() => void revertDraft(row)}
-                    disabled={!canRevert || revertingId === row.backup_id}
-                    className="rounded-md border border-gray-700 px-2.5 py-1 text-xs text-gray-200 hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {revertingId === row.backup_id ? 'Reverting…' : 'Revert'}
-                  </button>
-                </td>
-              </tr>
-            )})}
-          </tbody>
-        </table>
-      </div>
+      <ChangedListingsTable
+        rows={rows}
+        running={running}
+        revertingId={revertingId}
+        onRevert={(row) => void revertDraft(row)}
+      />
 
       {logs.length > 0 && (
         <LogPanel entries={logs} panelRef={logRef} />
