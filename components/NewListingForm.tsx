@@ -11,7 +11,6 @@ import { DraftDeleteDialog } from "@/components/new-listing-form/DraftDeleteDial
 import { SavedDraftView } from "@/components/new-listing-form/SavedDraftView";
 import {
   AutocompleteInput,
-  CheckboxField,
   ExtrasColumn,
   FieldLabel,
   FormSection,
@@ -25,18 +24,16 @@ import {
 import {
   BATTERY_FUELS,
   BODY_TYPE_OPTIONS,
-  COLOR_OPTIONS,
   CONDITION_OPTIONS,
-  CURRENCY_OPTIONS,
   EMPTY,
   EURO_OPTIONS,
   EXTRA_SECTIONS,
   MAIN_CATEGORIES,
-  MONTH_OPTIONS,
-  PRODUCTION_YEAR_OPTIONS,
   type FormState,
   type PrefillResponse,
 } from "@/components/new-listing-form/constants";
+import { LocationSection } from "@/components/new-listing-form/LocationSection";
+import { PricingSection } from "@/components/new-listing-form/PricingSection";
 interface Props {
   makes: MakeEntry[];
   transmissions: string[];
@@ -621,109 +618,16 @@ export default function NewListingForm({
         </div>
       </FormSection>
 
-      <FormSection>
-        <div className="grid gap-4 xl:grid-cols-[80px_1.8fr_90px_100px_130px_110px]">
-          <InputField
-            label="Цена"
-            value={form.price}
-            onChange={(value) => setField("price", value)}
-            type="number"
-            maxLength={7}
-            accent
-          />
-          <SelectField
-            label="ДДС"
-            value={form.vat}
-            onChange={(value) => setField("vat", value)}
-            options={[
-              "",
-              "Частна продажба. / Освободена от ДДС продажба.",
-              "Цената е с включено ДДС",
-              "Цената е без ДДС",
-            ]}
-            accent
-          />
-          <SelectField
-            label="Валута"
-            value={form.currency}
-            onChange={(value) => setField("currency", value)}
-            options={CURRENCY_OPTIONS}
-            accent
-          />
-          <InputField
-            label="Пробег [км]"
-            value={form.mileage}
-            onChange={(value) => setField("mileage", value)}
-            type="number"
-            maxLength={7}
-            accent
-          />
-          <SelectField
-            label="Месец"
-            value={form.productionMonth}
-            onChange={(value) => setField("productionMonth", value)}
-            options={MONTH_OPTIONS}
-            accent
-          />
-          <SelectField
-            label="Година"
-            value={form.productionYear}
-            onChange={(value) => setField("productionYear", value)}
-            options={PRODUCTION_YEAR_OPTIONS}
-            accent
-          />
-        </div>
-        <div className="mt-3">
-          <CheckboxField
-            label="Цена само при запитване"
-            checked={form.priceOnRequest}
-            onChange={(checked) => setField("priceOnRequest", checked)}
-          />
-        </div>
-      </FormSection>
+      <PricingSection form={form} setField={setField} />
 
-      <FormSection>
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1.1fr]">
-          <SelectField
-            label="Цвят"
-            value={form.color}
-            onChange={(value) => setField("color", value)}
-            options={COLOR_OPTIONS}
-          />
-          <SelectField
-            label="Намира се в"
-            value={form.region}
-            onChange={onRegionChange}
-            options={[
-              "",
-              ...regions.map(
-                (region) =>
-                  ({ value: region.value, label: region.label }) as const,
-              ),
-            ]}
-            accent
-          />
-          <SelectField
-            label="Град"
-            value={form.city}
-            onChange={(value) => setField("city", value)}
-            options={[
-              "",
-              ...cities.map(
-                (city) => ({ value: city.value, label: city.label }) as const,
-              ),
-            ]}
-            accent
-            disabled={!form.region || citiesLoading}
-          />
-          <InputField
-            label="VIN номер"
-            value={form.vin}
-            onChange={(value) => setField("vin", value)}
-            maxLength={17}
-          />
-        </div>
-      </FormSection>
+      <LocationSection
+        form={form}
+        regions={regions}
+        cities={cities}
+        citiesLoading={citiesLoading}
+        setField={setField}
+        onRegionChange={onRegionChange}
+      />
 
       <FormSection title="Екстри">
         <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.6fr_0.6fr] md:grid-cols-2">
