@@ -5,13 +5,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatDate, formatPrice } from '@/lib/utils';
-import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { streamJsonEvents } from '@/lib/streaming-job';
 import { getPriceWithVat } from '@/lib/vat';
+import {
+  revertDraftToSource,
+  startBatchSync,
+  startRenewReset,
+  stopBatchSync,
+  stopRenewResetJob,
+} from './edit-own-batch-sync/api';
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { SyncBadge } from './edit-own-batch-sync/SyncBadge';
 import {
   buildChangeRows,
-  isEditOwnSyncRow,
   labelForRow,
   toBatchRow,
 } from './edit-own-batch-sync/helpers';
@@ -69,12 +75,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
   async function revertDraft(row: BatchRow) {
     setRevertingId(row.backup_id);
     try {
-      const res = await fetch(`/api/editown/sync-drafts/${row.backup_id}`, { method: 'POST' });
-      const data = await res.json().catch(() => null) as EditOwnSyncRow | { error?: string } | null;
-      if (!res.ok || !isEditOwnSyncRow(data)) {
-        throw new Error((data && 'error' in data ? data.error : null) || 'Failed to revert draft');
-      }
-
+      const data = await revertDraftToSource(row.backup_id);
       setRows((prev) => prev.map((entry) => entry.backup_id === row.backup_id ? toBatchRow(data) : entry));
       toast.success('Draft reverted to original listing values');
       router.refresh();
@@ -109,10 +110,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
 
     let res: Response;
     try {
-      res = await fetch('/api/editown/batch-sync', {
-        method: 'POST',
-        signal: abortController.signal,
-      });
+      res = await startBatchSync(abortController.signal);
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         setRunning(false);
@@ -121,16 +119,6 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
         return;
       }
       const message = error instanceof Error ? error.message : 'Batch sync failed';
-      toast.error(message);
-      setLogs([{ kind: 'error', message }]);
-      setRunning(false);
-      setStopping(false);
-      abortRef.current = null;
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      const message = await readJsonError(res, 'Failed to start batch sync');
       toast.error(message);
       setLogs([{ kind: 'error', message }]);
       setRunning(false);
@@ -252,11 +240,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     setStopping(true);
 
     try {
-      const res = await fetch('/api/editown/batch-sync', { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to stop batch sync');
-      }
+      await stopBatchSync();
       appendLog({ kind: 'log', message: 'Stopping batch sync…' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop batch sync';
@@ -287,10 +271,9 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
 
     let res: Response;
     try {
-      res = await fetch('/api/editown/renew-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealerSlugs: renewDealers, onlyReset: renewOnlyReset }),
+      res = await startRenewReset({
+        dealerSlugs: renewDealers,
+        onlyReset: renewOnlyReset,
         signal: abortController.signal,
       });
     } catch (error) {
@@ -301,15 +284,6 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
         return;
       }
       toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
-      setRenewRunning(false);
-      setRenewStopping(false);
-      renewAbortRef.current = null;
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      const message = await readJsonError(res, 'Failed to start renew & reset');
-      toast.error(message);
       setRenewRunning(false);
       setRenewStopping(false);
       renewAbortRef.current = null;
@@ -354,9 +328,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     if (!renewRunning || renewStopping) return;
     setRenewStopping(true);
     try {
-      const res = await fetch('/api/editown/renew-reset', { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Failed to stop');
+      await stopRenewResetJob();
       appendRenewLog({ kind: 'log', message: 'Stopping…' });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to stop');
