@@ -7,192 +7,20 @@ import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { getPriceWithVat } from '@/lib/vat';
-
-interface OwnDealer {
-  slug: string;
-  name: string;
-}
+import { LogPanel } from './edit-own-batch-sync/LogPanel';
+import { SyncBadge } from './edit-own-batch-sync/SyncBadge';
+import {
+  buildChangeRows,
+  isEditOwnSyncRow,
+  labelForRow,
+  toBatchRow,
+} from './edit-own-batch-sync/helpers';
+import type { BatchRow, LogEntry, OwnDealer, RunStats, StreamEntry } from './edit-own-batch-sync/types';
 
 interface Props {
   initialRows: EditOwnSyncRow[];
   autoRun?: boolean;
   ownDealers: OwnDealer[];
-}
-
-type BatchRow = EditOwnSyncRow & {
-  runStatus: string | null;
-  runError: string | null;
-  completedAt: string | null;
-};
-
-type StreamEntry =
-  | {
-      type: 'start';
-      total: number;
-      completed: number;
-      succeeded: number;
-      failed: number;
-      message?: string;
-    }
-  | {
-      type: 'checking';
-      total: number;
-      completed: number;
-      succeeded: number;
-      failed: number;
-      target: {
-        backup_id: number;
-        mobile_id: string | null;
-        title: string | null;
-        make: string | null;
-        model: string | null;
-        dealer_name: string | null;
-        dealer_slug: string;
-      };
-      message?: string;
-    }
-  | {
-      type: 'result';
-      total: number;
-      completed: number;
-      succeeded: number;
-      failed: number;
-      row: {
-        backup_id: number;
-        mobile_id: string | null;
-        status: 'success' | 'failed';
-        completed_at: string;
-        error: string | null;
-      };
-      message?: string;
-    }
-  | {
-      type: 'complete';
-      total: number;
-      completed: number;
-      succeeded: number;
-      failed: number;
-      message?: string;
-    }
-  | {
-      type: 'log';
-      level?: 'info' | 'stderr';
-      backup_id?: number;
-      message?: string;
-    }
-  | {
-      type: 'error';
-      message?: string;
-    }
-  | {
-      type: 'stream_closed';
-      code?: number | null;
-    };
-
-interface RunStats {
-  total: number;
-  completed: number;
-  succeeded: number;
-  failed: number;
-}
-
-interface LogEntry {
-  kind: 'status' | 'result' | 'log' | 'error';
-  message: string;
-  ok?: boolean;
-}
-
-function formatVatLabel(value: string | null) {
-  if (value === 'included') return 'има';
-  if (value === 'exempt') return 'няма';
-  if (value === 'excluded') return '+ДДС';
-  return '—';
-}
-
-function buildChangeRows(row: EditOwnSyncRow) {
-  const changes: Array<{ label: string; oldValue: string; newValue: string }> = [];
-
-  if ((row.source_title ?? '') !== (row.title ?? '')) {
-    changes.push({
-      label: 'Title',
-      oldValue: row.source_title || '—',
-      newValue: row.title || '—',
-    });
-  }
-
-  if ((row.source_price ?? null) !== (row.current_price ?? null)) {
-    changes.push({
-      label: 'Price',
-      oldValue: row.source_price != null ? formatPrice(row.source_price) : '—',
-      newValue: row.current_price != null ? formatPrice(row.current_price) : '—',
-    });
-  }
-
-  if ((row.source_vat ?? null) !== (row.vat ?? null)) {
-    changes.push({
-      label: 'VAT',
-      oldValue: formatVatLabel(row.source_vat),
-      newValue: formatVatLabel(row.vat),
-    });
-  }
-
-  if ((row.source_ad_status ?? 'none') !== (row.ad_status ?? 'none')) {
-    changes.push({
-      label: 'Paid',
-      oldValue: row.source_ad_status || 'none',
-      newValue: row.ad_status || 'none',
-    });
-  }
-
-  if ((row.source_kaparo ?? 0) !== (row.kaparo ?? 0)) {
-    changes.push({
-      label: 'К',
-      oldValue: row.source_kaparo === 1 ? 'К' : '—',
-      newValue: row.kaparo === 1 ? 'К' : '—',
-    });
-  }
-
-  return changes;
-}
-
-function toBatchRow(row: EditOwnSyncRow): BatchRow {
-  return {
-    ...row,
-    runStatus: row.last_mobile_sync_status ?? (row.needs_sync === 1 ? 'pending' : null),
-    runError: row.last_mobile_sync_error,
-    completedAt: row.last_mobile_sync_at,
-  };
-}
-
-function SyncBadge({ status, error }: { status: string | null; error: string | null }) {
-  if (status === 'running') {
-    return <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-200">running</span>;
-  }
-  if (status === 'success') {
-    return <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-200">success</span>;
-  }
-  if (status === 'failed') {
-    return (
-      <span
-        className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-200"
-        title={error || 'Sync failed'}
-      >
-        failed
-      </span>
-    );
-  }
-  if (status === 'pending') {
-    return <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] text-blue-200">pending</span>;
-  }
-  return <span className="rounded-full bg-gray-700 px-2 py-0.5 text-[11px] text-gray-400">idle</span>;
-}
-
-function labelForRow(row: { make: string | null; model: string | null; title: string | null; mobile_id: string | null; backup_id: number }) {
-  return [row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`;
-}
-
-function isEditOwnSyncRow(data: EditOwnSyncRow | { error?: string } | null): data is EditOwnSyncRow {
-  return Boolean(data && typeof data === 'object' && 'backup_id' in data);
 }
 
 export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDealers }: Props) {
@@ -719,28 +547,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       </div>
 
       {logs.length > 0 && (
-        <div
-          ref={logRef}
-          className="rounded-lg border border-gray-700 bg-gray-900 p-3 space-y-1 max-h-[420px] overflow-y-auto"
-        >
-          {logs.map((entry, index) => (
-            <div
-              key={`${index}-${entry.message}`}
-              className={
-                entry.kind === 'error'
-                  ? 'text-xs py-0.5 font-mono text-red-400'
-                  : entry.kind === 'result'
-                  ? `text-xs py-0.5 font-mono ${entry.ok ? 'text-emerald-300' : 'text-red-300'}`
-                  : entry.kind === 'status'
-                  ? 'text-xs py-0.5 font-mono text-sky-300'
-                  : 'text-xs py-0.5 font-mono text-gray-400'
-              }
-            >
-              {entry.kind === 'error' ? '❌ ' : entry.kind === 'result' ? (entry.ok ? '✓ ' : '✕ ') : ''}
-              {entry.message}
-            </div>
-          ))}
-        </div>
+        <LogPanel entries={logs} panelRef={logRef} />
       )}
 
       {ownDealers.length > 0 && (
@@ -834,28 +641,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
           )}
 
           {renewLogs.length > 0 && (
-            <div
-              ref={renewLogRef}
-              className="rounded-lg border border-gray-700 bg-gray-900 p-3 space-y-1 max-h-[420px] overflow-y-auto"
-            >
-              {renewLogs.map((entry, index) => (
-                <div
-                  key={`renew-${index}-${entry.message}`}
-                  className={
-                    entry.kind === 'error'
-                      ? 'text-xs py-0.5 font-mono text-red-400'
-                      : entry.kind === 'result'
-                      ? `text-xs py-0.5 font-mono ${entry.ok ? 'text-emerald-300' : 'text-red-300'}`
-                      : entry.kind === 'status'
-                      ? 'text-xs py-0.5 font-mono text-sky-300'
-                      : 'text-xs py-0.5 font-mono text-gray-400'
-                  }
-                >
-                  {entry.kind === 'error' ? '❌ ' : entry.kind === 'result' ? (entry.ok ? '✓ ' : '✕ ') : ''}
-                  {entry.message}
-                </div>
-              ))}
-            </div>
+            <LogPanel entries={renewLogs} panelRef={renewLogRef} keyPrefix="renew" />
           )}
         </div>
       )}
