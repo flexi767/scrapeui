@@ -1,0 +1,24 @@
+.page { font-family: -apple-system, sans-serif; background: #faf7f2; min-height: 100vh; }
+.header { background: #faf7f2; border-bottom: 1px solid #e8dfd0; padding: 0 2.5rem; height: 68px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logoWrap { display: flex; align-items: center; gap: 0.6rem; }
+.logoIcon { width: 34px; height: 34px; background: #e07843; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.logoName { font-size: 1.2rem; font-weight: 800; }
+.logoAccent { color: #e07843; }
+.back { color: #e07843; text-decoration: none; font-size: 0.85rem; font-weight: 700; border: 1.5px solid #e07843; padding: 0.4rem 1rem; border-radius: 8px; }
+.main { max-width: 1000px; margin: 2.5rem auto; padding: 0 2.5rem; display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start; }
+.imageWrap { border-radius: 16px; overflow: hidden; background: #ede5d8; aspect-ratio: 4/3; }
+.imageWrap img { width: 100%; height: 100%; object-fit: cover; }
+.imagePlaceholder { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #c9b9a8; background: #ede5d8; border-radius: 16px; }
+.panel { background: #fff; border: 1px solid #ede5d8; border-radius: 16px; padding: 1.8rem; }
+.carMake { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: #a09080; margin-bottom: 0.3rem; }
+.carTitle { font-size: 1.6rem; font-weight: 800; color: #2c2416; margin-bottom: 0.3rem; }
+.carSub { font-size: 0.82rem; color: #a09080; margin-bottom: 1.5rem; }
+.price { font-size: 2rem; font-weight: 800; color: #2c2416; margin-bottom: 1.5rem; padding-top: 1.2rem; border-top: 1px solid #e8dfd0; }
+.specs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+.specItem { background: #faf5ee; border: 1px solid #ede5d8; border-radius: 10px; padding: 0.7rem; }
+.specLbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #a09080; margin-bottom: 0.2rem; }
+.specVal { font-size: 0.9rem; font-weight: 700; color: #2c2416; }
+.cta { width: 100%; background: #e07843; color: #fff; border: none; padding: 0.9rem; border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; }
+.description { background: #fff; border: 1px solid #ede5d8; border-radius: 16px; padding: 1.5rem; margin-top: 1.5rem; line-height: 1.7; font-size: 0.9rem; color: #5a4a38; }
+.footer { background: #2c2416; color: rgba(255,255,255,0.4); padding: 2rem; text-align: center; font-size: 0.8rem; margin-top: 3rem; }
+.footerAccent { color: #e07843; font-weight: 700; }

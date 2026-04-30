@@ -1,0 +1,41 @@
+.page { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
+.header { background: rgba(10,10,10,0.95); border-bottom: 1px solid rgba(201,168,76,0.3); padding: 0 2.5rem; height: 70px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logoWrap { display: flex; align-items: center; gap: 0.8rem; }
+.logoMark { width: 36px; height: 36px; background: #c9a84c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; color: #000; }
+.logoText { font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #e8e8e8; }
+.logoAccent { color: #c9a84c; }
+.sortSelect { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: #c9a84c; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+.sortSelect option { background: #111; }
+.hero { min-height: 360px; background: linear-gradient(135deg, #0a0a0a 0%, #1a1208 50%, #0a0a0a 100%); display: flex; align-items: flex-end; padding: 2.5rem; }
+.heroContent { max-width: 1100px; margin: 0 auto; width: 100%; }
+.heroEyebrow { font-size: 0.68rem; letter-spacing: 4px; text-transform: uppercase; color: #c9a84c; margin-bottom: 0.8rem; }
+.heroTitle { font-size: 2.8rem; font-weight: 400; color: #fff; font-family: Georgia, serif; }
+.heroTitleEm { font-style: italic; color: #c9a84c; }
+.body { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+.sectionLabel { font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase; color: #c9a84c; margin-bottom: 0.5rem; }
+.sectionTitle { font-size: 1.4rem; font-weight: 400; color: #fff; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 1rem; font-family: Georgia, serif; }
+.sectionCount { font-size: 0.82rem; color: rgba(255,255,255,0.3); font-family: sans-serif; font-weight: 400; margin-left: 1rem; }
+.list { display: flex; flex-direction: column; gap: 1px; background: rgba(255,255,255,0.05); }
+.card { background: #0f0f0f; display: grid; grid-template-columns: 260px 1fr auto; align-items: stretch; text-decoration: none; color: inherit; transition: background 0.2s; }
+.card:hover { background: #141414; }
+.cardImg { height: 170px; overflow: hidden; }
+.cardImg img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); transition: filter 0.3s; }
+.cardImgPlaceholder { width: 100%; height: 100%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #333; }
+.card:hover .cardImg img { filter: brightness(1); }
+.cardBody { padding: 1.5rem 2rem; display: flex; flex-direction: column; justify-content: center; }
+.carName { font-size: 1.2rem; font-weight: 400; color: #fff; margin-bottom: 0.3rem; font-family: Georgia, serif; }
+.carVariant { font-size: 0.78rem; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 1rem; }
+.specs { display: flex; gap: 1.5rem; }
+.specVal { font-size: 0.88rem; color: #e8e8e8; font-weight: 500; }
+.specLbl { font-size: 0.65rem; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; }
+.cardCta { padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 0.8rem; min-width: 160px; border-left: 1px solid rgba(255,255,255,0.05); }
+.price { font-size: 1.4rem; font-family: Georgia, serif; color: #fff; white-space: nowrap; }
+.priceLabel { font-size: 0.65rem; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; display: block; }
+.viewBtn { background: transparent; border: 1px solid rgba(201,168,76,0.5); color: #c9a84c; padding: 0.55rem 1.2rem; font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.viewBtn:hover { background: #c9a84c; color: #000; }
+.pagination { display: flex; justify-content: center; gap: 0.4rem; margin: 2rem 0; }
+.pageBtn { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: #c9a84c; padding: 0.45rem 0.9rem; font-size: 0.8rem; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+.pageBtnActive { background: #c9a84c; color: #000; border-color: #c9a84c; }
+.footer { border-top: 1px solid rgba(201,168,76,0.2); padding: 2.5rem; text-align: center; margin-top: 4rem; }
+.footLogo { font-size: 0.9rem; letter-spacing: 5px; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+.footLogoAccent { color: #c9a84c; }

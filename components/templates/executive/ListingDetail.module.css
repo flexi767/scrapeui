@@ -1,0 +1,24 @@
+.page { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
+.header { background: rgba(10,10,10,0.95); border-bottom: 1px solid rgba(201,168,76,0.3); padding: 0 2.5rem; height: 70px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logoWrap { display: flex; align-items: center; gap: 0.8rem; }
+.logoMark { width: 36px; height: 36px; background: #c9a84c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; color: #000; }
+.logoText { font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; }
+.logoAccent { color: #c9a84c; }
+.back { color: #c9a84c; text-decoration: none; font-size: 0.78rem; letter-spacing: 2px; text-transform: uppercase; border: 1px solid rgba(201,168,76,0.3); padding: 0.4rem 0.9rem; }
+.main { max-width: 1000px; margin: 2.5rem auto; padding: 0 2rem; display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start; }
+.imageWrap { border-radius: 4px; overflow: hidden; background: #1a1a1a; aspect-ratio: 4/3; }
+.imageWrap img { width: 100%; height: 100%; object-fit: cover; }
+.imagePlaceholder { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #333; background: #1a1a1a; }
+.panel { background: #0f0f0f; border: 1px solid rgba(201,168,76,0.15); padding: 1.8rem; }
+.carMake { font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase; color: #c9a84c; margin-bottom: 0.5rem; }
+.carTitle { font-size: 1.6rem; font-weight: 400; color: #fff; font-family: Georgia, serif; margin-bottom: 0.3rem; }
+.carSub { font-size: 0.78rem; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 1.5rem; }
+.price { font-size: 2rem; font-weight: 400; color: #fff; font-family: Georgia, serif; margin-bottom: 1.5rem; padding-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.07); }
+.specs { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.specItem { }
+.specLbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); margin-bottom: 0.2rem; }
+.specVal { font-size: 0.9rem; color: #e8e8e8; }
+.cta { width: 100%; background: #c9a84c; color: #000; border: none; padding: 0.9rem; font-size: 0.78rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; cursor: pointer; }
+.description { background: #0f0f0f; border: 1px solid rgba(255,255,255,0.07); padding: 1.5rem; margin-top: 1.5rem; line-height: 1.7; font-size: 0.88rem; color: rgba(255,255,255,0.5); }
+.footer { border-top: 1px solid rgba(201,168,76,0.2); padding: 2rem; text-align: center; margin-top: 4rem; font-size: 0.75rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.2); }
+.footAccent { color: #c9a84c; }
