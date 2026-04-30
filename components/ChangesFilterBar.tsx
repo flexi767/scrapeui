@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 
 interface Props {
   makes: string[];
@@ -27,10 +28,6 @@ export default function ChangesFilterBar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [dealerOpen, setDealerOpen] = useState(false);
-  const [fieldOpen, setFieldOpen] = useState(false);
-  const dealerRef = useRef<HTMLDivElement>(null);
-  const fieldRef = useRef<HTMLDivElement>(null);
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
@@ -44,15 +41,6 @@ export default function ChangesFilterBar({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, []);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dealerRef.current && !dealerRef.current.contains(e.target as Node)) setDealerOpen(false);
-      if (fieldRef.current && !fieldRef.current.contains(e.target as Node)) setFieldOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
@@ -140,96 +128,45 @@ export default function ChangesFilterBar({
         ))}
       </select>
 
-      <div className="relative" ref={dealerRef}>
-        <button
-          onClick={() => setDealerOpen((open) => !open)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentDealers.length > 0
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentDealers.length === 0
+      <MultiSelectDropdown
+        buttonText={
+          currentDealers.length === 0
             ? 'Dealers'
             : currentDealers.length === 1
             ? allDealers.find((dealer) => dealer.slug === currentDealers[0])?.name ?? currentDealers[0]
-            : `${currentDealers.length} dealers`}
-          <span className="text-gray-400">{dealerOpen ? '▲' : '▼'}</span>
-        </button>
-        {dealerOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {allDealers.map((dealer) => (
-              <label key={dealer.slug} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input
-                  type="checkbox"
-                  checked={currentDealers.includes(dealer.slug)}
-                  onChange={() => onDealerToggle(dealer.slug)}
-                  className="accent-blue-500"
-                />
-                <span>{dealer.name}</span>
-                {Boolean(dealer.own) && <span className="ml-auto rounded-full bg-emerald-700 px-1.5 text-[10px] text-emerald-100">own</span>}
-              </label>
-            ))}
-            {currentDealers.length > 0 && (
-              <button
-                onClick={() => {
-                  router.push(`${basePath}?${buildParams({ dealer: [] })}`);
-                  setDealerOpen(false);
-                }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white"
-              >
-                Clear dealers
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+            : `${currentDealers.length} dealers`
+        }
+        clearLabel="Clear dealers"
+        options={allDealers.map((dealer) => ({
+          value: dealer.slug,
+          label: dealer.name,
+          badge: dealer.own ? 'own' : undefined,
+        }))}
+        selectedValues={currentDealers}
+        onToggle={onDealerToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ dealer: [] })}`)}
+        minWidthClassName="min-w-[180px]"
+      />
 
-      <div className="relative" ref={fieldRef}>
-        <button
-          onClick={() => setFieldOpen((open) => !open)}
-          className={`flex h-8 items-center gap-1.5 rounded border px-3 text-sm text-white transition-colors ${
-            currentFieldsFromUrl.length > 0
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-          }`}
-        >
-          {currentFieldsFromUrl.length === 0
+      <MultiSelectDropdown
+        buttonText={
+          currentFieldsFromUrl.length === 0
             ? 'Fields'
             : currentFields.length === fieldOptions.length
             ? 'Fields'
             : currentFields.length === 1
             ? fieldOptions.find((field) => field.value === currentFields[0])?.label ?? currentFields[0]
-            : `Fields (${currentFields.length})`}
-          <span className="text-gray-400">{fieldOpen ? '▲' : '▼'}</span>
-        </button>
-        {fieldOpen && (
-          <div className="absolute left-0 top-9 z-30 min-w-[180px] rounded border border-gray-600 bg-gray-800 py-1 shadow-lg">
-            {fieldOptions.map((field) => (
-              <label key={field.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
-                <input
-                  type="checkbox"
-                  checked={currentFields.includes(field.value)}
-                  onChange={() => onFieldToggle(field.value)}
-                  className="accent-blue-500"
-                />
-                <span>{field.label}</span>
-              </label>
-            ))}
-            {(currentFieldsFromUrl.length > 0 || currentFields.length !== defaultFieldValues.length) && (
-              <button
-                onClick={() => {
-                  router.push(`${basePath}?${buildParams({ field: [] })}`);
-                  setFieldOpen(false);
-                }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-white"
-              >
-                Reset fields
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+            : `Fields (${currentFields.length})`
+        }
+        clearLabel="Reset fields"
+        options={fieldOptions}
+        selectedValues={currentFields}
+        onToggle={onFieldToggle}
+        onClear={() => router.push(`${basePath}?${buildParams({ field: [] })}`)}
+        active={currentFieldsFromUrl.length > 0}
+        showClear={currentFieldsFromUrl.length > 0 || currentFields.length !== defaultFieldValues.length}
+        minWidthClassName="min-w-[180px]"
+      />
 
       <select
         value={currentWhen}

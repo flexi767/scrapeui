@@ -15,6 +15,8 @@ interface MultiSelectDropdownProps {
   selectedValues: string[];
   onToggle: (value: string) => void;
   onClear: () => void;
+  active?: boolean;
+  showClear?: boolean;
   minWidthClassName?: string;
 }
 
@@ -25,11 +27,14 @@ export default function MultiSelectDropdown({
   selectedValues,
   onToggle,
   onClear,
+  active: activeOverride,
+  showClear,
   minWidthClassName = 'min-w-[160px]',
 }: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const active = selectedValues.length > 0;
+  const active = activeOverride ?? selectedValues.length > 0;
+  const canClear = showClear ?? selectedValues.length > 0;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -79,7 +84,7 @@ export default function MultiSelectDropdown({
               )}
             </label>
           ))}
-          {active && (
+          {canClear && (
             <button
               type="button"
               onClick={clearSelection}
