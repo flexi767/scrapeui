@@ -22,8 +22,8 @@ export const dealers = sqliteTable("dealers", {
   carsPassword: text("cars_password"),
   createdAt: text("created_at"),
   publicDomain: text("public_domain"),
-  template: text("template").default("bold"),
-  publicEnabled: integer("public_enabled").default(0),
+  template: text("template").notNull().default("bold"),
+  publicEnabled: integer("public_enabled").notNull().default(0),
 });
 
 export const listings = sqliteTable("listings", {
