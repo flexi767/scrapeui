@@ -11,6 +11,9 @@ function cachedDealerSlug(host: string): string | null {
   if (cache.has(host) && (cacheExpiry.get(host) ?? 0) > now) {
     return cache.get(host) ?? null;
   }
+  // Clean up expired entry before querying DB
+  cache.delete(host);
+  cacheExpiry.delete(host);
   const dealer = getDealerByDomain(host);
   const slug = dealer?.slug ?? null;
   cache.set(host, slug);
