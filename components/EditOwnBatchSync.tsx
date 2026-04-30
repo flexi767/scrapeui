@@ -15,6 +15,7 @@ import {
 import { ChangedListingsTable } from './edit-own-batch-sync/ChangedListingsTable';
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { RecentResults } from './edit-own-batch-sync/RecentResults';
+import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
 import {
   labelForRow,
   toBatchRow,
@@ -417,101 +418,22 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
         <LogPanel entries={logs} panelRef={logRef} />
       )}
 
-      {ownDealers.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-          <div className="flex flex-wrap items-center gap-3">
-            {renewStats && (
-              <>
-                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-                  <span className="uppercase tracking-wide text-gray-500">Total</span>
-                  <span className="ml-2 text-lg font-semibold text-white">{renewStats.total}</span>
-                </div>
-                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-                  <span className="uppercase tracking-wide text-gray-500">Success</span>
-                  <span className="ml-2 text-lg font-semibold text-emerald-400">{renewStats.succeeded}</span>
-                </div>
-                <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-                  <span className="uppercase tracking-wide text-gray-500">Failed</span>
-                  <span className="ml-2 text-lg font-semibold text-red-400">{renewStats.failed}</span>
-                </div>
-              </>
-            )}
-            <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
-              <span className="uppercase tracking-wide text-gray-500">Mode</span>
-              <span className="ml-2 text-sm font-medium text-gray-100">{renewRunning ? 'Running' : 'Idle'}</span>
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
-              <span>Dealers</span>
-              <span className="text-xs text-gray-500">({renewDealers.length} selected)</span>
-              <button
-                type="button"
-                onClick={() => setRenewDealers(renewDealers.length === ownDealers.length ? [] : ownDealers.map((d) => d.slug))}
-                disabled={renewRunning}
-                className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:text-gray-600"
-              >
-                {renewDealers.length === ownDealers.length ? 'Deselect all' : 'Select all'}
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {ownDealers.map((d) => (
-                <label key={d.slug} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={renewDealers.includes(d.slug)}
-                    onChange={() => setRenewDealers((prev) => prev.includes(d.slug) ? prev.filter((s) => s !== d.slug) : [...prev, d.slug])}
-                    disabled={renewRunning}
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
-                  />
-                  <span className="text-sm text-gray-200">{d.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={renewRunning ? stopRenewReset : () => void runRenewReset()}
-              disabled={renewStopping || (!renewRunning && renewDealers.length === 0) || running}
-              className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
-                renewRunning ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
-              }`}
-            >
-              {(renewRunning || renewStopping) && (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
-              {renewStopping ? 'Stopping…' : renewRunning ? 'Stop' : renewOnlyReset ? 'Reset views' : 'Renew & Reset'}
-            </button>
-
-            <div
-              onClick={() => !renewRunning && setRenewOnlyReset((v) => !v)}
-              className={`flex items-center gap-3 ${renewRunning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-            >
-              <div
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${renewOnlyReset ? 'bg-blue-600' : 'bg-gray-600'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${renewOnlyReset ? 'translate-x-6' : 'translate-x-1'}`} />
-              </div>
-              <span className="text-sm font-medium text-gray-200">Only reset views</span>
-            </div>
-          </div>
-
-          {renewDone && (
-            <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-              Done — {renewOnlyReset ? 'reset' : 'renewed'} {renewDone.succeeded}, failed {renewDone.failed}
-            </div>
-          )}
-
-          {renewLogs.length > 0 && (
-            <LogPanel entries={renewLogs} panelRef={renewLogRef} keyPrefix="renew" />
-          )}
-        </div>
-      )}
+      <RenewResetPanel
+        ownDealers={ownDealers}
+        renewDealers={renewDealers}
+        renewOnlyReset={renewOnlyReset}
+        renewRunning={renewRunning}
+        renewStopping={renewStopping}
+        renewStats={renewStats}
+        renewDone={renewDone}
+        renewLogs={renewLogs}
+        running={running}
+        renewLogRef={renewLogRef}
+        onToggleDealer={(slug) => setRenewDealers((prev) => prev.includes(slug) ? prev.filter((entry) => entry !== slug) : [...prev, slug])}
+        onToggleAllDealers={() => setRenewDealers(renewDealers.length === ownDealers.length ? [] : ownDealers.map((dealer) => dealer.slug))}
+        onToggleOnlyReset={() => setRenewOnlyReset((value) => !value)}
+        onRunOrStop={renewRunning ? stopRenewReset : () => void runRenewReset()}
+      />
     </div>
   );
 }
