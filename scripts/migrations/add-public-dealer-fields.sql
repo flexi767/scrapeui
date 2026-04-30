@@ -1,0 +1,3 @@
+ALTER TABLE dealers ADD COLUMN public_domain TEXT;
+ALTER TABLE dealers ADD COLUMN template TEXT NOT NULL DEFAULT 'bold';
+ALTER TABLE dealers ADD COLUMN public_enabled INTEGER NOT NULL DEFAULT 0;
