@@ -14,6 +14,14 @@ import {
   SyncStateButton,
   stopEditorPointerPropagation,
 } from "@/components/own-listings/TableControls";
+import {
+  buildOwnListingPatchBody,
+  EMPTY_OWN_LISTING_EDIT_FORM,
+  getEditFormFromOwnListing,
+  getOwnListingRowKey,
+  getOwnListingSaveEndpoint,
+  type OwnListingEditForm,
+} from "@/components/own-listings/editing";
 import { formatDateOnly } from "@/lib/date-format";
 import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
@@ -31,21 +39,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
   const [publishingToFbIds, setPublishingToFbIds] = useState<Record<number, boolean>>({});
-  const [editForm, setEditForm] = useState<{
-    title: string;
-    carsbg_title: string;
-    current_price: number;
-    vat: string;
-    kaparo: number;
-    ad_status: string;
-  }>({
-    title: "",
-    carsbg_title: "",
-    current_price: 0,
-    vat: "",
-    kaparo: 0,
-    ad_status: "none",
-  });
+  const [editForm, setEditForm] = useState<OwnListingEditForm>(EMPTY_OWN_LISTING_EDIT_FORM);
   const [saving, setSaving] = useState(false);
   const tableKey = searchParams.toString();
   const priceSaveTimeoutRef = useRef<number | null>(null);
@@ -57,22 +51,11 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
-  function getRowKey(row: OwnListingRow): string {
-    return row.mobile_id ? `mobile-${row.mobile_id}` : `backup-${row.backup_id}`;
-  }
-
   function startEdit(row: OwnListingRow) {
     if (saving) return;
     clearPriceSaveTimeout();
-    setEditForm({
-      title: row.title ?? "",
-      carsbg_title: row.carsbg_title ?? "",
-      current_price: row.current_price ?? 0,
-      vat: row.vat ?? "",
-      kaparo: row.kaparo ?? 0,
-      ad_status: row.ad_status ?? "none",
-    });
-    setEditingKey(getRowKey(row));
+    setEditForm(getEditFormFromOwnListing(row));
+    setEditingKey(getOwnListingRowKey(row));
   }
 
   async function handleSave(options?: {
@@ -89,29 +72,17 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
     setSaving(true);
     try {
-      const editingRow = rows.find((row) => getRowKey(row) === editingKey);
+      const editingRow = rows.find((row) => getOwnListingRowKey(row) === editingKey);
       if (!editingRow) {
         toast.error("No listing is currently being edited.");
         return;
       }
 
-      const res = await fetch(
-        editingRow.mobile_id
-          ? `/api/listings/${editingRow.mobile_id}`
-          : `/api/editown/backups/${editingRow.backup_id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formToSave.title,
-            carsbg_title: formToSave.carsbg_title,
-            current_price: formToSave.current_price,
-            vat: formToSave.vat,
-            kaparo: formToSave.kaparo,
-            ad_status: formToSave.ad_status,
-          }),
-        },
-      );
+      const res = await fetch(getOwnListingSaveEndpoint(editingRow), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildOwnListingPatchBody(formToSave)),
+      });
       if (res.ok) {
         if (editingRow.mobile_id) {
           const updated: OwnListingRow = await res.json();
@@ -317,7 +288,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
             </tr>
           )}
           {rows.map((row) => {
-            const rowKey = getRowKey(row);
+            const rowKey = getOwnListingRowKey(row);
             const editing = editingKey === rowKey;
 
             const thumbSrc = getListingThumbSrc(row);
