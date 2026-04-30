@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { Region, City } from "@/lib/mobile-bg/regions";
-import { BackupImageManager } from "@/components/new-listing-form/BackupImageManager";
 import { DraftDeleteDialog } from "@/components/new-listing-form/DraftDeleteDialog";
+import { SavedDraftView } from "@/components/new-listing-form/SavedDraftView";
 import {
   AutocompleteInput,
   CheckboxField,
@@ -15,7 +14,6 @@ import {
   FieldLabel,
   FormSection,
   InputField,
-  SavedListingSummary,
   SelectField,
   getSelectedOptionCount,
   normalizeAutocompleteValue,
@@ -411,31 +409,13 @@ export default function NewListingForm({
   if (saved) {
     const backupId = savedBackupId ?? selectedBackupId;
     return (
-      <div className="space-y-5 pb-8">
-        <SavedListingSummary
-          form={form}
-          mode={savedMode}
-          onEditDetails={() => setSaved(false)}
-          onNewListing={resetForm}
-        />
-        {backupId ? (
-          <>
-            <BackupImageManager backupId={backupId} />
-            <div className="flex items-center gap-4 text-sm">
-              <Link
-                href={`/mobilebg/backups/${backupId}`}
-                className="text-sky-300 underline hover:text-sky-200"
-              >
-                Отвори черновата
-              </Link>
-            </div>
-          </>
-        ) : (
-          <div className="rounded-xl border border-red-800/60 bg-red-950/30 p-4 text-sm text-red-300">
-            Черновата е запазена, но липсва backup ID за зареждане на снимки.
-          </div>
-        )}
-      </div>
+      <SavedDraftView
+        form={form}
+        mode={savedMode}
+        backupId={backupId}
+        onEditDetails={() => setSaved(false)}
+        onNewListing={resetForm}
+      />
     );
   }
 
