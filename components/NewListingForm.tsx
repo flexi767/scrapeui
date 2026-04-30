@@ -25,6 +25,7 @@ import { DescriptionContactSection } from "@/components/new-listing-form/Descrip
 import { ExtrasSection } from "@/components/new-listing-form/ExtrasSection";
 import { LocationSection } from "@/components/new-listing-form/LocationSection";
 import { PricingSection } from "@/components/new-listing-form/PricingSection";
+import { SubmitActions } from "@/components/new-listing-form/SubmitActions";
 import { VehicleDetailsSection } from "@/components/new-listing-form/VehicleDetailsSection";
 interface Props {
   makes: MakeEntry[];
@@ -469,34 +470,13 @@ export default function NewListingForm({
       <DescriptionContactSection form={form} setField={setField} />
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={saveExistingListing}
-          disabled={saving}
-          className="rounded-full bg-sky-500 px-6 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saving
-            ? "Запазване..."
-            : selectedBackupId
-              ? "Запази промените"
-              : "Запази обявата"}
-        </button>
-        {selectedBackupId ? (
-          <button
-            onClick={saveNewDraft}
-            disabled={saving}
-            className="rounded-full border border-sky-500/60 px-6 py-2.5 text-sm font-semibold text-sky-200 transition hover:border-sky-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Запази нова обява
-          </button>
-        ) : null}
-        <button
-          onClick={resetForm}
-          className="text-sm text-gray-400 hover:text-white"
-        >
-          Изчисти
-        </button>
-      </div>
+      <SubmitActions
+        saving={saving}
+        selectedBackupId={selectedBackupId}
+        onSave={() => void saveExistingListing()}
+        onSaveNew={() => void saveNewDraft()}
+        onReset={resetForm}
+      />
     </div>
   );
 }
