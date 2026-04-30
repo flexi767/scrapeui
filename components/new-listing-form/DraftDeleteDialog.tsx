@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { DealerListingSummary } from "@/components/new-listing-form/ui";
+import type { DealerListingSummary } from "@/components/new-listing-form/dealer-picker";
 
 export function DraftDeleteDialog({
   candidate,

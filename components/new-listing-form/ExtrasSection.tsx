@@ -1,4 +1,5 @@
-import { ExtrasColumn, FormSection } from "@/components/new-listing-form/ui";
+import { ExtrasColumn } from "@/components/new-listing-form/extras-column";
+import { FormSection } from "@/components/new-listing-form/fields";
 import { EXTRA_SECTIONS, type FormState } from "@/components/new-listing-form/constants";
 
 export function ExtrasSection({

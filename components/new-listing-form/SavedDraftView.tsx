@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BackupImageManager } from "@/components/new-listing-form/BackupImageManager";
-import { SavedListingSummary } from "@/components/new-listing-form/ui";
+import { SavedListingSummary } from "@/components/new-listing-form/SavedListingSummary";
 import type { FormState } from "@/components/new-listing-form/constants";
 
 export function SavedDraftView({

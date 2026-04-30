@@ -1,4 +1,8 @@
-import { FieldLabel, FormSection, InputField } from "@/components/new-listing-form/ui";
+import {
+  FieldLabel,
+  FormSection,
+  InputField,
+} from "@/components/new-listing-form/fields";
 import type { FormState } from "@/components/new-listing-form/constants";
 
 type SetFormField = <K extends keyof FormState>(

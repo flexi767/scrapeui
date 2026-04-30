@@ -13,8 +13,8 @@ import {
   getSelectedOptionCount,
   normalizeAutocompleteValue,
   sortMakeOptions,
-  type DealerListingSummary,
-} from "@/components/new-listing-form/ui";
+} from "@/components/new-listing-form/autocomplete";
+import type { DealerListingSummary } from "@/components/new-listing-form/dealer-picker";
 import {
   BATTERY_FUELS,
   EMPTY,

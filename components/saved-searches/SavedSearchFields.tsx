@@ -5,7 +5,7 @@ import {
   getSelectedOptionCount,
   normalizeAutocompleteValue,
   sortMakeOptions,
-} from "@/components/new-listing-form/ui";
+} from "@/components/new-listing-form/autocomplete";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {

@@ -1,9 +1,9 @@
 import {
   DealerListingPicker,
   DealerSelector,
-  FormSection,
   type DealerListingSummary,
-} from "@/components/new-listing-form/ui";
+} from "@/components/new-listing-form/dealer-picker";
+import { FormSection } from "@/components/new-listing-form/fields";
 
 export interface DealerOption {
   id: number;

@@ -1,5 +1,9 @@
 import type { City, Region } from "@/lib/mobile-bg/regions";
-import { FormSection, InputField, SelectField } from "@/components/new-listing-form/ui";
+import {
+  FormSection,
+  InputField,
+  SelectField,
+} from "@/components/new-listing-form/fields";
 import { COLOR_OPTIONS, type FormState } from "@/components/new-listing-form/constants";
 
 type SetFormField = <K extends keyof FormState>(

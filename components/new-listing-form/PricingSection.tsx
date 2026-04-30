@@ -1,4 +1,9 @@
-import { CheckboxField, FormSection, InputField, SelectField } from "@/components/new-listing-form/ui";
+import {
+  CheckboxField,
+  FormSection,
+  InputField,
+  SelectField,
+} from "@/components/new-listing-form/fields";
 import {
   CURRENCY_OPTIONS,
   MONTH_OPTIONS,

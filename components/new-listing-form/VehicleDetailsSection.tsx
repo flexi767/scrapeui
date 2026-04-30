@@ -1,12 +1,14 @@
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import {
   AutocompleteInput,
+  type AutocompleteOption,
+} from "@/components/new-listing-form/autocomplete";
+import {
   FieldLabel,
   FormSection,
   InputField,
   SelectField,
-  type AutocompleteOption,
-} from "@/components/new-listing-form/ui";
+} from "@/components/new-listing-form/fields";
 import {
   BODY_TYPE_OPTIONS,
   CONDITION_OPTIONS,
