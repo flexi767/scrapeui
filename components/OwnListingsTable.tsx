@@ -9,17 +9,20 @@ import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
 import {
+  launchFacebookMarketplaceDraft,
+  saveOwnListingEdit,
+  syncOwnListingToMobileBg,
+} from "@/components/own-listings/api";
+import {
   FbIcon,
   SortHeader,
   SyncStateButton,
   stopEditorPointerPropagation,
 } from "@/components/own-listings/TableControls";
 import {
-  buildOwnListingPatchBody,
   EMPTY_OWN_LISTING_EDIT_FORM,
   getEditFormFromOwnListing,
   getOwnListingRowKey,
-  getOwnListingSaveEndpoint,
   type OwnListingEditForm,
 } from "@/components/own-listings/editing";
 import { formatDateOnly } from "@/lib/date-format";
@@ -78,38 +81,31 @@ export default function OwnListingsTable({ initialRows }: Props) {
         return;
       }
 
-      const res = await fetch(getOwnListingSaveEndpoint(editingRow), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOwnListingPatchBody(formToSave)),
-      });
-      if (res.ok) {
-        if (editingRow.mobile_id) {
-          const updated: OwnListingRow = await res.json();
-          setRows((prev) =>
-            prev.map((r) => (r.mobile_id === updated.mobile_id ? updated : r)),
-          );
-        } else {
-          const updated = await res.json() as Partial<OwnListingRow>;
-          setRows((prev) =>
-            prev.map((row) =>
-              row.backup_id === editingRow.backup_id
-                ? {
-                    ...row,
-                    ...updated,
-                    carsbg_title: formToSave.carsbg_title,
-                  }
-                : row,
-            ),
-          );
-        }
-        if (options?.closeAfterSave) {
-          setEditingKey(null);
-        }
+      const data = await saveOwnListingEdit(editingRow, formToSave);
+      if (editingRow.mobile_id) {
+        const updated = data as OwnListingRow;
+        setRows((prev) =>
+          prev.map((r) => (r.mobile_id === updated.mobile_id ? updated : r)),
+        );
       } else {
-        const data = await res.json();
-        toast.error(data.error ?? "Save failed");
+        const updated = data as Partial<OwnListingRow>;
+        setRows((prev) =>
+          prev.map((row) =>
+            row.backup_id === editingRow.backup_id
+              ? {
+                  ...row,
+                  ...updated,
+                  carsbg_title: formToSave.carsbg_title,
+                }
+              : row,
+          ),
+        );
       }
+      if (options?.closeAfterSave) {
+        setEditingKey(null);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Save failed");
     } finally {
       setSaving(false);
     }
@@ -142,32 +138,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
     );
     setSyncingIds((prev) => ({ ...prev, [row.backup_id]: true }));
     try {
-      const res = await fetch("/api/mobilebg/updates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dealerSlug: row.dealer_slug,
-          backupId: row.backup_id,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const message = data.error || "Sync failed";
-        setRows((prev) =>
-          prev.map((item) =>
-            item.backup_id === row.backup_id
-              ? {
-                  ...item,
-                  last_mobile_sync_status: "failed",
-                  last_mobile_sync_error: message,
-                }
-              : item,
-          ),
-        );
-        toast.error(message);
-        return;
-      }
-
+      await syncOwnListingToMobileBg(row);
       setRows((prev) =>
         prev.map((item) =>
           item.backup_id === row.backup_id
@@ -205,19 +176,8 @@ export default function OwnListingsTable({ initialRows }: Props) {
   async function handlePublishToFB(row: OwnListingRow) {
     setPublishingToFbIds((prev) => ({ ...prev, [row.backup_id]: true }));
     try {
-      const res = await fetch("/api/facebook-marketplace", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ backupId: row.backup_id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? "Failed to launch Facebook Marketplace");
-      } else {
-        toast.success(
-          data.message ?? "Facebook Marketplace browser launched",
-        );
-      }
+      const message = await launchFacebookMarketplaceDraft(row);
+      toast.success(message);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to launch",
