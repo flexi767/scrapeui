@@ -2,17 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { Region, City } from "@/lib/mobile-bg/regions";
 import { BackupImageManager } from "@/components/new-listing-form/BackupImageManager";
+import { DraftDeleteDialog } from "@/components/new-listing-form/DraftDeleteDialog";
 import {
   AutocompleteInput,
   CheckboxField,
@@ -448,53 +441,17 @@ export default function NewListingForm({
 
   return (
     <div className="space-y-6 pb-8">
-      <Dialog
-        open={Boolean(draftDeleteCandidate)}
+      <DraftDeleteDialog
+        candidate={draftDeleteCandidate}
+        deletingBackupId={deletingBackupId}
         onOpenChange={(open) => {
           if (!open && deletingBackupId == null) {
             setDraftDeleteCandidateId(null);
           }
         }}
-      >
-        <DialogContent className="border border-gray-700 bg-gray-900 text-gray-100">
-          <DialogHeader>
-            <DialogTitle>Изтрий черновата?</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Това ще премахне черновата за{" "}
-              <span className="font-medium text-gray-200">
-                {draftDeleteCandidate
-                  ? [draftDeleteCandidate.make, draftDeleteCandidate.model]
-                      .filter(Boolean)
-                      .join(" ") || "тази обява"
-                  : "тази обява"}
-              </span>
-              . Действието не може да бъде отменено.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setDraftDeleteCandidateId(null)}
-              disabled={deletingBackupId != null}
-              className="rounded-md border border-gray-600 bg-transparent px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Отказ
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (draftDeleteCandidate?.backupId) {
-                  void deleteDraft(draftDeleteCandidate.backupId);
-                }
-              }}
-              disabled={deletingBackupId != null || !draftDeleteCandidate}
-              className="rounded-md border border-red-700 bg-red-950/80 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {deletingBackupId != null ? "Изтриване..." : "Изтрий"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onCancel={() => setDraftDeleteCandidateId(null)}
+        onConfirm={(backupId) => void deleteDraft(backupId)}
+      />
       <FormSection>
         <div className="mb-5">
           <div className="mt-2">
