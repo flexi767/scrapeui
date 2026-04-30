@@ -4,3 +4,4 @@ export * from './query-modules/core';
 export * from './query-modules/tasks';
 export * from './query-modules/expenses-articles';
 export * from './query-modules/mobilebg';
+export * from './query-modules/public';

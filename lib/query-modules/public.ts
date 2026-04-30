@@ -1,0 +1,206 @@
+import { raw } from "@/db/client";
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+export interface PublicDealer {
+  id: number;
+  slug: string;
+  name: string;
+  template: string;
+  publicDomain: string | null;
+  publicEnabled: number;
+}
+
+export interface PublicListing {
+  mobileId: string;
+  make: string | null;
+  model: string | null;
+  regYear: string | null;
+  fuel: string | null;
+  transmission: string | null;
+  mileage: number | null;
+  currentPrice: number | null;
+  imageCount: number | null;
+  thumbKeys: string | null;
+  fullKeys: string | null;
+  imageMeta: string | null;
+  imagesDownloaded: number | null;
+  thumbSaved: number | null;
+  isNew: number | null;
+  bodyType: string | null;
+}
+
+export interface PublicListingDetail extends PublicListing {
+  power: number | null;
+  color: string | null;
+  vin: string | null;
+  euronorm: number | null;
+  description: string | null;
+  extrasJson: string | null;
+  regMonth: string | null;
+}
+
+export interface PublicListingFilters {
+  make?: string;
+  fuel?: string;
+  yearFrom?: string;
+  yearTo?: string;
+  priceMin?: number;
+  priceMax?: number;
+  mileageMax?: number;
+  sort?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PublicListingsResult {
+  listings: PublicListing[];
+  total: number;
+  page: number;
+  limit: number;
+  makes: string[];
+}
+
+// ── Allowed sort fields (whitelist) ────────────────────────────────────────
+
+const ALLOWED_SORT: Record<string, string> = {
+  newest: "l.last_edit DESC",
+  price_asc: "l.current_price ASC",
+  price_desc: "l.current_price DESC",
+  mileage_asc: "l.mileage ASC",
+  year_desc: "l.reg_year DESC",
+};
+
+// ── Queries ────────────────────────────────────────────────────────────────
+
+export function getPublicDealer(slug: string): PublicDealer | null {
+  const row = raw
+    .prepare(
+      `SELECT id, slug, name,
+        COALESCE(template, 'bold') as template,
+        public_domain as publicDomain,
+        COALESCE(public_enabled, 0) as publicEnabled
+       FROM dealers
+       WHERE slug = ? AND active = 1
+       LIMIT 1`,
+    )
+    .get(slug) as PublicDealer | undefined;
+  return row ?? null;
+}
+
+export function getDealerByDomain(domain: string): PublicDealer | null {
+  const row = raw
+    .prepare(
+      `SELECT id, slug, name,
+        COALESCE(template, 'bold') as template,
+        public_domain as publicDomain,
+        COALESCE(public_enabled, 0) as publicEnabled
+       FROM dealers
+       WHERE public_domain = ? AND public_enabled = 1 AND active = 1
+       LIMIT 1`,
+    )
+    .get(domain) as PublicDealer | undefined;
+  return row ?? null;
+}
+
+export function getPublicListings(
+  dealerId: number,
+  filters: PublicListingFilters = {},
+): PublicListingsResult {
+  const {
+    make = "",
+    fuel = "",
+    yearFrom = "",
+    yearTo = "",
+    priceMin,
+    priceMax,
+    mileageMax,
+    sort = "newest",
+    page = 1,
+    limit = 24,
+  } = filters;
+
+  const wheres: string[] = [
+    "l.dealer_id = ?",
+    "l.is_active = 1",
+    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+  ];
+  const params: (string | number)[] = [dealerId];
+
+  if (make) { wheres.push("l.make = ?"); params.push(make); }
+  if (fuel) { wheres.push("l.fuel = ?"); params.push(fuel); }
+  if (yearFrom) { wheres.push("CAST(l.reg_year AS INTEGER) >= ?"); params.push(parseInt(yearFrom, 10)); }
+  if (yearTo) { wheres.push("CAST(l.reg_year AS INTEGER) <= ?"); params.push(parseInt(yearTo, 10)); }
+  if (priceMin != null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
+  if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
+  if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
+
+  const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.min(48, Math.max(1, limit));
+  const offset = (safePage - 1) * safeLimit;
+
+  const where = wheres.join(" AND ");
+
+  const countRow = raw
+    .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
+    .get(...params) as { n: number };
+
+  const rows = raw
+    .prepare(
+      `SELECT
+        l.mobile_id as mobileId,
+        l.make, l.model, l.reg_year as regYear, l.fuel,
+        l.transmission, l.mileage, l.current_price as currentPrice,
+        l.image_count as imageCount, l.thumb_keys as thumbKeys,
+        l.full_keys as fullKeys, l.image_meta as imageMeta,
+        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+        l.is_new as isNew, l.body_type as bodyType
+       FROM listings l
+       WHERE ${where}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`,
+    )
+    .all(...params, safeLimit, offset) as PublicListing[];
+
+  // Available makes for filter dropdown
+  const makeRows = raw
+    .prepare(
+      `SELECT DISTINCT make FROM listings
+       WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
+       ORDER BY make`,
+    )
+    .all(dealerId) as { make: string }[];
+
+  return {
+    listings: rows,
+    total: countRow.n,
+    page: safePage,
+    limit: safeLimit,
+    makes: makeRows.map((r) => r.make),
+  };
+}
+
+export function getPublicListing(
+  dealerId: number,
+  mobileId: string,
+): PublicListingDetail | null {
+  const row = raw
+    .prepare(
+      `SELECT
+        l.mobile_id as mobileId,
+        l.make, l.model, l.reg_year as regYear, l.reg_month as regMonth,
+        l.fuel, l.transmission, l.mileage, l.current_price as currentPrice,
+        l.image_count as imageCount, l.thumb_keys as thumbKeys,
+        l.full_keys as fullKeys, l.image_meta as imageMeta,
+        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+        l.is_new as isNew, l.body_type as bodyType,
+        l.power, l.color, l.vin, l.euronorm,
+        l.description, l.extras_json as extrasJson
+       FROM listings l
+       WHERE l.dealer_id = ? AND l.mobile_id = ? AND l.is_active = 1
+       LIMIT 1`,
+    )
+    .get(dealerId, mobileId) as PublicListingDetail | undefined;
+  return row ?? null;
+}
