@@ -19,6 +19,8 @@ import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
 import {
   labelForRow,
+  statsFromStreamEvent,
+  streamEventMessageKind,
   toBatchRow,
 } from './edit-own-batch-sync/helpers';
 import type { BatchRow, LogEntry, OwnDealer, RunStats, StreamEntry } from './edit-own-batch-sync/types';
@@ -130,23 +132,13 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     try {
       await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start') {
-              setStats({
-                total: event.total,
-                completed: event.completed,
-                succeeded: event.succeeded,
-                failed: event.failed,
-              });
+              setStats(statsFromStreamEvent(event));
               if (event.message) appendLog({ kind: 'status', message: event.message });
               return;
             }
 
             if (event.type === 'checking') {
-              setStats({
-                total: event.total,
-                completed: event.completed,
-                succeeded: event.succeeded,
-                failed: event.failed,
-              });
+              setStats(statsFromStreamEvent(event));
               setCurrentLabel(labelForRow({ ...event.target, mobile_id: event.target.mobile_id }));
               setRows((prev) => prev.map((row) => row.backup_id === event.target.backup_id ? {
                 ...row,
@@ -158,12 +150,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
             }
 
             if (event.type === 'result') {
-              setStats({
-                total: event.total,
-                completed: event.completed,
-                succeeded: event.succeeded,
-                failed: event.failed,
-              });
+              setStats(statsFromStreamEvent(event));
               setRows((prev) => prev.map((row) => row.backup_id === event.row.backup_id ? {
                 ...row,
                 needs_sync: event.row.status === 'success' ? 0 : row.needs_sync,
@@ -199,12 +186,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
             }
 
             if (event.type === 'complete') {
-              const summary = {
-                total: event.total,
-                completed: event.completed,
-                succeeded: event.succeeded,
-                failed: event.failed,
-              };
+              const summary = statsFromStreamEvent(event);
               setDoneSummary(summary);
               setStats(summary);
               setCurrentLabel(null);
@@ -293,7 +275,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     try {
       await streamJsonEvents<StreamEntry>(res, (event) => {
             if (event.type === 'start' || event.type === 'checking' || event.type === 'result' || event.type === 'complete') {
-              const s = { total: (event as RunStats).total ?? 0, completed: (event as RunStats).completed ?? 0, succeeded: (event as RunStats).succeeded ?? 0, failed: (event as RunStats).failed ?? 0 };
+              const s = statsFromStreamEvent(event);
               setRenewStats(s);
               if (event.type === 'complete') {
                 setRenewDone(s);
@@ -305,11 +287,9 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
               }
             }
 
-            if (event.type === 'log' || event.type === 'error') {
-              if (event.message) appendRenewLog({ kind: event.type === 'error' ? 'error' : 'log', message: event.message });
-            } else if ('message' in event && event.message) {
-              const kind = event.type === 'result' ? 'result' : 'status';
-              const ok = event.type === 'result' && 'row' in event ? (event.row as { status: string }).status === 'success' : undefined;
+            if ('message' in event && event.message) {
+              const kind = streamEventMessageKind(event);
+              const ok = event.type === 'result' ? event.row.status === 'success' : undefined;
               appendRenewLog({ kind, ok, message: event.message });
             }
       });

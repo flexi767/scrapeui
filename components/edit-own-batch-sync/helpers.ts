@@ -1,6 +1,6 @@
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { formatPrice } from '@/lib/utils';
-import type { BatchRow } from './types';
+import type { BatchRow, RunStats, StreamEntry } from './types';
 
 function formatVatLabel(value: string | null) {
   if (value === 'included') return 'има';
@@ -76,4 +76,20 @@ export function labelForRow(row: {
 
 export function isEditOwnSyncRow(data: EditOwnSyncRow | { error?: string } | null): data is EditOwnSyncRow {
   return Boolean(data && typeof data === 'object' && 'backup_id' in data);
+}
+
+export function statsFromStreamEvent(event: Extract<StreamEntry, { total: number }>): RunStats {
+  return {
+    total: event.total,
+    completed: event.completed,
+    succeeded: event.succeeded,
+    failed: event.failed,
+  };
+}
+
+export function streamEventMessageKind(event: StreamEntry) {
+  if (event.type === 'error') return 'error';
+  if (event.type === 'log') return event.level === 'stderr' ? 'error' : 'log';
+  if (event.type === 'result') return 'result';
+  return 'status';
 }
