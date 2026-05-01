@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { SearchIcon, SearchCheckIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
 import { SearchPrefillFields } from '@/components/search-prefill/SearchPrefillFields';
@@ -21,6 +21,7 @@ import {
   LoadingPanel,
   MessagesPanel,
 } from '@/components/listing-search-prefill/DialogPanels';
+import { DialogActions } from '@/components/listing-search-prefill/DialogActions';
 import type {
   MobileBgSearchResultsResponse,
   PendingAction,
@@ -353,36 +354,23 @@ export default function ListingSearchPrefillButton({
             </div>
           )}
 
-          <DialogFooter className="border-slate-500/60 bg-slate-800/85">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
-            </Button>
-            {!filtersVisible && (
-              <Button variant="outline" onClick={showFilters}>
-                Show filters
-              </Button>
-            )}
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" onClick={() => void saveSearchProfile()} disabled={!data || loading || profileSaving || Boolean(error)}>
-                {profileSaving ? 'Saving…' : 'Save search values'}
-              </Button>
-              <Button variant="outline" onClick={() => void resetSearchProfile()} disabled={!data || loading || profileSaving || Boolean(error) || !data.savedSearch.enabled}>
-                Reset saved
-              </Button>
-              <Button onClick={() => submitToMobileBg(buildSubmissionFields())} disabled={!data || loading || Boolean(error)}>
-                Submit all
-              </Button>
-              <Button onClick={() => submitToMobileBg(buildFirstSevenFields())} disabled={!data || loading || Boolean(error)}>
-                Submit first 7
-              </Button>
-              <Button onClick={() => showResultsHere(buildSubmissionFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
-                Show results for all filters
-              </Button>
-              <Button onClick={() => showResultsHere(buildFirstSevenFields())} disabled={!data || loading || Boolean(error) || resultsLoading}>
-                Show results for first 7 filters
-              </Button>
-            </div>
-          </DialogFooter>
+          <DialogActions
+            filtersVisible={filtersVisible}
+            hasData={Boolean(data)}
+            hasError={Boolean(error)}
+            loading={loading}
+            profileSaving={profileSaving}
+            resultsLoading={resultsLoading}
+            savedSearchEnabled={Boolean(data?.savedSearch.enabled)}
+            onClose={() => setOpen(false)}
+            onResetSearchProfile={() => void resetSearchProfile()}
+            onSaveSearchProfile={() => void saveSearchProfile()}
+            onShowAllResults={() => showResultsHere(buildSubmissionFields())}
+            onShowFilters={showFilters}
+            onShowFirstSevenResults={() => showResultsHere(buildFirstSevenFields())}
+            onSubmitAll={() => submitToMobileBg(buildSubmissionFields())}
+            onSubmitFirstSeven={() => submitToMobileBg(buildFirstSevenFields())}
+          />
         </DialogContent>
       </Dialog>
     </>
