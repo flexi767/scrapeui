@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
+import { SearchPositionsControlPanel } from '@/components/search-positions/SearchPositionsControlPanel';
 import { SearchPositionPreviewThumb } from '@/components/search-positions/SearchPositionPreviewThumb';
 import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
 
@@ -171,86 +172,17 @@ export default function SearchPositionsRunner() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Check Search Positions</h2>
-            <p className="mt-1 max-w-2xl text-sm text-gray-400">
-              Runs the edit-own search-position checker and streams progress here while it updates found and missing ranks.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3 text-right">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Mode</div>
-            <div className="mt-1 text-sm font-medium text-gray-100">
-              {running
-                ? activeMode === 'missing'
-                  ? 'Missing only'
-                  : 'All listings'
-                : 'Idle'}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Total</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{stats?.total ?? doneSummary?.total ?? '—'}</div>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Checked</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{stats?.checked ?? doneSummary?.total ?? 0}</div>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Found</div>
-            <div className="mt-1 text-2xl font-semibold text-emerald-400">{stats?.found ?? doneSummary?.found ?? 0}</div>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">Missing</div>
-            <div className="mt-1 text-2xl font-semibold text-amber-300">{stats?.notFound ?? doneSummary?.notFound ?? 0}</div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <button
-            onClick={running ? stop : () => void run(false)}
-            disabled={stopping}
-            className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
-              running ? 'bg-red-600 hover:bg-red-500' : 'bg-amber-600 hover:bg-amber-500'
-            }`}
-          >
-            {(running || stopping) && (
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            )}
-            {stopping ? 'Stopping…' : running ? 'Stop' : 'Check all'}
-          </button>
-
-          <button
-            onClick={() => void run(true)}
-            disabled={running}
-            className="rounded-md border border-gray-600 px-5 py-2 text-sm font-semibold text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Missing only
-          </button>
-
-          {currentLabel && (
-            <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">
-              <div className="text-[11px] uppercase tracking-wide text-sky-300/70">Current</div>
-              <div className="mt-2 flex items-center gap-3">
-                <SearchPositionPreviewThumb
-                  thumbUrl={currentPreview?.thumbUrl ?? null}
-                  listingUrl={currentPreview?.listingUrl ?? null}
-                  label={currentLabel}
-                />
-                <div className="min-w-0 truncate">{currentLabel}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <SearchPositionsControlPanel
+        running={running}
+        stopping={stopping}
+        activeMode={activeMode}
+        stats={stats}
+        doneSummary={doneSummary}
+        currentLabel={currentLabel}
+        currentPreview={currentPreview}
+        onCheckAll={running ? stop : () => void run(false)}
+        onMissingOnly={() => void run(true)}
+      />
 
       {doneSummary && (
         <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
