@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useEffectEvent } from 'react';
 import { toast } from 'sonner';
 import { LoginBadge } from '@/components/dealers/LoginBadge';
 import { DEALER_TEMPLATES, type Dealer, type DealerEditForm, type DealerLoginResult, type TemplateName } from '@/components/dealers/types';
+import { hasHttpProtocol, slugifyDealerName } from '@/components/dealers/utils';
 
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
+  const notifyDealersChange = useEffectEvent((nextDealers: Dealer[]) => {
+    onDealersChange?.(nextDealers);
+  });
 
   useEffect(() => {
-    onDealersChange?.(dealers);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    notifyDealersChange(dealers);
   }, [dealers]);
 
   function updateDealers(fn: (prev: Dealer[]) => Dealer[]) {
@@ -48,14 +51,6 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     } finally {
       setLoginRunning(prev => { const next = new Set(prev); next.delete(id); return next; });
     }
-  }
-
-  function slugify(name: string) {
-    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  }
-
-  function hasHttpProtocol(url: string) {
-    return /^https?:\/\//i.test(url.trim());
   }
 
   function showValidationError(message: string) {
@@ -204,7 +199,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                   </td>
                   <td className="px-4 py-2 text-gray-400 font-mono text-xs">
                     {editing ? (
-                      <input value={editForm.slug} onChange={e => setEditForm(f => ({ ...f, slug: slugify(e.target.value) }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono" />
+                      <input value={editForm.slug} onChange={e => setEditForm(f => ({ ...f, slug: slugifyDealerName(e.target.value) }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono" />
                     ) : (
                       <button onClick={() => startEdit(d)} className="text-left font-mono text-xs text-gray-400 hover:text-blue-300">{d.slug}</button>
                     )}
@@ -350,8 +345,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       <form onSubmit={onAdd} className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4 space-y-3">
         <h3 className="text-sm font-medium text-gray-300">Add</h3>
         <div className="grid grid-cols-4 items-start gap-3">
-          <input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: slugify(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
-          <input placeholder="Slug" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
+          <input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: slugifyDealerName(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
+          <input placeholder="Slug" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugifyDealerName(e.target.value) }))} required className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
           <input placeholder="https://dealer.mobile.bg" value={form.mobile_url} onChange={e => setForm(f => ({ ...f, mobile_url: e.target.value }))} required type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
           <input placeholder="https://www.cars.bg/company/dealer" value={form.cars_url} onChange={e => setForm(f => ({ ...f, cars_url: e.target.value }))} type="url" className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none min-w-0" />
           <div className="flex items-start justify-between gap-3">
