@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
@@ -10,6 +10,7 @@ import { SearchPositionsLogPanel } from '@/components/search-positions/SearchPos
 import { SearchPositionsRecentResults } from '@/components/search-positions/SearchPositionsRecentResults';
 import { SearchPositionsControlPanel } from '@/components/search-positions/SearchPositionsControlPanel';
 import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
+import { useAutoScroll } from '@/components/shared/useAutoScroll';
 
 export default function SearchPositionsRunner() {
   const router = useRouter();
@@ -24,10 +25,7 @@ export default function SearchPositionsRunner() {
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!logRef.current) return;
-    logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logs]);
+  useAutoScroll(logRef, logs);
 
   const resultRows = useMemo(
     () => logs.filter((entry): entry is SearchPositionLogEntry & { kind: 'result'; found: boolean } => entry.kind === 'result' && typeof entry.found === 'boolean'),

@@ -23,7 +23,7 @@ import {
   ZERO_CARS_BG_SYNC_TOTALS,
 } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
-import { useAutoScroll } from '@/components/cars-bg-sync/useAutoScroll';
+import { useAutoScroll } from '@/components/shared/useAutoScroll';
 
 interface Props {
   dealers: DealerRow[];
