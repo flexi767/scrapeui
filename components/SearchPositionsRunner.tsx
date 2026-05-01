@@ -5,8 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
+import { SearchPositionsDoneBanner } from '@/components/search-positions/SearchPositionsDoneBanner';
+import { SearchPositionsLogPanel } from '@/components/search-positions/SearchPositionsLogPanel';
+import { SearchPositionsRecentResults } from '@/components/search-positions/SearchPositionsRecentResults';
 import { SearchPositionsControlPanel } from '@/components/search-positions/SearchPositionsControlPanel';
-import { SearchPositionPreviewThumb } from '@/components/search-positions/SearchPositionPreviewThumb';
 import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
 
 export default function SearchPositionsRunner() {
@@ -184,66 +186,11 @@ export default function SearchPositionsRunner() {
         onMissingOnly={() => void run(true)}
       />
 
-      {doneSummary && (
-        <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-          Checked {doneSummary.total} listings • found {doneSummary.found} • missing {doneSummary.notFound}
-        </div>
-      )}
+      <SearchPositionsDoneBanner doneSummary={doneSummary} />
 
-      {resultRows.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-hidden">
-          <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Recent results</div>
-          <div className="divide-y divide-gray-800">
-            {resultRows.slice(-12).reverse().map((entry, index) => (
-              <div key={`${index}-${entry.message}`} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                <div className="flex min-w-0 items-center gap-3">
-                  <SearchPositionPreviewThumb
-                    thumbUrl={entry.thumbUrl ?? null}
-                    listingUrl={entry.listingUrl ?? null}
-                    label={entry.message}
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate text-gray-200">{entry.message}</div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      {entry.found
-                        ? `Orig #${entry.originalPosition ?? '—'} • Price #${entry.pricePosition ?? '—'}`
-                        : 'Not found in search results'}
-                    </div>
-                  </div>
-                </div>
-                <div className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${entry.found ? 'bg-emerald-900/50 text-emerald-200' : 'bg-amber-900/40 text-amber-200'}`}>
-                  {entry.found ? 'Found' : 'Missing'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <SearchPositionsRecentResults resultRows={resultRows} />
 
-      {logs.length > 0 && (
-        <div
-          ref={logRef}
-          className="rounded-lg border border-gray-700 bg-gray-900 p-3 space-y-1 max-h-[600px] overflow-y-auto"
-        >
-          {logs.map((entry, index) => (
-            <div
-              key={`${index}-${entry.message}`}
-              className={
-                entry.kind === 'error'
-                  ? 'text-xs py-0.5 font-mono text-red-400'
-                  : entry.kind === 'result'
-                  ? `text-xs py-0.5 font-mono ${entry.found ? 'text-emerald-300' : 'text-amber-300'}`
-                  : entry.kind === 'status'
-                  ? 'text-xs py-0.5 font-mono text-sky-300'
-                  : 'text-xs py-0.5 font-mono text-gray-400'
-              }
-            >
-              {entry.kind === 'error' ? '❌ ' : entry.kind === 'result' ? (entry.found ? '✓ ' : '• ') : ''}
-              {entry.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <SearchPositionsLogPanel logs={logs} logRef={logRef} />
     </div>
   );
 }
