@@ -22,16 +22,16 @@ import {
   MessagesPanel,
 } from '@/components/listing-search-prefill/DialogPanels';
 import { DialogActions } from '@/components/listing-search-prefill/DialogActions';
+import {
+  mergeEditableFields,
+  takeFirstVisibleFields,
+} from '@/components/listing-search-prefill/field-utils';
 import type {
   MobileBgSearchResultsResponse,
   PendingAction,
   SearchField,
   SearchPrefillResponse,
 } from '@/components/listing-search-prefill/types';
-import {
-  MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES as ALWAYS_INCLUDED_FIELD_NAMES,
-  MOBILE_BG_HIDDEN_FIELD_NAMES as HIDDEN_FIELD_NAMES,
-} from '@/lib/mobile-bg/search-field-config';
 
 export default function ListingSearchPrefillButton({
   listingId,
@@ -199,20 +199,11 @@ export default function ListingSearchPrefillButton({
 
   function buildSubmissionFields() {
     if (!data) return [];
-    return data.form.fields.map((field) => {
-      const edited = editableFields.find((candidate) => candidate.name === field.name);
-      return edited ?? field;
-    });
+    return mergeEditableFields(data.form.fields, editableFields);
   }
 
   function buildFirstSevenFields() {
-    const submissionFields = buildSubmissionFields();
-    const hiddenFields = submissionFields.filter((field) => HIDDEN_FIELD_NAMES.has(field.name));
-    const alwaysIncludedFields = submissionFields.filter((field) => ALWAYS_INCLUDED_FIELD_NAMES.has(field.name));
-    const firstSevenVisibleFields = submissionFields
-      .filter((field) => !HIDDEN_FIELD_NAMES.has(field.name) && !ALWAYS_INCLUDED_FIELD_NAMES.has(field.name))
-      .slice(0, 7);
-    return [...hiddenFields, ...alwaysIncludedFields, ...firstSevenVisibleFields];
+    return takeFirstVisibleFields(buildSubmissionFields(), 7);
   }
 
   function submitToMobileBg(fields = buildSubmissionFields()) {
