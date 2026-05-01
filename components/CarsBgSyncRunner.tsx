@@ -5,82 +5,8 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
-
-type StreamEntry =
-  | { type: 'start'; message?: string; dryRun: boolean }
-  | { type: 'dealer'; dealer: string; message?: string }
-  | { type: 'summary'; dealer: string; missing: number; diffs: number; stale: number; dryRun: boolean }
-  | { type: 'listing'; dealer: string; action: 'missing'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; price: number | null; url: string | null }
-  | { type: 'diff'; dealer: string; action: 'price'; mobileId: string | null; carsId: string | null; make: string | null; model: string | null; title: string | null; oldPrice: number | null; newPrice: number | null; priceDiff?: boolean; titleDiff?: boolean; descriptionDiff?: boolean; oldTitle?: string | null; newTitle?: string | null; oldDescription?: string | null; newDescription?: string | null; url: string | null }
-  | { type: 'stale'; dealer: string; carsId: string | null }
-  | { type: 'done'; dealer: string; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number }
-  | { type: 'end'; dryRun: boolean; missing: number; diffs: number; stale: number; updated: number; created: number; deleted: number; failedUpdates: number; failedCreates: number; failedDeletes: number; message?: string }
-  | { type: 'log'; level?: 'stderr' | 'info'; dealer?: string; message?: string }
-  | { type: 'error'; message?: string }
-  | { type: 'stream_closed'; code?: number | null };
-
-interface MissingItem {
-  dealer: string;
-  mobileId: string | null;
-  carsId: string | null;
-  make: string | null;
-  model: string | null;
-  title: string | null;
-  price: number | null;
-  url: string | null;
-}
-
-interface DiffItem {
-  dealer: string;
-  mobileId: string | null;
-  carsId: string | null;
-  make: string | null;
-  model: string | null;
-  title: string | null;
-  oldPrice: number | null;
-  newPrice: number | null;
-  priceDiff?: boolean;
-  titleDiff?: boolean;
-  descriptionDiff?: boolean;
-  oldTitle?: string | null;
-  newTitle?: string | null;
-  oldDescription?: string | null;
-  newDescription?: string | null;
-  url: string | null;
-}
-
-interface Totals {
-  missing: number;
-  diffs: number;
-  stale: number;
-  updated: number;
-  created: number;
-  deleted: number;
-  failedUpdates: number;
-  failedCreates: number;
-  failedDeletes: number;
-}
-
-interface LogEntry {
-  kind: 'status' | 'log' | 'error';
-  message: string;
-}
-
-const ZERO_TOTALS: Totals = {
-  missing: 0,
-  diffs: 0,
-  stale: 0,
-  updated: 0,
-  created: 0,
-  deleted: 0,
-  failedUpdates: 0,
-  failedCreates: 0,
-  failedDeletes: 0,
-};
-
-function listingLabel(item: { make: string | null; model: string | null; title: string | null; mobileId?: string | null; carsId?: string | null }) {
-  return [item.make, item.model, item.title].filter(Boolean).join(' ') || item.mobileId || item.carsId || 'Listing';
-}
+import { listingLabel, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
+import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem } from '@/components/cars-bg-sync/types';
 
 interface Props {
   dealers: DealerRow[];
@@ -92,13 +18,13 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const [liveMode, setLiveMode] = useState(false);
   const [currentDealer, setCurrentDealer] = useState<string | null>(null);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(() => dealers.map((dealer) => dealer.slug));
-  const [totals, setTotals] = useState<Totals>(ZERO_TOTALS);
-  const [doneSummary, setDoneSummary] = useState<Totals | null>(null);
+  const [totals, setTotals] = useState<CarsBgSyncTotals>(ZERO_CARS_BG_SYNC_TOTALS);
+  const [doneSummary, setDoneSummary] = useState<CarsBgSyncTotals | null>(null);
   const [missing, setMissing] = useState<MissingItem[]>([]);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [openDescriptionKey, setOpenDescriptionKey] = useState<string | null>(null);
   const [staleCarsIds, setStaleCarsIds] = useState<Array<{ dealer: string; carsId: string | null }>>([]);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<CarsBgSyncLogEntry[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -110,7 +36,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const hasPlan = missing.length > 0 || diffs.length > 0 || staleCarsIds.length > 0 || doneSummary !== null;
 
   const allSelected = selectedDealers.length === dealers.length;
-  const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
+  const appendLog = (entry: CarsBgSyncLogEntry) => setLogs((prev) => [...prev, entry]);
 
   function toggleDealer(slug: string) {
     setSelectedDealers((prev) => prev.includes(slug) ? prev.filter((entry) => entry !== slug) : [...prev, slug]);
@@ -125,7 +51,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     setStopping(false);
     setLiveMode(live);
     setCurrentDealer(null);
-    setTotals(ZERO_TOTALS);
+    setTotals(ZERO_CARS_BG_SYNC_TOTALS);
     setDoneSummary(null);
     setMissing([]);
     setDiffs([]);
@@ -171,7 +97,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     }
 
     try {
-      await streamJsonEvents<StreamEntry>(res, (event) => {
+      await streamJsonEvents<CarsBgSyncStreamEntry>(res, (event) => {
             if (event.type === 'start') {
               if (event.message) appendLog({ kind: 'status', message: event.message });
               return;
@@ -273,7 +199,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             }
 
             if (event.type === 'end') {
-              const summary: Totals = {
+              const summary: CarsBgSyncTotals = {
                 missing: event.missing,
                 diffs: event.diffs,
                 stale: event.stale,
