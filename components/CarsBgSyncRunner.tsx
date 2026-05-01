@@ -10,7 +10,7 @@ import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel
 import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
 import { CarsBgSyncPlanGrid } from '@/components/cars-bg-sync/CarsBgSyncPlanGrid';
 import { CarsBgSyncRunControls } from '@/components/cars-bg-sync/CarsBgSyncRunControls';
-import { ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
+import { diffItemFromEvent, missingItemFromEvent, staleItemFromEvent, totalsFromEndEvent, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
 
 interface Props {
@@ -129,43 +129,17 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             }
 
             if (event.type === 'listing') {
-              setMissing((prev) => [...prev, {
-                dealer: event.dealer,
-                mobileId: event.mobileId,
-                carsId: event.carsId,
-                make: event.make,
-                model: event.model,
-                title: event.title,
-                price: event.price,
-                url: event.url,
-              }]);
+              setMissing((prev) => [...prev, missingItemFromEvent(event)]);
               return;
             }
 
             if (event.type === 'diff') {
-              setDiffs((prev) => [...prev, {
-                dealer: event.dealer,
-                mobileId: event.mobileId,
-                carsId: event.carsId,
-                make: event.make,
-                model: event.model,
-                title: event.title,
-                oldPrice: event.oldPrice,
-                newPrice: event.newPrice,
-                priceDiff: event.priceDiff,
-                titleDiff: event.titleDiff,
-                descriptionDiff: event.descriptionDiff,
-                oldTitle: event.oldTitle ?? null,
-                newTitle: event.newTitle ?? null,
-                oldDescription: event.oldDescription ?? null,
-                newDescription: event.newDescription ?? null,
-                url: event.url,
-              }]);
+              setDiffs((prev) => [...prev, diffItemFromEvent(event)]);
               return;
             }
 
             if (event.type === 'stale') {
-              setStaleCarsIds((prev) => [...prev, { dealer: event.dealer, carsId: event.carsId }]);
+              setStaleCarsIds((prev) => [...prev, staleItemFromEvent(event)]);
               return;
             }
 
@@ -204,17 +178,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             }
 
             if (event.type === 'end') {
-              const summary: CarsBgSyncTotals = {
-                missing: event.missing,
-                diffs: event.diffs,
-                stale: event.stale,
-                updated: event.updated,
-                created: event.created,
-                deleted: event.deleted,
-                failedUpdates: event.failedUpdates,
-                failedCreates: event.failedCreates,
-                failedDeletes: event.failedDeletes,
-              };
+              const summary = totalsFromEndEvent(event);
               setDoneSummary(summary);
               setTotals(summary);
               setRunning(false);
