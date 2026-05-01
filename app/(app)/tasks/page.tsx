@@ -34,8 +34,6 @@ export default function TasksPage() {
     if (priority) params.set('priority', priority);
     if (search) params.set('search', search);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     fetch(`/api/tasks?${params}`)
       .then((r) => r.json())
       .then((data) => {
@@ -61,12 +59,18 @@ export default function TasksPage() {
         <Input
           placeholder="Search tasks..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setSearch(e.target.value);
+          }}
           className="w-64"
         />
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setStatus(e.target.value);
+          }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
           <option value="">All statuses</option>
@@ -76,7 +80,10 @@ export default function TasksPage() {
         </select>
         <select
           value={priority}
-          onChange={(e) => setPriority(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setPriority(e.target.value);
+          }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
           <option value="">All priorities</option>

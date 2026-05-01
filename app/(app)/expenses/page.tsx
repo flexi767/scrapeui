@@ -33,8 +33,6 @@ export default function ExpensesPage() {
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     fetch(`/api/expenses?${params}`)
       .then((r) => r.json())
       .then((data) => {
@@ -63,12 +61,18 @@ export default function ExpensesPage() {
         <Input
           placeholder="Search..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setSearch(e.target.value);
+          }}
           className="w-48"
         />
         <select
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setCategory(e.target.value);
+          }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
           <option value="">All categories</option>
@@ -76,9 +80,15 @@ export default function ExpensesPage() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+        <Input type="date" value={dateFrom} onChange={(e) => {
+          setLoading(true);
+          setDateFrom(e.target.value);
+        }} className="w-40" />
         <span className="self-center text-gray-400">to</span>
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+        <Input type="date" value={dateTo} onChange={(e) => {
+          setLoading(true);
+          setDateTo(e.target.value);
+        }} className="w-40" />
       </div>
 
       {loading ? (

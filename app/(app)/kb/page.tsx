@@ -23,8 +23,6 @@ export default function KBPage() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     fetch(`/api/articles?${params}`)
       .then((r) => r.json())
       .then((data) => {
@@ -50,7 +48,10 @@ export default function KBPage() {
         <Input
           placeholder="Search articles..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setSearch(e.target.value);
+          }}
           className="w-64"
         />
       </div>
