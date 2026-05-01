@@ -56,11 +56,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     setSelectedDealers((prev) => prev.includes(slug) ? prev.filter((entry) => entry !== slug) : [...prev, slug]);
   }
 
-  async function run(live: boolean) {
-    if (selectedDealers.length === 0) {
-      toast.error('Select at least one dealer');
-      return;
-    }
+  function resetRunState(live: boolean) {
     setRunning(true);
     setStopping(false);
     setLiveMode(live);
@@ -72,6 +68,21 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     setOpenDescriptionKey(null);
     setStaleCarsIds([]);
     setLogs([]);
+  }
+
+  function finishRun() {
+    setRunning(false);
+    setStopping(false);
+    setCurrentDealer(null);
+    abortRef.current = null;
+  }
+
+  async function run(live: boolean) {
+    if (selectedDealers.length === 0) {
+      toast.error('Select at least one dealer');
+      return;
+    }
+    resetRunState(live);
 
     const abortController = new AbortController();
     abortRef.current = abortController;
@@ -86,17 +97,13 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       });
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
-        setRunning(false);
-        setStopping(false);
-        abortRef.current = null;
+        finishRun();
         return;
       }
       const message = error instanceof Error ? error.message : 'Cars.bg sync failed';
       setLogs([{ kind: 'error', message }]);
       toast.error(message);
-      setRunning(false);
-      setStopping(false);
-      abortRef.current = null;
+      finishRun();
       return;
     }
 
@@ -104,9 +111,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       const message = await readJsonError(res, 'Failed to start cars.bg sync');
       setLogs([{ kind: 'error', message }]);
       toast.error(message);
-      setRunning(false);
-      setStopping(false);
-      abortRef.current = null;
+      finishRun();
       return;
     }
 
@@ -167,10 +172,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
               const summary = totalsFromEndEvent(event);
               setDoneSummary(summary);
               setTotals(summary);
-              setRunning(false);
-              setStopping(false);
-              setCurrentDealer(null);
-              abortRef.current = null;
+              finishRun();
               if (event.message) appendLog({ kind: 'status', message: event.message });
               if (live) {
                 if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
@@ -191,10 +193,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
         toast.error(message);
       }
     } finally {
-      setRunning(false);
-      setStopping(false);
-      setCurrentDealer(null);
-      abortRef.current = null;
+      finishRun();
     }
   }
 
