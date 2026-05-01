@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
+import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
 import { listingLabel, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem } from '@/components/cars-bg-sync/types';
 
@@ -267,38 +268,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-        <div className="flex flex-wrap gap-3">
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Missing</span>
-            <span className="ml-2 text-lg font-semibold text-white">{totals.missing}</span>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Diffs</span>
-            <span className="ml-2 text-lg font-semibold text-amber-300">{totals.diffs}</span>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Stale</span>
-            <span className="ml-2 text-lg font-semibold text-red-300">{totals.stale}</span>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Updated</span>
-            <span className="ml-2 text-lg font-semibold text-sky-300">{totals.updated}</span>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Created</span>
-            <span className="ml-2 text-lg font-semibold text-emerald-400">{totals.created}</span>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-            <span className="uppercase tracking-wide text-gray-500">Deleted</span>
-            <span className="ml-2 text-lg font-semibold text-red-400">{totals.deleted}</span>
-          </div>
-          <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
-            <span className="uppercase tracking-wide text-gray-500">Mode</span>
-            <span className="ml-2 text-sm font-medium text-gray-100">
-              {running ? (liveMode ? 'Running live' : 'Planning') : (doneSummary ? (liveMode ? 'Last run live' : 'Last preview') : 'Idle')}
-            </span>
-          </div>
-        </div>
+        <CarsBgSyncOverview totals={totals} running={running} liveMode={liveMode} doneSummary={doneSummary} />
 
         <div className="flex flex-wrap items-center gap-4">
           <button
