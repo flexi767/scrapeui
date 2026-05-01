@@ -41,6 +41,11 @@ export interface DiffItem {
   url: string | null;
 }
 
+export interface StaleCarsItem {
+  dealer: string;
+  carsId: string | null;
+}
+
 export interface CarsBgSyncTotals {
   missing: number;
   diffs: number;

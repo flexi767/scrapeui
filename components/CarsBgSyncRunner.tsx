@@ -2,15 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
 import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
+import { CarsBgSyncPlanGrid } from '@/components/cars-bg-sync/CarsBgSyncPlanGrid';
 import { CarsBgSyncRunControls } from '@/components/cars-bg-sync/CarsBgSyncRunControls';
-import { listingLabel, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
-import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem } from '@/components/cars-bg-sync/types';
+import { ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
+import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
 
 interface Props {
   dealers: DealerRow[];
@@ -27,7 +27,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const [missing, setMissing] = useState<MissingItem[]>([]);
   const [diffs, setDiffs] = useState<DiffItem[]>([]);
   const [openDescriptionKey, setOpenDescriptionKey] = useState<string | null>(null);
-  const [staleCarsIds, setStaleCarsIds] = useState<Array<{ dealer: string; carsId: string | null }>>([]);
+  const [staleCarsIds, setStaleCarsIds] = useState<StaleCarsItem[]>([]);
   const [logs, setLogs] = useState<CarsBgSyncLogEntry[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -299,114 +299,13 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       )}
 
       {hasPlan && (
-        <div className="grid gap-6 xl:grid-cols-3">
-          <div className="overflow-hidden rounded-xl border border-gray-700/60">
-            <div className="border-b border-gray-700/60 bg-gray-800/70 px-4 py-3 text-sm font-medium text-gray-200">
-              Missing On Cars.bg
-            </div>
-            <div className="divide-y divide-gray-700/40 bg-gray-900/40">
-              {missing.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-gray-500">No missing listings in the current plan.</div>
-              ) : missing.map((item, index) => (
-                <div key={`${item.mobileId || index}`} className="px-4 py-3 text-sm">
-                  <div className="text-white">{listingLabel(item)}</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {item.dealer}
-                    {item.mobileId ? ` • mobile.bg #${item.mobileId}` : ''}
-                    {item.price != null ? ` • ${formatPrice(item.price)}` : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-gray-700/60">
-            <div className="border-b border-gray-700/60 bg-gray-800/70 px-4 py-3 text-sm font-medium text-gray-200">
-              Price Diffs
-            </div>
-            <div className="divide-y divide-gray-700/40 bg-gray-900/40">
-              {diffs.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-gray-500">No price diffs in the current plan.</div>
-              ) : diffs.map((item, index) => {
-                const diffKey = `${item.mobileId || item.carsId || index}`;
-                const descriptionOpen = openDescriptionKey === diffKey;
-                return (
-                <div key={diffKey} className="px-4 py-3 text-sm">
-                  <div className="text-white">{listingLabel(item)}</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {item.dealer}
-                    {item.mobileId ? ` • mobile.bg #${item.mobileId}` : ''}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
-                    {item.priceDiff && (
-                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">price</span>
-                    )}
-                    {item.titleDiff && (
-                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-200">title</span>
-                    )}
-                    {item.descriptionDiff && (
-                      <button
-                        type="button"
-                        onClick={() => setOpenDescriptionKey((prev) => prev === diffKey ? null : diffKey)}
-                        className="rounded-full bg-violet-500/15 px-2 py-0.5 text-violet-200 transition-colors hover:bg-violet-500/25"
-                      >
-                        description
-                      </button>
-                    )}
-                  </div>
-                  {item.priceDiff && (
-                    <div className="mt-1 text-xs">
-                      <span className="text-gray-500">cars.bg:</span>{' '}
-                      <span className="text-gray-300">{formatPrice(item.oldPrice)}</span>
-                      <span className="mx-1 text-gray-600">→</span>
-                      <span className="text-white">{formatPrice(item.newPrice)}</span>
-                    </div>
-                  )}
-                  {item.titleDiff && (
-                    <div className="mt-1 text-xs">
-                      <span className="text-gray-500">title:</span>{' '}
-                      <span className="text-gray-300">{item.oldTitle?.trim() || '—'}</span>
-                      <span className="mx-1 text-gray-600">→</span>
-                      <span className="text-white">{item.newTitle?.trim() || '—'}</span>
-                    </div>
-                  )}
-                  {descriptionOpen && item.descriptionDiff && (
-                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
-                      <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
-                        <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">Old</div>
-                        <div className="whitespace-pre-wrap text-xs text-gray-300">
-                          {item.oldDescription?.trim() || '—'}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
-                        <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">New</div>
-                        <div className="whitespace-pre-wrap text-xs text-gray-200">
-                          {item.newDescription?.trim() || '—'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )})}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-gray-700/60">
-            <div className="border-b border-gray-700/60 bg-gray-800/70 px-4 py-3 text-sm font-medium text-gray-200">
-              Stale Cars.bg Offers
-            </div>
-            <div className="divide-y divide-gray-700/40 bg-gray-900/40">
-              {staleCarsIds.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-gray-500">No stale offers in the current plan.</div>
-              ) : staleCarsIds.map((item, index) => (
-                <div key={`${item.carsId || index}`} className="px-4 py-3 text-sm">
-                  <div className="text-white">{item.carsId || 'Unknown cars.bg id'}</div>
-                  <div className="mt-1 text-xs text-gray-500">{item.dealer}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CarsBgSyncPlanGrid
+          missing={missing}
+          diffs={diffs}
+          staleCarsIds={staleCarsIds}
+          openDescriptionKey={openDescriptionKey}
+          onToggleDescription={(key) => setOpenDescriptionKey((prev) => prev === key ? null : key)}
+        />
       )}
 
       <CarsBgSyncLogPanel logs={logs} logRef={logRef} />
