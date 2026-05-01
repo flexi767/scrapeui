@@ -14,6 +14,7 @@ import {
 } from './edit-own-batch-sync/api';
 import { BatchSyncPanel } from './edit-own-batch-sync/BatchSyncPanel';
 import { ChangedListingsTable } from './edit-own-batch-sync/ChangedListingsTable';
+import { DoneSummaryBanner } from './edit-own-batch-sync/DoneSummaryBanner';
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
@@ -337,11 +338,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
         onRunOrStop={running ? stop : () => void run()}
       />
 
-      {doneSummary && (
-        <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-          Completed {doneSummary.completed} of {doneSummary.total} listings • success {doneSummary.succeeded} • failed {doneSummary.failed}
-        </div>
-      )}
+      <DoneSummaryBanner summary={doneSummary} />
 
       <RecentResults rows={recentResults} />
 
