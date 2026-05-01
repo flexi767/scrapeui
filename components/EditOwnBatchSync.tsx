@@ -98,7 +98,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     setCurrentLabel(null);
     setDoneSummary(null);
     setStats({
-      total: rows.filter((row) => row.needs_sync === 1).length,
+      total: rowCounts.pending,
       completed: 0,
       succeeded: 0,
       failed: 0,
