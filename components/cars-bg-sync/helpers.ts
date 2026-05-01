@@ -1,4 +1,4 @@
-import type { CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
+import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
 
 export const ZERO_CARS_BG_SYNC_TOTALS: CarsBgSyncTotals = {
   missing: 0,
@@ -14,6 +14,49 @@ export const ZERO_CARS_BG_SYNC_TOTALS: CarsBgSyncTotals = {
 
 export function listingLabel(item: { make: string | null; model: string | null; title: string | null; mobileId?: string | null; carsId?: string | null }) {
   return [item.make, item.model, item.title].filter(Boolean).join(' ') || item.mobileId || item.carsId || 'Listing';
+}
+
+export function addSummaryTotals(totals: CarsBgSyncTotals, event: Extract<CarsBgSyncStreamEntry, { type: 'summary' }>): CarsBgSyncTotals {
+  return {
+    ...totals,
+    missing: totals.missing + event.missing,
+    diffs: totals.diffs + event.diffs,
+    stale: totals.stale + event.stale,
+  };
+}
+
+export function addDoneTotals(totals: CarsBgSyncTotals, event: Extract<CarsBgSyncStreamEntry, { type: 'done' }>): CarsBgSyncTotals {
+  return {
+    ...totals,
+    updated: totals.updated + event.updated,
+    created: totals.created + event.created,
+    deleted: totals.deleted + event.deleted,
+    failedUpdates: totals.failedUpdates + event.failedUpdates,
+    failedCreates: totals.failedCreates + event.failedCreates,
+    failedDeletes: totals.failedDeletes + event.failedDeletes,
+  };
+}
+
+export function summaryLogFromEvent(event: Extract<CarsBgSyncStreamEntry, { type: 'summary' }>): CarsBgSyncLogEntry {
+  return {
+    kind: 'status',
+    message: `${event.dealer}: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`,
+  };
+}
+
+export function doneLogFromEvent(event: Extract<CarsBgSyncStreamEntry, { type: 'done' }>): CarsBgSyncLogEntry {
+  return {
+    kind: 'status',
+    message: `${event.dealer}: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`,
+  };
+}
+
+export function streamLogFromEvent(event: Extract<CarsBgSyncStreamEntry, { type: 'log' }>): CarsBgSyncLogEntry | null {
+  if (!event.message) return null;
+  return {
+    kind: event.level === 'stderr' ? 'error' : 'log',
+    message: event.dealer ? `${event.dealer}: ${event.message}` : event.message,
+  };
 }
 
 export function totalsFromEndEvent(event: Extract<CarsBgSyncStreamEntry, { type: 'end' }>): CarsBgSyncTotals {

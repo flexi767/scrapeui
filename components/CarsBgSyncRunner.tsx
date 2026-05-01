@@ -10,7 +10,18 @@ import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel
 import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
 import { CarsBgSyncPlanGrid } from '@/components/cars-bg-sync/CarsBgSyncPlanGrid';
 import { CarsBgSyncRunControls } from '@/components/cars-bg-sync/CarsBgSyncRunControls';
-import { diffItemFromEvent, missingItemFromEvent, staleItemFromEvent, totalsFromEndEvent, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
+import {
+  addDoneTotals,
+  addSummaryTotals,
+  diffItemFromEvent,
+  doneLogFromEvent,
+  missingItemFromEvent,
+  staleItemFromEvent,
+  streamLogFromEvent,
+  summaryLogFromEvent,
+  totalsFromEndEvent,
+  ZERO_CARS_BG_SYNC_TOTALS,
+} from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
 
 interface Props {
@@ -115,16 +126,8 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             }
 
             if (event.type === 'summary') {
-              setTotals((prev) => ({
-                ...prev,
-                missing: prev.missing + event.missing,
-                diffs: prev.diffs + event.diffs,
-                stale: prev.stale + event.stale,
-              }));
-              appendLog({
-                kind: 'status',
-                message: `${event.dealer}: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`,
-              });
+              setTotals((prev) => addSummaryTotals(prev, event));
+              appendLog(summaryLogFromEvent(event));
               return;
             }
 
@@ -144,29 +147,14 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
             }
 
             if (event.type === 'done') {
-              setTotals((prev) => ({
-                ...prev,
-                updated: prev.updated + event.updated,
-                created: prev.created + event.created,
-                deleted: prev.deleted + event.deleted,
-                failedUpdates: prev.failedUpdates + event.failedUpdates,
-                failedCreates: prev.failedCreates + event.failedCreates,
-                failedDeletes: prev.failedDeletes + event.failedDeletes,
-              }));
-              appendLog({
-                kind: 'status',
-                message: `${event.dealer}: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`,
-              });
+              setTotals((prev) => addDoneTotals(prev, event));
+              appendLog(doneLogFromEvent(event));
               return;
             }
 
             if (event.type === 'log') {
-              if (event.message) {
-                appendLog({
-                  kind: event.level === 'stderr' ? 'error' : 'log',
-                  message: event.dealer ? `${event.dealer}: ${event.message}` : event.message,
-                });
-              }
+              const logEntry = streamLogFromEvent(event);
+              if (logEntry) appendLog(logEntry);
               return;
             }
 
