@@ -18,7 +18,9 @@ import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
 import {
+  countBatchRows,
   labelForRow,
+  recentCompletedRows,
   statsFromStreamEvent,
   streamEventMessageKind,
   toBatchRow,
@@ -67,12 +69,10 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     renewLogRef.current.scrollTop = renewLogRef.current.scrollHeight;
   }, [renewLogs]);
 
-  const pendingCount = rows.filter((row) => row.needs_sync === 1).length;
-  const successCount = rows.filter((row) => row.runStatus === 'success').length;
-  const failedCount = rows.filter((row) => row.runStatus === 'failed').length;
+  const rowCounts = useMemo(() => countBatchRows(rows), [rows]);
 
   const recentResults = useMemo(
-    () => rows.filter((row) => row.runStatus === 'success' || row.runStatus === 'failed').slice().reverse().slice(0, 12),
+    () => recentCompletedRows(rows),
     [rows],
   );
   const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
@@ -334,12 +334,12 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       <BatchSyncPanel
         currentLabel={currentLabel}
         doneSummary={doneSummary}
-        failedCount={failedCount}
-        pendingCount={pendingCount}
+        failedCount={rowCounts.failed}
+        pendingCount={rowCounts.pending}
         running={running}
         stats={stats}
         stopping={stopping}
-        successCount={successCount}
+        successCount={rowCounts.success}
         onRunOrStop={running ? stop : () => void run()}
       />
 

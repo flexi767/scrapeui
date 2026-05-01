@@ -93,3 +93,19 @@ export function streamEventMessageKind(event: StreamEntry) {
   if (event.type === 'result') return 'result';
   return 'status';
 }
+
+export function countBatchRows(rows: BatchRow[]) {
+  return {
+    pending: rows.filter((row) => row.needs_sync === 1).length,
+    success: rows.filter((row) => row.runStatus === 'success').length,
+    failed: rows.filter((row) => row.runStatus === 'failed').length,
+  };
+}
+
+export function recentCompletedRows(rows: BatchRow[], limit = 12) {
+  return rows
+    .filter((row) => row.runStatus === 'success' || row.runStatus === 'failed')
+    .slice()
+    .reverse()
+    .slice(0, limit);
+}
