@@ -2,28 +2,8 @@
 
 import { useState } from 'react';
 import DealersManager from './DealersManager';
+import type { Dealer } from './DealersManager';
 import ScrapeRunner from './ScrapeRunner';
-
-type DealerTemplate = 'bold' | 'executive' | 'atlas' | 'night' | 'sunset' | 'pro';
-
-interface Dealer {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_url: string | null;
-  own: number;
-  active: number;
-  priority: number;
-  cars_url: string | null;
-  mobile_user: string | null;
-  mobile_password: string | null;
-  cars_user: string | null;
-  cars_password: string | null;
-  public_enabled: number;
-  template: DealerTemplate;
-  public_domain: string | null;
-  created_at?: string | null;
-}
 
 export default function ConfigShell({ initialDealers }: { initialDealers: Dealer[] }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);

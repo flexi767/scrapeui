@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 const TEMPLATES = ['bold', 'executive', 'atlas', 'night', 'sunset', 'pro'] as const;
-type TemplateName = typeof TEMPLATES[number];
+export type TemplateName = typeof TEMPLATES[number];
 
-interface Dealer {
+export interface Dealer {
   id: number;
   slug: string;
   name: string;
@@ -35,6 +35,22 @@ interface DealerLoginResult {
   error?: string;
 }
 
+interface DealerEditForm {
+  name: string;
+  slug: string;
+  mobile_url: string;
+  own: boolean;
+  priority: number;
+  mobile_user: string;
+  mobile_password: string;
+  cars_url: string;
+  cars_user: string;
+  cars_password: string;
+  public_enabled: boolean;
+  template: TemplateName;
+  public_domain: string;
+}
+
 function LoginBadge({ result, label }: { result?: LoginResult; label: string }) {
   if (!result) return <span className="text-gray-600 text-[10px]">{label} —</span>;
   if (result.ok) return (
@@ -61,7 +77,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     setDealers(prev => fn(prev));
   }
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<DealerEditForm>({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
     mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
     public_enabled: false, template: 'bold' as TemplateName, public_domain: '',
@@ -172,7 +188,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       name: d.name, slug: d.slug, mobile_url: d.mobile_url || '', own: Boolean(d.own), priority: d.priority || 0,
       mobile_user: d.mobile_user || '', mobile_password: d.mobile_password || '',
       cars_url: d.cars_url || '', cars_user: d.cars_user || '', cars_password: d.cars_password || '',
-      public_enabled: d.public_enabled === 1, template: d.template || 'bold', public_domain: d.public_domain || '',
+      public_enabled: d.public_enabled === 1, template: d.template, public_domain: d.public_domain || '',
     });
   }
 

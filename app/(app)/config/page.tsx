@@ -1,25 +1,9 @@
 import Link from 'next/link';
 import ConfigShell from '@/components/ConfigShell';
+import type { Dealer } from '@/components/DealersManager';
 import { raw } from '@/db/client';
 
-type DealerTemplate = 'bold' | 'executive' | 'atlas' | 'night' | 'sunset' | 'pro';
-
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_url: string | null;
-  own: number;
-  active: number;
-  priority: number;
-  mobile_user: string | null;
-  mobile_password: string | null;
-  cars_url: string | null;
-  cars_user: string | null;
-  cars_password: string | null;
-  public_enabled: number;
-  template: DealerTemplate;
-  public_domain: string | null;
+interface DealerRow extends Dealer {
   created_at: string | null;
 }
 
