@@ -10,13 +10,11 @@ import { Label } from "@/components/ui/label";
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(process.env.NODE_ENV === "development");
 
   // Auto-login in development mode
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
     signIn("credentials", {
       username: "",
       password: "__dev_auto__",
