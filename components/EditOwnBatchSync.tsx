@@ -17,6 +17,7 @@ import { ChangedListingsTable } from './edit-own-batch-sync/ChangedListingsTable
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
+import { useAutoScroll } from './edit-own-batch-sync/useAutoScroll';
 import {
   countBatchRows,
   labelForRow,
@@ -59,15 +60,8 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
     void run();
   });
 
-  useEffect(() => {
-    if (!logRef.current) return;
-    logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logs]);
-
-  useEffect(() => {
-    if (!renewLogRef.current) return;
-    renewLogRef.current.scrollTop = renewLogRef.current.scrollHeight;
-  }, [renewLogs]);
+  useAutoScroll(logRef, logs);
+  useAutoScroll(renewLogRef, renewLogs);
 
   const rowCounts = useMemo(() => countBatchRows(rows), [rows]);
 
