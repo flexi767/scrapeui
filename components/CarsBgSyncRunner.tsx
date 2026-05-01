@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
 import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
+import { CarsBgSyncRunControls } from '@/components/cars-bg-sync/CarsBgSyncRunControls';
 import { listingLabel, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem } from '@/components/cars-bg-sync/types';
 
@@ -270,77 +272,22 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
         <CarsBgSyncOverview totals={totals} running={running} liveMode={liveMode} doneSummary={doneSummary} />
 
-        <div className="flex flex-wrap items-center gap-4">
-          <button
-            onClick={running ? stop : () => void run(false)}
-            disabled={stopping}
-            className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${
-              running ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
-            }`}
-          >
-            {(running || stopping) && (
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            )}
-            {stopping ? 'Stopping…' : running ? 'Stop' : 'Preview plan'}
-          </button>
+        <CarsBgSyncRunControls
+          running={running}
+          stopping={stopping}
+          currentDealer={currentDealer}
+          onPreview={running ? stop : () => void run(false)}
+          onRunLive={() => void run(true)}
+        />
 
-          <button
-            onClick={() => void run(true)}
-            disabled={running}
-            className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Run live
-          </button>
-
-          {currentDealer && (
-            <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">
-              <div className="text-[11px] uppercase tracking-wide text-sky-300/70">Current dealer</div>
-              <div className="mt-1 truncate">{currentDealer}</div>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-medium text-gray-200">Dealers</div>
-              <div className="mt-1 text-xs text-gray-500">
-                Select one or more own dealers for preview or live sync.
-              </div>
-            </div>
-            <button
-              type="button"
-              disabled={running || dealers.length === 0}
-              onClick={() => setSelectedDealers(allSelected ? [] : dealers.map((dealer) => dealer.slug))}
-              className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {allSelected ? 'Clear all' : 'Select all'}
-            </button>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {dealers.map((dealer) => {
-              const selected = selectedDealers.includes(dealer.slug);
-              return (
-                <button
-                  key={dealer.slug}
-                  type="button"
-                  disabled={running}
-                  onClick={() => toggleDealer(dealer.slug)}
-                  className={`rounded-md border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selected
-                      ? 'border-sky-500 bg-sky-500/15 text-sky-200'
-                      : 'border-gray-700 bg-gray-900/80 text-gray-400 hover:border-gray-500 hover:text-gray-200'
-                  }`}
-                >
-                  {dealer.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <CarsBgSyncDealerSelector
+          dealers={dealers}
+          selectedDealers={selectedDealers}
+          running={running}
+          allSelected={allSelected}
+          onToggleDealer={toggleDealer}
+          onToggleAll={() => setSelectedDealers(allSelected ? [] : dealers.map((dealer) => dealer.slug))}
+        />
       </div>
 
       {doneSummary && (
