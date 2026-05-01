@@ -8,58 +8,22 @@ import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
 import { SearchPrefillFields } from '@/components/search-prefill/SearchPrefillFields';
 import {
+  loadLocationOptions,
+  loadMobileBgSearchResults,
+  loadSearchPrefill,
+  resetSearchProfileFields,
+  saveSearchProfileFields,
+} from '@/components/listing-search-prefill/api';
+import type {
+  MobileBgSearchResultsResponse,
+  PendingAction,
+  SearchField,
+  SearchPrefillResponse,
+} from '@/components/listing-search-prefill/types';
+import {
   MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES as ALWAYS_INCLUDED_FIELD_NAMES,
   MOBILE_BG_HIDDEN_FIELD_NAMES as HIDDEN_FIELD_NAMES,
 } from '@/lib/mobile-bg/search-field-config';
-import type { MobileBgSearchResultsPayload } from '@/lib/mobile-bg/search-results';
-
-interface SearchField {
-  name: string;
-  label: string;
-  value: string;
-  source: 'default' | 'listing' | 'derived' | 'saved';
-}
-
-interface SearchPrefillResponse {
-  listing: {
-    id: number;
-    mobile_id: string | null;
-    title: string | null;
-    make: string | null;
-    model: string | null;
-    currentPrice: number | null;
-  };
-  form: {
-    action: string;
-    method: 'POST';
-    fields: SearchField[];
-    visibleFields: SearchField[];
-  };
-  reference: {
-    makeCount: number | null;
-    modelCount: number | null;
-  };
-  options: {
-    makes: Array<{ value: string; count: number | null }>;
-    modelsByMake: Record<string, Array<{ value: string; count: number | null }>>;
-    locations: Array<{ value: string; label: string }>;
-    subLocations: {
-      label: string;
-      options: Array<{ value: string; label: string }>;
-    };
-  };
-  omitted: string[];
-  savedSearch: {
-    enabled: boolean;
-    updatedAt: string | null;
-  };
-}
-
-interface MobileBgSearchResultsResponse extends MobileBgSearchResultsPayload {
-  fallback_note?: string | null;
-}
-
-type PendingAction = 'open' | 'show-first-7' | null;
 
 export default function ListingSearchPrefillButton({
   listingId,
@@ -93,23 +57,8 @@ export default function ListingSearchPrefillButton({
     setProfileSaving(true);
     try {
       const fields = buildSubmissionFields();
-      const res = await fetch(`/api/listing-search-profiles/${listingId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to save search values');
-      }
-
-      const refresh = await fetch(`/api/listings/search-prefill/${listingId}`);
-      const refreshPayload = await refresh.json().catch(() => ({}));
-      if (!refresh.ok) {
-        throw new Error((refreshPayload as { error?: string }).error || 'Failed to reload saved search values');
-      }
-
-      const nextData = refreshPayload as SearchPrefillResponse;
+      await saveSearchProfileFields(listingId, fields);
+      const nextData = await loadSearchPrefill(listingId);
       setData(nextData);
       syncEditableFields(nextData);
       toast.success('Saved custom search values');
@@ -123,21 +72,8 @@ export default function ListingSearchPrefillButton({
   async function resetSearchProfile() {
     setProfileSaving(true);
     try {
-      const res = await fetch(`/api/listing-search-profiles/${listingId}`, {
-        method: 'DELETE',
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to reset saved search values');
-      }
-
-      const refresh = await fetch(`/api/listings/search-prefill/${listingId}`);
-      const refreshPayload = await refresh.json().catch(() => ({}));
-      if (!refresh.ok) {
-        throw new Error((refreshPayload as { error?: string }).error || 'Failed to reload default search values');
-      }
-
-      const nextData = refreshPayload as SearchPrefillResponse;
+      await resetSearchProfileFields(listingId);
+      const nextData = await loadSearchPrefill(listingId);
       setData(nextData);
       syncEditableFields(nextData);
       toast.success('Reset to default search values');
@@ -162,12 +98,7 @@ export default function ListingSearchPrefillButton({
     setOpen(true);
 
     try {
-      const res = await fetch(`/api/listings/search-prefill/${listingId}`);
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to load search fields');
-      }
-      const nextData = payload as SearchPrefillResponse;
+      const nextData = await loadSearchPrefill(listingId);
       setData(nextData);
       syncEditableFields(nextData);
     } catch (err: unknown) {
@@ -227,12 +158,7 @@ export default function ListingSearchPrefillButton({
     }));
 
     try {
-      const params = new URLSearchParams();
-      if (value) params.set('location', value);
-      const res = await fetch(`/api/mobile-bg/location-options?${params.toString()}`);
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) return;
-
+      const payload = await loadLocationOptions(value);
       const nextLabel = typeof payload.label === 'string' && payload.label ? payload.label : 'Населено място';
       const nextOptions = Array.isArray(payload.options) && payload.options.length > 0
         ? payload.options as Array<{ value: string; label: string }>
@@ -316,22 +242,14 @@ export default function ListingSearchPrefillButton({
     setResultsError('');
 
     try {
-      const res = await fetch('/api/mobile-bg/search-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: data.form.action,
-          method: data.form.method,
-          fields,
-          sourceListingId: listingId,
-          sourceMobileId: data.listing.mobile_id,
-        }),
+      const payload = await loadMobileBgSearchResults({
+        action: data.form.action,
+        method: data.form.method,
+        fields,
+        sourceListingId: listingId,
+        sourceMobileId: data.listing.mobile_id,
       });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error || 'Failed to load mobile.bg results');
-      }
-      setResults(payload as MobileBgSearchResultsResponse);
+      setResults(payload);
     } catch (err: unknown) {
       setResultsError(err instanceof Error ? err.message : 'Failed to load mobile.bg results');
       setResults(null);
