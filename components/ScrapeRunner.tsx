@@ -5,26 +5,11 @@ import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { ScrapeChangesTable } from '@/components/scrape-runner/ScrapeChangesTable';
 import { ScrapeControls } from '@/components/scrape-runner/ScrapeControls';
 import { ScrapeLogPanel } from '@/components/scrape-runner/ScrapeLogPanel';
-import type { ScrapeDealer, ScrapeLogEntry, ScrapeSource } from '@/components/scrape-runner/types';
+import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/types';
+import { useScrapeDealerSelection } from '@/components/scrape-runner/useScrapeDealerSelection';
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
-  const [source, setSource] = useState<ScrapeSource>('mobile');
-  const activeDealers = initialDealers.filter((dealer) => dealer.active);
-  const availableDealers = activeDealers.filter((dealer) => source === 'mobile' ? dealer.mobile_url : dealer.cars_url);
-  const [selectedDealers, setSelectedDealers] = useState<string[]>(initialDealers.filter(d => d.active && d.own && d.mobile_url).map(d => d.slug));
-
-  // Effective selection: only keep slugs that are still active
-  const activeSlugs = new Set(availableDealers.map(d => d.slug));
-  const effectiveSelected = selectedDealers.filter(slug => activeSlugs.has(slug));
-  const allActiveSelected = availableDealers.length > 0 && effectiveSelected.length === availableDealers.length;
-
-  useEffect(() => {
-    const nextActiveSlugs = new Set(activeDealers.map(d => d.slug));
-    setSelectedDealers(prev => {
-      const next = prev.filter(slug => nextActiveSlugs.has(slug));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [activeDealers]);
+  const dealerSelection = useScrapeDealerSelection(initialDealers);
 
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
@@ -34,30 +19,6 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const logRef = useRef<HTMLDivElement>(null);
   const changesRef = useRef<HTMLDivElement>(null);
   const runAbortRef = useRef<AbortController | null>(null);
-
-  const toggleDealer = (slug: string) => {
-    setSelectedDealers(prev =>
-      prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]
-    );
-  };
-
-  const toggleSelectAllDealers = () => {
-    setSelectedDealers((prev) => {
-      const inactiveSelections = prev.filter((slug) => !activeSlugs.has(slug));
-      if (allActiveSelected) return inactiveSelections;
-      return [...inactiveSelections, ...availableDealers.map((dealer) => dealer.slug)];
-    });
-  };
-
-  const selectSource = (nextSource: ScrapeSource) => {
-    if (running) return;
-    setSource(nextSource);
-    setSelectedDealers(
-      initialDealers
-        .filter((dealer) => dealer.active && dealer.own && (nextSource === 'mobile' ? dealer.mobile_url : dealer.cars_url))
-        .map((dealer) => dealer.slug),
-    );
-  };
 
   const scrollToBottom = () => {
     requestAnimationFrame(() => {
@@ -76,7 +37,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   }, [changes.length]);
 
   const run = async () => {
-    if (effectiveSelected.length === 0) return;
+    if (dealerSelection.effectiveSelected.length === 0) return;
     onRunStart?.();
     setRunning(true);
     setStopping(false);
@@ -91,7 +52,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       res = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealers: effectiveSelected, deepCrawl, source }),
+        body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, source: dealerSelection.source }),
         signal: abortController.signal,
       });
     } catch (err) {
@@ -156,17 +117,19 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   return (
     <div className="space-y-6">
       <ScrapeControls
-        source={source}
+        source={dealerSelection.source}
         running={running}
         stopping={stopping}
         deepCrawl={deepCrawl}
-        activeDealers={activeDealers}
-        availableDealers={availableDealers}
-        effectiveSelected={effectiveSelected}
-        allActiveSelected={allActiveSelected}
-        onSourceChange={selectSource}
-        onToggleDealer={toggleDealer}
-        onToggleSelectAllDealers={toggleSelectAllDealers}
+        activeDealers={dealerSelection.activeDealers}
+        availableDealers={dealerSelection.availableDealers}
+        effectiveSelected={dealerSelection.effectiveSelected}
+        allActiveSelected={dealerSelection.allActiveSelected}
+        onSourceChange={(nextSource) => {
+          if (!running) dealerSelection.selectSource(nextSource);
+        }}
+        onToggleDealer={dealerSelection.toggleDealer}
+        onToggleSelectAllDealers={dealerSelection.toggleSelectAllDealers}
         onToggleDeepCrawl={() => !running && setDeepCrawl((value) => !value)}
         onRunClick={running ? stop : run}
       />
