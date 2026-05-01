@@ -4,6 +4,7 @@ import { useState, useEffect, useEffectEvent } from 'react';
 import { toast } from 'sonner';
 import { AddDealerForm } from '@/components/dealers/AddDealerForm';
 import { DealersTable } from '@/components/dealers/DealersTable';
+import { createDealer, deleteDealer, patchDealer, testDealerLogins } from '@/components/dealers/api';
 import { type Dealer, type DealerCreateForm, type DealerEditForm, type DealerLoginResult, type TemplateName } from '@/components/dealers/types';
 import { hasHttpProtocol } from '@/components/dealers/utils';
 
@@ -40,12 +41,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   async function testLogin(id: number) {
     setLoginRunning(prev => new Set([...prev, id]));
     try {
-      const res = await fetch('/api/dealers/test-logins', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [id] }),
-      });
-      const data = await res.json() as Record<number, DealerLoginResult>;
+      const data = await testDealerLogins(id);
       setLoginResults(prev => ({ ...prev, ...data }));
     } catch (err) {
       setLoginResults(prev => ({ ...prev, [id]: { error: (err as Error).message } }));
@@ -74,33 +70,22 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
     setAdding(true);
     try {
-      const res = await fetch('/api/dealers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Failed to add'); return; }
-      updateDealers(d => [...d, data]);
+      const result = await createDealer(form);
+      if (!result.ok) { setError(result.error); return; }
+      updateDealers(d => [...d, result.data]);
       setForm({ name: '', slug: '', mobile_url: '', own: false, priority: 0, mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '' });
     } finally { setAdding(false); }
   }
 
   async function onToggleActive(d: Dealer) {
     const newActive = d.active ? 0 : 1;
-    await fetch(`/api/dealers/${d.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: newActive }),
-    });
+    await patchDealer(d.id, { active: newActive });
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, active: newActive } : x));
   }
 
   async function onToggleOwn(d: Dealer) {
     const newOwn = d.own ? 0 : 1;
-    await fetch(`/api/dealers/${d.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ own: newOwn }),
-    });
+    await patchDealer(d.id, { own: newOwn });
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, own: newOwn } : x));
     if (newOwn === 1) startEdit({ ...d, own: newOwn });
     else if (editingId === d.id) setEditingId(null);
@@ -108,10 +93,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
   async function onChangePriority(d: Dealer, delta: number) {
     const newPriority = (d.priority || 0) + delta;
-    await fetch(`/api/dealers/${d.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priority: newPriority }),
-    });
+    await patchDealer(d.id, { priority: newPriority });
     updateDealers(cs => cs.map(x => x.id === d.id ? { ...x, priority: newPriority } : x).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.name.localeCompare(b.name)));
     setFlashId(d.id);
     setTimeout(() => setFlashId(null), 600);
@@ -142,12 +124,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/dealers/${id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(data.error || 'Failed to save'); return; }
+      const result = await patchDealer(id, editForm);
+      if (!result.ok) { setError(result.error); return; }
       updateDealers(cs => cs.map(x => x.id === id ? {
         ...x,
         ...editForm,
@@ -161,7 +139,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
 
   async function onDelete(d: Dealer) {
     if (!confirm(`Delete ${d.name}?`)) return;
-    await fetch(`/api/dealers/${d.id}`, { method: 'DELETE' });
+    await deleteDealer(d.id);
     updateDealers(cs => cs.filter(x => x.id !== d.id));
   }
 
