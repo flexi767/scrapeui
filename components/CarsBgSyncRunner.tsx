@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
@@ -23,6 +23,7 @@ import {
   ZERO_CARS_BG_SYNC_TOTALS,
 } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
+import { useAutoScroll } from '@/components/cars-bg-sync/useAutoScroll';
 
 interface Props {
   dealers: DealerRow[];
@@ -44,10 +45,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!logRef.current) return;
-    logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logs]);
+  useAutoScroll(logRef, logs);
 
   const hasPlan = missing.length > 0 || diffs.length > 0 || staleCarsIds.length > 0 || doneSummary !== null;
 
