@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingDetailProps } from "../types";
 import s from "./ListingDetail.module.css";
 
@@ -18,7 +19,7 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
       <div className={s.main}>
         <div>
           {thumb
-            ? <div className={s.imageWrap}><img src={thumb} alt={`${listing.make} ${listing.model}`} /></div>
+            ? <div className={s.imageWrap}><ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /></div>
             : <div className={s.imagePlaceholder}>🚗</div>}
           {listing.description && <div className={s.description}>{listing.description}</div>}
         </div>

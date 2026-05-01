@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps, PublicListingFilters } from "../types";
 import s from "./ListingGrid.module.css";
 
@@ -111,7 +112,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
                 <Link key={l.mobileId} href={`${base}/${l.mobileId}`} className={s.row}>
                   <div className={s.rowCarCol}>
                     <div className={s.thumb}>
-                      {thumb ? <img src={thumb} alt={`${l.make} ${l.model}`} /> : <div className={s.thumbPlaceholder}>🚗</div>}
+                      {thumb ? <ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /> : <div className={s.thumbPlaceholder}>🚗</div>}
                     </div>
                     <div>
                       <div className={s.carName}>{l.make} {l.model}</div>
