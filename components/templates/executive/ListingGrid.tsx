@@ -17,7 +17,7 @@ function filterHref(base: string, f: PublicListingFilters, u: Record<string, str
   return qs ? `${base}?${qs}` : base;
 }
 
-export function ListingGrid({ dealer, listings, total, page, limit, filters }: ListingGridProps) {
+export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
   const initial = dealer.name.charAt(0);
@@ -29,12 +29,25 @@ export function ListingGrid({ dealer, listings, total, page, limit, filters }: L
           <div className={s.logoMark}>{initial}</div>
           <div className={s.logoText}><span className={s.logoAccent}>{initial}</span>{dealer.name.slice(1).toUpperCase()}</div>
         </div>
-        <select className={s.sortSelect} defaultValue={filters.sort ?? "newest"}
-          onChange={(e) => { window.location.href = filterHref(base, filters, { sort: e.target.value }); }}>
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price ↑</option>
-          <option value="price_desc">Price ↓</option>
-        </select>
+        <div className={s.headerFilters}>
+          <select className={s.filterSelect} value={filters.make ?? ""} onChange={(e) => { window.location.href = filterHref(base, filters, { make: e.target.value || undefined, page: 1 }); }}>
+            <option value="">All Makes</option>
+            {makes.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select className={s.filterSelect} value={filters.fuel ?? ""} onChange={(e) => { window.location.href = filterHref(base, filters, { fuel: e.target.value || undefined, page: 1 }); }}>
+            <option value="">All Fuels</option>
+            <option value="Бензин">Petrol</option>
+            <option value="Дизел">Diesel</option>
+            <option value="Електрически">Electric</option>
+            <option value="Хибрид">Hybrid</option>
+          </select>
+          <select className={s.sortSelect} defaultValue={filters.sort ?? "newest"}
+            onChange={(e) => { window.location.href = filterHref(base, filters, { sort: e.target.value }); }}>
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
+          </select>
+        </div>
       </header>
 
       <div className={s.hero}>

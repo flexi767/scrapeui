@@ -4,6 +4,9 @@
 .logoMark { width: 36px; height: 36px; background: #c9a84c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; color: #000; }
 .logoText { font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #e8e8e8; }
 .logoAccent { color: #c9a84c; }
+.headerFilters { display: flex; align-items: center; gap: 0.75rem; }
+.filterSelect { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: #e8e8e8; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+.filterSelect option { background: #111; }
 .sortSelect { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: #c9a84c; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
 .sortSelect option { background: #111; }
 .hero { min-height: 360px; background: linear-gradient(135deg, #0a0a0a 0%, #1a1208 50%, #0a0a0a 100%); display: flex; align-items: flex-end; padding: 2.5rem; }
