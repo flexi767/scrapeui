@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface LogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
@@ -310,11 +311,11 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                     <div className="flex items-start gap-3">
                       {entry.thumb ? (
                         <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <ImageWithFallback
                             src={entry.thumb}
                             alt=""
                             className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
+                            fallbackLabel="No image"
                             style={{ aspectRatio: '4/3' }}
                           />
                         </a>
@@ -382,11 +383,11 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                 <div key={i} className="flex items-start gap-3 py-1.5 border-b border-gray-800 last:border-0">
                   {entry.thumb ? (
                     <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <ImageWithFallback
                         src={entry.thumb}
                         alt=""
                         className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
+                        fallbackLabel="No image"
                         style={{aspectRatio:'4/3'}}
                       />
                     </a>
