@@ -1,3 +1,5 @@
+export type ScrapeSource = 'mobile' | 'carsbg';
+
 export interface ScrapeLogEntry {
   type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
   level?: 'stderr' | 'info';
