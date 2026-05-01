@@ -21,7 +21,10 @@ import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
 import { useAutoScroll } from './edit-own-batch-sync/useAutoScroll';
 import {
   countBatchRows,
+  applyRowResult,
   labelForRow,
+  markRowRunning,
+  prepareRowsForRun,
   recentCompletedRows,
   statsFromStreamEvent,
   streamEventMessageKind,
@@ -98,12 +101,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       succeeded: 0,
       failed: 0,
     });
-    setRows((prev) => prev.map((row) => row.needs_sync === 1 ? {
-      ...row,
-      runStatus: 'pending',
-      runError: null,
-      completedAt: row.completedAt,
-    } : row));
+    setRows(prepareRowsForRun);
 
     const abortController = new AbortController();
     abortRef.current = abortController;
@@ -138,24 +136,14 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
             if (event.type === 'checking') {
               setStats(statsFromStreamEvent(event));
               setCurrentLabel(labelForRow({ ...event.target, mobile_id: event.target.mobile_id }));
-              setRows((prev) => prev.map((row) => row.backup_id === event.target.backup_id ? {
-                ...row,
-                runStatus: 'running',
-                runError: null,
-              } : row));
+              setRows((prev) => markRowRunning(prev, event.target.backup_id));
               if (event.message) appendLog({ kind: 'status', message: event.message });
               return;
             }
 
             if (event.type === 'result') {
               setStats(statsFromStreamEvent(event));
-              setRows((prev) => prev.map((row) => row.backup_id === event.row.backup_id ? {
-                ...row,
-                needs_sync: event.row.status === 'success' ? 0 : row.needs_sync,
-                runStatus: event.row.status,
-                runError: event.row.error,
-                completedAt: event.row.completed_at,
-              } : row));
+              setRows((prev) => applyRowResult(prev, event.row));
               if (event.message) {
                 appendLog({
                   kind: 'result',

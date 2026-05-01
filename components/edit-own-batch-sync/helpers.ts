@@ -109,3 +109,30 @@ export function recentCompletedRows(rows: BatchRow[], limit = 12) {
     .reverse()
     .slice(0, limit);
 }
+
+export function prepareRowsForRun(rows: BatchRow[]) {
+  return rows.map((row) => row.needs_sync === 1 ? {
+    ...row,
+    runStatus: 'pending',
+    runError: null,
+    completedAt: row.completedAt,
+  } : row);
+}
+
+export function markRowRunning(rows: BatchRow[], backupId: number) {
+  return rows.map((row) => row.backup_id === backupId ? {
+    ...row,
+    runStatus: 'running',
+    runError: null,
+  } : row);
+}
+
+export function applyRowResult(rows: BatchRow[], result: Extract<StreamEntry, { type: 'result' }>['row']) {
+  return rows.map((row) => row.backup_id === result.backup_id ? {
+    ...row,
+    needs_sync: result.status === 'success' ? 0 : row.needs_sync,
+    runStatus: result.status,
+    runError: result.error,
+    completedAt: result.completed_at,
+  } : row);
+}
