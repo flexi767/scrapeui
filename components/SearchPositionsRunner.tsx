@@ -3,150 +3,21 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
-
-type RankLogLevel = 'stderr' | 'info';
-
-interface RankStats {
-  total: number;
-  checked: number;
-  found: number;
-  notFound: number;
-}
-
-interface RankTarget {
-  backup_id: number;
-  listing_id: number;
-  mobile_id: string | null;
-  title: string | null;
-  make: string | null;
-  model: string | null;
-  thumb_url: string | null;
-  listing_url: string | null;
-}
-
-interface RankRow {
-  backup_id: number;
-  listing_id: number;
-  mobile_id: string | null;
-  title: string | null;
-  make: string | null;
-  model: string | null;
-  checked_at: string;
-  original_position: number | null;
-  price_position: number | null;
-  first_result_price: number | null;
-  found: boolean;
-  thumb_url: string | null;
-  listing_url: string | null;
-}
-
-type StreamEntry =
-  | {
-      type: 'start';
-      stats: RankStats;
-      missingOnly: boolean;
-      message?: string;
-    }
-  | {
-      type: 'checking';
-      stats: RankStats;
-      target: RankTarget;
-      message?: string;
-    }
-  | {
-      type: 'result';
-      stats: RankStats;
-      row: RankRow;
-      message?: string;
-    }
-  | {
-      type: 'complete';
-      total: number;
-      found: number;
-      notFound: number;
-      rows: RankRow[];
-      message?: string;
-      code?: number | null;
-    }
-  | {
-      type: 'log';
-      level?: RankLogLevel;
-      message?: string;
-    }
-  | {
-      type: 'error';
-      message?: string;
-    }
-  | {
-      type: 'stream_closed';
-      code?: number | null;
-    };
-
-interface DisplayLogEntry {
-  kind: 'status' | 'result' | 'log' | 'error';
-  message: string;
-  found?: boolean;
-  thumbUrl?: string | null;
-  listingUrl?: string | null;
-  originalPosition?: number | null;
-  pricePosition?: number | null;
-}
-
-function labelForTarget(target: RankTarget) {
-  return [target.make, target.model, target.title].filter(Boolean).join(' ') || target.mobile_id || `listing ${target.listing_id}`;
-}
-
-function labelForRow(row: RankRow) {
-  return [row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `listing ${row.listing_id}`;
-}
-
-function PreviewThumb({
-  thumbUrl,
-  listingUrl,
-  label,
-}: {
-  thumbUrl: string | null;
-  listingUrl: string | null;
-  label: string;
-}) {
-  const content = thumbUrl ? (
-    <ImageWithFallback
-      src={thumbUrl}
-      alt={label}
-      className="h-14 w-[76px] rounded object-cover bg-gray-800"
-      fallbackClassName="flex h-14 w-[76px] items-center justify-center rounded bg-gray-800 text-[10px] uppercase tracking-wide text-gray-500"
-      fallbackLabel="No image"
-      style={{ aspectRatio: '4/3' }}
-    />
-  ) : (
-    <div className="flex h-14 w-[76px] items-center justify-center rounded bg-gray-800 text-[10px] uppercase tracking-wide text-gray-500">
-      No image
-    </div>
-  );
-
-  if (listingUrl) {
-    return (
-      <a href={listingUrl} className="shrink-0 transition-opacity hover:opacity-80">
-        {content}
-      </a>
-    );
-  }
-
-  return <div className="shrink-0">{content}</div>;
-}
+import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
+import { SearchPositionPreviewThumb } from '@/components/search-positions/SearchPositionPreviewThumb';
+import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
 
 export default function SearchPositionsRunner() {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [activeMode, setActiveMode] = useState<'all' | 'missing' | null>(null);
-  const [logs, setLogs] = useState<DisplayLogEntry[]>([]);
+  const [logs, setLogs] = useState<SearchPositionLogEntry[]>([]);
   const [stats, setStats] = useState<RankStats | null>(null);
   const [currentLabel, setCurrentLabel] = useState<string | null>(null);
-  const [currentPreview, setCurrentPreview] = useState<{ thumbUrl: string | null; listingUrl: string | null } | null>(null);
-  const [doneSummary, setDoneSummary] = useState<{ total: number; found: number; notFound: number } | null>(null);
+  const [currentPreview, setCurrentPreview] = useState<SearchPositionPreview | null>(null);
+  const [doneSummary, setDoneSummary] = useState<SearchPositionSummary | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -156,10 +27,10 @@ export default function SearchPositionsRunner() {
   }, [logs]);
 
   const resultRows = useMemo(
-    () => logs.filter((entry): entry is DisplayLogEntry & { kind: 'result'; found: boolean } => entry.kind === 'result' && typeof entry.found === 'boolean'),
+    () => logs.filter((entry): entry is SearchPositionLogEntry & { kind: 'result'; found: boolean } => entry.kind === 'result' && typeof entry.found === 'boolean'),
     [logs],
   );
-  const appendLog = (entry: DisplayLogEntry) => setLogs((prev) => [...prev, entry]);
+  const appendLog = (entry: SearchPositionLogEntry) => setLogs((prev) => [...prev, entry]);
 
   async function run(missingOnly = false) {
     setRunning(true);
@@ -210,7 +81,7 @@ export default function SearchPositionsRunner() {
     }
 
     try {
-      await streamJsonEvents<StreamEntry>(res, (event) => {
+      await streamJsonEvents<SearchPositionStreamEntry>(res, (event) => {
             if (event.type === 'start') {
               setStats(event.stats);
               if (event.message) appendLog({ kind: 'status', message: event.message });
@@ -229,15 +100,7 @@ export default function SearchPositionsRunner() {
               setStats(event.stats);
               setCurrentLabel(labelForRow(event.row));
               setCurrentPreview({ thumbUrl: event.row.thumb_url, listingUrl: event.row.listing_url });
-              appendLog({
-                kind: 'result',
-                found: event.row.found,
-                message: labelForRow(event.row),
-                thumbUrl: event.row.thumb_url,
-                listingUrl: event.row.listing_url,
-                originalPosition: event.row.original_position,
-                pricePosition: event.row.price_position,
-              });
+              appendLog(logEntryFromResult(event.row));
               return;
             }
 
@@ -256,7 +119,7 @@ export default function SearchPositionsRunner() {
             }
 
             if (event.type === 'complete') {
-              setDoneSummary({ total: event.total, found: event.found, notFound: event.notFound });
+              setDoneSummary(summaryFromCompleteEvent(event));
               setCurrentLabel(null);
               setCurrentPreview(null);
               setRunning(false);
@@ -377,7 +240,7 @@ export default function SearchPositionsRunner() {
             <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">
               <div className="text-[11px] uppercase tracking-wide text-sky-300/70">Current</div>
               <div className="mt-2 flex items-center gap-3">
-                <PreviewThumb
+                <SearchPositionPreviewThumb
                   thumbUrl={currentPreview?.thumbUrl ?? null}
                   listingUrl={currentPreview?.listingUrl ?? null}
                   label={currentLabel}
@@ -402,7 +265,7 @@ export default function SearchPositionsRunner() {
             {resultRows.slice(-12).reverse().map((entry, index) => (
               <div key={`${index}-${entry.message}`} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
                 <div className="flex min-w-0 items-center gap-3">
-                  <PreviewThumb
+                  <SearchPositionPreviewThumb
                     thumbUrl={entry.thumbUrl ?? null}
                     listingUrl={entry.listingUrl ?? null}
                     label={entry.message}
