@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { getMobileBgEditFormById } from '@/lib/queries';
 import { formatDate, parseJson } from '@/lib/utils';
 
@@ -82,11 +83,11 @@ export default async function MobileBgEditFormDetailPage({
             </div>
             {row.screenshot_path ? (
               <a href={`/api/mobilebg-edit-form-screenshot/${row.id}`} target="_blank" rel="noreferrer" className="block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ImageWithFallback
                   src={`/api/mobilebg-edit-form-screenshot/${row.id}`}
                   alt={`Edit form screenshot for ${row.mobile_id || row.id}`}
                   className="w-full object-cover"
+                  fallbackLabel="Screenshot unavailable"
                 />
               </a>
             ) : (
