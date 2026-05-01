@@ -17,7 +17,7 @@ export default function ConfigPage() {
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-5xl px-4 py-3">
+        <div className="mx-auto max-w-screen-2xl px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/listings" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Listings
@@ -27,7 +27,7 @@ export default function ConfigPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 space-y-10">
+      <main className="mx-auto max-w-screen-2xl px-4 py-8 space-y-10">
         <ConfigShell initialDealers={dealers} />
       </main>
     </div>
