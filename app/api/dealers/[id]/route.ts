@@ -34,15 +34,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     cars_url: 'cars_url',
     cars_user: 'cars_user',
     cars_password: 'cars_password',
+    public_enabled: 'public_enabled',
+    template: 'template',
+    public_domain: 'public_domain',
   };
+
+  const boolFields = new Set(['own', 'active', 'public_enabled']);
+  const numFields = new Set(['priority']);
+  const allowedTemplates = new Set(['bold', 'executive', 'atlas', 'night', 'sunset', 'pro']);
 
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) {
       if (k === 'slug' && !/^[a-z0-9-]+$/.test(body[k])) {
         return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
       }
+      if (k === 'template' && !allowedTemplates.has(body[k])) {
+        return NextResponse.json({ error: `template must be one of: ${[...allowedTemplates].join(', ')}` }, { status: 400 });
+      }
       fields.push(`${col} = ?`);
-      values.push((k === 'own' || k === 'active') ? (body[k] ? 1 : 0) : (k === 'priority' ? Number(body[k]) : body[k]));
+      if (boolFields.has(k)) values.push(body[k] ? 1 : 0);
+      else if (numFields.has(k)) values.push(Number(body[k]));
+      else values.push(body[k] ?? null);
     }
   }
 

@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
+const TEMPLATES = ['bold', 'executive', 'atlas', 'night', 'sunset', 'pro'] as const;
+type TemplateName = typeof TEMPLATES[number];
+
 interface Dealer {
   id: number;
   slug: string;
@@ -16,6 +19,9 @@ interface Dealer {
   cars_url: string | null;
   cars_user: string | null;
   cars_password: string | null;
+  public_enabled: number;
+  template: TemplateName;
+  public_domain: string | null;
 }
 
 interface LoginResult {
@@ -58,6 +64,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   const [editForm, setEditForm] = useState({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
     mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
+    public_enabled: false, template: 'bold' as TemplateName, public_domain: '',
   });
   const [form, setForm] = useState({
     name: '', slug: '', mobile_url: '', own: false, priority: 0,
@@ -165,6 +172,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       name: d.name, slug: d.slug, mobile_url: d.mobile_url || '', own: Boolean(d.own), priority: d.priority || 0,
       mobile_user: d.mobile_user || '', mobile_password: d.mobile_password || '',
       cars_url: d.cars_url || '', cars_user: d.cars_user || '', cars_password: d.cars_password || '',
+      public_enabled: d.public_enabled === 1, template: d.template || 'bold', public_domain: d.public_domain || '',
     });
   }
 
@@ -192,6 +200,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
         ...x,
         ...editForm,
         own: editForm.own ? 1 : 0,
+        public_enabled: editForm.public_enabled ? 1 : 0,
+        public_domain: editForm.public_domain || null,
       } : x));
       setEditingId(null);
     } finally { setSaving(false); }
@@ -216,12 +226,13 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
               <th className="px-4 py-2 text-center">Own</th>
               <th className="px-4 py-2 text-center">Priority</th>
               <th className="px-4 py-2 text-center">Active</th>
+              <th className="px-4 py-2 text-center">Public</th>
               <th className="px-4 py-2 text-center w-16"></th>
               <th className="px-4 py-2 text-center w-8"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50">
-            {dealers.length === 0 && <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
+            {dealers.length === 0 && <tr><td colSpan={10} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
             {dealers.map(d => {
               const editing = editingId === d.id;
               const loginResult = loginResults[d.id];
@@ -303,6 +314,31 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
                         ) : (
                           <LoginBadge result={loginResult?.['cars.bg']} label="cars" />
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-center align-top">
+                    {editing ? (
+                      <div className="flex flex-col gap-1.5 items-start min-w-[160px]">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input type="checkbox" checked={editForm.public_enabled} onChange={e => setEditForm(f => ({ ...f, public_enabled: e.target.checked }))} />
+                          Enabled
+                        </label>
+                        <select value={editForm.template} onChange={e => setEditForm(f => ({ ...f, template: e.target.value as TemplateName }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
+                          {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <input value={editForm.public_domain} onChange={e => setEditForm(f => ({ ...f, public_domain: e.target.value }))} placeholder="www.example.com" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.public_enabled === 1 ? 'bg-purple-800/70 text-purple-200' : 'bg-gray-700 text-gray-500'}`}>
+                          {d.public_enabled === 1 ? d.template : 'off'}
+                        </span>
+                        {d.public_enabled === 1 && (
+                          <a href={`/d/${d.slug}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-400 hover:underline font-mono">
+                            /d/{d.slug}
+                          </a>
                         )}
                       </div>
                     )}

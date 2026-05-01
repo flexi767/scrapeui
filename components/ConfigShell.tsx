@@ -4,6 +4,8 @@ import { useState } from 'react';
 import DealersManager from './DealersManager';
 import ScrapeRunner from './ScrapeRunner';
 
+type DealerTemplate = 'bold' | 'executive' | 'atlas' | 'night' | 'sunset' | 'pro';
+
 interface Dealer {
   id: number;
   slug: string;
@@ -17,6 +19,9 @@ interface Dealer {
   mobile_password: string | null;
   cars_user: string | null;
   cars_password: string | null;
+  public_enabled: number;
+  template: DealerTemplate;
+  public_domain: string | null;
   created_at?: string | null;
 }
 

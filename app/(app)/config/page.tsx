@@ -2,6 +2,8 @@ import Link from 'next/link';
 import ConfigShell from '@/components/ConfigShell';
 import { raw } from '@/db/client';
 
+type DealerTemplate = 'bold' | 'executive' | 'atlas' | 'night' | 'sunset' | 'pro';
+
 interface DealerRow {
   id: number;
   slug: string;
@@ -15,11 +17,14 @@ interface DealerRow {
   cars_url: string | null;
   cars_user: string | null;
   cars_password: string | null;
+  public_enabled: number;
+  template: DealerTemplate;
+  public_domain: string | null;
   created_at: string | null;
 }
 
 function getDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, public_enabled, template, public_domain, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
 }
 
 export default function ConfigPage() {
