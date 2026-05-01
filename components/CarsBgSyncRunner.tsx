@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
 import { listingLabel, ZERO_CARS_BG_SYNC_TOTALS } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem } from '@/components/cars-bg-sync/types';
 
@@ -491,29 +492,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-700/60 bg-gray-900/40">
-        <div className="border-b border-gray-700/60 px-4 py-3 text-sm font-medium text-gray-200">Live log</div>
-        <div ref={logRef} className="max-h-[420px] overflow-y-auto px-4 py-3 font-mono text-xs leading-6">
-          {logs.length === 0 ? (
-            <div className="text-gray-500">No output yet.</div>
-          ) : (
-            logs.map((entry, index) => (
-              <div
-                key={`${index}-${entry.message}`}
-                className={
-                  entry.kind === 'error'
-                    ? 'text-red-300'
-                    : entry.kind === 'status'
-                      ? 'text-sky-200'
-                      : 'text-gray-300'
-                }
-              >
-                {entry.message}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      <CarsBgSyncLogPanel logs={logs} logRef={logRef} />
     </div>
   );
 }
