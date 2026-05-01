@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { streamJsonEvents } from '@/lib/streaming-job';
@@ -53,6 +53,9 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
   const renewAbortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const renewLogRef = useRef<HTMLDivElement>(null);
+  const runInitialBatchSync = useEffectEvent(() => {
+    void run();
+  });
 
   useEffect(() => {
     if (!logRef.current) return;
@@ -323,9 +326,7 @@ export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDeal
       return;
     }
     startedRef.current = true;
-    void run();
-    // autoRun only matters on first load of this page
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    runInitialBatchSync();
   }, [autoRun, rows.length]);
 
   return (
