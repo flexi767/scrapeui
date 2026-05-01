@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
+import { CarsBgSyncDoneBanner } from '@/components/cars-bg-sync/CarsBgSyncDoneBanner';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
 import { CarsBgSyncOverview } from '@/components/cars-bg-sync/CarsBgSyncOverview';
 import { CarsBgSyncPlanGrid } from '@/components/cars-bg-sync/CarsBgSyncPlanGrid';
@@ -290,13 +291,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
         />
       </div>
 
-      {doneSummary && (
-        <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-          {liveMode
-            ? `Live run finished • updated ${doneSummary.updated} • created ${doneSummary.created} • deleted ${doneSummary.deleted}`
-            : `Plan ready • missing ${doneSummary.missing} • diffs ${doneSummary.diffs} • stale ${doneSummary.stale}`}
-        </div>
-      )}
+      <CarsBgSyncDoneBanner doneSummary={doneSummary} liveMode={liveMode} />
 
       {hasPlan && (
         <CarsBgSyncPlanGrid
