@@ -2,61 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { formatPrice } from '@/lib/utils';
+import { ScrapeThumbnail } from '@/components/scrape-runner/ScrapeThumbnail';
+import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/types';
 
-interface LogEntry {
-  type: 'listing' | 'done' | 'error' | 'log' | 'seeded' | 'complete' | 'change';
-  level?: 'stderr' | 'info';
-  dealer?: string;
-  make?: string;
-  model?: string;
-  title?: string;
-  price?: number | null;
-  url?: string;
-  thumb?: string;
-  imageCount?: number;
-  views?: number | null;
-  mobilePrice?: number | null;
-  uniqueMatch?: boolean;
-  syncNeeded?: boolean;
-  count?: number;
-  message?: string;
-  code?: number | null;
-  mobileId?: string;
-  newListing?: boolean;
-  priceChanged?: boolean;
-  oldPrice?: number | null;
-  newPrice?: number | null;
-  vatChanged?: boolean;
-  oldVat?: string | null;
-  newVat?: string | null;
-  viewsChanged?: boolean;
-  oldViews?: number | null;
-  newViews?: number | null;
-  adStatusChanged?: boolean;
-  oldStatus?: string | null;
-  newStatus?: string | null;
-  kaparoChanged?: boolean;
-  titleChanged?: boolean;
-  descriptionChanged?: boolean;
-}
-
-interface Dealer {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_url: string | null;
-  cars_url: string | null;
-  own: number;
-  active: number;
-}
-
-function formatPrice(price: number | null | undefined) {
-  if (!price) return '—';
-  return `€${price.toLocaleString()}`;
-}
-
-export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: Dealer[]; onRunStart?: () => void }) {
+export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
   const [source, setSource] = useState<'mobile' | 'carsbg'>('mobile');
   const activeDealers = initialDealers.filter((dealer) => dealer.active);
   const availableDealers = activeDealers.filter((dealer) => source === 'mobile' ? dealer.mobile_url : dealer.cars_url);
@@ -78,7 +28,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [log, setLog] = useState<LogEntry[]>([]);
+  const [log, setLog] = useState<ScrapeLogEntry[]>([]);
   const [done, setDone] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const changesRef = useRef<HTMLDivElement>(null);
@@ -157,7 +107,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     }
 
     try {
-      await streamJsonEvents<LogEntry>(res, (obj) => {
+      await streamJsonEvents<ScrapeLogEntry>(res, (obj) => {
         setLog(prev => [...prev, obj]);
         if (obj.type === 'complete') {
           setDone(true);
@@ -309,19 +259,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
                 <tr key={i} className="hover:bg-gray-800/40 align-top">
                   <td className="px-4 py-2">
                     <div className="flex items-start gap-3">
-                      {entry.thumb ? (
-                        <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                          <ImageWithFallback
-                            src={entry.thumb}
-                            alt=""
-                            className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
-                            fallbackLabel="No image"
-                            style={{ aspectRatio: '4/3' }}
-                          />
-                        </a>
-                      ) : (
-                        <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
-                      )}
+                      <ScrapeThumbnail src={entry.thumb} href={entry.url} />
                       <div className="min-w-0 text-xs">
                         {(entry.make || entry.model) && (
                           <div className="truncate font-medium">
@@ -381,19 +319,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
             if (entry.type === 'listing') {
               return (
                 <div key={i} className="flex items-start gap-3 py-1.5 border-b border-gray-800 last:border-0">
-                  {entry.thumb ? (
-                    <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                      <ImageWithFallback
-                        src={entry.thumb}
-                        alt=""
-                        className="h-[45px] w-[60px] rounded object-cover bg-gray-800 hover:opacity-80"
-                        fallbackLabel="No image"
-                        style={{aspectRatio:'4/3'}}
-                      />
-                    </a>
-                  ) : (
-                    <div className="h-[45px] w-[60px] flex-shrink-0 rounded bg-gray-800" />
-                  )}
+                  <ScrapeThumbnail src={entry.thumb} href={entry.url} />
                   <div className="flex-1 min-w-0 text-xs">
                     {(entry.make || entry.model) && (
                       <div className="truncate font-medium">
