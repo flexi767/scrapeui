@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import ConfigShell from '@/components/ConfigShell';
-import type { Dealer } from '@/components/DealersManager';
+import type { Dealer } from '@/components/dealers/types';
 import { raw } from '@/db/client';
 
 interface DealerRow extends Dealer {

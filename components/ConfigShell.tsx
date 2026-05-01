@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import DealersManager from './DealersManager';
-import type { Dealer } from './DealersManager';
+import type { Dealer } from './dealers/types';
 import ScrapeRunner from './ScrapeRunner';
 
 export default function ConfigShell({ initialDealers }: { initialDealers: Dealer[] }) {

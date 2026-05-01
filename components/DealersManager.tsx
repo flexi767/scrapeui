@@ -2,68 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-
-const TEMPLATES = ['bold', 'executive', 'atlas', 'night', 'sunset', 'pro'] as const;
-export type TemplateName = typeof TEMPLATES[number];
-
-export interface Dealer {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_url: string | null;
-  own: number;
-  active: number;
-  priority: number;
-  mobile_user: string | null;
-  mobile_password: string | null;
-  cars_url: string | null;
-  cars_user: string | null;
-  cars_password: string | null;
-  public_enabled: number;
-  template: TemplateName;
-  public_domain: string | null;
-}
-
-interface LoginResult {
-  ok: boolean;
-  reason?: string;
-}
-
-interface DealerLoginResult {
-  'mobile.bg'?: LoginResult;
-  'cars.bg'?: LoginResult;
-  error?: string;
-}
-
-interface DealerEditForm {
-  name: string;
-  slug: string;
-  mobile_url: string;
-  own: boolean;
-  priority: number;
-  mobile_user: string;
-  mobile_password: string;
-  cars_url: string;
-  cars_user: string;
-  cars_password: string;
-  public_enabled: boolean;
-  template: TemplateName;
-  public_domain: string;
-}
-
-function LoginBadge({ result, label }: { result?: LoginResult; label: string }) {
-  if (!result) return <span className="text-gray-600 text-[10px]">{label} —</span>;
-  if (result.ok) return (
-    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-800/60 px-1.5 py-px text-[10px] font-semibold text-emerald-300">
-      ✓ {label}
-    </span>
-  );
-  return (
-    <span className="inline-flex items-center gap-0.5 rounded-full bg-red-900/60 px-1.5 py-px text-[10px] font-semibold text-red-300" title={result.reason}>
-      ✗ {label}
-    </span>
-  );
-}
+import { LoginBadge } from '@/components/dealers/LoginBadge';
+import { DEALER_TEMPLATES, type Dealer, type DealerEditForm, type DealerLoginResult, type TemplateName } from '@/components/dealers/types';
 
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
@@ -342,7 +282,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
                           Enabled
                         </label>
                         <select value={editForm.template} onChange={e => setEditForm(f => ({ ...f, template: e.target.value as TemplateName }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
-                          {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
+                          {DEALER_TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                         <input value={editForm.public_domain} onChange={e => setEditForm(f => ({ ...f, public_domain: e.target.value }))} placeholder="www.example.com" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
                       </div>
