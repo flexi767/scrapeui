@@ -46,3 +46,16 @@ export interface DealerEditForm {
   template: TemplateName;
   public_domain: string;
 }
+
+export interface DealerCreateForm {
+  name: string;
+  slug: string;
+  mobile_url: string;
+  own: boolean;
+  priority: number;
+  mobile_user: string;
+  mobile_password: string;
+  cars_url: string;
+  cars_user: string;
+  cars_password: string;
+}
