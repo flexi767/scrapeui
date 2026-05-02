@@ -1,8 +1,8 @@
 -- Add dealer_id FK to users (nullable; null = admin)
-ALTER TABLE users ADD COLUMN dealer_id INTEGER REFERENCES dealers(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dealer_id INTEGER REFERENCES dealers(id) ON DELETE SET NULL;
 
 -- Template configs table
-CREATE TABLE dealer_template_configs (
+CREATE TABLE IF NOT EXISTS dealer_template_configs (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   dealer_id        INTEGER REFERENCES dealers(id) ON DELETE CASCADE,
   base_template_id INTEGER REFERENCES dealer_template_configs(id) ON DELETE SET NULL,
@@ -13,5 +13,5 @@ CREATE TABLE dealer_template_configs (
 );
 
 -- Active config pointer on dealers
-ALTER TABLE dealers ADD COLUMN active_template_config_id INTEGER
+ALTER TABLE dealers ADD COLUMN IF NOT EXISTS active_template_config_id INTEGER
   REFERENCES dealer_template_configs(id) ON DELETE SET NULL;

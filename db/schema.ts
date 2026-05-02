@@ -3,6 +3,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
 // ─── Existing tables ──────────────────────────────────────────────
@@ -24,7 +25,10 @@ export const dealers = sqliteTable("dealers", {
   publicDomain: text("public_domain"),
   template: text("template").notNull().default("bold"),
   publicEnabled: integer("public_enabled").notNull().default(0),
-  activeTemplateConfigId: integer("active_template_config_id"),
+  activeTemplateConfigId: integer("active_template_config_id").references(
+    (): AnySQLiteColumn => dealerTemplateConfigs.id,
+    { onDelete: "set null" }
+  ),
 });
 
 export const listings = sqliteTable("listings", {
@@ -111,7 +115,10 @@ export const users = sqliteTable("users", {
 export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   dealerId: integer("dealer_id").references(() => dealers.id),
-  baseTemplateId: integer("base_template_id"),
+  baseTemplateId: integer("base_template_id").references(
+    (): AnySQLiteColumn => dealerTemplateConfigs.id,
+    { onDelete: "set null" }
+  ),
   name: text("name").notNull(),
   configJson: text("config_json").notNull(),
   createdAt: text("created_at").notNull(),
