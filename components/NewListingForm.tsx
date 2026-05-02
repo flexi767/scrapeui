@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
-import type { Region, City } from "@/lib/mobile-bg/regions";
+import type { Region } from "@/lib/mobile-bg/regions";
 import {
   DealerTemplateSection,
   type DealerOption,
@@ -28,9 +28,7 @@ import { VehicleDetailsSection } from "@/components/new-listing-form/VehicleDeta
 import {
   createDraft,
   deleteDraftById,
-  fetchCities,
   fetchListingPrefill,
-  fetchMakes,
   updateDraft,
 } from "@/components/new-listing-form/api";
 import {
@@ -40,6 +38,7 @@ import {
   modelOptionsFromMake,
   validateListingForm,
 } from "@/components/new-listing-form/helpers";
+import { useNewListingLookups } from "@/components/new-listing-form/useNewListingLookups";
 interface Props {
   makes: MakeEntry[];
   transmissions: string[];
@@ -66,10 +65,15 @@ export default function NewListingForm({
     ...EMPTY,
     dealerId: initialDealerId,
   }));
-  const [makes, setMakes] = useState<MakeEntry[]>(initialMakes);
-  const [makesLoading, setMakesLoading] = useState(false);
-  const [cities, setCities] = useState<City[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState(false);
+  const {
+    makes,
+    makesLoading,
+    cities,
+    citiesLoading,
+    setCities,
+    loadCities,
+    loadMakes,
+  } = useNewListingLookups(initialMakes);
   const [selectedTemplateMobileId, setSelectedTemplateMobileId] = useState<
     string | null
   >(null);
@@ -136,36 +140,6 @@ export default function NewListingForm({
   useEffect(() => {
     setDealerListingsByDealer(initialDealerListingsByDealer);
   }, [initialDealerListingsByDealer]);
-
-  const loadCities = useCallback(async (regionValue: string) => {
-    if (!regionValue) {
-      setCities([]);
-      return;
-    }
-
-    setCitiesLoading(true);
-    try {
-      setCities(await fetchCities(regionValue));
-    } catch {
-      setCities([]);
-    } finally {
-      setCitiesLoading(false);
-    }
-  }, []);
-
-  const loadMakes = useCallback(
-    async (pubtype: string) => {
-      setMakesLoading(true);
-      try {
-        setMakes(await fetchMakes(pubtype));
-      } catch {
-        setMakes(initialMakes);
-      } finally {
-        setMakesLoading(false);
-      }
-    },
-    [initialMakes],
-  );
 
   function resetForm() {
     setForm({
