@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
-import { SavedSearchEditorHeader } from "@/components/saved-searches/SavedSearchEditorHeader";
-import { SavedSearchFields } from "@/components/saved-searches/SavedSearchFields";
+import { SavedSearchEditorPanel } from "@/components/saved-searches/SavedSearchEditorPanel";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
 import { SavedSearchResultsPanel } from "@/components/saved-searches/SavedSearchResultsPanel";
 import {
@@ -362,9 +361,13 @@ export default function SavedSearchesWorkspace({
               onCancel={() => setDeleteDialogOpen(false)}
               onConfirm={() => void deleteCurrent()}
             />
-            <div className="rounded-lg border border-gray-700 bg-gray-900/70">
-              <SavedSearchEditorHeader
-                listing={listing}
+            <SavedSearchEditorPanel
+                detail={detail}
+                fields={editableFields}
+                subLocationLabel={subLocationLabel}
+                subLocationOptions={subLocationOptions}
+                locationLoading={locationLoading}
+                openAutocomplete={openAutocomplete}
                 resultsLoading={resultsLoading}
                 saveAdMode={saveAdMode}
                 makeOrModelChanged={makeOrModelChanged}
@@ -380,19 +383,6 @@ export default function SavedSearchesWorkspace({
                 onSave={() => void saveCurrent()}
                 onSaveAsNew={() => void saveAsNew()}
                 onDelete={() => setDeleteDialogOpen(true)}
-              />
-              {detail.prefill.omitted.length > 0 && (
-                <div className="px-4 pt-3 text-xs text-amber-300/80">
-                  {detail.prefill.omitted.join(" ")}
-                </div>
-              )}
-              <SavedSearchFields
-                fields={editableFields}
-                prefillOptions={detail.prefill.options}
-                subLocationLabel={subLocationLabel}
-                subLocationOptions={subLocationOptions}
-                locationLoading={locationLoading}
-                openAutocomplete={openAutocomplete}
                 getFieldValue={getFieldValue}
                 onClear={clearField}
                 onNudge={nudgeField}
@@ -401,7 +391,6 @@ export default function SavedSearchesWorkspace({
                 onUpdateLocation={updateLocation}
                 onUpdateMake={updateMake}
               />
-            </div>
 
             <SavedSearchResultsPanel
               error={resultsError}
