@@ -1,4 +1,4 @@
-import { getVatFromMobileBgLabel } from '@/lib/vat';
+import { getMobileBgVatLabel, getVatFromMobileBgLabel } from '@/lib/vat';
 
 export function parseJson<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback;
@@ -165,4 +165,70 @@ export function buildExtrasJson(body: FullFormBody): string | null {
 
 export function getFullFormVat(body: FullFormBody) {
   return getVatFromMobileBgLabel(body.vat);
+}
+
+export function normalizeExtras(extrasRaw: unknown): Record<string, string[]> {
+  const extras: Record<string, string[]> = {};
+  if (!extrasRaw || typeof extrasRaw !== 'object' || Array.isArray(extrasRaw)) {
+    return extras;
+  }
+
+  for (const [cat, items] of Object.entries(extrasRaw as Record<string, unknown>)) {
+    if (!Array.isArray(items)) continue;
+    extras[cat] = items.map((item) => {
+      if (typeof item === 'string') return item;
+      if (typeof item === 'object' && item !== null && 'label' in item) {
+        return (item as { label: string }).label;
+      }
+      return '';
+    }).filter(Boolean);
+  }
+
+  return extras;
+}
+
+export function buildBackupForm(row: BackupRow) {
+  const techData = parseJson<Record<string, string>>(row.tech_data_json, {});
+  const extras = normalizeExtras(parseJson<unknown>(row.extras_json, null));
+  const phones = parseJson<string[]>(row.phones_json, []);
+  const engineCc = row.engine?.match(/(\d{3,5})/)?.[1] ?? '';
+
+  return {
+    dealerId: String(row.dealer_id),
+    pubtype: techData.pubtype || '1,2',
+    make: row.make ?? '',
+    model: row.model ?? '',
+    title: row.title ?? '',
+    fuel: row.fuel ?? '',
+    condition: techData.f25 || '0',
+    power: row.power != null ? String(row.power) : '',
+    euronorm: techData.f29 ? `Евро ${techData.f29}` : '',
+    transmission: row.transmission ?? '',
+    bodyType: row.category ?? '',
+    engineCc,
+    batteryRange: techData.f33 || inferBatteryRangeKm(row.fuel, row.description),
+    batteryCapacity: techData.f34 || inferBatteryCapacityKwh(
+      row.fuel,
+      row.make,
+      row.model,
+      row.title,
+      row.description,
+    ),
+    price: row.price_amount != null ? String(row.price_amount) : '',
+    vat: getMobileBgVatLabel(row.vat_included) ?? '',
+    currency: techData.f13 || row.price_currency || 'EUR',
+    mileage: row.mileage != null ? String(row.mileage) : '',
+    productionMonth: techData.f14 || '',
+    productionYear: techData.f15 || (row.year != null ? String(row.year) : ''),
+    color: row.color ?? '',
+    region: techData.region || '',
+    city: techData.city || '',
+    vin: normalizeVin(techData.f32),
+    description: row.description ?? '',
+    phone: techData.f22 || phones[0] || '',
+    email: techData.f23 || '',
+    website: techData.f24 || '',
+    priceOnRequest: techData.priceneg === '99999999',
+    extras,
+  };
 }
