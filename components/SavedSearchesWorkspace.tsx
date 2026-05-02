@@ -19,7 +19,11 @@ import {
   updateSavedSearch,
 } from "@/components/saved-searches/api";
 import {
-  SEARCH_ACTION,
+  didMakeOrModelChange,
+  mergeEditableFields,
+  submitMobileBgSearch,
+} from "@/components/saved-searches/helpers";
+import {
   buildFirstSevenSearchFields,
   type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
@@ -120,25 +124,11 @@ export default function SavedSearchesWorkspace({
   );
   const currentFields = useMemo(() => {
     if (!detail) return [];
-    return detail.prefill.form.fields.map((field) => {
-      const edited = editableFields.find(
-        (candidate) => candidate.name === field.name,
-      );
-      return edited ?? field;
-    });
+    return mergeEditableFields(detail.prefill.form.fields, editableFields);
   }, [detail, editableFields]);
   const makeOrModelChanged = useMemo(() => {
     if (!detail) return false;
-    const originalMap = new Map(
-      detail.prefill.form.fields.map((field) => [field.name, field.value]),
-    );
-    const currentMap = new Map(
-      currentFields.map((field) => [field.name, field.value]),
-    );
-    return (
-      (currentMap.get("marka") ?? "") !== (originalMap.get("marka") ?? "") ||
-      (currentMap.get("model") ?? "") !== (originalMap.get("model") ?? "")
-    );
+    return didMakeOrModelChange(detail.prefill.form.fields, currentFields);
   }, [currentFields, detail]);
 
   function syncFromDetail(nextDetail: SavedSearchDetailResponse["detail"]) {
@@ -242,24 +232,7 @@ export default function SavedSearchesWorkspace({
   }
 
   function openInMobileBg(fields = currentFields) {
-    if (typeof document === "undefined") return;
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = SEARCH_ACTION;
-    form.target = "_blank";
-    form.acceptCharset = "windows-1251";
-
-    for (const field of fields) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = field.name;
-      input.value = field.value;
-      form.appendChild(input);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
+    submitMobileBgSearch(fields);
   }
 
   async function showResultsHere(fields = currentFields) {
