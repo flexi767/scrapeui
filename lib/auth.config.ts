@@ -23,6 +23,7 @@ export const authConfig = {
         token.id = user.id!;
         token.role = (user as { role?: string }).role ?? 'user';
         token.username = (user as { username?: string }).username ?? '';
+        token.dealerId = (user as { dealerId?: number | null }).dealerId ?? null;
       }
       return token;
     },
@@ -30,6 +31,7 @@ export const authConfig = {
       session.user.id = token.id as string;
       (session.user as unknown as Record<string, unknown>).role = token.role;
       (session.user as unknown as Record<string, unknown>).username = token.username;
+      (session.user as unknown as Record<string, unknown>).dealerId = token.dealerId ?? null;
       return session;
     },
   },

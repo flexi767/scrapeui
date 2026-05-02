@@ -8,6 +8,7 @@ declare module 'next-auth' {
   interface User {
     role?: string;
     username?: string;
+    dealerId?: number | null;
   }
   interface Session {
     user: {
@@ -15,6 +16,7 @@ declare module 'next-auth' {
       name: string;
       username: string;
       role: string;
+      dealerId: number | null;
     };
   }
 }
@@ -24,6 +26,7 @@ declare module '@auth/core/jwt' {
     id: string;
     role: string;
     username: string;
+    dealerId: number | null;
   }
 }
 
@@ -46,17 +49,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = isDevLogin && !credentials?.username
           ? (raw
               .prepare(
-                "SELECT id, username, name, password_hash, role FROM users WHERE role = 'admin' LIMIT 1",
+                "SELECT id, username, name, password_hash, role, dealer_id FROM users WHERE role = 'admin' LIMIT 1",
               )
               .get() as
-              | { id: number; username: string; name: string; password_hash: string; role: string }
+              | { id: number; username: string; name: string; password_hash: string; role: string; dealer_id: number | null }
               | undefined)
           : (raw
               .prepare(
-                'SELECT id, username, name, password_hash, role FROM users WHERE username = ?',
+                'SELECT id, username, name, password_hash, role, dealer_id FROM users WHERE username = ?',
               )
               .get(credentials!.username as string) as
-              | { id: number; username: string; name: string; password_hash: string; role: string }
+              | { id: number; username: string; name: string; password_hash: string; role: string; dealer_id: number | null }
               | undefined);
 
         if (!user) return null;
@@ -74,6 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           username: user.username,
           role: user.role,
+          dealerId: user.dealer_id ?? null,
         };
       },
     }),
