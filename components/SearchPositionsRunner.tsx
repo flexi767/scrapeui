@@ -33,7 +33,7 @@ export default function SearchPositionsRunner() {
   );
   const appendLog = (entry: SearchPositionLogEntry) => setLogs((prev) => [...prev, entry]);
 
-  async function run(missingOnly = false) {
+  function resetRunState(missingOnly: boolean) {
     setRunning(true);
     setStopping(false);
     setActiveMode(missingOnly ? 'missing' : 'all');
@@ -42,6 +42,19 @@ export default function SearchPositionsRunner() {
     setCurrentLabel(null);
     setCurrentPreview(null);
     setDoneSummary(null);
+  }
+
+  function finishRun() {
+    setRunning(false);
+    setStopping(false);
+    setActiveMode(null);
+    abortRef.current = null;
+    setCurrentLabel(null);
+    setCurrentPreview(null);
+  }
+
+  async function run(missingOnly = false) {
+    resetRunState(missingOnly);
 
     const abortController = new AbortController();
     abortRef.current = abortController;
@@ -56,17 +69,11 @@ export default function SearchPositionsRunner() {
       });
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
-        setRunning(false);
-        setStopping(false);
-        setActiveMode(null);
-        abortRef.current = null;
+        finishRun();
         return;
       }
       toast.error(error instanceof Error ? error.message : 'Search check failed');
-      setRunning(false);
-      setStopping(false);
-      setActiveMode(null);
-      abortRef.current = null;
+      finishRun();
       return;
     }
 
@@ -74,10 +81,7 @@ export default function SearchPositionsRunner() {
       const message = await readJsonError(res, 'Failed to start search-position run');
       toast.error(message);
       setLogs([{ kind: 'error', message }]);
-      setRunning(false);
-      setStopping(false);
-      setActiveMode(null);
-      abortRef.current = null;
+      finishRun();
       return;
     }
 
@@ -121,12 +125,7 @@ export default function SearchPositionsRunner() {
 
             if (event.type === 'complete') {
               setDoneSummary(summaryFromCompleteEvent(event));
-              setCurrentLabel(null);
-              setCurrentPreview(null);
-              setRunning(false);
-              setStopping(false);
-              setActiveMode(null);
-              abortRef.current = null;
+              finishRun();
               toast.success(`Checked ${event.total} listings • found ${event.found} • missing ${event.notFound}`);
               router.refresh();
               return;
@@ -139,12 +138,7 @@ export default function SearchPositionsRunner() {
         toast.error(message);
       }
     } finally {
-      setRunning(false);
-      setStopping(false);
-      setActiveMode(null);
-      abortRef.current = null;
-      setCurrentLabel(null);
-      setCurrentPreview(null);
+      finishRun();
     }
   }
 
