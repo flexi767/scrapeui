@@ -24,6 +24,7 @@ export const dealers = sqliteTable("dealers", {
   publicDomain: text("public_domain"),
   template: text("template").notNull().default("bold"),
   publicEnabled: integer("public_enabled").notNull().default(0),
+  activeTemplateConfigId: integer("active_template_config_id"),
 });
 
 export const listings = sqliteTable("listings", {
@@ -102,6 +103,19 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("user"),
   createdAt: text("created_at"),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+});
+
+// ─── Template Configs ────────────────────────────────────────────
+
+export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dealerId: integer("dealer_id").references(() => dealers.id),
+  baseTemplateId: integer("base_template_id"),
+  name: text("name").notNull(),
+  configJson: text("config_json").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 // ─── Labels (shared across tasks, articles, expenses) ─────────────
@@ -532,6 +546,7 @@ export type Dealer = typeof dealers.$inferSelect;
 export type Listing = typeof listings.$inferSelect;
 export type ListingSnapshot = typeof listingSnapshots.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type DealerTemplateConfig = typeof dealerTemplateConfigs.$inferSelect;
 export type Label = typeof labels.$inferSelect;
 export type MobileBgBackupRun = typeof mobileBgBackupRuns.$inferSelect;
 export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
