@@ -21,6 +21,7 @@ import {
 import {
   didMakeOrModelChange,
   mergeEditableFields,
+  normalizeLocationOptions,
   submitMobileBgSearch,
 } from "@/components/saved-searches/helpers";
 import {
@@ -192,15 +193,8 @@ export default function SavedSearchesWorkspace({
 
     try {
       const payload = await fetchLocationOptions(value);
-
-      const nextLabel =
-        typeof payload.label === "string" && payload.label
-          ? payload.label
-          : "Населено място";
-      const nextOptions =
-        Array.isArray(payload.options) && payload.options.length > 0
-          ? (payload.options as Array<{ value: string; label: string }>)
-          : [{ value: "", label: "всички" }];
+      const { label: nextLabel, options: nextOptions } =
+        normalizeLocationOptions(payload);
 
       setSubLocationLabel(nextLabel);
       setSubLocationOptions(nextOptions);

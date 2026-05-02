@@ -48,3 +48,19 @@ export function submitMobileBgSearch(fields: SearchField[]) {
   form.submit();
   form.remove();
 }
+
+export function normalizeLocationOptions(payload: {
+  label?: unknown;
+  options?: unknown;
+}) {
+  const label =
+    typeof payload.label === "string" && payload.label
+      ? payload.label
+      : "Населено място";
+  const options =
+    Array.isArray(payload.options) && payload.options.length > 0
+      ? (payload.options as Array<{ value: string; label: string }>)
+      : [{ value: "", label: "всички" }];
+
+  return { label, options };
+}
