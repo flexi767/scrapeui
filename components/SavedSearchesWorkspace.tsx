@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
 import { SavedSearchEditorHeader } from "@/components/saved-searches/SavedSearchEditorHeader";
 import { SavedSearchFields } from "@/components/saved-searches/SavedSearchFields";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
 import { SavedSearchResultsPanel } from "@/components/saved-searches/SavedSearchResultsPanel";
+import {
+  SavedSearchEmptyState,
+  SavedSearchLoadingState,
+} from "@/components/saved-searches/SavedSearchWorkspaceStates";
 import {
   createSavedSearch,
   deleteSavedSearch,
@@ -347,14 +350,9 @@ export default function SavedSearchesWorkspace({
 
       <section className="space-y-4">
         {loadingDetail ? (
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-12 text-center text-sm text-gray-400">
-            <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-            Loading saved search…
-          </div>
+          <SavedSearchLoadingState />
         ) : !detail || !selectedSummary ? (
-          <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-12 text-center text-sm text-gray-500">
-            Select a saved search to edit it.
-          </div>
+          <SavedSearchEmptyState />
         ) : (
           <>
             <SavedSearchDeleteDialog
