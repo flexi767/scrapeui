@@ -34,6 +34,7 @@ import {
 import {
   applyMakeSelection,
   findSelectedMake,
+  getDraftResponseId,
   makeOptionsFromEntries,
   modelOptionsFromMake,
   validateListingForm,
@@ -201,7 +202,7 @@ export default function NewListingForm({
     setSaving(true);
     try {
       const data = await createDraft(form);
-      const nextBackupId = typeof data.id === "number" ? data.id : null;
+      const nextBackupId = getDraftResponseId(data);
       setSavedBackupId(nextBackupId);
       setSelectedBackupId(nextBackupId);
       setSavedMode("created");
@@ -223,7 +224,7 @@ export default function NewListingForm({
     setSaving(true);
     try {
       const data = await updateDraft(selectedBackupId, form);
-      setSavedBackupId(typeof data.id === "number" ? data.id : selectedBackupId);
+      setSavedBackupId(getDraftResponseId(data, selectedBackupId));
       setSavedMode("updated");
       setSaved(true);
     } catch (saveError) {

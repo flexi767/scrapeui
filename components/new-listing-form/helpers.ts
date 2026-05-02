@@ -54,3 +54,10 @@ export function applyMakeSelection(
 
   return { ...form, make: value, model: nextModel };
 }
+
+export function getDraftResponseId(
+  response: { id?: unknown },
+  fallbackId: number | null = null,
+) {
+  return typeof response.id === "number" ? response.id : fallbackId;
+}
