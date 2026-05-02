@@ -9,6 +9,7 @@ export interface PublicDealer {
   template: string;
   publicDomain: string | null;
   publicEnabled: number;
+  activeTemplateConfigId: number | null;
 }
 
 export interface PublicListing {
@@ -79,7 +80,8 @@ export function getPublicDealer(slug: string): PublicDealer | null {
       `SELECT id, slug, name,
         COALESCE(template, 'bold') as template,
         public_domain as publicDomain,
-        COALESCE(public_enabled, 0) as publicEnabled
+        COALESCE(public_enabled, 0) as publicEnabled,
+        active_template_config_id as activeTemplateConfigId
        FROM dealers
        WHERE slug = ? AND active = 1
        LIMIT 1`,
@@ -94,7 +96,8 @@ export function getDealerByDomain(domain: string): PublicDealer | null {
       `SELECT id, slug, name,
         COALESCE(template, 'bold') as template,
         public_domain as publicDomain,
-        COALESCE(public_enabled, 0) as publicEnabled
+        COALESCE(public_enabled, 0) as publicEnabled,
+        active_template_config_id as activeTemplateConfigId
        FROM dealers
        WHERE public_domain = ? AND public_enabled = 1 AND active = 1
        LIMIT 1`,

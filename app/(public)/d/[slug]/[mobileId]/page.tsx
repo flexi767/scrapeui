@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
-import { getPublicDealer, getPublicListing } from "@/lib/queries";
+import { getPublicDealer, getPublicListing, getDealerTemplateConfig } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";
+import { renderCraftPage } from "@/lib/template-renderer";
+import type { RenderData } from "@/lib/template-renderer";
 
 interface Props {
   params: Promise<{ slug: string; mobileId: string }>;
@@ -14,6 +16,14 @@ export default async function PublicListingDetailPage({ params }: Props) {
 
   const listing = getPublicListing(dealer.id, mobileId);
   if (!listing) notFound();
+
+  if (dealer.activeTemplateConfigId) {
+    const config = getDealerTemplateConfig(dealer.activeTemplateConfigId);
+    if (config) {
+      const renderData: RenderData = { dealer, listing };
+      return renderCraftPage(config.configJson, 'listingDetail', renderData);
+    }
+  }
 
   const Template =
     TEMPLATE_REGISTRY[dealer.template as keyof typeof TEMPLATE_REGISTRY] ??

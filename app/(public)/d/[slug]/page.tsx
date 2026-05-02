@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
-import { getPublicDealer, getPublicListings } from "@/lib/queries";
+import { getPublicDealer, getPublicListings, getDealerTemplateConfig } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";
+import { renderCraftPage } from "@/lib/template-renderer";
 import type { PublicListingFilters } from "@/lib/queries";
+import type { RenderData } from "@/lib/template-renderer";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -37,6 +39,21 @@ export default async function PublicDealerPage({ params, searchParams }: Props) 
   };
 
   const result = getPublicListings(dealer.id, filters);
+
+  if (dealer.activeTemplateConfigId) {
+    const config = getDealerTemplateConfig(dealer.activeTemplateConfigId);
+    if (config) {
+      const renderData: RenderData = {
+        dealer,
+        listings: result.listings,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        makes: result.makes,
+      };
+      return renderCraftPage(config.configJson, 'listingGrid', renderData);
+    }
+  }
 
   const Template =
     TEMPLATE_REGISTRY[dealer.template as keyof typeof TEMPLATE_REGISTRY] ??
