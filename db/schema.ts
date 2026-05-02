@@ -114,7 +114,7 @@ export const users = sqliteTable("users", {
 
 export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  dealerId: integer("dealer_id").references(() => dealers.id),
+  dealerId: integer("dealer_id").references(() => dealers.id, { onDelete: "cascade" }),
   baseTemplateId: integer("base_template_id").references(
     (): AnySQLiteColumn => dealerTemplateConfigs.id,
     { onDelete: "set null" }
