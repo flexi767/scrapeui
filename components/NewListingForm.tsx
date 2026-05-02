@@ -11,7 +11,6 @@ import { DraftDeleteDialog } from "@/components/new-listing-form/DraftDeleteDial
 import { SavedDraftView } from "@/components/new-listing-form/SavedDraftView";
 import {
   getSelectedOptionCount,
-  normalizeAutocompleteValue,
   sortMakeOptions,
 } from "@/components/new-listing-form/autocomplete";
 import type { DealerListingSummary } from "@/components/new-listing-form/dealer-picker";
@@ -34,6 +33,13 @@ import {
   fetchMakes,
   updateDraft,
 } from "@/components/new-listing-form/api";
+import {
+  applyMakeSelection,
+  findSelectedMake,
+  makeOptionsFromEntries,
+  modelOptionsFromMake,
+  validateListingForm,
+} from "@/components/new-listing-form/helpers";
 interface Props {
   makes: MakeEntry[];
   transmissions: string[];
@@ -95,32 +101,16 @@ export default function NewListingForm({
   );
 
   const selectedMake = useMemo(
-    () =>
-      makes.find(
-        (entry) =>
-          normalizeAutocompleteValue(entry.make) ===
-          normalizeAutocompleteValue(form.make),
-      ) ?? null,
+    () => findSelectedMake(makes, form.make),
     [form.make, makes],
   );
-  const models = useMemo(() => selectedMake?.models ?? [], [selectedMake]);
   const makeOptions = useMemo(
-    () =>
-      sortMakeOptions(
-        makes.map((entry) => ({
-          value: entry.make,
-          count: entry.count ?? null,
-        })),
-      ),
+    () => sortMakeOptions(makeOptionsFromEntries(makes)),
     [makes],
   );
   const modelOptions = useMemo(
-    () =>
-      models.map((entry) => ({
-        value: entry.label,
-        count: entry.count ?? null,
-      })),
-    [models],
+    () => modelOptionsFromMake(selectedMake),
+    [selectedMake],
   );
   const selectedMakeCount = useMemo(
     () => getSelectedOptionCount(makeOptions, form.make),
@@ -218,41 +208,16 @@ export default function NewListingForm({
 
   function updateMake(value: string) {
     setOpenAutocomplete("model");
-    setForm((prev) => {
-      const selectedEntry =
-        makes.find(
-          (entry) =>
-            normalizeAutocompleteValue(entry.make) ===
-            normalizeAutocompleteValue(value),
-        ) ?? null;
-      const validModels = (selectedEntry?.models ?? []).map((entry) =>
-        normalizeAutocompleteValue(entry.label),
-      );
-      const nextModel =
-        prev.model &&
-        validModels.includes(normalizeAutocompleteValue(prev.model))
-          ? prev.model
-          : "";
-      return { ...prev, make: value, model: nextModel };
-    });
+    setForm((prev) => applyMakeSelection(prev, makes, value));
   }
 
   function validateForm(): boolean {
     setError("");
-
-    if (!form.dealerId) {
-      setError("Изберете дилър.");
+    const validationError = validateListingForm(form);
+    if (validationError) {
+      setError(validationError);
       return false;
     }
-    if (!form.make) {
-      setError("Изберете марка.");
-      return false;
-    }
-    if (!form.priceOnRequest && !form.price) {
-      setError('Въведете цена или маркирайте "Цена само при запитване".');
-      return false;
-    }
-
     return true;
   }
 
