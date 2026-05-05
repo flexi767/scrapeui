@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import path from 'path';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { UPLOADS_DIR } from '@/lib/storage-paths';
 
@@ -10,10 +10,9 @@ const UPLOAD_DIR = UPLOADS_DIR;
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const formData = await request.formData();
   const files = [
@@ -75,10 +74,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const uploads = raw
     .prepare(
