@@ -16,6 +16,17 @@ const ALLOWED_ROOTS = [
   path.join(process.cwd(), 'storage'),
 ];
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Private-Network': 'true',
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -51,7 +62,7 @@ export async function GET(
     headers: {
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=86400',
-      'Access-Control-Allow-Origin': '*',
+      ...CORS_HEADERS,
     },
   });
 }

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { BookmarkletLink } from "@/components/facebook-marketplace/BookmarkletLink";
 
 export default async function FacebookMarketplaceBookmarkletPage() {
   const headerList = await headers();
@@ -18,12 +19,7 @@ export default async function FacebookMarketplaceBookmarkletPage() {
 
       <section className="rounded-lg border border-gray-700 bg-gray-900/50 p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <a
-            href={bookmarklet}
-            className="inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            scrapeui Marketplace
-          </a>
+          <BookmarkletLink bookmarklet={bookmarklet} />
           <span className="text-sm text-gray-400">
             Drag this link to the bookmarks bar.
           </span>
@@ -47,4 +43,3 @@ export default async function FacebookMarketplaceBookmarkletPage() {
     </div>
   );
 }
-

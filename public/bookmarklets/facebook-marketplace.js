@@ -39,8 +39,12 @@
       .suimp-body { padding: 12px; display: grid; gap: 10px; }
       .suimp-search { width: 100%; border: 1px solid #334155; border-radius: 6px; background: #111827; color: #fff; padding: 8px 10px; outline: none; }
       .suimp-list { max-height: 280px; overflow: auto; border: 1px solid #1f2937; border-radius: 6px; background: #020617; }
-      .suimp-item { display: block; width: 100%; border: 0; border-bottom: 1px solid #111827; background: transparent; color: #cbd5e1; text-align: left; padding: 8px 10px; cursor: pointer; }
+      .suimp-item { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; min-height: 64px; border: 0; border-bottom: 1px solid #111827; background: transparent; color: #cbd5e1; text-align: left; padding: 8px 10px; cursor: pointer; }
       .suimp-item:hover, .suimp-item[data-active="true"] { background: #1d4ed8; color: #fff; }
+      .suimp-thumb { width: 58px; height: 46px; border-radius: 5px; object-fit: cover; background: #111827; border: 1px solid #1f2937; flex: none; }
+      .suimp-thumb-placeholder { display: grid; place-items: center; color: #64748b; font-size: 11px; }
+      .suimp-item-main { min-width: 0; }
+      .suimp-item-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 650; }
       .suimp-muted { color: #94a3b8; font-size: 12px; }
       .suimp-actions { display: flex; gap: 8px; }
       .suimp-primary, .suimp-secondary { border: 1px solid #2563eb; border-radius: 6px; padding: 8px 10px; cursor: pointer; font-weight: 600; }
@@ -107,9 +111,17 @@
       button.type = "button";
       button.className = "suimp-item";
       button.dataset.active = state.selected?.backupId === listing.backupId ? "true" : "false";
+      const thumbUrl = listing.photoUrls?.[0];
       button.innerHTML = `
-        <div style="font-weight:650">${escapeHtml(listing.title || `Backup #${listing.backupId}`)}</div>
-        <div class="suimp-muted">${escapeHtml([listing.year, listing.mileage ? `${listing.mileage} km` : "", listing.price ? `${listing.price} BGN` : "", `${listing.photoUrls?.length || 0} photos`].filter(Boolean).join(" | "))}</div>
+        ${
+          thumbUrl
+            ? `<img class="suimp-thumb" src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
+            : '<div class="suimp-thumb suimp-thumb-placeholder">No img</div>'
+        }
+        <div class="suimp-item-main">
+          <div class="suimp-item-title">${escapeHtml(listing.title || `Backup #${listing.backupId}`)}</div>
+          <div class="suimp-muted">${escapeHtml([listing.year, listing.mileage ? `${listing.mileage} km` : "", listing.price ? `${listing.price} BGN` : "", `${listing.photoUrls?.length || 0} photos`].filter(Boolean).join(" | "))}</div>
+        </div>
       `;
       button.addEventListener("click", () => {
         state.selected = listing;
@@ -309,4 +321,3 @@
 
   void loadListings();
 })();
-
