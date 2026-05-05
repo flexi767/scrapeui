@@ -4,8 +4,9 @@ import { BookmarkletLink } from "@/components/facebook-marketplace/BookmarkletLi
 export default async function FacebookMarketplaceBookmarkletPage() {
   const headerList = await headers();
   const host = headerList.get("host") ?? "localhost:3000";
-  const proto = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const origin = `${proto}://${host}`;
+  const bookmarkletHost = host.replace(/^localhost(?=:|$)/, "127.0.0.1");
+  const proto = headerList.get("x-forwarded-proto") ?? (bookmarkletHost.startsWith("127.0.0.1") ? "http" : "https");
+  const origin = `${proto}://${bookmarkletHost}`;
   const bookmarklet = `javascript:(()=>{const s=document.createElement('script');s.src='${origin}/api/facebook-marketplace/bookmarklet?ts='+Date.now();document.body.appendChild(s);})()`;
 
   return (
