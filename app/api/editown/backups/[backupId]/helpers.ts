@@ -1,19 +1,8 @@
+import { parseJson, normalizeVin } from '@/lib/utils';
 import { getMobileBgVatLabel, getVatFromMobileBgLabel } from '@/lib/vat';
+import { normalizeExtras as normalizeExtrasShared } from '@/lib/mobile-bg/extras';
 
-export function parseJson<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-export function normalizeVin(value: string | null | undefined): string {
-  if (!value) return '';
-  const vin = value.trim().toUpperCase();
-  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
-}
+export { normalizeVin };
 
 export function inferBatteryRangeKm(fuel: string | null, description: string | null): string {
   if (!fuel?.toLowerCase().includes('електр')) return '';
@@ -167,29 +156,11 @@ export function getFullFormVat(body: FullFormBody) {
   return getVatFromMobileBgLabel(body.vat);
 }
 
-export function normalizeExtras(extrasRaw: unknown): Record<string, string[]> {
-  const extras: Record<string, string[]> = {};
-  if (!extrasRaw || typeof extrasRaw !== 'object' || Array.isArray(extrasRaw)) {
-    return extras;
-  }
-
-  for (const [cat, items] of Object.entries(extrasRaw as Record<string, unknown>)) {
-    if (!Array.isArray(items)) continue;
-    extras[cat] = items.map((item) => {
-      if (typeof item === 'string') return item;
-      if (typeof item === 'object' && item !== null && 'label' in item) {
-        return (item as { label: string }).label;
-      }
-      return '';
-    }).filter(Boolean);
-  }
-
-  return extras;
-}
+export { normalizeExtrasShared as normalizeExtras };
 
 export function buildBackupForm(row: BackupRow) {
   const techData = parseJson<Record<string, string>>(row.tech_data_json, {});
-  const extras = normalizeExtras(parseJson<unknown>(row.extras_json, null));
+  const extras = normalizeExtrasShared(parseJson<unknown>(row.extras_json, null));
   const phones = parseJson<string[]>(row.phones_json, []);
   const engineCc = row.engine?.match(/(\d{3,5})/)?.[1] ?? '';
 

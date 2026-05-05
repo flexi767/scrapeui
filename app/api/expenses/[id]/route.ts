@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getExpenseById } from '@/lib/queries';
 import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
@@ -8,8 +8,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   const expense = getExpenseById(Number(id));
@@ -21,8 +21,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   const expenseId = Number(id);
@@ -46,8 +46,8 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   raw.prepare('DELETE FROM expenses WHERE id = ?').run(Number(id));

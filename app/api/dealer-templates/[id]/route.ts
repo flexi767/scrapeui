@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-helpers";
 import {
   getDealerTemplateConfig,
   updateDealerTemplateConfig,
@@ -7,8 +7,9 @@ import {
 interface Params { params: Promise<{ id: string }> }
 
 export async function PATCH(request: Request, { params }: Params) {
-  const session = await auth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const { id } = await params;
   const configId = parseInt(id, 10);

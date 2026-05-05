@@ -15,7 +15,10 @@ const VALID_SORT: Record<string, string> = {
   reg_year: "l.reg_year",
 };
 
-export function getListings(filters: ListingFilters = {}) {
+function buildListingFilters(
+  filters: ListingFilters,
+  initialWheres: string[],
+): { wheres: string[]; params: (string | number)[] } {
   const {
     make = "",
     model = "",
@@ -32,37 +35,20 @@ export function getListings(filters: ListingFilters = {}) {
     priceChangeMax = null,
     kaparo = "",
     source = "",
-    sort = "price",
-    order = "desc",
     search = "",
-    page = 1,
-    limit = 25,
   } = filters;
 
-  const wheres: string[] = [
-    "l.is_active = 1",
-    "d.active = 1",
-    "(l.duplicate = 0 OR l.duplicate IS NULL)",
-  ];
+  const wheres = [...initialWheres];
   const params: (string | number)[] = [];
 
-  if (make) {
-    wheres.push("l.make = ?");
-    params.push(make);
-  }
-  if (model) {
-    wheres.push("l.model = ?");
-    params.push(model);
-  }
+  if (make) { wheres.push("l.make = ?"); params.push(make); }
+  if (model) { wheres.push("l.model = ?"); params.push(model); }
   if (categories.length > 0) {
-    const ph = categories.map(() => "?").join(",");
-    wheres.push(`l.body_type IN (${ph})`);
+    wheres.push(`l.body_type IN (${categories.map(() => "?").join(",")})`);
     params.push(...categories);
   }
-
   if (statuses.length > 0) {
-    const ph = statuses.map(() => "?").join(",");
-    wheres.push(`l.ad_status IN (${ph})`);
+    wheres.push(`l.ad_status IN (${statuses.map(() => "?").join(",")})`);
     params.push(...statuses);
   }
   if (vatValues.length > 0) {
@@ -70,49 +56,30 @@ export function getListings(filters: ListingFilters = {}) {
     const nonNull = vatValues.filter((v) => v !== "null");
     const clauses: string[] = [];
     if (nonNull.length > 0) {
-      const ph = nonNull.map(() => "?").join(",");
-      clauses.push(`l.vat IN (${ph})`);
+      clauses.push(`l.vat IN (${nonNull.map(() => "?").join(",")})`);
       params.push(...nonNull);
     }
     if (includeNull) clauses.push("l.vat IS NULL");
     if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
   }
   if (fuels.length > 0) {
-    const ph = fuels.map(() => "?").join(",");
-    wheres.push(`l.fuel IN (${ph})`);
+    wheres.push(`l.fuel IN (${fuels.map(() => "?").join(",")})`);
     params.push(...fuels);
   }
   if (extras.length > 0) {
-    const clauses = extras.map(() => "l.extras_json LIKE ?");
-    wheres.push(`(${clauses.join(" OR ")})`);
+    wheres.push(`(${extras.map(() => "l.extras_json LIKE ?").join(" OR ")})`);
     params.push(...extras.map((extra) => `%${extra}%`));
   }
-  if (priceMin !== null) {
-    wheres.push("l.current_price >= ?");
-    params.push(priceMin);
-  }
-  if (priceMax !== null) {
-    wheres.push("l.current_price <= ?");
-    params.push(priceMax);
-  }
+  if (priceMin !== null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
+  if (priceMax !== null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
   if (priceChangeMin !== null || priceChangeMax !== null) {
     wheres.push("l.price_change IS NOT NULL");
-    if (priceChangeMin !== null) {
-      wheres.push("l.price_change >= ?");
-      params.push(priceChangeMin);
-    }
-    if (priceChangeMax !== null) {
-      wheres.push("l.price_change <= ?");
-      params.push(priceChangeMax);
-    }
+    if (priceChangeMin !== null) { wheres.push("l.price_change >= ?"); params.push(priceChangeMin); }
+    if (priceChangeMax !== null) { wheres.push("l.price_change <= ?"); params.push(priceChangeMax); }
   }
-  if (kaparo) {
-    wheres.push("l.kaparo = ?");
-    params.push(kaparo === "yes" ? 1 : 0);
-  }
+  if (kaparo) { wheres.push("l.kaparo = ?"); params.push(kaparo === "yes" ? 1 : 0); }
   if (years.length > 0) {
-    const ph = years.map(() => "?").join(",");
-    wheres.push(`l.reg_year IN (${ph})`);
+    wheres.push(`l.reg_year IN (${years.map(() => "?").join(",")})`);
     params.push(...years);
   }
   if (search) {
@@ -120,14 +87,22 @@ export function getListings(filters: ListingFilters = {}) {
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => "?").join(",");
-    wheres.push(`d.slug IN (${ph})`);
+    wheres.push(`d.slug IN (${dealerSlugs.map(() => "?").join(",")})`);
     params.push(...dealerSlugs);
   }
-  if (source) {
-    wheres.push("l.source = ?");
-    params.push(source);
-  }
+  if (source) { wheres.push("l.source = ?"); params.push(source); }
+
+  return { wheres, params };
+}
+
+export function getListings(filters: ListingFilters = {}) {
+  const { sort = "price", order = "desc", page = 1, limit = 25 } = filters;
+
+  const { wheres, params } = buildListingFilters(filters, [
+    "l.is_active = 1",
+    "d.active = 1",
+    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+  ]);
 
   const where = `WHERE ${wheres.join(" AND ")}`;
   const sortCol = VALID_SORT[sort] ?? "l.last_edit";
@@ -175,118 +150,14 @@ export function getListings(filters: ListingFilters = {}) {
 }
 
 export function getDeletedListings(filters: ListingFilters = {}) {
-  const {
-    make = "",
-    model = "",
-    dealerSlugs = [],
-    years = [],
-    categories = [],
-    statuses = [],
-    vatValues = [],
-    fuels = [],
-    extras = [],
-    priceMin = null,
-    priceMax = null,
-    priceChangeMin = null,
-    priceChangeMax = null,
-    kaparo = "",
-    source = "",
-    sort = "last_edit",
-    order = "desc",
-    search = "",
-    page = 1,
-    limit = 50,
-  } = filters;
+  const { sort = "last_edit", order = "desc", page = 1, limit = 50 } = filters;
 
-  const wheres: string[] = [
+  const { wheres, params } = buildListingFilters(filters, [
     "l.is_active = 0",
     "l.deleted_at IS NOT NULL",
     "d.active = 1",
     "(l.duplicate = 0 OR l.duplicate IS NULL)",
-  ];
-  const params: (string | number)[] = [];
-
-  if (make) {
-    wheres.push("l.make = ?");
-    params.push(make);
-  }
-  if (model) {
-    wheres.push("l.model = ?");
-    params.push(model);
-  }
-  if (categories.length > 0) {
-    const ph = categories.map(() => "?").join(",");
-    wheres.push(`l.body_type IN (${ph})`);
-    params.push(...categories);
-  }
-  if (statuses.length > 0) {
-    const ph = statuses.map(() => "?").join(",");
-    wheres.push(`l.ad_status IN (${ph})`);
-    params.push(...statuses);
-  }
-  if (vatValues.length > 0) {
-    const includeNull = vatValues.includes("null");
-    const nonNull = vatValues.filter((v) => v !== "null");
-    const clauses: string[] = [];
-    if (nonNull.length > 0) {
-      const ph = nonNull.map(() => "?").join(",");
-      clauses.push(`l.vat IN (${ph})`);
-      params.push(...nonNull);
-    }
-    if (includeNull) clauses.push("l.vat IS NULL");
-    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
-  }
-  if (fuels.length > 0) {
-    const ph = fuels.map(() => "?").join(",");
-    wheres.push(`l.fuel IN (${ph})`);
-    params.push(...fuels);
-  }
-  if (extras.length > 0) {
-    const clauses = extras.map(() => "l.extras_json LIKE ?");
-    wheres.push(`(${clauses.join(" OR ")})`);
-    params.push(...extras.map((extra) => `%${extra}%`));
-  }
-  if (priceMin !== null) {
-    wheres.push("l.current_price >= ?");
-    params.push(priceMin);
-  }
-  if (priceMax !== null) {
-    wheres.push("l.current_price <= ?");
-    params.push(priceMax);
-  }
-  if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push("l.price_change IS NOT NULL");
-    if (priceChangeMin !== null) {
-      wheres.push("l.price_change >= ?");
-      params.push(priceChangeMin);
-    }
-    if (priceChangeMax !== null) {
-      wheres.push("l.price_change <= ?");
-      params.push(priceChangeMax);
-    }
-  }
-  if (kaparo) {
-    wheres.push("l.kaparo = ?");
-    params.push(kaparo === "yes" ? 1 : 0);
-  }
-  if (years.length > 0) {
-    const ph = years.map(() => "?").join(",");
-    wheres.push(`l.reg_year IN (${ph})`);
-    params.push(...years);
-  }
-  if (search) {
-    wheres.push("(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)");
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-  }
-  if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => "?").join(",");
-    wheres.push(`d.slug IN (${ph})`);
-    params.push(...dealerSlugs);
-  }
-  if (source) {
-    wheres.push("l.source = ?");
-    params.push(source);
-  }
+  ]);
 
   const where = `WHERE ${wheres.join(" AND ")}`;
   const sortCol = VALID_SORT[sort] ?? "l.last_edit";

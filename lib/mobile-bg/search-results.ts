@@ -4,6 +4,11 @@ import type { Element } from 'domhandler';
 import { execFile } from 'child_process';
 import iconv from 'iconv-lite';
 import { promisify } from 'util';
+import {
+  MOBILE_BG_FUEL_SET,
+  MOBILE_BG_TRANSMISSION_SET,
+  MOBILE_BG_CATEGORY_SET,
+} from '@/lib/mobile-bg/search-field-config';
 
 const execFileAsync = promisify(execFile);
 
@@ -55,34 +60,6 @@ export interface MobileBgSearchResultsUntilFoundPayload extends MobileBgSearchRe
   found_on_page: number | null;
 }
 
-const FUEL_OPTIONS = new Set([
-  'Бензинов',
-  'Дизелов',
-  'Електрически',
-  'Хибриден',
-  'Plug-in хибрид',
-  'Газ',
-  'Водород',
-]);
-
-const TRANSMISSION_OPTIONS = new Set([
-  'Ръчна',
-  'Автоматична',
-  'Полуавтоматична',
-]);
-
-const BODY_TYPE_OPTIONS = new Set([
-  'Ван',
-  'Джип',
-  'Кабрио',
-  'Комби',
-  'Купе',
-  'Миниван',
-  'Пикап',
-  'Седан',
-  'Стреч лимузина',
-  'Хечбек',
-]);
 
 const SORT_LABELS: Record<string, string> = {
   '1': 'Марка/Модел/Цена',
@@ -393,9 +370,9 @@ async function fetchMobileBgSearchResultsPage(
     const status = item.hasClass('TOP') ? 'TOP' : item.hasClass('VIP') ? 'VIP' : 'none';
     const yearMonth = parseYearAndMonth(params[0] || '');
     const mileage = params.map(parseMileage).find((value) => value != null) ?? null;
-    const fuel = params.find((value) => FUEL_OPTIONS.has(value)) || null;
-    const transmission = params.find((value) => TRANSMISSION_OPTIONS.has(value)) || null;
-    const bodyType = params.find((value) => BODY_TYPE_OPTIONS.has(value)) || null;
+    const fuel = params.find((value) => MOBILE_BG_FUEL_SET.has(value)) || null;
+    const transmission = params.find((value) => MOBILE_BG_TRANSMISSION_SET.has(value)) || null;
+    const bodyType = params.find((value) => MOBILE_BG_CATEGORY_SET.has(value)) || null;
     const power = params.map(parsePower).find((value) => value != null) ?? null;
     const makeModel = deriveMakeModel(title, submittedMake, submittedModel);
 

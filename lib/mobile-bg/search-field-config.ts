@@ -42,6 +42,10 @@ export const MOBILE_BG_CATEGORY_OPTIONS = [
   "Хечбек",
 ];
 
+export const MOBILE_BG_FUEL_SET = new Set(MOBILE_BG_ENGINE_OPTIONS.filter(Boolean));
+export const MOBILE_BG_TRANSMISSION_SET = new Set(MOBILE_BG_TRANSMISSION_OPTIONS.filter(Boolean));
+export const MOBILE_BG_CATEGORY_SET = new Set(MOBILE_BG_CATEGORY_OPTIONS.filter(Boolean));
+
 export const MOBILE_BG_STEPPER_FIELDS = new Set(["f10", "f11", "f25", "f26"]);
 export const MOBILE_BG_CLEARABLE_FIELDS = new Set(["f25", "f26", "f7", "f8", "f15"]);
 

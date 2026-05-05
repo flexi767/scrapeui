@@ -1,30 +1,14 @@
 #!/usr/bin/env tsx
-import path from 'path';
-import util from 'util';
 import Database from 'better-sqlite3';
 import {
   planCarsBgDealerSync,
   syncCarsBgDealer,
   type CarsBgDealerAccount,
 } from '@/lib/cars-bg/sync';
+import { emit, formatError, parseRunnerArgs, DB_PATH } from '@/scraper/lib/runner';
 
-const args = process.argv.slice(2);
-const dealersIdx = args.indexOf('--dealers');
-const dealerArg = dealersIdx !== -1 && args[dealersIdx + 1] ? args[dealersIdx + 1] : '';
-const requestedSlugs = dealerArg ? dealerArg.split(',').map((value) => value.trim()).filter(Boolean) : [];
-const dryRun = !args.includes('--live');
-
-function emit(obj: object) {
-  process.stdout.write(JSON.stringify(obj) + '\n');
-}
-
-function formatError(err: unknown): string {
-  if (!err) return 'Unknown error';
-  if (typeof err === 'string') return err;
-  const record = err as Record<string, unknown>;
-  if (record.message) return String(record.message);
-  return util.inspect(err, { depth: 4, breakLength: 120 });
-}
+const { requestedSlugs } = parseRunnerArgs();
+const dryRun = !process.argv.includes('--live');
 
 function loadDealers(db: Database.Database): CarsBgDealerAccount[] {
   const rows = db.prepare(`
@@ -58,8 +42,7 @@ function loadDealers(db: Database.Database): CarsBgDealerAccount[] {
 }
 
 async function main() {
-  const dbPath = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
-  const db = new Database(dbPath);
+  const db = new Database(DB_PATH);
 
   try {
     const dealers = loadDealers(db);

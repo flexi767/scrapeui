@@ -1,5 +1,7 @@
 import React from "react";
-import type { PublicDealer, PublicListing, PublicListingDetail } from "./query-modules/public";
+import type { PublicDealer, PublicListing, PublicListingDetail, PublicListingFilters } from "./query-modules/public";
+import { getListingThumbSrc } from "./listing-thumb";
+import { buildImageList, parseJson, type ImageMeta } from "./utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -7,10 +9,12 @@ export interface RenderData {
   dealer: PublicDealer;
   listings?: PublicListing[];
   listing?: PublicListingDetail;
+  relatedListings?: PublicListing[];
   total?: number;
   page?: number;
   limit?: number;
   makes?: string[];
+  filters?: PublicListingFilters;
 }
 
 interface CraftNode {
@@ -71,28 +75,61 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
       tagline ? React.createElement('div', { style: { fontSize: 14, opacity: 0.8 } }, String(tagline)) : null,
     ),
 
-  FilterBar: ({ backgroundColor, layout }) =>
-    React.createElement('form', {
-      style: { backgroundColor: backgroundColor ?? '#f8fafc', padding: '12px 16px', display: 'flex', flexDirection: layout === 'vertical' ? 'column' : 'row', gap: 8, flexWrap: 'wrap' },
-    },
-      React.createElement('select', { name: 'make', style: { padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 13 } },
-        React.createElement('option', { value: '' }, 'Any Make')
-      ),
-      React.createElement('input', { type: 'submit', value: 'Filter', style: { padding: '6px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' } }),
-    ),
+  FilterBar: ({ backgroundColor, layout, showMake, showFuel, showYear, showPrice }, data) => {
+    const makes = data.makes ?? [];
+    const f = data.filters ?? {};
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
+    const fuelTypes = ['Бензин', 'Дизел', 'Електро', 'Хибрид', 'Газ / Бензин', 'LPG / Бензин'];
+    const inputStyle = { padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', minWidth: 120 };
+    const sel = (name: string, placeholder: string, opts: string[], current?: string) =>
+      React.createElement('select', {
+        key: name, name, defaultValue: current ?? '', style: inputStyle,
+      },
+        React.createElement('option', { value: '' }, placeholder),
+        ...opts.map((o) => React.createElement('option', { key: o, value: o }, o)),
+      );
+    const elements: React.ReactElement[] = [];
+    if (showMake !== false) elements.push(sel('make', 'Any Make', makes, f.make));
+    if (showFuel !== false) elements.push(sel('fuel', 'Any Fuel', fuelTypes, f.fuel));
+    if (showYear !== false) {
+      elements.push(sel('yearFrom', 'Year from', years.map(String), f.yearFrom));
+      elements.push(sel('yearTo', 'Year to', years.map(String), f.yearTo));
+    }
+    if (showPrice !== false) {
+      elements.push(React.createElement('input', { key: 'priceMax', type: 'number', name: 'priceMax', placeholder: 'Max price (лв)', defaultValue: f.priceMax ?? '', style: { ...inputStyle, minWidth: 140 } }));
+    }
+    elements.push(React.createElement('input', { key: 'submit', type: 'submit', value: 'Filter', style: { padding: '6px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 } }));
+    return React.createElement('form', {
+      method: 'GET',
+      style: { backgroundColor: backgroundColor ?? '#f8fafc', padding: '12px 16px', display: 'flex', flexDirection: layout === 'vertical' ? 'column' : 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
+    }, ...elements);
+  },
 
   ListingGridBlock: ({ columns, cardStyle, gap, showPrice, showMileage, showYear, showFuel }, data) => {
     const listings = data.listings ?? [];
     return React.createElement('div', {
       style: { display: 'grid', gridTemplateColumns: `repeat(${columns ?? 3}, 1fr)`, gap: gap ?? 16, padding: 16 },
     },
-      listings.map((l) =>
-        React.createElement('a', {
+      listings.map((l: PublicListing) => {
+        const thumbSrc = getListingThumbSrc({
+          mobile_id: l.mobileId,
+          thumb_keys: l.thumbKeys,
+          full_keys: l.fullKeys,
+          image_meta: l.imageMeta,
+          images_downloaded: l.imagesDownloaded,
+          thumb_saved: l.thumbSaved,
+        });
+        return React.createElement('a', {
           key: l.mobileId,
           href: `${l.mobileId}`,
           style: { borderRadius: cardStyle === 'card' ? 8 : 0, border: cardStyle === 'card' ? '1px solid #e2e8f0' : 'none', overflow: 'hidden', background: '#fff', display: 'block', textDecoration: 'none', color: 'inherit' },
         },
-          React.createElement('div', { style: { height: 160, background: '#e2e8f0', overflow: 'hidden', position: 'relative' } }),
+          React.createElement('div', { style: { height: 160, background: '#e2e8f0', overflow: 'hidden', position: 'relative' } },
+            thumbSrc
+              ? React.createElement('img', { src: thumbSrc, alt: `${l.make ?? ''} ${l.model ?? ''}`.trim(), style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } })
+              : null,
+          ),
           React.createElement('div', { style: { padding: '8px 12px' } },
             React.createElement('div', { style: { fontWeight: 600, fontSize: 14, marginBottom: 4 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
             React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#64748b' } },
@@ -102,8 +139,8 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
               showFuel !== false && l.fuel ? React.createElement('span', { key: 'fuel' }, l.fuel) : null,
             ),
           ),
-        )
-      )
+        );
+      })
     );
   },
 
@@ -123,19 +160,96 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     );
   },
 
-  FooterBlock: ({ backgroundColor, fontColor, showAddress }, data) =>
-    React.createElement('footer', {
-      style: { backgroundColor: backgroundColor ?? '#1e293b', color: fontColor ?? '#cbd5e1', padding: '24px 32px', fontSize: 13 },
+  FooterBlock: ({ backgroundColor, fontColor, showAddress, showPhone, showEmail }, data) => {
+    const contactLine = data.dealer.publicDomain ?? (data.dealer.mobileUrl ? new URL(data.dealer.mobileUrl).hostname : null);
+    const detailItems: React.ReactElement[] = [];
+    if (showAddress !== false && contactLine) detailItems.push(React.createElement('span', { key: 'addr' }, `📍 ${contactLine}`));
+    if (showPhone !== false && data.dealer.mobileUrl) detailItems.push(React.createElement('a', { key: 'phone', href: data.dealer.mobileUrl, target: '_blank', rel: 'noopener noreferrer', style: { color: 'inherit', textDecoration: 'none', opacity: 0.7 } }, '📞 View on Mobile.bg'));
+    if (showEmail !== false && data.dealer.mobileUrl) detailItems.push(React.createElement('a', { key: 'email', href: data.dealer.mobileUrl, target: '_blank', rel: 'noopener noreferrer', style: { color: 'inherit', textDecoration: 'none', opacity: 0.7 } }, '✉️ Contact'));
+    return React.createElement('footer', {
+      style: { backgroundColor: backgroundColor ?? '#1e293b', color: fontColor ?? '#cbd5e1', padding: '24px 32px', display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'space-between', fontSize: 13 },
     },
-      React.createElement('div', { style: { fontWeight: 600, fontSize: 16, marginBottom: 8 } }, data.dealer.name),
-      showAddress !== false ? React.createElement('div', null, '📍 Address on file') : null,
-    ),
+      React.createElement('div', { style: { fontWeight: 600, fontSize: 16 } }, data.dealer.name),
+      detailItems.length > 0
+        ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, opacity: 0.7, fontSize: 12 } }, ...detailItems)
+        : null,
+    );
+  },
 
-  ImageGallery: ({ maxHeight }, data) => {
+  ImageGallery: ({ maxHeight, layout }, data) => {
     const listing = data.listing;
     if (!listing) return React.createElement('div', null);
-    return React.createElement('div', { style: { background: '#e2e8f0', height: maxHeight ?? 400, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#94a3b8' } },
-      `${listing.imageCount ?? 0} photos`
+    const imageMeta = parseJson<ImageMeta | null>(listing.imageMeta, null);
+    const thumbKeys = parseJson<string[]>(listing.thumbKeys, []);
+    const fullKeys = parseJson<string[]>(listing.fullKeys, []);
+    const images = buildImageList(
+      listing.mobileId,
+      fullKeys.length ? fullKeys : thumbKeys,
+      thumbKeys,
+      imageMeta,
+      listing.imagesDownloaded === 1,
+    );
+    const mainHeight = maxHeight ?? 400;
+    const altBase = `${listing.make ?? ''} ${listing.model ?? ''}`.trim();
+    if (!images.length) {
+      return React.createElement('div', {
+        style: { background: '#e2e8f0', height: mainHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#94a3b8' },
+      }, 'No photos');
+    }
+    if (layout === 'grid') {
+      return React.createElement('div', {
+        style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 },
+      },
+        ...images.slice(0, 9).map((img, i) =>
+          React.createElement('img', {
+            key: i,
+            src: img.full || img.thumb,
+            alt: `${altBase} photo ${i + 1}`,
+            style: { width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' },
+          }),
+        ),
+      );
+    }
+    if (layout === 'slider') {
+      return React.createElement('div', {
+        style: { background: '#000', height: mainHeight, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+      },
+        React.createElement('img', {
+          src: images[0].full || images[0].thumb,
+          alt: altBase,
+          style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' },
+        }),
+        images.length > 1
+          ? React.createElement('div', {
+              style: { position: 'absolute', bottom: 12, right: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 12, padding: '2px 8px', borderRadius: 12 },
+            }, `1 / ${images.length}`)
+          : null,
+      );
+    }
+    return React.createElement('div', null,
+      React.createElement('div', {
+        style: { background: '#000', height: mainHeight, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      },
+        React.createElement('img', {
+          src: images[0].full || images[0].thumb,
+          alt: altBase,
+          style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' },
+        }),
+      ),
+      images.length > 1
+        ? React.createElement('div', {
+            style: { display: 'flex', gap: 4, padding: '4px 0', overflowX: 'auto' },
+          },
+            ...images.slice(1, 12).map((img, i) =>
+              React.createElement('img', {
+                key: i,
+                src: img.thumb || img.full,
+                alt: `Photo ${i + 2}`,
+                style: { height: 72, width: 96, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', borderRadius: 2 },
+              }),
+            ),
+          )
+        : null,
     );
   },
 
@@ -148,7 +262,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     );
   },
 
-  SpecsTable: ({ showMileage, showFuel, showPower, showTransmission, showYear }, data) => {
+  SpecsTable: ({ showMileage, showFuel, showPower, showTransmission, showYear, layout }, data) => {
     const l = data.listing;
     if (!l) return React.createElement('div', null);
     const specs = [
@@ -158,6 +272,17 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
       showTransmission !== false && l.transmission ? { label: 'Transmission', value: l.transmission } : null,
       showYear !== false && l.regYear ? { label: 'Year', value: l.regYear } : null,
     ].filter(Boolean) as { label: string; value: string }[];
+
+    if (layout === 'cards') {
+      return React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, padding: '8px 0' } },
+        specs.map((s) =>
+          React.createElement('div', { key: s.label, style: { background: '#f8fafc', borderRadius: 8, padding: 12, textAlign: 'center' } },
+            React.createElement('div', { style: { fontSize: 12, color: '#64748b' } }, s.label),
+            React.createElement('div', { style: { fontWeight: 700, fontSize: 16, marginTop: 4 } }, s.value),
+          )
+        )
+      );
+    }
 
     return React.createElement('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: 14 } },
       React.createElement('tbody', null,
@@ -178,19 +303,62 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     }, text);
   },
 
-  CTASection: ({ showPhone, showEmail, showWhatsapp, buttonColor, layout }) =>
-    React.createElement('div', {
+  CTASection: ({ showPhone, showEmail, showWhatsapp, buttonColor, layout }, data) => {
+    const dealerUrl = data.dealer.mobileUrl ?? '#';
+    const bc = buttonColor ?? '#2563eb';
+    return React.createElement('div', {
       style: { display: 'flex', flexDirection: layout === 'column' ? 'column' : 'row', gap: 12, padding: '16px 0', flexWrap: 'wrap' },
     },
-      showPhone !== false ? React.createElement('a', { key: 'phone', href: 'tel:', style: { padding: '12px 24px', background: buttonColor ?? '#2563eb', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, '📞 Call') : null,
-      showEmail !== false ? React.createElement('a', { key: 'email', href: 'mailto:', style: { padding: '12px 24px', border: `2px solid ${buttonColor ?? '#2563eb'}`, color: buttonColor ?? '#2563eb', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, '✉️ Email') : null,
-      showWhatsapp !== false ? React.createElement('a', { key: 'wa', href: 'https://wa.me/', style: { padding: '12px 24px', background: '#25d366', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, 'WhatsApp') : null,
-    ),
+      showPhone !== false
+        ? React.createElement('a', { key: 'phone', href: dealerUrl, target: '_blank', rel: 'noopener noreferrer', style: { padding: '12px 24px', background: bc, color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, '📞 Call Dealer')
+        : null,
+      showEmail !== false
+        ? React.createElement('a', { key: 'email', href: dealerUrl, target: '_blank', rel: 'noopener noreferrer', style: { padding: '12px 24px', border: `2px solid ${bc}`, color: bc, borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, '✉️ Contact')
+        : null,
+      showWhatsapp !== false
+        ? React.createElement('a', { key: 'wa', href: dealerUrl, target: '_blank', rel: 'noopener noreferrer', style: { padding: '12px 24px', background: '#25d366', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none' } }, '💬 WhatsApp')
+        : null,
+    );
+  },
 
-  RelatedListings: () =>
-    React.createElement('div', { style: { padding: '16px 0' } },
+  RelatedListings: ({ count, cardStyle }, data) => {
+    const related = (data.relatedListings ?? []).slice(0, (count as number) ?? 3);
+    const bordered = cardStyle !== 'minimal';
+    return React.createElement('div', { style: { padding: '16px 0' } },
       React.createElement('h3', { style: { fontSize: 18, fontWeight: 600, marginBottom: 12 } }, 'Similar Cars'),
-    ),
+      related.length === 0
+        ? null
+        : React.createElement('div', { style: { display: 'grid', gridTemplateColumns: `repeat(${Math.min(related.length, 3)}, 1fr)`, gap: 12 } },
+            ...related.map((l: PublicListing) => {
+              const thumbSrc = getListingThumbSrc({
+                mobile_id: l.mobileId,
+                thumb_keys: l.thumbKeys,
+                full_keys: l.fullKeys,
+                image_meta: l.imageMeta,
+                images_downloaded: l.imagesDownloaded,
+                thumb_saved: l.thumbSaved,
+              });
+              return React.createElement('a', {
+                key: l.mobileId,
+                href: l.mobileId,
+                style: { display: 'block', border: bordered ? '1px solid #e2e8f0' : 'none', borderRadius: bordered ? 8 : 0, overflow: 'hidden', textDecoration: 'none', color: 'inherit', background: '#fff' },
+              },
+                React.createElement('div', { style: { height: 120, background: '#f1f5f9', overflow: 'hidden' } },
+                  thumbSrc
+                    ? React.createElement('img', { src: thumbSrc, alt: `${l.make ?? ''} ${l.model ?? ''}`.trim(), style: { width: '100%', height: '100%', objectFit: 'cover' } })
+                    : null,
+                ),
+                React.createElement('div', { style: { padding: '8px 10px' } },
+                  React.createElement('div', { style: { fontWeight: 600, fontSize: 13 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
+                  l.currentPrice
+                    ? React.createElement('div', { style: { color: '#2563eb', fontSize: 13, marginTop: 2 } }, `€${l.currentPrice.toLocaleString()}`)
+                    : null,
+                ),
+              );
+            }),
+          ),
+    );
+  },
 };
 
 // ── Recursive renderer ────────────────────────────────────────────────────

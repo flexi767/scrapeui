@@ -1,19 +1,15 @@
 import fsp from "fs/promises";
 import path from "path";
 import type Database from "better-sqlite3";
-import { chromium, type Page } from "playwright";
+import { chromium } from "playwright";
 import { loginMobileBg } from "@/lib/mobile-bg/auth";
 import { USER_AGENT } from "@/lib/mobile-bg/constants";
-import {
-  fetchMakesModels,
-  parseMakeModelSync,
-  type MakesMap,
-} from "@/lib/mobile-bg/makes-models";
+import { fetchMakesModels } from "@/lib/mobile-bg/makes-models";
 import { loadMobileBgMakesMapFromDb } from "@/lib/mobile-bg/reference";
 import { captureEditFormSnapshotWithPage } from "@/lib/mobile-bg/edit-form-capture";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
-import { cleanDescription } from "@/lib/mobile-bg/description";
-import { normalizeImageUrl, toMobileBgFullImageUrl } from "@/lib/mobile-bg/backup-images";
+import { normalizeImageUrl } from "@/lib/mobile-bg/backup-images";
+import { parseJson } from "@/lib/utils";
 import type {
   BackupDealerResult,
   BackupDefaultsRow,
@@ -21,14 +17,23 @@ import type {
   DealerBackupConfig,
   DealerDraftDefaults,
   DealerDraftRow,
-  ExistingBackupRow,
-  SavedImage,
   ScrapedDetail,
-  ScrapedListingPageData,
   SnapshotFieldsRow,
 } from "@/lib/mobile-bg/backup-types";
+import {
+  collectListingLinks,
+  scrapeListingDetail,
+  downloadAllImages,
+} from "@/lib/mobile-bg/backup-scraper";
+import {
+  createBackupRun,
+  dedupeMobileBgBackups,
+  upsertBackupArtifact,
+  insertBackupImages,
+} from "@/lib/mobile-bg/backup-db";
 
 export type { BackupDealerResult, BackupProgressEvent, DealerBackupConfig };
+export { dedupeMobileBgBackups };
 
 export interface SavePublicListingDraftResult {
   backupId: number;
@@ -48,145 +53,142 @@ async function ensureDir(dir: string): Promise<void> {
 
 interface CrawlQueueEntry {
   id: number;
+  dealer_id: number;
+  url: string;
+  url_type: string;
   status: string;
-  listingsCount: number | null;
+  mobile_id: string | null;
+  listings_count: number | null;
   price: number | null;
   views: number | null;
-  lastCrawledAt: string | null;
+  error: string | null;
+  last_crawled_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CrawlCacheResult {
   cached: boolean;
-  listingsCount?: number;
-  price?: number;
-  views?: number;
+  listingsCount: number | null;
 }
 
 function getCrawlQueueEntry(
   db: Database.Database,
   dealerId: number,
   url: string,
-): CrawlQueueEntry | null {
+  urlType: string,
+): CrawlQueueEntry | undefined {
   return db
     .prepare(
       `
-    SELECT id, status, listings_count, price, views, last_crawled_at
+    SELECT *
     FROM mobilebg_crawl_queue
-    WHERE dealer_id = ? AND url = ?
+    WHERE dealer_id = ? AND url = ? AND url_type = ?
+    ORDER BY last_crawled_at DESC, id DESC
     LIMIT 1
   `,
     )
-    .get(dealerId, url) as CrawlQueueEntry | null;
+    .get(dealerId, url, urlType) as CrawlQueueEntry | undefined;
 }
 
 function checkCrawlCache(
   db: Database.Database,
   dealerId: number,
   url: string,
-  urlType: "dealer_homepage" | "listing_detail",
+  urlType: string,
 ): CrawlCacheResult {
-  const entry = getCrawlQueueEntry(db, dealerId, url);
-  if (!entry) {
-    return { cached: false };
+  const entry = getCrawlQueueEntry(db, dealerId, url, urlType);
+  if (!entry || !entry.last_crawled_at) {
+    return { cached: false, listingsCount: null };
   }
 
-  // Check if cache is still fresh (only for dealer_homepage)
-  if (urlType === "dealer_homepage" && entry.lastCrawledAt) {
-    const lastCrawl = new Date(entry.lastCrawledAt);
-    const now = new Date();
-    const hoursSince = (now.getTime() - lastCrawl.getTime()) / (1000 * 60 * 60);
-    if (hoursSince < CRAWL_CACHE_TTL_HOURS) {
-      return {
-        cached: true,
-        listingsCount: entry.listingsCount ?? undefined,
-      };
-    }
+  const lastCrawledAt = new Date(entry.last_crawled_at);
+  const now = new Date();
+  const hoursSinceLastCrawl =
+    (now.getTime() - lastCrawledAt.getTime()) / (1000 * 60 * 60);
+
+  if (hoursSinceLastCrawl > CRAWL_CACHE_TTL_HOURS) {
+    return { cached: false, listingsCount: null };
   }
 
-  // For listing_detail, use cache if available
-  if (urlType === "listing_detail" && entry.lastCrawledAt) {
-    return {
-      cached: true,
-      price: entry.price ?? undefined,
-      views: entry.views ?? undefined,
-    };
-  }
-
-  return { cached: false };
+  return {
+    cached: true,
+    listingsCount: entry.listings_count,
+  };
 }
 
 function saveCrawlQueueStatus(
   db: Database.Database,
   dealerId: number,
   url: string,
-  urlType: "dealer_homepage" | "listing_detail",
+  urlType: string,
   data: {
+    mobileId?: string;
     listingsCount?: number;
     price?: number;
     views?: number;
-    mobileId?: string;
     status?: string;
     error?: string;
   },
 ): void {
   const now = new Date().toISOString();
-  const existing = getCrawlQueueEntry(db, dealerId, url);
+  const existing = getCrawlQueueEntry(db, dealerId, url, urlType);
 
   if (existing) {
+    const updates: string[] = ["updated_at = ?", "last_crawled_at = ?"];
+    const values: (string | number | null)[] = [now, now];
+
+    if (data.mobileId !== undefined) {
+      updates.push("mobile_id = ?");
+      values.push(data.mobileId);
+    }
+    if (data.listingsCount !== undefined) {
+      updates.push("listings_count = ?");
+      values.push(data.listingsCount);
+    }
+    if (data.price !== undefined) {
+      updates.push("price = ?");
+      values.push(data.price);
+    }
+    if (data.views !== undefined) {
+      updates.push("views = ?");
+      values.push(data.views);
+    }
+    if (data.status !== undefined) {
+      updates.push("status = ?");
+      values.push(data.status);
+    }
+    if (data.error !== undefined) {
+      updates.push("error = ?");
+      values.push(data.error);
+    }
+
+    values.push(existing.id);
     db.prepare(
-      `
-      UPDATE mobilebg_crawl_queue
-      SET
-        status = ?,
-        listings_count = COALESCE(?, listings_count),
-        price = COALESCE(?, price),
-        views = COALESCE(?, views),
-        last_crawled_at = ?,
-        error = ?,
-        updated_at = ?
-      WHERE id = ?
-    `,
-    ).run(
-      data.status ?? "completed",
-      data.listingsCount ?? null,
-      data.price ?? null,
-      data.views ?? null,
-      now,
-      data.error ?? null,
-      now,
-      existing.id,
-    );
+      `UPDATE mobilebg_crawl_queue SET ${updates.join(", ")} WHERE id = ?`,
+    ).run(...values);
   } else {
     db.prepare(
       `
       INSERT INTO mobilebg_crawl_queue (
-        dealer_id, url, url_type, mobile_id, status, listings_count, price, views,
-        last_crawled_at, error, created_at, updated_at
+        dealer_id, url, url_type, status, mobile_id, listings_count, price, views, error,
+        last_crawled_at, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     ).run(
       dealerId,
       url,
       urlType,
-      data.mobileId ?? null,
       data.status ?? "completed",
+      data.mobileId ?? null,
       data.listingsCount ?? null,
       data.price ?? null,
       data.views ?? null,
-      now,
       data.error ?? null,
       now,
       now,
+      now,
     );
-  }
-}
-
-function parseJson<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
   }
 }
 
@@ -277,620 +279,6 @@ function buildDraftTechData(
   if (defaults.website) techData.f24 = defaults.website;
 
   return techData;
-}
-
-async function collectListingLinks(
-  page: Page,
-  dealerUrl: string,
-  maxPages = 30,
-): Promise<string[]> {
-  const links = new Set<string>();
-
-  for (let currentPage = 1; currentPage <= maxPages; currentPage += 1) {
-    const url = new URL(dealerUrl);
-    if (currentPage > 1) url.searchParams.set("page", String(currentPage));
-
-    await page.goto(url.toString(), {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
-    await page
-      .waitForSelector('a[href*="/obiava-"]', { timeout: 15000 })
-      .catch(() => {});
-
-    const pageLinks = await page.$$eval('a[href*="/obiava-"]', (elements) => [
-      ...new Set(
-        elements
-          .map((el) => (el as HTMLAnchorElement).href)
-          .filter((href) => href.includes("/obiava-")),
-      ),
-    ]);
-
-    pageLinks.forEach((href) => links.add(href));
-
-    const hasNext = await page
-      .evaluate(
-        (pageNo) =>
-          Array.from(document.querySelectorAll("a")).some(
-            (a) =>
-              a.href.includes(`page=${pageNo + 1}`) ||
-              a.textContent?.trim() === String(pageNo + 1),
-          ),
-        currentPage,
-      )
-      .catch(() => false);
-
-    if (!hasNext) break;
-  }
-
-  return [...links];
-}
-
-async function scrapeAllImages(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const normalizeUrl = (value: string) => {
-      if (!value) return "";
-      try {
-        return new URL(value, window.location.href).toString();
-      } catch {
-        return "";
-      }
-    };
-    const toFullSizeUrl = (source: string) =>
-      source
-        .replace(/(\/mobile\/photosorg\/\d+)\/(\d+)\/(?!big1)/, "$1/$2/big1/")
-        .replace(/\/1\/big1\/big1\//, "/1/big1/");
-
-    const galleryEls = document.querySelectorAll(
-      ".smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]",
-    );
-    if (galleryEls.length > 0) {
-      const seen = new Set<string>();
-      const imgs: string[] = [];
-      galleryEls.forEach((el) => {
-        const source = normalizeUrl(
-          el.getAttribute("data-src-gallery") ||
-            el.getAttribute("data-lazy") ||
-            el.getAttribute("data-src") ||
-            (el as HTMLImageElement).src ||
-            "",
-        );
-        const bigSource = toFullSizeUrl(source);
-        const canonical = bigSource.includes("/big1/") ? bigSource : source;
-        if (
-          canonical &&
-          !seen.has(canonical) &&
-          canonical.includes("photosorg")
-        ) {
-          seen.add(canonical);
-          imgs.push(canonical);
-        }
-      });
-      if (imgs.length > 0) return imgs;
-    }
-
-    const seen = new Set<string>();
-    const imgs: string[] = [];
-    document.querySelectorAll("img, [data-lazy], [data-src]").forEach((el) => {
-      const source = normalizeUrl(
-        el.getAttribute("data-src-gallery") ||
-          el.getAttribute("data-lazy") ||
-          el.getAttribute("data-src") ||
-          (el as HTMLImageElement).src ||
-          "",
-      );
-      if (!source) return;
-      const canonical = toFullSizeUrl(source);
-      if (seen.has(canonical)) return;
-      const isCarPhoto =
-        canonical.includes("/big1/") &&
-        /\.(webp|jpg|jpeg|png)(\?|$)/i.test(canonical);
-      if (isCarPhoto) {
-        seen.add(canonical);
-        imgs.push(canonical);
-      }
-    });
-    if (imgs.length > 0) return imgs;
-
-    const html = document.documentElement.innerHTML;
-    const regex =
-      /https?:\/\/[^"'\\\s]+\/photosorg\/[^"'\\\s]+\/big1\/[^"'\\\s]+\.(?:webp|jpg|jpeg|png)(?:\?[^"'\\\s]*)?/gi;
-    const htmlMatches = html.match(regex) || [];
-    for (const rawUrl of htmlMatches) {
-      const canonical = normalizeUrl(rawUrl);
-      if (!canonical || seen.has(canonical)) continue;
-      seen.add(canonical);
-      imgs.push(canonical);
-    }
-    return imgs;
-  });
-}
-
-async function scrapeListingDetail(
-  page: Page,
-  url: string,
-  makesMap: MakesMap | null,
-  { includeImages = true }: { includeImages?: boolean } = {},
-): Promise<ScrapedDetail> {
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-  await page.waitForSelector("h1", { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(1200);
-
-  const data = await page.evaluate(String.raw`(() => {
-    const normalizeCategoryValue = (value) => {
-      if (!value) return null;
-      return (
-        value
-          .split(/\r?\n/)[0]
-          .replace(
-            /\s+(Пробег|Цвят|Скоростна кутия|Двигател|Мощност|Кубатура).*$/i,
-            "",
-          )
-          .trim() || null
-      );
-    };
-
-    const body = document.body.innerText;
-    const title = document.querySelector("h1")?.textContent?.trim() || "";
-    const priceMatch = body.match(/([\d\s.,]+)\s*€/);
-    const noVat = body.includes("Не се начислява ДДС");
-    const hasVat = !noVat && body.includes("начислява ДДС");
-    const readTechDataValue = (label) => {
-      const rows = Array.from(
-        document.querySelectorAll(".techData .items .item"),
-      );
-      for (const row of rows) {
-        const divs = row.querySelectorAll("div");
-        if (divs.length < 2) continue;
-        if (divs[0].textContent?.trim() === label) {
-          return divs[1].textContent?.trim() || null;
-        }
-      }
-      return null;
-    };
-
-    const extract = (pattern) => {
-      const match = body.match(pattern);
-      return match ? match[1].trim() : null;
-    };
-
-    const year = extract(/Дата на производство\s+(.+?)(?:\n|Двигател)/);
-    const fuel = extract(/Двигател\s+(\S+)/);
-    const power = extract(/Мощност\s+([\d]+)/);
-    const engine = extract(/Кубатура[^)]*\)\s*([\d]+)/);
-    const transmission = extract(/Скоростна кутия\s+(\S+)/);
-    const categoryFromTechData = readTechDataValue("Категория");
-    const categoryRaw =
-      categoryFromTechData || extract(/Категория\s+(.+?)(?:\n|Пробег|Цвят|$)/);
-    const category = normalizeCategoryValue(categoryRaw);
-    const mileageFromTechData = readTechDataValue("Пробег");
-    const mileageMatch = (mileageFromTechData || body).match(/([\d\s]+)\s*км/);
-    const mileage = mileageMatch
-      ? mileageMatch[1].replace(/\s/g, "").trim()
-      : null;
-    const colorFromTechData = readTechDataValue("Цвят");
-    const color =
-      (colorFromTechData || extract(/Цвят\s+([^\r\n]+)/) || null)
-        ?.split(/\r?\n/)[0]
-        .trim() || null;
-    const description =
-      document.querySelector(".moreInfo")?.innerText?.trim() || "";
-    const listingId = window.location.href.match(/obiava-(\d+)/)?.[1] || null;
-    const phoneMatch = body.match(/тел[.\s]*([0-9\s+\-()]{8,20})/gi);
-    const phones = phoneMatch
-      ? phoneMatch.map((p) => p.replace(/тел[.\s]*/i, "").trim())
-      : [];
-
-    const extras = {};
-    const extriEl = document.querySelector(".carExtri");
-    if (extriEl) {
-      let currentCategory = null;
-      for (const child of Array.from(extriEl.childNodes)) {
-        if (child.nodeType !== 1) continue;
-        const element = child;
-        if (element.tagName === "SPAN" && element.classList.contains("Title")) {
-          currentCategory = element.textContent?.trim() || null;
-          if (currentCategory) extras[currentCategory] = [];
-        } else if (
-          element.tagName === "DIV" &&
-          element.classList.contains("items") &&
-          currentCategory
-        ) {
-          extras[currentCategory] = Array.from(
-            element.querySelectorAll("div"),
-          ).map((el) => ({
-            label: el.textContent?.trim() || "",
-            alias: el.getAttribute("data-title") || null,
-          }));
-        }
-      }
-    }
-
-    const techData = {};
-    document.querySelectorAll(".techData .items .item").forEach((item) => {
-      const divs = item.querySelectorAll("div");
-      if (divs.length >= 2) {
-        techData[divs[0].textContent?.trim() || ""] =
-          divs[1].textContent?.trim() || "";
-      }
-    });
-
-    const photoOrder = Array.from(
-      document.querySelectorAll(
-        ".smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]",
-      ),
-    )
-      .map((el) => {
-        const source =
-          el.src ||
-          el.getAttribute("data-lazy") ||
-          el.getAttribute("data-src") ||
-          "";
-        const keyMatch = source.match(/_([^_/]+)\.webp/);
-        return keyMatch ? keyMatch[1] : null;
-      })
-      .filter(Boolean);
-
-    const photoThumbUrls = Array.from(
-      document.querySelectorAll(
-        ".smallPicturesGallery img, .smallPicturesGallery [data-lazy], .smallPicturesGallery [data-src]",
-      ),
-    )
-      .map(
-        (el) =>
-          el.src ||
-          el.getAttribute("data-lazy") ||
-          el.getAttribute("data-src") ||
-          "",
-      )
-      .filter(Boolean);
-
-    return {
-      title,
-      price: priceMatch
-        ? priceMatch[1].replace(/\s/g, "").replace(",", ".")
-        : null,
-      noVat,
-      hasVat,
-      year,
-      fuel,
-      power,
-      engine,
-      transmission,
-      category,
-      mileage,
-      color,
-      description,
-      listingId,
-      phones,
-      extras,
-      techData,
-      photoOrder,
-      photoThumbUrls,
-    };
-  })()`) as ScrapedListingPageData;
-
-  const scrapedImageUrls = includeImages ? await scrapeAllImages(page) : [];
-  const mobileId =
-    url.match(/obiava-(\d+)/)?.[1] || data.listingId || String(Date.now());
-  const imageUrls =
-    !includeImages
-      ? []
-      : scrapedImageUrls.length > 0
-      ? scrapedImageUrls
-      : data.photoThumbUrls
-          .map((thumbUrl) => toMobileBgFullImageUrl(thumbUrl))
-          .filter((value): value is string => Boolean(value));
-  const cleanedTitle = data.title.replace(/\s*Обява:\s*\d+\s*$/i, "").trim();
-  const parsed = parseMakeModelSync(cleanedTitle, makesMap);
-
-  return {
-    mobileId,
-    url,
-    sourceTitle: cleanedTitle,
-    make: parsed.make,
-    model: parsed.model,
-    title: parsed.titleRemainder.replace(/\s*Обява:\s*\d+\s*$/i, "").trim(),
-    priceAmount: data.price ? parseFloat(data.price) : null,
-    priceCurrency: "EUR",
-    vat: data.hasVat ? "included" : data.noVat ? "exempt" : null,
-    year: data.year
-      ? parseInt(data.year.match(/\d{4}/)?.[0] || "", 10) || null
-      : null,
-    mileage: data.mileage ? parseInt(data.mileage, 10) || null : null,
-    fuel: data.fuel || null,
-    power: data.power ? parseInt(data.power, 10) || null : null,
-    engine: data.engine ? `${data.engine} см³` : null,
-    color: data.color || null,
-    transmission: data.transmission || null,
-    category: data.category || null,
-    description: cleanDescription(data.description),
-    phones: data.phones,
-    extras: data.extras,
-    techData: data.techData,
-    photoOrder: data.photoOrder,
-    photoThumbUrls: data.photoThumbUrls,
-    imageUrls,
-  };
-}
-
-async function downloadAllImages(
-  urls: string[],
-  destDir: string,
-): Promise<SavedImage[]> {
-  const saved: SavedImage[] = [];
-  const validUrls = urls
-    .map((url) => normalizeImageUrl(url))
-    .filter((url): url is string => Boolean(url))
-    .filter((url) => {
-      if (!url) return false;
-      if (!/\.(webp|jpg|jpeg|png)(\?|$)/i.test(url)) return false;
-      if (!url.includes("/big1/") && !url.includes("/snimka/")) return false;
-      return true;
-    });
-
-  for (let i = 0; i < validUrls.length; i += 1) {
-    const imageUrl = validUrls[i];
-    const filename = `${String(i + 1).padStart(2, "0")}.webp`;
-    const localPath = path.join(destDir, filename);
-
-    try {
-      const existingStat = await fsp.stat(localPath);
-      if (existingStat.isFile() && existingStat.size > 0) {
-        saved.push({ filename, url: imageUrl, localPath });
-        continue;
-      }
-    } catch {
-      // File missing, continue with download.
-    }
-
-    try {
-      const res = await fetch(imageUrl, {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (!res.ok) continue;
-      const buf = Buffer.from(await res.arrayBuffer());
-      await fsp.writeFile(localPath, buf);
-      saved.push({ filename, url: imageUrl, localPath });
-    } catch {
-      // best-effort; keep the backup run moving
-    }
-  }
-
-  return saved;
-}
-
-function createBackupRun(
-  db: Database.Database,
-  dealerId: number,
-  sourceUrl: string,
-): number {
-  const now = new Date().toISOString();
-  const result = db
-    .prepare(
-      `
-    INSERT INTO mobilebg_backup_runs (dealer_id, status, source_url, listings_count, images_count, started_at, created_at, updated_at)
-    VALUES (?, 'running', ?, 0, 0, ?, ?, ?)
-  `,
-    )
-    .run(dealerId, sourceUrl, now, now, now);
-  return Number(result.lastInsertRowid);
-}
-
-function clearBackupImages(db: Database.Database, backupId: number): void {
-  db.prepare(`DELETE FROM mobilebg_backup_images WHERE backup_id = ?`).run(
-    backupId,
-  );
-}
-
-function deleteDuplicateBackups(
-  db: Database.Database,
-  canonicalId: number,
-  duplicateIds: number[],
-): void {
-  if (duplicateIds.length === 0) return;
-
-  const placeholders = duplicateIds.map(() => "?").join(", ");
-  db.prepare(
-    `UPDATE mobilebg_edit_form_snapshots SET backup_id = ? WHERE backup_id IN (${placeholders})`,
-  ).run(canonicalId, ...duplicateIds);
-  db.prepare(
-    `UPDATE mobilebg_repost_jobs SET backup_id = ? WHERE backup_id IN (${placeholders})`,
-  ).run(canonicalId, ...duplicateIds);
-  db.prepare(
-    `DELETE FROM mobilebg_backup_images WHERE backup_id IN (${placeholders})`,
-  ).run(...duplicateIds);
-  db.prepare(`DELETE FROM mobilebg_backups WHERE id IN (${placeholders})`).run(
-    ...duplicateIds,
-  );
-}
-
-export function dedupeMobileBgBackups(
-  db: Database.Database,
-  dealerId?: number,
-): number {
-  const duplicateGroups = db
-    .prepare(
-      `
-    SELECT dealer_id, mobile_id
-    FROM mobilebg_backups
-    ${dealerId == null ? "" : "WHERE dealer_id = ?"}
-    GROUP BY dealer_id, mobile_id
-    HAVING COUNT(*) > 1
-  `,
-    )
-    .all(...(dealerId == null ? [] : [dealerId])) as Array<{
-    dealer_id: number;
-    mobile_id: string;
-  }>;
-
-  let deletedCount = 0;
-
-  for (const group of duplicateGroups) {
-    const rows = db
-      .prepare(
-        `
-      SELECT id
-      FROM mobilebg_backups
-      WHERE dealer_id = ? AND mobile_id = ?
-      ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
-    `,
-      )
-      .all(group.dealer_id, group.mobile_id) as ExistingBackupRow[];
-
-    const canonical = rows[0];
-    const duplicateIds = rows.slice(1).map((row) => row.id);
-    if (!canonical || duplicateIds.length === 0) continue;
-
-    deleteDuplicateBackups(db, canonical.id, duplicateIds);
-    deletedCount += duplicateIds.length;
-  }
-
-  return deletedCount;
-}
-
-function upsertBackupArtifact(
-  db: Database.Database,
-  runId: number,
-  dealerId: number,
-  detail: ScrapedDetail,
-): { backupId: number; action: "created" | "updated" } {
-  const now = new Date().toISOString();
-  const listingRow = db
-    .prepare(
-      `
-    SELECT id, ad_status, kaparo, carsbg_created_date
-    FROM listings
-    WHERE mobile_id = ?
-    LIMIT 1
-  `,
-    )
-    .get(detail.mobileId) as
-    | {
-        id?: number;
-        ad_status?: string | null;
-        kaparo?: number | null;
-        carsbg_created_date?: string | null;
-      }
-    | undefined;
-  const existing = db
-    .prepare(
-      `
-    SELECT id
-    FROM mobilebg_backups
-    WHERE dealer_id = ? AND mobile_id = ?
-    ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
-  `,
-    )
-    .all(dealerId, detail.mobileId) as ExistingBackupRow[];
-
-  const canonical = existing[0];
-  const duplicateIds = existing.slice(1).map((row) => row.id);
-  const normalizedColor = detail.color
-    ? detail.color.split(/\r?\n/)[0].trim() || null
-    : null;
-
-  if (canonical) {
-    if (duplicateIds.length > 0) {
-      deleteDuplicateBackups(db, canonical.id, duplicateIds);
-    }
-
-    db.prepare(
-      `
-      UPDATE mobilebg_backups
-      SET
-        run_id = ?, listing_id = ?, source_url = ?, source_title = ?, phones_json = ?, extras_json = ?, tech_data_json = ?,
-        photo_order_json = ?, image_count = 0, created_at = COALESCE(?, created_at), updated_at = ?
-      WHERE id = ?
-    `,
-    ).run(
-      runId,
-      listingRow?.id ?? null,
-      detail.url,
-      detail.sourceTitle,
-      JSON.stringify(detail.phones),
-      JSON.stringify(detail.extras),
-      JSON.stringify(detail.techData),
-      JSON.stringify(detail.photoOrder),
-      listingRow?.carsbg_created_date ?? null,
-      now,
-      canonical.id,
-    );
-
-    clearBackupImages(db, canonical.id);
-    return { backupId: canonical.id, action: "updated" };
-  }
-
-  const createdAt = listingRow?.carsbg_created_date ?? now;
-
-  const result = db
-    .prepare(
-      `
-    INSERT INTO mobilebg_backups (
-      run_id, dealer_id, listing_id, mobile_id, source_url, source_title, make, model, title,
-      price_amount, price_currency, vat_included, year, mileage, fuel, power, engine, color, transmission, category,
-      description, ad_status, kaparo, draft_needs_sync, last_mobile_sync_at,
-      phones_json, extras_json, tech_data_json, photo_order_json, image_count, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-    )
-    .run(
-      runId,
-      dealerId,
-      listingRow?.id ?? null,
-      detail.mobileId,
-      detail.url,
-      detail.sourceTitle,
-      detail.make,
-      detail.model,
-      detail.title,
-      detail.priceAmount,
-      detail.priceCurrency,
-      detail.vat,
-      detail.year,
-      detail.mileage,
-      detail.fuel,
-      detail.power,
-      detail.engine,
-      normalizedColor,
-      detail.transmission,
-      detail.category,
-      detail.description,
-      listingRow?.ad_status ?? "none",
-      listingRow?.kaparo ?? 0,
-      0,
-      null,
-      JSON.stringify(detail.phones),
-      JSON.stringify(detail.extras),
-      JSON.stringify(detail.techData),
-      JSON.stringify(detail.photoOrder),
-      0,
-      createdAt,
-      now,
-    );
-
-  return { backupId: Number(result.lastInsertRowid), action: "created" };
-}
-
-function insertBackupImages(
-  db: Database.Database,
-  backupId: number,
-  savedImages: SavedImage[],
-): void {
-  const now = new Date().toISOString();
-  const stmt = db.prepare(`
-    INSERT INTO mobilebg_backup_images (backup_id, sort_order, filename, source_url, local_path, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  for (let i = 0; i < savedImages.length; i += 1) {
-    const image = savedImages[i];
-    stmt.run(backupId, i, image.filename, image.url, image.localPath, now);
-  }
-
-  db.prepare(
-    `UPDATE mobilebg_backups SET image_count = ?, updated_at = ? WHERE id = ?`,
-  ).run(savedImages.length, now, backupId);
 }
 
 export async function savePublicMobileBgListingAsDraft(

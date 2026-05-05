@@ -1,4 +1,11 @@
 import util from "util";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const _dir = fileURLToPath(new URL(".", import.meta.url));
+export const DB_PATH =
+  process.env.DB_PATH ||
+  path.resolve(_dir, "../../../scraped/listings.db");
 
 export function emit(obj: object) {
   process.stdout.write(`${JSON.stringify(obj)}\n`);

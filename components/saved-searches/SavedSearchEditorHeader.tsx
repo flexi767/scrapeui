@@ -117,7 +117,7 @@ export function SavedSearchEditorHeader({
           disabled={resultsLoading}
         >
           <SearchIcon className="mr-1 h-4 w-4" />
-          First 8
+          First 7
         </Button>
         <Button
           type="button"

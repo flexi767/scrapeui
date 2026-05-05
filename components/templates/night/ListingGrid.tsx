@@ -2,25 +2,9 @@
 import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import type { ListingGridProps, PublicListingFilters } from "../types";
+import type { ListingGridProps } from "../types";
+import { fmtPrice, fmtMileage, filterHref } from "../utils";
 import s from "./ListingGrid.module.css";
-
-function fmtPrice(p: number | null) { return p ? p.toLocaleString("bg-BG") + " лв" : "—"; }
-function fmtMileage(m: number | null) { return m ? m.toLocaleString("bg-BG") + " km" : "—"; }
-function filterHref(base: string, f: PublicListingFilters, u: Record<string, string | number | undefined>) {
-  const p = new URLSearchParams();
-  const m = { ...f, ...u };
-  if (m.make) p.set("make", String(m.make));
-  if (m.fuel) p.set("fuel", String(m.fuel));
-  if (m.yearFrom) p.set("yearFrom", String(m.yearFrom));
-  if (m.yearTo) p.set("yearTo", String(m.yearTo));
-  if (m.priceMin) p.set("priceMin", String(m.priceMin));
-  if (m.priceMax) p.set("priceMax", String(m.priceMax));
-  if (m.sort && m.sort !== "newest") p.set("sort", String(m.sort));
-  if (m.page && Number(m.page) > 1) p.set("page", String(m.page));
-  const qs = p.toString();
-  return qs ? `${base}?${qs}` : base;
-}
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
   const base = `/d/${dealer.slug}`;
@@ -91,10 +75,10 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           </div>
 
           <div className={s.grid}>
-            {listings.map((l) => {
+            {listings.map((l, i) => {
               const thumb = getListingThumbSrc({ mobile_id: l.mobileId, thumb_keys: l.thumbKeys, full_keys: l.fullKeys, image_meta: l.imageMeta, images_downloaded: l.imagesDownloaded, thumb_saved: l.thumbSaved });
               return (
-                <Link key={l.mobileId} href={`${base}/${l.mobileId}`} className={s.card}>
+                <Link key={l.mobileId ?? i} href={`${base}/${l.mobileId}`} className={s.card}>
                   <div className={s.cardImg}>
                     {thumb ? <ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /> : <div className={s.cardImgPlaceholder}>🚗</div>}
                     {l.isNew === 1 && <span className={s.cardTag}>New</span>}
@@ -109,7 +93,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
                     </div>
                     <div className={s.cardFoot}>
                       <div className={s.price}>{fmtPrice(l.currentPrice)}</div>
-                      <button className={s.viewBtn}>View</button>
+                      <span className={s.viewBtn}>View</span>
                     </div>
                   </div>
                 </Link>

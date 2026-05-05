@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NextRequest } from 'next/server';
 import { raw } from '@/db/client';
+import { SCRAPED_ROOT } from '@/lib/storage-paths';
 
 const MIME: Record<string, string> = {
   '.webp': 'image/webp',
@@ -10,7 +11,7 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
 };
 
-const ALLOWED_ROOT = '/Users/v/dev/scraped';
+const ALLOWED_ROOT = SCRAPED_ROOT;
 
 export async function GET(
   _request: NextRequest,

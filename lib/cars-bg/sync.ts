@@ -1,17 +1,40 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { randomUUID } from 'crypto';
 import type Database from 'better-sqlite3';
+import { CARIMG_DIR } from '@/lib/storage-paths';
 import { chromium, type Page } from 'playwright';
 import { CARS_BG_BASE_URL, loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
 import {
   buildCarsBgEditUrl,
   extractOfferId,
 } from '@/lib/cars-bg/urls';
-import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getCdnImageUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { normalizeVatValue } from '@/lib/vat';
+import {
+  type CarsBgExtrasPayload,
+  normalizeLabel,
+  normalizeCompareText,
+  sanitizeCarsBgDescription,
+  sanitizeCarsBgTitle,
+  titleOverlapScore,
+  normalizeFuelFamily,
+  parseCarsBgExtrasPayload,
+  getExtraLabels,
+  optionSets,
+  findOptionByLabel,
+  fetchModelOptions,
+  inferBrandFromTitle,
+  inferModelFromTitle,
+  mapCategory,
+  mapGear,
+  mapFuel,
+  mapDoors,
+  mapColor,
+  currencyIdFromCode,
+} from '@/lib/cars-bg/sync-mapping';
+import { downloadImages, uploadImages } from '@/lib/cars-bg/sync-images';
+import { applyCarsBgSupplementalFields } from '@/lib/cars-bg/sync-extras';
+
+export { extractCarsBgExtras, applyCarsBgExtras } from '@/lib/cars-bg/sync-extras';
 
 export {
   buildCarsBgEditUrl,
@@ -21,14 +44,7 @@ export {
 } from '@/lib/cars-bg/urls';
 
 const fsp = fs.promises;
-const MAX_PHOTO_UPLOADS = 15;
-const LOCAL_IMAGE_BASE_DIR = '/Users/v/dev/scraped/carimg';
-const PUBLISH_FORM_PATHS = [
-  path.resolve(process.cwd(), 'data/publishcar.html'),
-  '/Users/v/dev/scrapers/data/publishcar.html',
-];
-
-let sharpModule: typeof import('sharp') | null | undefined;
+const LOCAL_IMAGE_BASE_DIR = CARIMG_DIR;
 
 export interface CarsBgDealerAccount {
   id: number;
@@ -69,20 +85,6 @@ interface SyncListingRow {
   full_keys: string | null;
   images_downloaded: number | null;
   latest_backup_id?: number | null;
-}
-
-interface CarsBgSelectedExtra {
-  name?: string;
-  value?: string;
-  id?: string;
-  label?: string;
-  checked?: boolean;
-}
-
-interface CarsBgExtrasPayload {
-  url?: string | null;
-  summaryText?: string;
-  selected?: CarsBgSelectedExtra[];
 }
 
 export interface CarsBgSyncListing {
@@ -189,316 +191,6 @@ export function getStaleCarsBgListings(db: Database.Database, dealerSlug: string
   return rows.map((row) => row.cars_id).filter(Boolean);
 }
 
-function normalizeCompareText(value: string | null | undefined): string {
-  // Treat 💵/📞 (used on mobile.bg) and ✓ (substituted when pushing to cars.bg)
-  // as equivalent by stripping all three before comparison.
-  return String(value || '')
-    .replace(/[💵📞✓]/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9а-я]+/giu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizeCarsBgDescriptionText(value: string | null | undefined): string {
-  return String(value || '').replace(/[💵📞✓]/gu, '✓');
-}
-
-function sanitizeCarsBgDescription(value: string | null | undefined): string {
-  return normalizeCarsBgDescriptionText(value)
-    .replace(/(^|\s|[,.!?:;()\-])Възможност\s+за\s+данъчен\s+кредит(?=$|\s|[,.!?:;()\-])/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-function normalizeCarsBgTitleText(value: string | null | undefined): string {
-  return String(value || '').replace(/[💵📞✓]/gu, '');
-}
-
-function sanitizeCarsBgTitle(value: string | null | undefined): string {
-  return normalizeCarsBgTitleText(value).trim();
-}
-
-function titleOverlapScore(a: string | null | undefined, b: string | null | undefined): number {
-  const aTokens = new Set(normalizeCompareText(a).split(' ').filter((token) => token.length > 2));
-  const bTokens = new Set(normalizeCompareText(b).split(' ').filter((token) => token.length > 2));
-  if (aTokens.size === 0 || bTokens.size === 0) return 0;
-  let overlap = 0;
-  for (const token of aTokens) {
-    if (bTokens.has(token)) overlap++;
-  }
-  return overlap;
-}
-
-function loadPublishFormHtml(): string {
-  for (const filePath of PUBLISH_FORM_PATHS) {
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, 'utf8');
-  }
-  return '';
-}
-
-function normalizeLabel(value = ''): string {
-  return String(value)
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/&amp;/g, '&')
-    .replace(/[^a-z0-9а-я\s]/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-const EXTRA_LABEL_MAPPINGS: Record<string, string[]> = {
-  [normalizeLabel('Ел. регулиране на седалките')]: ['Ел.седалки'],
-  [normalizeLabel('Подгряване на седалките')]: ['Подгряване на седалки'],
-  [normalizeLabel('Лети джанти')]: ['Алуминиеви джанти'],
-  [normalizeLabel('Антиблокираща система')]: ['ABS'],
-  [normalizeLabel('Електронна програма за стабилизиране')]: ['ESP'],
-  [normalizeLabel('Въздушни възглавници - Предни')]: ['Airbag'],
-  [normalizeLabel('Въздушни възглавници - Задни')]: ['Airbag'],
-  [normalizeLabel('Въздушни възглавници - Странични')]: ['Airbag'],
-  [normalizeLabel('Система за защита от пробуксуване')]: ['ASR/Тракшън контрол'],
-  [normalizeLabel('Аларма')]: ['Имобилайзер'],
-  [normalizeLabel('Централно заключване')]: ['Центр. заключване'],
-  [normalizeLabel('Каско')]: ['Застраховка'],
-  [normalizeLabel('Auto Start Stop function')]: ['Старт-Стоп система'],
-  [normalizeLabel('Steptronic, Tiptronic')]: ['Типтроник/Мултитроник'],
-  [normalizeLabel('Система за контрол на скоростта (автопилот)')]: ['Автопилот'],
-  [normalizeLabel('Серво усилвател на волана')]: ['Серво управление'],
-  [normalizeLabel('Бордкомпютър')]: ['Бордови компютър'],
-  [normalizeLabel('Навигация')]: ['Навигационна система'],
-  [normalizeLabel('Панорамен люк')]: ['Панорамен покрив'],
-  [normalizeLabel('7 места')]: ['7 места (6+1)'],
-};
-
-const EXTRA_BOOLEAN_FIELD_MAPPINGS: Record<string, string[]> = {
-  usageId: [normalizeLabel('Нов внос')],
-  metallic: [normalizeLabel('Металик')],
-};
-
-const EXTRA_BOOLEAN_FIELD_NEGATIONS: Record<string, string[]> = {
-  usageId: [normalizeLabel('С регистрация')],
-};
-
-function expandCarsBgExtraLabels(extraLabels: string[] = []): string[] {
-  const expanded = new Set<string>();
-  for (const label of extraLabels) {
-    const normalized = normalizeLabel(label);
-    if (!normalized) continue;
-    expanded.add(normalized);
-    for (const mapped of EXTRA_LABEL_MAPPINGS[normalized] || []) {
-      const mappedNormalized = normalizeLabel(mapped);
-      if (mappedNormalized) expanded.add(mappedNormalized);
-    }
-  }
-  return Array.from(expanded);
-}
-
-function hasMappedBooleanExtra(extraLabels: string[] = [], fieldName: keyof typeof EXTRA_BOOLEAN_FIELD_MAPPINGS): boolean {
-  const expected = EXTRA_BOOLEAN_FIELD_MAPPINGS[fieldName];
-  if (!expected?.length) return false;
-  const normalized = new Set(extraLabels.map((label) => normalizeLabel(label)).filter(Boolean));
-  const blockedBy = EXTRA_BOOLEAN_FIELD_NEGATIONS[fieldName] || [];
-  if (blockedBy.some((label) => normalized.has(label))) return false;
-  return expected.some((label) => normalized.has(label));
-}
-
-function getExtraLabels(extrasJson: string | null): string[] {
-  if (!extrasJson) return [];
-  try {
-    const parsed = JSON.parse(extrasJson) as Record<string, unknown>;
-    return Object.values(parsed).flatMap((entry) => {
-      if (!Array.isArray(entry)) return [];
-      return entry.flatMap((item) => {
-        if (typeof item === 'string') return [item];
-        if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
-        return [];
-      });
-    });
-  } catch {
-    return [];
-  }
-}
-
-function parseCarsBgExtrasPayload(extrasJson: string | null): CarsBgExtrasPayload | null {
-  const parsed = parseJson<CarsBgExtrasPayload | null>(extrasJson, null);
-  if (!parsed || !Array.isArray(parsed.selected)) return null;
-  return parsed;
-}
-
-interface OptionEntry {
-  id: number;
-  label: string;
-  normalized: string;
-}
-
-interface OptionSet {
-  options: OptionEntry[];
-  sorted: OptionEntry[];
-  map: Map<string, OptionEntry>;
-}
-
-function parseOptionMap(html: string, inputName: string): OptionSet {
-  if (!html) return { options: [], sorted: [], map: new Map() };
-  const regex = new RegExp(
-    `<input[^>]*name=["']${inputName}["'][^>]*id=["'][^"']*_(\\d+)["'][^>]*?(?:value=["'](\\d+)["'])?[^>]*>\\s*<label[^>]*>([^<]+)<`,
-    'gi',
-  );
-  const options: OptionEntry[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(html)) !== null) {
-    const id = Number(match[2] || match[1]);
-    const label = match[3]?.trim();
-    if (!label || Number.isNaN(id)) continue;
-    options.push({ id, label, normalized: normalizeLabel(label) });
-  }
-  const sorted = [...options].sort((a, b) => b.normalized.length - a.normalized.length);
-  const map = new Map(options.map((option) => [option.normalized, option]));
-  return { options, sorted, map };
-}
-
-const publishFormHtml = loadPublishFormHtml();
-const optionSets = publishFormHtml
-  ? {
-      brand: parseOptionMap(publishFormHtml, 'brandId'),
-      category: parseOptionMap(publishFormHtml, 'categoryId'),
-      condition: parseOptionMap(publishFormHtml, 'conditionId'),
-      currency: parseOptionMap(publishFormHtml, 'currencyId'),
-      color: parseOptionMap(publishFormHtml, 'colorId'),
-      doors: parseOptionMap(publishFormHtml, 'doorId'),
-    }
-  : null;
-
-const modelOptionsCache = new Map<number, OptionSet>();
-
-const CATEGORY_SYNONYMS: Record<string, string> = {
-  стретч: 'Седан',
-  stretch: 'Седан',
-  лимузина: 'Седан',
-  седан: 'Седан',
-  suv: 'Джип',
-  джип: 'Джип',
-  комби: 'Комби',
-  кабрио: 'Кабрио',
-};
-
-const COLOR_SYNONYMS = [
-  { keywords: ['тъмно', 'тъмен', 'тъмна'], replacement: 'Черен' },
-];
-
-function findOptionByLabel(optionSet: OptionSet | undefined | null, label: string | null | undefined): OptionEntry | null {
-  if (!optionSet || !label) return null;
-  return optionSet.map.get(normalizeLabel(label)) ?? null;
-}
-
-async function fetchModelOptions(brandId: number): Promise<OptionSet | null> {
-  if (!brandId) return null;
-  if (modelOptionsCache.has(brandId)) return modelOptionsCache.get(brandId)!;
-  const res = await fetch(`${CARS_BG_BASE_URL}/carmodelpublish.php?brandId=${brandId}`, {
-    headers: { 'User-Agent': USER_AGENT },
-  });
-  if (!res.ok) return null;
-  const html = await res.text();
-  const parsed = parseOptionMap(html, 'modelId');
-  modelOptionsCache.set(brandId, parsed);
-  return parsed;
-}
-
-function inferBrandFromTitle(title: string): OptionEntry | null {
-  if (!optionSets?.brand) return null;
-  const normalizedTitle = normalizeLabel(title);
-  for (const option of optionSets.brand.sorted) {
-    if (normalizedTitle.startsWith(option.normalized)) return option;
-  }
-  return null;
-}
-
-function inferModelFromTitle(title: string, brandLabel: string, modelOptions: OptionSet | null): OptionEntry | null {
-  if (!modelOptions) return null;
-  const remainder = title.replace(new RegExp(`^${brandLabel}\\s*`, 'i'), '').trim();
-  const normalized = normalizeLabel(remainder);
-  for (const option of modelOptions.sorted) {
-    if (normalized.startsWith(option.normalized)) return option;
-  }
-  return null;
-}
-
-function mapCategory(categoryName: string | null | undefined): OptionEntry | null {
-  if (!optionSets?.category || !categoryName) return null;
-  const direct = findOptionByLabel(optionSets.category, categoryName);
-  if (direct) return direct;
-  const synonym = CATEGORY_SYNONYMS[normalizeLabel(categoryName)];
-  if (synonym) {
-    const mapped = findOptionByLabel(optionSets.category, synonym);
-    if (mapped) return mapped;
-  }
-  return optionSets.category.options.find((option) => normalizeLabel(categoryName).includes(option.normalized))
-    ?? findOptionByLabel(optionSets.category, 'Седан');
-}
-
-function normalizeColorToken(token = ''): string {
-  return normalizeLabel(token).replace(/t(?=[а-я])/g, 'т');
-}
-
-function mapColor(colorName: string | null | undefined): OptionEntry | null {
-  if (!optionSets?.color || !colorName) return null;
-  const normalized = normalizeColorToken(colorName);
-  const direct = optionSets.color.map.get(normalized);
-  if (direct) return direct;
-  const synonym = COLOR_SYNONYMS.find((entry) =>
-    entry.keywords.some((word) => normalized.includes(normalizeColorToken(word))),
-  );
-  if (synonym) {
-    const replacement = optionSets.color.map.get(normalizeColorToken(synonym.replacement));
-    if (replacement) return replacement;
-  }
-  return optionSets.color.options.find((option) => normalized.includes(option.normalized)) ?? null;
-}
-
-function mapFuel(fuelName: string | null | undefined): { id: number; label: string } | null {
-  const normalized = normalizeLabel(fuelName || '');
-  if (!normalized) return null;
-  if (normalized.includes('диз')) return { id: 2, label: 'Дизел' };
-  if (normalized.includes('бенз')) return { id: 1, label: 'Бензин' };
-  if (normalized.includes('газ')) return { id: 3, label: 'Газ/Бензин' };
-  if (normalized.includes('метан')) return { id: 4, label: 'Метан/Бензин' };
-  if (normalized.includes('хибрид')) return { id: 6, label: 'Хибрид' };
-  if (normalized.includes('елект')) return { id: 7, label: 'Електричество' };
-  return null;
-}
-
-function normalizeFuelFamily(fuelName: string | null | undefined): string | null {
-  const normalized = normalizeLabel(fuelName || '');
-  if (!normalized) return null;
-  if (normalized.includes('plug in') || normalized.includes('плъг ин') || normalized.includes('plug-in')) return 'plug-in hybrid';
-  if (normalized.includes('хибрид')) return 'hybrid';
-  if (normalized.includes('диз')) return 'diesel';
-  if (normalized.includes('бенз')) return 'petrol';
-  if (normalized.includes('газ')) return 'gas';
-  if (normalized.includes('метан')) return 'methane';
-  if (normalized.includes('елект')) return 'electric';
-  return normalized;
-}
-
-function mapGear(transmission: string | null | undefined): { id: number; label: string } | null {
-  const normalized = normalizeLabel(transmission || '');
-  if (!normalized) return null;
-  if (normalized.includes('автомат')) return { id: 2, label: 'Автоматични' };
-  if (normalized.includes('ръч')) return { id: 1, label: 'Ръчни' };
-  return null;
-}
-
-function mapDoors(categoryName: string | null | undefined): number {
-  const normalized = normalizeLabel(categoryName || '');
-  return new Set(['купе', 'кабрио']).has(normalized) ? 1 : 2;
-}
-
-function currencyIdFromCode(code = 'EUR'): number {
-  const upper = code.toUpperCase();
-  if (upper === 'BGN') return 1;
-  if (upper === 'USD') return 2;
-  return 3;
-}
-
 async function selectRadio(page: Page, name: string, value: number | string | null | undefined): Promise<void> {
   if (value == null) return;
   await page.evaluate(({ field, fieldValue }) => {
@@ -526,302 +218,6 @@ async function fillTextarea(page: Page, selector: string, value: string | null |
   await input.type(String(value).slice(0, 32000), { delay: 5 });
 }
 
-export async function extractCarsBgExtras(page: Page, extrasUrl?: string | null): Promise<CarsBgExtrasPayload> {
-  const href = extrasUrl || await page.evaluate(() => {
-    const link = document.querySelector<HTMLAnchorElement>('a[sync-data="extrasSelectPage"]');
-    return link?.href || link?.getAttribute('href') || null;
-  }).catch(() => null);
-
-  if (!href) return { url: null, summaryText: '', selected: [] };
-
-  const originalUrl = page.url();
-  await page.goto(href, { waitUntil: 'domcontentloaded' });
-  await prepareCarsBgPage(page);
-
-  const extras = await page.evaluate(() => {
-    const normalize = (value = '') => value.replace(/\s+/g, ' ').trim();
-    const nodes = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
-    const all = nodes.map((node) => {
-      const label = node.id
-        ? (document.querySelector(`label[for="${node.id}"]`)?.textContent || '')
-        : (node.closest('label')?.textContent || '');
-      return {
-        name: node.name || '',
-        value: node.value || '',
-        id: node.id || '',
-        checked: !!node.checked,
-        label: normalize(label),
-      };
-    }).filter((entry) => entry.name || entry.value || entry.label);
-
-    return {
-      url: location.href,
-      summaryText: normalize(document.body.innerText || ''),
-      selected: all.filter((entry) => entry.checked),
-    };
-  });
-
-  await page.goto(originalUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
-  await prepareCarsBgPage(page);
-  return extras;
-}
-
-export async function applyCarsBgExtras(
-  page: Page,
-  extrasData: CarsBgExtrasPayload | null | undefined,
-  extraLabels: string[] = [],
-): Promise<boolean> {
-  const selected = Array.isArray(extrasData?.selected) ? extrasData.selected : [];
-  const normalizedExtraLabels = expandCarsBgExtraLabels(extraLabels);
-  if (!selected.length && !normalizedExtraLabels.length) return false;
-
-  const href = extrasData?.url || await page.evaluate(() => {
-    const link = document.querySelector<HTMLAnchorElement>('a[sync-data="extrasSelectPage"]');
-    return link?.href || link?.getAttribute('href') || null;
-  }).catch(() => null);
-
-  if (!href) return false;
-
-  await page.goto(href, { waitUntil: 'domcontentloaded' });
-  await prepareCarsBgPage(page);
-
-  const labels = [
-    ...selected.map((entry) => normalizeLabel(entry.label || '')).filter(Boolean),
-    ...normalizedExtraLabels,
-  ];
-  const pairs = selected.map((entry) => `${entry.name || ''}::${entry.value || ''}`);
-
-  await page.evaluate(({ expectedPairs, expectedLabels }) => {
-    const normalize = (value = '') => value.toLowerCase().replace(/[^a-z0-9а-я\s]/gi, ' ').replace(/\s+/g, ' ').trim();
-    for (const input of Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))) {
-      const key = `${input.name || ''}::${input.value || ''}`;
-      const labelText = normalize(
-        (input.id ? document.querySelector(`label[for="${input.id}"]`)?.textContent : '') ||
-        input.closest('label')?.textContent ||
-        '',
-      );
-      if (expectedPairs.includes(key) || (labelText && expectedLabels.includes(labelText))) {
-        if (!input.checked) {
-          input.checked = true;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-    }
-    const submit =
-      document.querySelector('#publishBtn') ||
-      document.querySelector('button[type="submit"]') ||
-      document.querySelector('input[type="submit"]') ||
-      document.querySelector('a.btn-thick');
-    if (submit instanceof HTMLElement) submit.click();
-    else document.querySelector('form')?.submit();
-  }, { expectedPairs: pairs, expectedLabels: labels });
-
-  await prepareCarsBgPage(page);
-  return true;
-}
-
-async function applyCarsBgBooleanExtras(page: Page, extraLabels: string[]): Promise<void> {
-  const fieldsToEnable = Object.keys(EXTRA_BOOLEAN_FIELD_MAPPINGS).filter((fieldName) =>
-    hasMappedBooleanExtra(extraLabels, fieldName as keyof typeof EXTRA_BOOLEAN_FIELD_MAPPINGS),
-  );
-  if (fieldsToEnable.length === 0) return;
-
-  await page.evaluate((expectedFields) => {
-    for (const fieldName of expectedFields) {
-      const input =
-        document.querySelector<HTMLInputElement>(`#${fieldName}`) ||
-        document.querySelector<HTMLInputElement>(`input[name="${fieldName}"]`);
-      if (!input || input.checked) continue;
-      input.checked = true;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }, fieldsToEnable);
-}
-
-async function ensureCarsBgPriceOptions(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const selectors = ['#barter', '#leasing', 'input[name="barter"]', 'input[name="leasing"]'];
-    for (const selector of selectors) {
-      const input = document.querySelector<HTMLInputElement>(selector);
-      if (!input || input.checked) continue;
-      input.checked = true;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  });
-}
-
-async function applyCarsBgVatFlags(page: Page, vatValue: string | null | undefined): Promise<void> {
-  if (normalizeVatValue(vatValue) !== 'included') return;
-  await page.evaluate(() => {
-    const input =
-      document.querySelector<HTMLInputElement>('#dcredit') ||
-      document.querySelector<HTMLInputElement>('input[name="dcredit"]');
-    if (!input || input.checked) return;
-    input.checked = true;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-}
-
-async function applyCarsBgSupplementalFields(page: Page, listing: CarsBgSyncListing): Promise<void> {
-  if (listing.euronorm != null) {
-    await selectRadio(page, 'euroId', listing.euronorm);
-  }
-  await ensureCarsBgPriceOptions(page);
-  await applyCarsBgVatFlags(page, listing.vat);
-  await applyCarsBgBooleanExtras(page, listing.extraLabels);
-  if (listing.carsBgExtras?.selected?.length || listing.extraLabels.length) {
-    await applyCarsBgExtras(page, listing.carsBgExtras, listing.extraLabels).catch(() => {});
-  }
-}
-
-async function getSharp() {
-  if (sharpModule !== undefined) return sharpModule;
-  try {
-    const sharpImport = await import('sharp');
-    sharpModule = ('default' in sharpImport ? sharpImport.default : sharpImport) as typeof import('sharp');
-  } catch {
-    sharpModule = null;
-  }
-  return sharpModule;
-}
-
-async function convertToJpeg(filePath: string): Promise<string | null> {
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.jpg' || ext === '.jpeg') return filePath;
-  const sharp = await getSharp();
-  if (!sharp) return null;
-  const jpegPath = filePath.replace(/\.[^.]+$/, '.jpg');
-  await sharp(filePath).jpeg({ quality: 90 }).toFile(jpegPath);
-  return jpegPath;
-}
-
-async function downloadImages(urls: string[], prefix: string): Promise<{ dir: string; files: string[] }> {
-  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), `cars-bg-${prefix || randomUUID()}-`));
-  const files: string[] = [];
-  const seen = new Set<string>();
-  const uniqueUrls = urls.filter((url) => {
-    if (!url || seen.has(url)) return false;
-    seen.add(url);
-    return true;
-  });
-
-  for (let i = 0; i < uniqueUrls.length && files.length < MAX_PHOTO_UPLOADS; i++) {
-    const url = uniqueUrls[i];
-    try {
-      if (url.startsWith('/')) {
-        if (!fs.existsSync(url)) continue;
-        const ext = path.extname(url) || '.webp';
-        const target = path.join(dir, `${i}${ext}`);
-        await fsp.copyFile(url, target);
-        files.push(target);
-        continue;
-      }
-
-      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-      if (!res.ok) continue;
-      const buffer = Buffer.from(await res.arrayBuffer());
-      const ext = path.extname(new URL(url).pathname) || '.jpg';
-      const target = path.join(dir, `${i}${ext}`);
-      await fsp.writeFile(target, buffer);
-      files.push(target);
-    } catch {
-      continue;
-    }
-  }
-
-  return { dir, files };
-}
-
-async function uploadImagesFallback(page: Page, files: string[]): Promise<void> {
-  const initialCount = await page.evaluate(() => document.querySelectorAll('.photobox.haspic').length).catch(() => 0);
-  for (let i = 0; i < files.length; i++) {
-    const input = await page.$(`#uploadFile${i + 1}`).catch(() => null);
-    if (!input) break;
-    await input.setInputFiles([files[i]]);
-    await page.evaluate((index) => {
-      const input = document.getElementById(`uploadFile${index}`);
-      if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
-    }, i + 1);
-    const ok = await page.waitForFunction(
-      (expected) => document.querySelectorAll('.photobox.haspic').length >= expected,
-      initialCount + i + 1,
-      { timeout: 15000 },
-    ).then(() => true).catch(() => false);
-    void ok;
-    await page.waitForTimeout(600);
-  }
-}
-
-async function uploadImages(page: Page, files: string[]): Promise<void> {
-  const uploadCount = Math.min(files.length, MAX_PHOTO_UPLOADS);
-  if (uploadCount === 0) return;
-
-  const jpegFiles: string[] = [];
-  for (const file of files.slice(0, uploadCount)) {
-    const converted = await convertToJpeg(file).catch(() => null);
-    if (converted) jpegFiles.push(converted);
-  }
-  if (jpegFiles.length === 0) return;
-
-  const currentUrl = page.url();
-  const offerIdMatch = currentUrl.match(/objectId=([a-f0-9]{24})/i);
-  const offerId = offerIdMatch ? offerIdMatch[1] : '0';
-  const uploadReady = await page.evaluate(() => typeof (window as Window & { UploadFiles?: unknown }).UploadFiles === 'function').catch(() => false);
-  if (!uploadReady) {
-    await uploadImagesFallback(page, jpegFiles);
-    return;
-  }
-
-  for (const filePath of jpegFiles) {
-    const fileBytes = await fsp.readFile(filePath);
-    const base64 = fileBytes.toString('base64');
-    const slotId = await page.evaluate(() => {
-      const empty = document.querySelector('.photobox:not(.haspic)');
-      if (!empty) return null;
-      try {
-        const args = empty.getAttribute('data-action-args');
-        return args ? JSON.parse(args).fileId : null;
-      } catch {
-        return null;
-      }
-    });
-    if (slotId == null) break;
-
-    await page.evaluate(async ({ base64Data, slot, currentOfferId }) => {
-      const binary = atob(base64Data);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'image/jpeg' });
-      const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-
-      await new Promise<void>((resolve) => {
-        const upload = (window as Window & { UploadFiles?: (slotId: number, file: File, files: File[], offerId: string) => void }).UploadFiles;
-        if (typeof upload !== 'function') {
-          resolve();
-          return;
-        }
-        const observer = new MutationObserver(() => {
-          if (document.querySelector(`#photobox_${slot}.haspic`)) {
-            observer.disconnect();
-            resolve();
-          }
-        });
-        observer.observe(document.getElementById(`photobox_${slot}`) || document.body, {
-          attributes: true,
-          attributeFilter: ['class'],
-          subtree: true,
-        });
-        setTimeout(() => {
-          observer.disconnect();
-          resolve();
-        }, 20000);
-        upload(slot, file, [file], currentOfferId);
-      });
-    }, { base64Data: base64, slot: slotId, currentOfferId: offerId });
-
-    await page.waitForTimeout(500);
-  }
-}
 
 function getBackupOrderedImages(db: Database.Database, backupId: number | null | undefined): string[] {
   if (!backupId) return [];
@@ -1099,7 +495,7 @@ export async function updateListingPrice(page: Page, offerUrlOrId: string, listi
 
   await priceInput.fill('');
   await priceInput.type(String(listing.price.amount), { delay: 20 });
-  await applyCarsBgSupplementalFields(page, listing);
+  await applyCarsBgSupplementalFields(page, listing, selectRadio);
 
   const submitSelectors = [
     '#publishBtn',
@@ -1160,7 +556,7 @@ export async function updateListingContent(page: Page, offerUrlOrId: string, lis
     await notesInput.type(notes.slice(0, 32000), { delay: 5 });
   }
 
-  await applyCarsBgSupplementalFields(page, listing);
+  await applyCarsBgSupplementalFields(page, listing, selectRadio);
 
   const submitSelectors = [
     '#publishBtn',
@@ -1263,7 +659,7 @@ export async function createListing(page: Page, listing: CarsBgSyncListing, deal
 
   await selectRadio(page, 'is_inbg', 1);
   await fillTextarea(page, '#notes', sanitizeCarsBgDescription(listing.description || listing.fullTitle));
-  await applyCarsBgSupplementalFields(page, listing);
+  await applyCarsBgSupplementalFields(page, listing, selectRadio);
 
   let tempDir: string | null = null;
   try {

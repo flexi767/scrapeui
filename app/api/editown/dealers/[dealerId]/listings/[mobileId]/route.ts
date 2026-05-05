@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { getMobileBgVatLabel } from '@/lib/vat';
+import { parseJson, normalizeVin } from '@/lib/utils';
+import { normalizeExtras } from '@/lib/mobile-bg/extras';
 
 const MONTH_NAMES = [
   '',
@@ -8,138 +10,6 @@ const MONTH_NAMES = [
   'юли', 'август', 'септември', 'октомври', 'ноември', 'декември',
 ];
 
-// Maps each extra item label to its category for flat-array conversion
-const EXTRAS_CATEGORY_MAP: Record<string, string> = {
-  'GPS система за проследяване': 'Безопасност',
-  'Автоматичен контрол на стабилността': 'Безопасност',
-  'Адаптивни предни светлини': 'Безопасност',
-  'Антиблокираща система': 'Безопасност',
-  'Въздушни възглавници - Задни': 'Безопасност',
-  'Въздушни възглавници - Предни': 'Безопасност',
-  'Въздушни възглавници - Странични': 'Безопасност',
-  'Ел. разпределяне на спирачното усилие': 'Безопасност',
-  'Електронна програма за стабилизиране': 'Безопасност',
-  'Контрол на налягането на гумите': 'Безопасност',
-  'Парктроник': 'Безопасност',
-  'Система ISOFIX': 'Безопасност',
-  'Система за динамична устойчивост': 'Безопасност',
-  'Система за защита от пробуксуване': 'Безопасност',
-  'Система за изсушаване на накладките': 'Безопасност',
-  'Система за контрол на дистанцията': 'Безопасност',
-  'Система за контрол на спускането': 'Безопасност',
-  'Система за подпомагане на спирането': 'Безопасност',
-  'Auto Start Stop function': 'Комфорт',
-  'Bluetooth \\ handsfree система': 'Комфорт',
-  'DVD, TV': 'Комфорт',
-  'Steptronic, Tiptronic': 'Комфорт',
-  'USB, audio\\video, IN\\AUX изводи': 'Комфорт',
-  'Адаптивно въздушно окачване': 'Комфорт',
-  'Безключово палене': 'Комфорт',
-  'Блокаж на диференциала': 'Комфорт',
-  'Бордкомпютър': 'Комфорт',
-  'Бързи \\ бавни скорости': 'Комфорт',
-  'Датчик за светлина': 'Комфорт',
-  'Ел. Огледала': 'Комфорт',
-  'Ел. Стъкла': 'Комфорт',
-  'Ел. регулиране на окачването': 'Комфорт',
-  'Ел. регулиране на седалките': 'Комфорт',
-  'Ел. усилвател на волана': 'Комфорт',
-  'Климатик': 'Комфорт',
-  'Климатроник': 'Комфорт',
-  'Мултифункционален волан': 'Комфорт',
-  'Навигация': 'Комфорт',
-  'Отопление на волана': 'Комфорт',
-  'Печка': 'Комфорт',
-  'Подгряване на предното стъкло': 'Комфорт',
-  'Подгряване на седалките': 'Комфорт',
-  'Регулиране на волана': 'Комфорт',
-  'Сензор за дъжд': 'Комфорт',
-  'Серво усилвател на волана': 'Комфорт',
-  'Система за измиване на фаровете': 'Комфорт',
-  'Система за контрол на скоростта (автопилот)': 'Комфорт',
-  'Стерео уредба': 'Комфорт',
-  'Термопомпа': 'Комфорт',
-  'Хладилна жабка': 'Комфорт',
-  '4x4': 'Други',
-  '7 места': 'Други',
-  'Buy back': 'Други',
-  'Бартер': 'Други',
-  'Газова уредба': 'Други',
-  'Дълга база': 'Други',
-  'Капариран\\Продаден': 'Други',
-  'Катастрофирал': 'Други',
-  'Къса база': 'Други',
-  'Лизинг': 'Други',
-  'Метанова уредба': 'Други',
-  'На части': 'Други',
-  'Напълно обслужен': 'Други',
-  'Нов внос': 'Други',
-  'С регистрация': 'Други',
-  'Сервизна книжка': 'Други',
-  'Тунинг': 'Други',
-  '2(3) Врати': 'Екстериор',
-  '4(5) Врати': 'Екстериор',
-  'LED фарове': 'Екстериор',
-  'Ксенонови фарове': 'Екстериор',
-  'Лети джанти': 'Екстериор',
-  'Металик': 'Екстериор',
-  'Панорамен люк': 'Екстериор',
-  'Рейлинг на покрива': 'Екстериор',
-  'Спойлери': 'Екстериор',
-  'Теглич': 'Екстериор',
-  'Халогенни фарове': 'Екстериор',
-  'Шибедах': 'Екстериор',
-  'OFFROAD пакет': 'Защита',
-  'Аларма': 'Защита',
-  'Брониран': 'Защита',
-  'Каско': 'Защита',
-  'Лебедка': 'Защита',
-  'Централно заключване': 'Защита',
-  'Велурен салон': 'Интериор',
-  'Десен волан': 'Интериор',
-  'Кожен салон': 'Интериор',
-  'TAXI': 'Специализирани',
-  'За хора с увреждания': 'Специализирани',
-  'Катафалка': 'Специализирани',
-  'Линейка': 'Специализирани',
-  'Учебен': 'Специализирани',
-  'Хладилен': 'Специализирани',
-  'Хомологация N1': 'Специализирани',
-};
-
-function normalizeExtras(raw: unknown): Record<string, string[]> {
-  if (!raw) return {};
-  // Flat string array (from listings.extras_json)
-  if (Array.isArray(raw)) {
-    const result: Record<string, string[]> = {};
-    for (const item of raw) {
-      if (typeof item !== 'string') continue;
-      const cat = EXTRAS_CATEGORY_MAP[item];
-      if (!cat) continue;
-      (result[cat] ??= []).push(item);
-    }
-    return result;
-  }
-  // Categorized object (from mobilebg_backups.extras_json)
-  // Values may be {label, alias}[] objects or plain strings
-  if (typeof raw === 'object' && raw !== null) {
-    const result: Record<string, string[]> = {};
-    for (const [cat, items] of Object.entries(raw as Record<string, unknown>)) {
-      if (!Array.isArray(items)) continue;
-      result[cat] = items
-        .map((item) => {
-          if (typeof item === 'string') return item;
-          if (typeof item === 'object' && item !== null && 'label' in item) {
-            return (item as { label: string }).label;
-          }
-          return '';
-        })
-        .filter(Boolean);
-    }
-    return result;
-  }
-  return {};
-}
 
 interface PrefillRow {
   dealer_id: number;
@@ -169,24 +39,9 @@ interface PrefillRow {
   snapshot_checked_json: string | null;
 }
 
-function parseJson<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
-
 function toEuroNormLabel(value: string | number | null | undefined): string {
   if (value == null || value === '') return '';
   return `Евро ${String(value).trim()}`;
-}
-
-function normalizeVin(value: string | null | undefined): string {
-  if (!value) return '';
-  const vin = value.trim().toUpperCase();
-  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
 }
 
 function pickVin(...candidates: Array<string | null | undefined>): string {

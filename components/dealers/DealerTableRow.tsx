@@ -143,6 +143,15 @@ export function DealerTableRow({
                 /d/{dealer.slug}
               </a>
             )}
+            {dealer.active_template_config_id != null ? (
+              <a href={`/templates/editor/${dealer.active_template_config_id}`} className="text-[10px] text-blue-400 hover:underline">
+                custom tmpl #{dealer.active_template_config_id}
+              </a>
+            ) : dealer.public_enabled === 1 ? (
+              <a href="/templates" className="text-[10px] text-gray-500 hover:text-gray-300">
+                + add template
+              </a>
+            ) : null}
           </div>
         )}
       </td>

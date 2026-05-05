@@ -1,3 +1,4 @@
+import { parseApiResponse } from "@/lib/utils";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import type { MobileBgSearchResultsPayload } from "@/lib/mobile-bg/search-results";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
@@ -35,21 +36,9 @@ export interface LocationOptionsResponse {
 
 type SavedSearchDeleteResponse = SavedSearchListResponse;
 
-async function readJson(response: Response) {
-  return response.json().catch(() => ({}));
-}
-
-async function parseJsonResponse<T>(response: Response, fallbackError: string) {
-  const payload = await readJson(response);
-  if (!response.ok) {
-    throw new Error((payload as { error?: string }).error || fallbackError);
-  }
-  return payload as T;
-}
-
 export async function fetchSavedSearchDetail(id: number) {
   const response = await fetch(`/api/saved-searches/${id}`);
-  return parseJsonResponse<SavedSearchDetailResponse>(
+  return parseApiResponse<SavedSearchDetailResponse>(
     response,
     "Failed to load saved search",
   );
@@ -61,7 +50,7 @@ export async function fetchLocationOptions(value: string) {
   const response = await fetch(
     `/api/mobile-bg/location-options?${params.toString()}`,
   );
-  return parseJsonResponse<LocationOptionsResponse>(
+  return parseApiResponse<LocationOptionsResponse>(
     response,
     "Failed to load location options",
   );
@@ -91,7 +80,7 @@ export async function fetchMobileBgSearchResults({
       sourceMobileId,
     }),
   });
-  return parseJsonResponse<MobileBgSearchResultsResponse>(
+  return parseApiResponse<MobileBgSearchResultsResponse>(
     response,
     "Failed to load mobile.bg results",
   );
@@ -103,7 +92,7 @@ export async function updateSavedSearch(id: number, fields: SearchField[]) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fields }),
   });
-  return parseJsonResponse<SavedSearchMutationResponse>(
+  return parseApiResponse<SavedSearchMutationResponse>(
     response,
     "Failed to save search",
   );
@@ -115,7 +104,7 @@ export async function createSavedSearch(fields: SearchField[]) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fields }),
   });
-  return parseJsonResponse<SavedSearchMutationResponse>(
+  return parseApiResponse<SavedSearchMutationResponse>(
     response,
     "Failed to create saved search",
   );
@@ -125,7 +114,7 @@ export async function deleteSavedSearch(id: number) {
   const response = await fetch(`/api/saved-searches/${id}`, {
     method: "DELETE",
   });
-  return parseJsonResponse<SavedSearchDeleteResponse>(
+  return parseApiResponse<SavedSearchDeleteResponse>(
     response,
     "Failed to delete saved search",
   );

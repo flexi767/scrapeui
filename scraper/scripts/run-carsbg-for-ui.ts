@@ -19,8 +19,7 @@
  *   - Images hosted on g1-bg.cars.bg (not www.cars.bg)
  */
 import { PlaywrightCrawler } from 'crawlee';
-import path from 'path';
-import { fileURLToPath } from 'url';
+
 import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
@@ -43,7 +42,7 @@ import {
   parseSpecsString,
   titleOverlapScore,
 } from '@/lib/cars-bg/parse';
-import { emit, formatError, parseRunnerArgs } from '@/scraper/lib/runner';
+import { emit, formatError, parseRunnerArgs, DB_PATH } from '@/scraper/lib/runner';
 
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const CARS_BG_MAX_IMAGES = 15;
@@ -926,8 +925,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
 }
 
 async function main() {
-  const __dirname = fileURLToPath(new URL('.', import.meta.url));
-  const db = new Database(process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db'));
+  const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   const makesMap = loadMobileBgMakesMapFromDb(db) ?? await fetchMakesModels().catch(() => null);

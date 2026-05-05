@@ -1,11 +1,9 @@
 #!/usr/bin/env tsx
 
-import path from 'path';
-import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { backupDealerToDb, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
+import { DB_PATH } from '@/scraper/lib/runner';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const args = process.argv.slice(2);
 const dealerIdx = args.indexOf('--dealer');
 const dealerSlug = dealerIdx !== -1 ? args[dealerIdx + 1] : null;
@@ -26,8 +24,7 @@ interface DealerRow {
 }
 
 async function main() {
-  const dbPath = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
-  const db = new Database(dbPath);
+  const db = new Database(DB_PATH);
   const dealer = db.prepare(`
     SELECT id, slug, name, own, mobile_url, mobile_user, mobile_password
     FROM dealers
@@ -57,7 +54,7 @@ async function main() {
     mobilePassword: dealer.mobile_password,
   };
 
-  const result = await backupDealerToDb(db, config, dbPath);
+  const result = await backupDealerToDb(db, config, DB_PATH);
   console.log(JSON.stringify(result, null, 2));
 }
 

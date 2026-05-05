@@ -1,5 +1,6 @@
 'use client';
 import { useNode, type UserComponent } from '@craftjs/core';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface ImageBlockProps {
   src?: string;
@@ -17,7 +18,14 @@ export const ImageBlock: UserComponent<ImageBlockProps> = ({
   linkHref,
 }) => {
   const { connectors: { connect, drag } } = useNode();
-  const img = <img src={src} alt={alt} style={{ width, display: 'block' }} />;
+  const img = (
+    <ImageWithFallback
+      src={src}
+      alt={alt}
+      fallbackLabel="No image"
+      style={{ width, display: 'block' }}
+    />
+  );
   return (
     <div
       ref={(ref) => { if (ref) connect(drag(ref)); }}

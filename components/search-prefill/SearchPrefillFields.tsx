@@ -7,6 +7,10 @@ import {
   MOBILE_BG_STEPPER_FIELDS,
   MOBILE_BG_TRANSMISSION_OPTIONS,
 } from "@/lib/mobile-bg/search-field-config";
+import {
+  normalizeAutocompleteValue as normalizeOptionValue,
+  getSelectedOptionCount,
+} from "@/components/new-listing-form/autocomplete";
 
 interface SearchPrefillFieldsProps {
   fields: SearchField[];
@@ -24,21 +28,6 @@ interface SearchPrefillFieldsProps {
   onUpdateMake: (value: string) => void;
 }
 
-function normalizeOptionValue(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function getSelectedOptionCount(
-  options: Array<{ value: string; count?: number | null }>,
-  value: string,
-) {
-  const normalizedValue = normalizeOptionValue(value);
-  if (!normalizedValue) return null;
-  const match = options.find(
-    (option) => normalizeOptionValue(option.value) === normalizedValue,
-  );
-  return match?.count ?? null;
-}
 
 export function SearchPrefillFields({
   fields,

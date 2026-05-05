@@ -1,17 +1,9 @@
+import { parseApiResponse } from '@/lib/utils';
 import type { SearchField, SearchPrefillResponse, MobileBgSearchResultsResponse } from './types';
-
-async function readJson(res: Response) {
-  return res.json().catch(() => ({}));
-}
 
 export async function loadSearchPrefill(listingId: number) {
   const res = await fetch(`/api/listings/search-prefill/${listingId}`);
-  const payload = await readJson(res);
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || 'Failed to load search fields');
-  }
-
-  return payload as SearchPrefillResponse;
+  return parseApiResponse<SearchPrefillResponse>(res, 'Failed to load search fields');
 }
 
 export async function saveSearchProfileFields(listingId: number, fields: SearchField[]) {
@@ -20,35 +12,24 @@ export async function saveSearchProfileFields(listingId: number, fields: SearchF
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields }),
   });
-  const payload = await readJson(res);
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || 'Failed to save search values');
-  }
+  await parseApiResponse<unknown>(res, 'Failed to save search values');
 }
 
 export async function resetSearchProfileFields(listingId: number) {
   const res = await fetch(`/api/listing-search-profiles/${listingId}`, {
     method: 'DELETE',
   });
-  const payload = await readJson(res);
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || 'Failed to reset saved search values');
-  }
+  await parseApiResponse<unknown>(res, 'Failed to reset saved search values');
 }
 
 export async function loadLocationOptions(location: string) {
   const params = new URLSearchParams();
   if (location) params.set('location', location);
   const res = await fetch(`/api/mobile-bg/location-options?${params.toString()}`);
-  const payload = await readJson(res);
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || 'Failed to load location options');
-  }
-
-  return payload as {
+  return parseApiResponse<{
     label?: string;
     options?: Array<{ value: string; label: string }>;
-  };
+  }>(res, 'Failed to load location options');
 }
 
 export async function loadMobileBgSearchResults({
@@ -75,10 +56,5 @@ export async function loadMobileBgSearchResults({
       sourceMobileId,
     }),
   });
-  const payload = await readJson(res);
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || 'Failed to load mobile.bg results');
-  }
-
-  return payload as MobileBgSearchResultsResponse;
+  return parseApiResponse<MobileBgSearchResultsResponse>(res, 'Failed to load mobile.bg results');
 }

@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api/auth-helpers';
 
 interface DealerRow {
   id: number;
@@ -18,31 +18,21 @@ interface DealerRow {
   public_enabled: number;
   template: string;
   public_domain: string | null;
+  active_template_config_id: number | null;
   created_at: string | null;
 }
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  return null;
-}
-
 export async function GET() {
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
-  const rows = raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, public_enabled, template, public_domain, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  const rows = raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, public_enabled, template, public_domain, active_template_config_id, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
   return NextResponse.json(rows);
 }
 
 export async function POST(req: NextRequest) {
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   const { name, slug, mobile_url, own = false, priority = 0, mobile_user = null, mobile_password = null, cars_url = null, cars_user = null, cars_password = null } = await req.json();
   if (!name || !slug || !mobile_url) {

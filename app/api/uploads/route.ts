@@ -4,8 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { auth } from '@/lib/auth';
 import { raw } from '@/db/client';
+import { UPLOADS_DIR } from '@/lib/storage-paths';
 
-const UPLOAD_DIR = '/Users/v/dev/scraped/uploads';
+const UPLOAD_DIR = UPLOADS_DIR;
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 export async function POST(request: NextRequest) {

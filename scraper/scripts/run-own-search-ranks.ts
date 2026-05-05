@@ -1,21 +1,10 @@
 #!/usr/bin/env tsx
 
-import util from 'util';
 import { runOwnSearchRankChecks, type OwnSearchRankProgressEvent } from '@/lib/mobile-bg/own-search-ranks';
+import { emit, formatError } from '@/scraper/lib/runner';
 
 const args = process.argv.slice(2);
 const missingOnly = args.includes('--missing-only');
-
-function emit(payload: object) {
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
-}
-
-function formatError(error: unknown) {
-  if (!error) return 'Unknown error';
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
-  return util.inspect(error, { depth: 4, breakLength: 120 });
-}
 
 function progressMessage(event: OwnSearchRankProgressEvent) {
   if (event.type === 'start') {

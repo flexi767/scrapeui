@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskComments } from '@/lib/queries';
 
@@ -7,8 +7,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   const comments = getTaskComments(Number(id));
@@ -19,8 +19,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const { id } = await params;
   const { body } = await request.json();

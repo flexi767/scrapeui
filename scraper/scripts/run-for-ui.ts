@@ -6,8 +6,7 @@
  * Usage: tsx scripts/run-for-ui.ts --dealers peevauto,luxcars [--deep]
  */
 import { PlaywrightCrawler } from "crawlee";
-import path from "path";
-import { fileURLToPath } from "url";
+
 import { execSync } from "child_process";
 import Database from "better-sqlite3";
 import {
@@ -28,7 +27,7 @@ import {
 import { cleanDescription } from "@/lib/mobile-bg/description";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { saveListingThumb } from "@/lib/listing-thumbs";
-import { emit, formatError, parseRunnerArgs } from "@/scraper/lib/runner";
+import { emit, formatError, parseRunnerArgs, DB_PATH } from "@/scraper/lib/runner";
 
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const HOMEPAGE_CATEGORY_OPTIONS = new Set([
@@ -1115,11 +1114,7 @@ function killOtherInstances() {
 
 async function main() {
   killOtherInstances();
-  const __dirname = fileURLToPath(new URL(".", import.meta.url));
-  const db = new Database(
-    process.env.DB_PATH ||
-      path.resolve(__dirname, "../../../scraped/listings.db"),
-  );
+  const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   const makesMap = await fetchMakesModels().catch(() => null);

@@ -2,9 +2,8 @@ import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingDetailProps } from "../types";
+import { fmt } from "../utils";
 import s from "./ListingDetail.module.css";
-
-function fmt(n: number | null, suffix = "") { return n != null ? n.toLocaleString("bg-BG") + suffix : "—"; }
 
 export function ListingDetail({ dealer, listing }: ListingDetailProps) {
   const base = `/d/${dealer.slug}`;
@@ -36,7 +35,7 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
             {listing.color && <div><div className={s.specLbl}>Color</div><div className={s.specVal}>{listing.color}</div></div>}
             {listing.regYear && <div><div className={s.specLbl}>Year</div><div className={s.specVal}>{listing.regYear}</div></div>}
           </div>
-          <button className={s.cta}>Enquire</button>
+          <a href={dealer.mobileUrl ?? '#'} target="_blank" rel="noopener noreferrer" className={s.cta}>Enquire</a>
         </div>
       </div>
       <footer className={s.footer}>

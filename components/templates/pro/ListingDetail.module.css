@@ -16,7 +16,7 @@
 .specItem { background: #f8f9fb; border: 1px solid #dde1e9; border-radius: 6px; padding: 0.7rem; }
 .specLbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #8a93a6; margin-bottom: 0.2rem; }
 .specVal { font-size: 0.88rem; font-weight: 700; color: #1e2533; }
-.cta { width: 100%; background: #2e6fef; color: #fff; border: none; padding: 0.9rem; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cta { width: 100%; background: #2e6fef; color: #fff; border: none; padding: 0.9rem; border-radius: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: block; text-align: center; text-decoration: none; box-sizing: border-box; }
 .description { background: #fff; border: 1px solid #dde1e9; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem; line-height: 1.7; font-size: 0.88rem; color: #4a5568; }
 .footer { background: #1e2533; color: rgba(255,255,255,0.35); padding: 1.5rem 2rem; display: flex; justify-content: space-between; margin-top: 2rem; font-size: 0.75rem; }
 .footLogo { color: rgba(255,255,255,0.65); font-weight: 700; }

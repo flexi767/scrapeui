@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { UPLOADS_DIR } from '@/lib/storage-paths';
 
-const UPLOAD_DIR = '/Users/v/dev/scraped/uploads';
+const UPLOAD_DIR = UPLOADS_DIR;
 
 const MIME: Record<string, string> = {
   '.webp': 'image/webp',

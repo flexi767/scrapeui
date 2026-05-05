@@ -157,3 +157,21 @@ export function parseJson<T>(json: string | null | undefined, fallback: T): T {
     return fallback;
   }
 }
+
+export function normalizeVin(value: string | null | undefined): string {
+  if (!value) return '';
+  const vin = value.trim().toUpperCase();
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '';
+}
+
+export async function readJsonResponse(response: Response): Promise<Record<string, unknown>> {
+  return response.json().catch(() => ({}));
+}
+
+export async function parseApiResponse<T>(response: Response, fallbackError: string): Promise<T> {
+  const payload = await readJsonResponse(response);
+  if (!response.ok) {
+    throw new Error((payload as { error?: string }).error || fallbackError);
+  }
+  return payload as T;
+}

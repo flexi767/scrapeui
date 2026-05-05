@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPublicDealer, getPublicListing, getDealerTemplateConfig } from "@/lib/queries";
+import { getPublicDealer, getPublicListing, getDealerTemplateConfig, getRelatedListings } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";
 import { renderCraftPage } from "@/lib/template-renderer";
 import type { RenderData } from "@/lib/template-renderer";
@@ -20,7 +20,8 @@ export default async function PublicListingDetailPage({ params }: Props) {
   if (dealer.activeTemplateConfigId) {
     const config = getDealerTemplateConfig(dealer.activeTemplateConfigId);
     if (config) {
-      const renderData: RenderData = { dealer, listing };
+      const relatedListings = getRelatedListings(dealer.id, mobileId, listing.make);
+      const renderData: RenderData = { dealer, listing, relatedListings };
       return renderCraftPage(config.configJson, 'listingDetail', renderData);
     }
   }

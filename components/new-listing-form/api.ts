@@ -1,3 +1,4 @@
+import { parseApiResponse } from "@/lib/utils";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { City } from "@/lib/mobile-bg/regions";
 import type {
@@ -7,18 +8,6 @@ import type {
 
 export interface SaveDraftResponse {
   id?: number;
-}
-
-async function readJson(response: Response) {
-  return response.json().catch(() => ({}));
-}
-
-async function parseJsonResponse<T>(response: Response, fallbackError: string) {
-  const payload = await readJson(response);
-  if (!response.ok) {
-    throw new Error((payload as { error?: string }).error || fallbackError);
-  }
-  return payload as T;
 }
 
 export async function fetchCities(regionValue: string) {
@@ -41,7 +30,7 @@ export async function createDraft(form: FormState) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
   });
-  return parseJsonResponse<SaveDraftResponse>(response, "Грешка при запазване.");
+  return parseApiResponse<SaveDraftResponse>(response, "Грешка при запазване.");
 }
 
 export async function updateDraft(backupId: number, form: FormState) {
@@ -50,7 +39,7 @@ export async function updateDraft(backupId: number, form: FormState) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
   });
-  return parseJsonResponse<SaveDraftResponse>(
+  return parseApiResponse<SaveDraftResponse>(
     response,
     "Грешка при запазване на промените.",
   );
@@ -69,7 +58,7 @@ export async function fetchListingPrefill({
     ? `/api/editown/dealers/${encodeURIComponent(dealerId)}/listings/${encodeURIComponent(mobileId)}`
     : `/api/editown/backups/${backupId}`;
   const response = await fetch(url);
-  return parseJsonResponse<PrefillResponse>(
+  return parseApiResponse<PrefillResponse>(
     response,
     "Грешка при зареждане на обявата.",
   );
@@ -79,5 +68,5 @@ export async function deleteDraftById(backupId: number) {
   const response = await fetch(`/api/editown/backups/${backupId}`, {
     method: "DELETE",
   });
-  await parseJsonResponse(response, "Грешка при изтриване на черновата.");
+  await parseApiResponse(response, "Грешка при изтриване на черновата.");
 }

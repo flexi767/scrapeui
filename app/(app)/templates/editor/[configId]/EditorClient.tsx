@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Editor, Frame, useEditor } from '@craftjs/core';
 import { BLOCK_RESOLVER, BLOCK_PALETTE } from '@/components/editor-blocks';
 import type { DealerTemplateConfig } from '@/lib/queries';
@@ -10,18 +10,28 @@ function EditorToolbar({
   name,
   configId,
   pageType,
+  dealerSlug,
+  isActive,
+  previewOpen,
   onPageTypeChange,
+  onPreviewToggle,
 }: {
   name: string;
   configId: number;
   pageType: 'listingGrid' | 'listingDetail';
+  dealerSlug: string | null;
+  isActive: boolean;
+  previewOpen: boolean;
   onPageTypeChange: (t: 'listingGrid' | 'listingDetail') => void;
+  onPreviewToggle: () => void;
 }) {
-  const { actions, query, canUndo, canRedo } = useEditor((state, q) => ({
+  const { actions, query, canUndo, canRedo } = useEditor((_state, q) => ({
     canUndo: q.history.canUndo(),
     canRedo: q.history.canRedo(),
   }));
   const [saving, setSaving] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [activated, setActivated] = useState(isActive);
   const [configName, setConfigName] = useState(name);
 
   const save = useCallback(async () => {
@@ -38,6 +48,16 @@ function EditorToolbar({
       setSaving(false);
     }
   }, [query, configId, pageType, configName]);
+
+  const activate = useCallback(async () => {
+    setActivating(true);
+    try {
+      const res = await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
+      if (res.ok) setActivated(true);
+    } finally {
+      setActivating(false);
+    }
+  }, [configId]);
 
   return (
     <div className="flex items-center gap-3 px-4 h-12 bg-gray-900 border-b border-gray-700 shrink-0">
@@ -73,7 +93,27 @@ function EditorToolbar({
           </button>
         ))}
       </div>
-      <div className="ml-auto flex gap-2">
+      <div className="ml-auto flex items-center gap-2">
+        {dealerSlug && (
+          <button
+            onClick={onPreviewToggle}
+            className={`text-xs px-3 py-1.5 rounded-md border ${previewOpen ? 'border-blue-500 text-blue-400 bg-blue-900/30' : 'border-gray-600 text-gray-400 hover:text-white'}`}
+          >
+            {previewOpen ? 'Hide Preview' : 'Preview'}
+          </button>
+        )}
+        {!activated && (
+          <button
+            onClick={activate}
+            disabled={activating}
+            className="text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 px-4 py-1.5 rounded-md font-medium"
+          >
+            {activating ? 'Activating…' : 'Activate'}
+          </button>
+        )}
+        {activated && (
+          <span className="text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-1">Active</span>
+        )}
         <button
           onClick={save}
           disabled={saving}
@@ -202,10 +242,53 @@ function PropControl({ propKey, value, onChange }: { propKey: string; value: unk
   return null;
 }
 
+// ── Preview panel ─────────────────────────────────────────────────────────────
+
+function PreviewPanel({
+  dealerSlug,
+  pageType,
+  firstListingId,
+}: {
+  dealerSlug: string;
+  pageType: 'listingGrid' | 'listingDetail';
+  firstListingId: string | null;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const src = pageType === 'listingDetail' && firstListingId
+    ? `/d/${dealerSlug}/${firstListingId}`
+    : `/d/${dealerSlug}`;
+
+  const reload = () => {
+    if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+  };
+
+  return (
+    <div className="flex-1 flex flex-col border-l border-gray-700 bg-gray-950 min-w-0">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700 bg-gray-900 shrink-0">
+        <span className="text-xs text-gray-400 font-medium">Preview</span>
+        <span className="text-xs text-gray-600">(saved state)</span>
+        <button onClick={reload} className="ml-auto text-xs text-gray-400 hover:text-white">↻ Refresh</button>
+      </div>
+      <iframe ref={iframeRef} src={src} className="flex-1 w-full bg-white" />
+    </div>
+  );
+}
+
 // ── Main editor client component ─────────────────────────────────────────────
 
-export function EditorClient({ config }: { config: DealerTemplateConfig }) {
+export function EditorClient({
+  config,
+  dealerSlug,
+  isActive,
+  firstListingId,
+}: {
+  config: DealerTemplateConfig;
+  dealerSlug?: string | null;
+  isActive?: boolean;
+  firstListingId?: string | null;
+}) {
   const [pageType, setPageType] = useState<'listingGrid' | 'listingDetail'>('listingGrid');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const parsedConfig = JSON.parse(config.configJson) as {
     listingGrid: object;
@@ -221,7 +304,11 @@ export function EditorClient({ config }: { config: DealerTemplateConfig }) {
           name={config.name}
           configId={config.id}
           pageType={pageType}
+          dealerSlug={dealerSlug ?? null}
+          isActive={isActive ?? false}
+          previewOpen={previewOpen}
           onPageTypeChange={setPageType}
+          onPreviewToggle={() => setPreviewOpen((v) => !v)}
         />
         <div className="flex flex-1 overflow-hidden">
           <BlockPalette pageType={pageType} />
@@ -231,6 +318,9 @@ export function EditorClient({ config }: { config: DealerTemplateConfig }) {
             </div>
           </div>
           <PropertiesPanel />
+          {previewOpen && dealerSlug && (
+            <PreviewPanel dealerSlug={dealerSlug} pageType={pageType} firstListingId={firstListingId ?? null} />
+          )}
         </div>
       </Editor>
     </div>

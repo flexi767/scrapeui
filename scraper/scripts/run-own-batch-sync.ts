@@ -5,6 +5,7 @@ import {
   createMobileBgUpdateSession,
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
+import { emit } from '@/scraper/lib/runner';
 
 interface DealerRow {
   id: number;
@@ -22,10 +23,6 @@ interface SyncTarget {
   model: string | null;
   dealer_name: string | null;
   dealer_slug: string | null;
-}
-
-function emit(data: object) {
-  process.stdout.write(`${JSON.stringify(data)}\n`);
 }
 
 async function main() {

@@ -1,7 +1,5 @@
 #!/usr/bin/env tsx
 
-import path from 'path';
-import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import {
   DEFAULT_MOBILEBG_PUBTYPE,
@@ -9,6 +7,7 @@ import {
   syncMobileBgMakeModelReference,
   type MobileBgMakeModelSyncProgressEvent,
 } from '@/lib/mobile-bg/reference';
+import { emit, formatError, DB_PATH } from '@/scraper/lib/runner';
 
 const args = process.argv.slice(2);
 
@@ -17,14 +16,8 @@ function getArg(name: string): string | null {
   return idx !== -1 && args[idx + 1] ? args[idx + 1] : null;
 }
 
-function emit(event: unknown) {
-  console.log(JSON.stringify(event));
-}
-
 async function main() {
-  const __dirname = fileURLToPath(new URL('.', import.meta.url));
-  const dbPath = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
-  const db = new Database(dbPath);
+  const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
@@ -53,7 +46,7 @@ async function main() {
     emit({
       type: 'complete',
       ok: true,
-      dbPath,
+      dbPath: DB_PATH,
       searchPath,
       pubtype,
       onlyMake,
@@ -66,6 +59,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  emit({ type: 'error', message: formatError(error) });
   process.exit(1);
 });

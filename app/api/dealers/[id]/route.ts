@@ -1,21 +1,10 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  return null;
-}
+import { requireAdmin } from '@/lib/api/auth-helpers';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   const body = await req.json();
@@ -69,8 +58,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   const { id } = await params;
   raw.prepare('DELETE FROM dealers WHERE id = ?').run(Number(id));

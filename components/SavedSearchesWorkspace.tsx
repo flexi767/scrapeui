@@ -362,35 +362,35 @@ export default function SavedSearchesWorkspace({
               onConfirm={() => void deleteCurrent()}
             />
             <SavedSearchEditorPanel
-                detail={detail}
-                fields={editableFields}
-                subLocationLabel={subLocationLabel}
-                subLocationOptions={subLocationOptions}
-                locationLoading={locationLoading}
-                openAutocomplete={openAutocomplete}
-                resultsLoading={resultsLoading}
-                saveAdMode={saveAdMode}
-                makeOrModelChanged={makeOrModelChanged}
-                saveBusy={saveBusy}
-                cloneBusy={cloneBusy}
-                deleteBusy={deleteBusy}
-                onShowFirst={() =>
-                  void showResultsHere(buildFirstSevenSearchFields(currentFields))
-                }
-                onShowAll={() => void showResultsHere()}
-                onOpenMobileBg={() => openInMobileBg()}
-                onSaveAd={() => void activateSaveAdMode()}
-                onSave={() => void saveCurrent()}
-                onSaveAsNew={() => void saveAsNew()}
-                onDelete={() => setDeleteDialogOpen(true)}
-                getFieldValue={getFieldValue}
-                onClear={clearField}
-                onNudge={nudgeField}
-                onOpenAutocompleteChange={setOpenAutocomplete}
-                onUpdateField={updateField}
-                onUpdateLocation={updateLocation}
-                onUpdateMake={updateMake}
-              />
+              detail={detail}
+              fields={editableFields}
+              subLocationLabel={subLocationLabel}
+              subLocationOptions={subLocationOptions}
+              locationLoading={locationLoading}
+              openAutocomplete={openAutocomplete}
+              resultsLoading={resultsLoading}
+              saveAdMode={saveAdMode}
+              makeOrModelChanged={makeOrModelChanged}
+              saveBusy={saveBusy}
+              cloneBusy={cloneBusy}
+              deleteBusy={deleteBusy}
+              onShowFirst={() =>
+                void showResultsHere(buildFirstSevenSearchFields(currentFields))
+              }
+              onShowAll={() => void showResultsHere()}
+              onOpenMobileBg={() => openInMobileBg()}
+              onSaveAd={() => void activateSaveAdMode()}
+              onSave={() => void saveCurrent()}
+              onSaveAsNew={() => void saveAsNew()}
+              onDelete={() => setDeleteDialogOpen(true)}
+              getFieldValue={getFieldValue}
+              onClear={clearField}
+              onNudge={nudgeField}
+              onOpenAutocompleteChange={setOpenAutocomplete}
+              onUpdateField={updateField}
+              onUpdateLocation={updateLocation}
+              onUpdateMake={updateMake}
+            />
 
             <SavedSearchResultsPanel
               error={resultsError}

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getExpenses } from '@/lib/queries';
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const sp = request.nextUrl.searchParams;
   const result = getExpenses({
@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const body = await request.json();
   const {

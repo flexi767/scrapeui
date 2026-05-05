@@ -3,6 +3,7 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
 import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
+import { getStorageRoot } from '@/lib/mobile-bg/backup';
 
 interface DealerLike {
   id: number;
@@ -23,10 +24,6 @@ function normalizeMobileBgDateTime(value: string | null): string | null {
   if (!match) return null;
   const [, day, month, year, hour, minute] = match;
   return `${year}-${month}-${day}T${hour}:${minute}:00`;
-}
-
-function getStorageRoot(dbPath: string): string {
-  return path.join(path.dirname(dbPath), 'mobilebg-backups');
 }
 
 function getSnapshotDir(dbPath: string, dealerSlug: string, mobileId: string): string {

@@ -2,6 +2,7 @@ import { raw } from '@/db/client';
 import { chromium } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
+import { emit } from '@/scraper/lib/runner';
 
 interface DealerRow {
   id: number;
@@ -9,10 +10,6 @@ interface DealerRow {
   name: string;
   mobile_user: string | null;
   mobile_password: string | null;
-}
-
-function emit(data: object) {
-  process.stdout.write(`${JSON.stringify(data)}\n`);
 }
 
 function parseArgs(): { dealerSlugs: string[]; onlyReset: boolean } {

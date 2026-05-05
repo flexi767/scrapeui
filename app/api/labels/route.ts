@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getAllLabels } from '@/lib/queries';
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
   return NextResponse.json(getAllLabels());
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
 
   const { name, color = '#6b7280' } = await request.json();
   if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 });

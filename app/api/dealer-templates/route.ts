@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-helpers";
 import {
   listDealerTemplateConfigs,
   listAllDealerTemplateConfigs,
@@ -7,8 +7,9 @@ import {
 } from "@/lib/queries";
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const url = new URL(request.url);
   const dealerIdParam = url.searchParams.get("dealerId");
@@ -33,8 +34,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+  const session = check.session;
 
   const isAdmin = (session.user as { role: string }).role === "admin";
   const body = await request.json() as { dealerId: number; baseTemplateId: number; name: string };

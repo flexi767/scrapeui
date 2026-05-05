@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { CARIMG_DIR } from '@/lib/storage-paths';
 
-const BASE_DIR = '/Users/v/dev/scraped/carimg';
+const BASE_DIR = CARIMG_DIR;
 
 const MIME: Record<string, string> = {
   '.webp': 'image/webp',

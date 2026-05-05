@@ -18,6 +18,7 @@ export interface Dealer {
   public_enabled: number;
   template: TemplateName;
   public_domain: string | null;
+  active_template_config_id: number | null;
 }
 
 export interface LoginResult {

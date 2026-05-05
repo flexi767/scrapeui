@@ -1,13 +1,10 @@
 #!/usr/bin/env tsx
-import path from 'path';
-import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { loginToCarsBg } from '@/lib/cars-bg/auth';
+import { DB_PATH } from '@/scraper/lib/runner';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db');
 const slug = process.argv[2];
 if (!slug) {
   console.error('Usage: tsx scraper/scripts/test-dealer-logins.ts <dealer-slug>');

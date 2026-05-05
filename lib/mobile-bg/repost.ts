@@ -7,6 +7,7 @@ import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { normalizeVatValue } from '@/lib/vat';
+import { getExtraLabels } from '@/lib/mobile-bg/extras';
 
 interface BackupRow {
   id: number;
@@ -78,23 +79,6 @@ function getRegionCityValues(techDataJson: string | null): { region: string | nu
     };
   } catch {
     return { region: null, city: null };
-  }
-}
-
-function getExtraLabels(extrasJson: string | null): string[] {
-  if (!extrasJson) return [];
-  try {
-    const parsed = JSON.parse(extrasJson) as Record<string, unknown>;
-    return Object.values(parsed).flatMap((entry) => {
-      if (!Array.isArray(entry)) return [];
-      return entry.flatMap((item) => {
-        if (typeof item === 'string') return [item];
-        if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
-        return [];
-      });
-    });
-  } catch {
-    return [];
   }
 }
 

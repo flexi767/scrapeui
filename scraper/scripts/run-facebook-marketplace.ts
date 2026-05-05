@@ -5,9 +5,8 @@
  * Usage: tsx scraper/scripts/run-facebook-marketplace.ts --backup-id <id>
  */
 
-import path from "path";
-import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
+import { DB_PATH } from "@/scraper/lib/runner";
 import {
   postToFacebookMarketplace,
   type MarketplaceListing,
@@ -86,11 +85,7 @@ function mapTransmission(t: string | null): string | undefined {
 }
 
 async function main() {
-  const __dirname = fileURLToPath(new URL(".", import.meta.url));
-  const db = new Database(
-    process.env.DB_PATH ||
-      path.resolve(__dirname, "../../../scraped/listings.db"),
-  );
+  const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
 
   const backup = db

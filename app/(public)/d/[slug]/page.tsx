@@ -50,6 +50,7 @@ export default async function PublicDealerPage({ params, searchParams }: Props) 
         page: result.page,
         limit: result.limit,
         makes: result.makes,
+        filters,
       };
       return renderCraftPage(config.configJson, 'listingGrid', renderData);
     }

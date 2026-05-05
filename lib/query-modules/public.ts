@@ -10,6 +10,7 @@ export interface PublicDealer {
   publicDomain: string | null;
   publicEnabled: number;
   activeTemplateConfigId: number | null;
+  mobileUrl: string | null;
 }
 
 export interface PublicListing {
@@ -74,36 +75,53 @@ const ALLOWED_SORT: Record<string, string> = {
 
 // ── Queries ────────────────────────────────────────────────────────────────
 
+const DEALER_SELECT = `
+  id, slug, name,
+  COALESCE(template, 'bold') as template,
+  public_domain as publicDomain,
+  COALESCE(public_enabled, 0) as publicEnabled,
+  active_template_config_id as activeTemplateConfigId,
+  mobile_url as mobileUrl`;
+
 export function getPublicDealer(slug: string): PublicDealer | null {
   const row = raw
-    .prepare(
-      `SELECT id, slug, name,
-        COALESCE(template, 'bold') as template,
-        public_domain as publicDomain,
-        COALESCE(public_enabled, 0) as publicEnabled,
-        active_template_config_id as activeTemplateConfigId
-       FROM dealers
-       WHERE slug = ? AND active = 1
-       LIMIT 1`,
-    )
+    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
     .get(slug) as PublicDealer | undefined;
   return row ?? null;
 }
 
 export function getDealerByDomain(domain: string): PublicDealer | null {
   const row = raw
-    .prepare(
-      `SELECT id, slug, name,
-        COALESCE(template, 'bold') as template,
-        public_domain as publicDomain,
-        COALESCE(public_enabled, 0) as publicEnabled,
-        active_template_config_id as activeTemplateConfigId
-       FROM dealers
-       WHERE public_domain = ? AND public_enabled = 1 AND active = 1
-       LIMIT 1`,
-    )
+    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
     .get(domain) as PublicDealer | undefined;
   return row ?? null;
+}
+
+export function getRelatedListings(
+  dealerId: number,
+  excludeMobileId: string,
+  make: string | null,
+  limit = 6,
+): PublicListing[] {
+  if (!make) return [];
+  return raw
+    .prepare(
+      `SELECT
+        l.mobile_id as mobileId,
+        l.make, l.model, l.reg_year as regYear, l.fuel,
+        l.transmission, l.mileage, l.current_price as currentPrice,
+        l.image_count as imageCount, l.thumb_keys as thumbKeys,
+        l.full_keys as fullKeys, l.image_meta as imageMeta,
+        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+        l.is_new as isNew, l.body_type as bodyType
+       FROM listings l
+       WHERE l.dealer_id = ? AND l.is_active = 1 AND l.make = ?
+         AND l.mobile_id != ?
+         AND (l.duplicate = 0 OR l.duplicate IS NULL)
+       ORDER BY l.last_edit DESC
+       LIMIT ?`,
+    )
+    .all(dealerId, make, excludeMobileId, limit) as PublicListing[];
 }
 
 export function getPublicListings(
