@@ -8,15 +8,115 @@
   const scriptUrl = new URL(document.currentScript?.src || location.href);
   const apiBase = scriptUrl.origin;
   const state = { listings: [], selected: null };
+  const pendingKey = "scrapeui.fbMarketplace.pendingListing";
+  const createVehicleUrl = "https://www.facebook.com/marketplace/create/vehicle";
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const visible = (el) => Boolean(el && el.offsetWidth > 0 && el.offsetHeight > 0);
   const text = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  const isCreateForm = () => location.href.includes("/marketplace/create");
 
   const panel = document.createElement("div");
   panel.id = "scrapeui-fb-marketplace-panel";
-  panel.innerHTML = `
-    <style>
+  panel.innerHTML = renderPanelHtml();
+  document.body.appendChild(panel);
+
+  const closeButton = panel.querySelector(".suimp-close");
+  const searchInput = panel.querySelector(".suimp-search");
+  const listEl = panel.querySelector(".suimp-list");
+  const fillButton = panel.querySelector(".suimp-primary");
+  const createButton = panel.querySelector(".suimp-secondary");
+  const logEl = panel.querySelector(".suimp-log");
+
+  function log(message) {
+    logEl.textContent += `${new Date().toLocaleTimeString()} ${message}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[ch]);
+  }
+
+  function renderList() {
+    const items = getVisibleListings();
+
+    listEl.innerHTML = "";
+    if (items.length === 0) {
+      listEl.innerHTML = '<div class="suimp-muted" style="padding:10px">No listings found.</div>';
+      return;
+    }
+
+    for (const listing of items) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "suimp-item";
+      button.dataset.active = state.selected?.backupId === listing.backupId ? "true" : "false";
+      button.innerHTML = renderListingItemHtml(listing);
+      button.addEventListener("click", () => selectListing(listing));
+      listEl.appendChild(button);
+    }
+  }
+
+  function getVisibleListings() {
+    const query = searchInput.value.trim().toLowerCase();
+    return state.listings
+      .filter((listing) => listingMatchesQuery(listing, query))
+      .slice(0, 80);
+  }
+
+  function listingMatchesQuery(listing, query) {
+    if (!query) return true;
+    return [
+      listing.title,
+      listing.make,
+      listing.model,
+      listing.year,
+      listing.price,
+      listing.mileage,
+    ].filter(Boolean).join(" ").toLowerCase().includes(query);
+  }
+
+  function selectListing(listing) {
+    state.selected = listing;
+    updateFillButton();
+    renderList();
+    log(`Selected backup #${listing.backupId}`);
+  }
+
+  function updateFillButton() {
+    fillButton.disabled = !state.selected;
+  }
+
+  function renderPanelHtml() {
+    return `
+      <style>${panelStyles()}</style>
+      <div class="suimp-head">
+        <div>
+          <div class="suimp-title">scrapeui Marketplace</div>
+          <div class="suimp-muted">Choose a listing, fill this Facebook tab, review, then publish manually.</div>
+        </div>
+        <button class="suimp-close" type="button" title="Close">x</button>
+      </div>
+      <div class="suimp-body">
+        <input class="suimp-search" placeholder="Search existing listings" />
+        <div class="suimp-list"><div class="suimp-muted" style="padding:10px">Loading listings...</div></div>
+        <div class="suimp-actions">
+          <button class="suimp-secondary" type="button">Create form</button>
+          <button class="suimp-primary" type="button" disabled>Fill selected</button>
+        </div>
+        <div class="suimp-log"></div>
+      </div>
+    `;
+  }
+
+  function panelStyles() {
+    return `
       #scrapeui-fb-marketplace-panel {
         position: fixed;
         z-index: 2147483647;
@@ -52,85 +152,30 @@
       .suimp-secondary { background: #111827; color: #dbeafe; }
       .suimp-primary:disabled { opacity: .5; cursor: not-allowed; }
       .suimp-log { max-height: 150px; overflow: auto; white-space: pre-wrap; border: 1px solid #1f2937; border-radius: 6px; background: #020617; padding: 8px; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-    </style>
-    <div class="suimp-head">
-      <div>
-        <div class="suimp-title">scrapeui Marketplace</div>
-        <div class="suimp-muted">Choose a listing, fill this Facebook tab, review, then publish manually.</div>
-      </div>
-      <button class="suimp-close" type="button" title="Close">x</button>
-    </div>
-    <div class="suimp-body">
-      <input class="suimp-search" placeholder="Search existing listings" />
-      <div class="suimp-list"><div class="suimp-muted" style="padding:10px">Loading listings...</div></div>
-      <div class="suimp-actions">
-        <button class="suimp-secondary" type="button">Create form</button>
-        <button class="suimp-primary" type="button" disabled>Fill selected</button>
-      </div>
-      <div class="suimp-log"></div>
-    </div>
-  `;
-  document.body.appendChild(panel);
-
-  const closeButton = panel.querySelector(".suimp-close");
-  const searchInput = panel.querySelector(".suimp-search");
-  const listEl = panel.querySelector(".suimp-list");
-  const fillButton = panel.querySelector(".suimp-primary");
-  const createButton = panel.querySelector(".suimp-secondary");
-  const logEl = panel.querySelector(".suimp-log");
-
-  function log(message) {
-    logEl.textContent += `${new Date().toLocaleTimeString()} ${message}\n`;
-    logEl.scrollTop = logEl.scrollHeight;
+    `;
   }
 
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, (ch) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    })[ch]);
-  }
+  function renderListingItemHtml(listing) {
+    const thumbUrl = listing.photoUrls?.[0];
+    const title = listing.title || `Backup #${listing.backupId}`;
+    const meta = [
+      listing.year,
+      listing.mileage ? `${listing.mileage} km` : "",
+      listing.price ? `${listing.price} BGN` : "",
+      `${listing.photoUrls?.length || 0} photos`,
+    ].filter(Boolean).join(" | ");
 
-  function renderList() {
-    const q = searchInput.value.trim().toLowerCase();
-    const items = state.listings
-      .filter((listing) => !q || `${listing.title} ${listing.make || ""} ${listing.model || ""}`.toLowerCase().includes(q))
-      .slice(0, 80);
-
-    listEl.innerHTML = "";
-    if (items.length === 0) {
-      listEl.innerHTML = '<div class="suimp-muted" style="padding:10px">No listings found.</div>';
-      return;
-    }
-
-    for (const listing of items) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "suimp-item";
-      button.dataset.active = state.selected?.backupId === listing.backupId ? "true" : "false";
-      const thumbUrl = listing.photoUrls?.[0];
-      button.innerHTML = `
-        ${
-          thumbUrl
-            ? `<img class="suimp-thumb" src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
-            : '<div class="suimp-thumb suimp-thumb-placeholder">No img</div>'
-        }
-        <div class="suimp-item-main">
-          <div class="suimp-item-title">${escapeHtml(listing.title || `Backup #${listing.backupId}`)}</div>
-          <div class="suimp-muted">${escapeHtml([listing.year, listing.mileage ? `${listing.mileage} km` : "", listing.price ? `${listing.price} BGN` : "", `${listing.photoUrls?.length || 0} photos`].filter(Boolean).join(" | "))}</div>
-        </div>
-      `;
-      button.addEventListener("click", () => {
-        state.selected = listing;
-        fillButton.disabled = false;
-        renderList();
-        log(`Selected backup #${listing.backupId}`);
-      });
-      listEl.appendChild(button);
-    }
+    return `
+      ${
+        thumbUrl
+          ? `<img class="suimp-thumb" src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
+          : '<div class="suimp-thumb suimp-thumb-placeholder">No img</div>'
+      }
+      <div class="suimp-item-main">
+        <div class="suimp-item-title">${escapeHtml(title)}</div>
+        <div class="suimp-muted">${escapeHtml(meta)}</div>
+      </div>
+    `;
   }
 
   function setNativeValue(el, value) {
@@ -171,10 +216,9 @@
 
   async function fillCombobox(labelText, value) {
     if (!value) return false;
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    await delay(200);
-    const combo = Array.from(document.querySelectorAll('label[role="combobox"], [role="combobox"]'))
-      .find((el) => visible(el) && text(el).includes(labelText));
+    await dismissOpenDropdown();
+
+    const combo = findCombobox(labelText);
     if (!combo) {
       log(`Missing dropdown: ${labelText}`);
       return false;
@@ -184,27 +228,48 @@
     combo.click();
     await delay(900);
 
-    const roots = Array.from(document.querySelectorAll('[role="listbox"]')).filter(visible);
-    if (roots.length === 0) roots.push(document);
-    const wanted = String(value).toLowerCase();
-
-    for (const root of roots) {
-      const options = Array.from(root.querySelectorAll('[role="option"], li, div[tabindex="0"]')).filter(visible);
-      const exact = options.find((option) => text(option).toLowerCase() === wanted);
-      const partial = exact || options.find((option) => {
-        const optionText = text(option).toLowerCase();
-        return optionText.length < 90 && optionText.includes(wanted);
-      });
-      if (partial) {
-        partial.click();
-        await delay(450);
-        log(`Selected ${labelText}: ${value}`);
-        return true;
-      }
+    const option = findDropdownOption(value);
+    if (option) {
+      option.click();
+      await delay(450);
+      log(`Selected ${labelText}: ${value}`);
+      return true;
     }
 
     log(`No option matched ${labelText}: ${value}`);
     return false;
+  }
+
+  async function dismissOpenDropdown() {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await delay(200);
+  }
+
+  function findCombobox(labelText) {
+    return Array.from(document.querySelectorAll('label[role="combobox"], [role="combobox"]'))
+      .find((el) => visible(el) && text(el).includes(labelText));
+  }
+
+  function findDropdownOption(value) {
+    const wanted = String(value).toLowerCase();
+    for (const root of getDropdownRoots()) {
+      const exact = getVisibleDropdownOptions(root).find((option) => text(option).toLowerCase() === wanted);
+      const partial = exact || getVisibleDropdownOptions(root).find((option) => {
+        const optionText = text(option).toLowerCase();
+        return optionText.length < 90 && optionText.includes(wanted);
+      });
+      if (partial) return partial;
+    }
+    return null;
+  }
+
+  function getDropdownRoots() {
+    const roots = Array.from(document.querySelectorAll('[role="listbox"]')).filter(visible);
+    return roots.length > 0 ? roots : [document];
+  }
+
+  function getVisibleDropdownOptions(root) {
+    return Array.from(root.querySelectorAll('[role="option"], li, div[tabindex="0"]')).filter(visible);
   }
 
   async function fillLocation(locationValue) {
@@ -248,8 +313,7 @@
     }
     if (dt.files.length === 0) return;
     input.files = dt.files;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    dispatchInputEvents(input);
     log(`Attached ${dt.files.length} photos`);
     await delay(2500);
   }
@@ -257,10 +321,11 @@
   async function fillListing(listing) {
     fillButton.disabled = true;
     try {
-      if (!location.href.includes("/marketplace/create")) {
-        log("This is not a create form. Use Create form first, then run Fill selected.");
+      if (!isCreateForm()) {
+        navigateToCreateFormWithPendingListing(listing);
         return;
       }
+
       log(`Filling backup #${listing.backupId}`);
       await uploadPhotos(listing);
       await fillCombobox("Марка", listing.make);
@@ -280,19 +345,26 @@
       if (!(await fillCombobox("Цвят на екстериора", listing.color))) await fillCombobox("Цвят", listing.color);
       if (!(await fillCombobox("Скоростна кутия", listing.transmission))) await fillCombobox("Трансмисия", listing.transmission);
       await fillCombobox("Състояние", listing.condition);
-
-      if (listing.noDamage) {
-        const checkbox = document.querySelector('input[aria-label*="Без повреди"], [role="checkbox"][aria-label*="Без повреди"]');
-        const checked = checkbox?.checked || checkbox?.getAttribute("aria-checked") === "true";
-        if (checkbox && !checked) {
-          checkbox.click();
-          log("Enabled Без повреди");
-        }
-      }
+      enableCheckboxByLabel("Без повреди", listing.noDamage);
 
       log("Done. Review the Facebook form and publish manually.");
     } finally {
       fillButton.disabled = false;
+    }
+  }
+
+  function dispatchInputEvents(el) {
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function enableCheckboxByLabel(labelText, shouldEnable) {
+    if (!shouldEnable) return;
+    const checkbox = document.querySelector(`input[aria-label*="${labelText}"], [role="checkbox"][aria-label*="${labelText}"]`);
+    const checked = checkbox?.checked || checkbox?.getAttribute("aria-checked") === "true";
+    if (checkbox && !checked) {
+      checkbox.click();
+      log(`Enabled ${labelText}`);
     }
   }
 
@@ -302,7 +374,14 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       state.listings = data.listings || [];
+      state.selected = matchListingByBackupId(state.selected?.backupId);
+      updateFillButton();
       log(`Loaded ${state.listings.length} listings`);
+
+      if (await continuePendingListing()) {
+        return;
+      }
+
       renderList();
     } catch (error) {
       listEl.innerHTML = '<div class="suimp-muted" style="padding:10px">Could not load listings.</div>';
@@ -310,10 +389,51 @@
     }
   }
 
+  function navigateToCreateFormWithPendingListing(listing) {
+    savePendingListing(listing);
+    log("Opening Facebook Marketplace create form. Click the bookmarklet again after it loads to continue filling.");
+    location.href = createVehicleUrl;
+  }
+
+  function savePendingListing(listing) {
+    try {
+      sessionStorage.setItem(pendingKey, JSON.stringify(listing));
+    } catch {
+      // If storage is blocked, navigation still happens; the user can reselect.
+    }
+  }
+
+  function getPendingListing() {
+    try {
+      const raw = sessionStorage.getItem(pendingKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function continuePendingListing() {
+    const pending = getPendingListing();
+    if (!pending || !isCreateForm()) return false;
+
+    state.selected = matchListingByBackupId(pending.backupId) || pending;
+    updateFillButton();
+    renderList();
+    sessionStorage.removeItem(pendingKey);
+    log(`Continuing pending backup #${state.selected.backupId}`);
+    await fillListing(state.selected);
+    return true;
+  }
+
+  function matchListingByBackupId(backupId) {
+    if (!backupId) return null;
+    return state.listings.find((listing) => listing.backupId === backupId) || null;
+  }
+
   closeButton.addEventListener("click", () => panel.remove());
   searchInput.addEventListener("input", renderList);
   createButton.addEventListener("click", () => {
-    location.href = "https://www.facebook.com/marketplace/create/vehicle";
+    location.href = createVehicleUrl;
   });
   fillButton.addEventListener("click", () => {
     if (state.selected) void fillListing(state.selected);
