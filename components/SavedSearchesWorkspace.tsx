@@ -29,7 +29,10 @@ import {
 import {
   buildMobileBgBrowserSearchWindowName,
   buildMobileBgResultsBookmarklet,
+  mergeMobileBgBrowserResults,
   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+  persistMobileBgBrowserResults,
+  readMobileBgBrowserResults,
   type MobileBgBrowserResultsMessage,
 } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
 import {
@@ -37,21 +40,6 @@ import {
   type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
-
-function getResultsStorageKey(searchId: number) {
-  return `scrapeui.savedSearch.browserResults.${searchId}`;
-}
-
-function persistResults(searchId: number, payload: MobileBgSearchResultsResponse | null) {
-  if (typeof window === "undefined") return;
-  try {
-    if (payload) {
-      window.localStorage.setItem(getResultsStorageKey(searchId), JSON.stringify(payload));
-    } else {
-      window.localStorage.removeItem(getResultsStorageKey(searchId));
-    }
-  } catch {}
-}
 
 export default function SavedSearchesWorkspace({
   initialSearches,
@@ -102,34 +90,6 @@ export default function SavedSearchesWorkspace({
   const pendingBrowserSearchTokenRef = useRef<string | null>(null);
   const pendingBrowserSearchFieldsRef = useRef<SearchField[] | null>(null);
   const installBookmarklet = useMemo(() => buildMobileBgResultsBookmarklet(), []);
-
-  function mergeBrowserResults(
-    previous: MobileBgSearchResultsResponse | null,
-    incoming: MobileBgSearchResultsResponse,
-  ): MobileBgSearchResultsResponse {
-    if (!previous?.rows.length) return incoming;
-    const rowsById = new Map(previous.rows.map((row) => [row.mobile_id, row]));
-    for (const row of incoming.rows) rowsById.set(row.mobile_id, row);
-    const rows = Array.from(rowsById.values()).map((row, index) => ({
-      ...row,
-      original_position: index + 1,
-    }));
-    return {
-      ...incoming,
-      page: previous.page,
-      total_pages: incoming.total_pages ?? previous.total_pages,
-      has_next_page: incoming.has_next_page,
-      count_on_page: rows.length,
-      loaded_until_page: Math.max(previous.loaded_until_page ?? previous.page, incoming.loaded_until_page ?? incoming.page),
-      ignored_search_result_ids: [
-        ...new Set([
-          ...(previous.ignored_search_result_ids ?? []),
-          ...(incoming.ignored_search_result_ids ?? []),
-        ]),
-      ],
-      rows,
-    };
-  }
 
   useEffect(() => {
     if (selectedId == null) {
@@ -185,10 +145,8 @@ export default function SavedSearchesWorkspace({
 
   useEffect(() => {
     if (!detail?.search.id || results || browserResultsLoading) return;
-    try {
-      const raw = window.localStorage.getItem(getResultsStorageKey(detail.search.id));
-      if (raw) setResults(JSON.parse(raw) as MobileBgSearchResultsResponse);
-    } catch {}
+    const cachedResults = readMobileBgBrowserResults(detail.search.id);
+    if (cachedResults) setResults(cachedResults);
   }, [detail?.search.id, results, browserResultsLoading]);
 
   useEffect(() => {
@@ -223,9 +181,9 @@ export default function SavedSearchesWorkspace({
       }
 
       const incoming = message.payload as MobileBgSearchResultsResponse;
-      const merged = mergeBrowserResults(results, incoming);
+      const merged = mergeMobileBgBrowserResults(results, incoming);
       setResults(merged);
-      if (detail?.search.id) persistResults(detail.search.id, merged);
+      if (detail?.search.id) persistMobileBgBrowserResults(detail.search.id, merged);
       setResultsError("");
       setBrowserResultsNotice("");
       setBrowserBookmarklet("");
@@ -373,7 +331,7 @@ export default function SavedSearchesWorkspace({
         sourceMobileId: listing?.mobile_id ?? null,
       });
       setResults(payload);
-      persistResults(detail.search.id, payload);
+      persistMobileBgBrowserResults(detail.search.id, payload);
     } catch (error) {
       setResultsError(
         error instanceof Error
@@ -381,7 +339,7 @@ export default function SavedSearchesWorkspace({
           : "Failed to load mobile.bg results",
       );
       setResults(null);
-      persistResults(detail.search.id, null);
+      persistMobileBgBrowserResults(detail.search.id, null);
     } finally {
       setResultsLoading(false);
     }
