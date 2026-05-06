@@ -11,6 +11,7 @@ interface SavedSearchEditorPanelProps {
   locationLoading: boolean;
   openAutocomplete: "marka" | "model" | null;
   resultsLoading: boolean;
+  browserResultsLoading: boolean;
   saveAdMode: boolean;
   makeOrModelChanged: boolean;
   saveBusy: boolean;
@@ -19,6 +20,7 @@ interface SavedSearchEditorPanelProps {
   getFieldValue: (name: string) => string;
   onShowFirst: () => void;
   onShowAll: () => void;
+  onSearchInBrowser: () => void;
   onOpenMobileBg: () => void;
   onSaveAd: () => void;
   onSave: () => void;
@@ -40,6 +42,7 @@ export function SavedSearchEditorPanel({
   locationLoading,
   openAutocomplete,
   resultsLoading,
+  browserResultsLoading,
   saveAdMode,
   makeOrModelChanged,
   saveBusy,
@@ -48,6 +51,7 @@ export function SavedSearchEditorPanel({
   getFieldValue,
   onShowFirst,
   onShowAll,
+  onSearchInBrowser,
   onOpenMobileBg,
   onSaveAd,
   onSave,
@@ -65,6 +69,7 @@ export function SavedSearchEditorPanel({
       <SavedSearchEditorHeader
         listing={detail.prefill.listing ?? null}
         resultsLoading={resultsLoading}
+        browserResultsLoading={browserResultsLoading}
         saveAdMode={saveAdMode}
         makeOrModelChanged={makeOrModelChanged}
         saveBusy={saveBusy}
@@ -72,6 +77,7 @@ export function SavedSearchEditorPanel({
         deleteBusy={deleteBusy}
         onShowFirst={onShowFirst}
         onShowAll={onShowAll}
+        onSearchInBrowser={onSearchInBrowser}
         onOpenMobileBg={onOpenMobileBg}
         onSaveAd={onSaveAd}
         onSave={onSave}

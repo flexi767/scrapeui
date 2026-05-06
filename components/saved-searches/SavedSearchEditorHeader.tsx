@@ -34,6 +34,7 @@ function getListingThumb(listing: SavedSearchListing) {
 export function SavedSearchEditorHeader({
   listing,
   resultsLoading,
+  browserResultsLoading,
   saveAdMode,
   makeOrModelChanged,
   saveBusy,
@@ -41,6 +42,7 @@ export function SavedSearchEditorHeader({
   deleteBusy,
   onShowFirst,
   onShowAll,
+  onSearchInBrowser,
   onOpenMobileBg,
   onSaveAd,
   onSave,
@@ -49,6 +51,7 @@ export function SavedSearchEditorHeader({
 }: {
   listing: SavedSearchListing;
   resultsLoading: boolean;
+  browserResultsLoading: boolean;
   saveAdMode: boolean;
   makeOrModelChanged: boolean;
   saveBusy: boolean;
@@ -56,6 +59,7 @@ export function SavedSearchEditorHeader({
   deleteBusy: boolean;
   onShowFirst: () => void;
   onShowAll: () => void;
+  onSearchInBrowser: () => void;
   onOpenMobileBg: () => void;
   onSaveAd: () => void;
   onSave: () => void;
@@ -114,7 +118,7 @@ export function SavedSearchEditorHeader({
           variant="outline"
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={onShowFirst}
-          disabled={resultsLoading}
+          disabled={resultsLoading || browserResultsLoading}
         >
           <SearchIcon className="mr-1 h-4 w-4" />
           First 7
@@ -124,14 +128,28 @@ export function SavedSearchEditorHeader({
           variant="outline"
           className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
           onClick={onShowAll}
-          disabled={resultsLoading}
+          disabled={resultsLoading || browserResultsLoading}
         >
           {resultsLoading ? (
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />
           ) : (
             <SearchIcon className="mr-1 h-4 w-4" />
           )}
-          All
+          Search on Server
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="border-cyan-700 bg-cyan-950/80 text-cyan-200 hover:bg-cyan-900 hover:text-white"
+          onClick={onSearchInBrowser}
+          disabled={resultsLoading || browserResultsLoading}
+        >
+          {browserResultsLoading ? (
+            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : (
+            <SearchIcon className="mr-1 h-4 w-4" />
+          )}
+          Open Browser Search
         </Button>
         <Button
           type="button"
@@ -151,7 +169,7 @@ export function SavedSearchEditorHeader({
               : "border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
           }
           onClick={onSaveAd}
-          disabled={resultsLoading}
+          disabled={resultsLoading || browserResultsLoading}
         >
           {resultsLoading && saveAdMode ? (
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />

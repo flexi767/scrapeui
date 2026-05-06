@@ -1,13 +1,19 @@
 import { headers } from "next/headers";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { BookmarkletLink } from "@/components/facebook-marketplace/BookmarkletLink";
 
 export default async function FacebookMarketplaceBookmarkletPage() {
   const headerList = await headers();
   const host = headerList.get("host") ?? "localhost:3000";
-  const bookmarkletHost = host.replace(/^localhost(?=:|$)/, "127.0.0.1");
-  const proto = headerList.get("x-forwarded-proto") ?? (bookmarkletHost.startsWith("127.0.0.1") ? "http" : "https");
-  const origin = `${proto}://${bookmarkletHost}`;
-  const bookmarklet = `javascript:(()=>{const s=document.createElement('script');s.src='${origin}/api/facebook-marketplace/bookmarklet?ts='+Date.now();document.body.appendChild(s);})()`;
+  const proto = headerList.get("x-forwarded-proto") ?? (host.includes("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+  const origin = `${proto}://${host}`;
+  const source = await readFile(join(process.cwd(), "public/bookmarklets/facebook-marketplace.js"), "utf8");
+  const bookmarkletScript = source
+    .replace('"__SCRAPEUI_ORIGIN__"', JSON.stringify(origin))
+    .replace(/\s*\n\s*/g, " ")
+    .trim();
+  const bookmarklet = `javascript:${bookmarkletScript}`;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -27,8 +33,8 @@ export default async function FacebookMarketplaceBookmarkletPage() {
         </div>
 
         <div className="mt-5 space-y-2 text-sm text-gray-300">
-          <p>Open Facebook Marketplace create vehicle listing, then click the bookmark.</p>
-          <p>The overlay loads recent own listings, lets you choose one, fills the form, and leaves publishing to you.</p>
+          <p>Open Facebook Marketplace, then click the bookmark.</p>
+          <p>The bookmark opens a scrapeui picker popup, sends your chosen listing back to Facebook, fills the form, and leaves publishing to you.</p>
         </div>
       </section>
 

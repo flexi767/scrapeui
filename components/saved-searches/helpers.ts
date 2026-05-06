@@ -28,12 +28,21 @@ export function didMakeOrModelChange(
   );
 }
 
-export function submitMobileBgSearch(fields: SearchField[]) {
+export function submitMobileBgSearch(
+  fields: SearchField[],
+  target = "_blank",
+  targetWindowName?: string,
+) {
   if (typeof document === "undefined") return;
+  const formTarget = targetWindowName || target;
+  if (target && target !== "_self") {
+    window.open("", formTarget);
+  }
+
   const form = document.createElement("form");
   form.method = "POST";
   form.action = SEARCH_ACTION;
-  form.target = "_blank";
+  form.target = formTarget;
   form.acceptCharset = "windows-1251";
 
   for (const field of fields) {

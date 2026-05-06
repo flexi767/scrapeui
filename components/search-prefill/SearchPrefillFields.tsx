@@ -8,7 +8,6 @@ import {
   MOBILE_BG_TRANSMISSION_OPTIONS,
 } from "@/lib/mobile-bg/search-field-config";
 import {
-  normalizeAutocompleteValue as normalizeOptionValue,
   getSelectedOptionCount,
 } from "@/components/new-listing-form/autocomplete";
 
