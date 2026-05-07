@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
 import { SavedSearchEditorPanel } from "@/components/saved-searches/SavedSearchEditorPanel";
@@ -27,14 +27,9 @@ import {
   submitMobileBgSearch,
 } from "@/components/saved-searches/helpers";
 import {
-  buildMobileBgBrowserSearchWindowName,
-  buildMobileBgResultsBookmarklet,
-  mergeMobileBgBrowserResults,
-  MOBILE_BG_BROWSER_RESULTS_MESSAGE,
   persistMobileBgBrowserResults,
-  readMobileBgBrowserResults,
-  type MobileBgBrowserResultsMessage,
 } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+import { useMobileBgBrowserResults } from "@/components/saved-searches/useMobileBgBrowserResults";
 import {
   buildFirstSevenSearchFields,
   type SearchField,
@@ -68,10 +63,6 @@ export default function SavedSearchesWorkspace({
   );
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [browserResultsLoading, setBrowserResultsLoading] = useState(false);
-  const [browserResultsNotice, setBrowserResultsNotice] = useState("");
-  const [browserBookmarklet, setBrowserBookmarklet] = useState("");
-  const [browserImportTimedOut, setBrowserImportTimedOut] = useState(false);
   const [resultsError, setResultsError] = useState("");
   const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(
     null,
@@ -87,18 +78,33 @@ export default function SavedSearchesWorkspace({
   >(null);
 
   const listing = detail?.prefill.listing ?? null;
-  const pendingBrowserSearchTokenRef = useRef<string | null>(null);
-  const pendingBrowserSearchFieldsRef = useRef<SearchField[] | null>(null);
-  const installBookmarklet = useMemo(() => buildMobileBgResultsBookmarklet(), []);
+  const selectedSummary = useMemo(
+    () => searches.find((entry) => entry.id === selectedId) ?? null,
+    [searches, selectedId],
+  );
+  const currentFields = useMemo(() => {
+    if (!detail) return [];
+    return mergeEditableFields(detail.prefill.form.fields, editableFields);
+  }, [detail, editableFields]);
+  const makeOrModelChanged = useMemo(() => {
+    if (!detail) return false;
+    return didMakeOrModelChange(detail.prefill.form.fields, currentFields);
+  }, [currentFields, detail]);
+  const browserResults = useMobileBgBrowserResults({
+    searchId: detail?.search.id ?? null,
+    currentFields,
+    results,
+    setResults,
+    setResultsError,
+  });
+  const resetBrowserResults = browserResults.reset;
 
   useEffect(() => {
     if (selectedId == null) {
       setDetail(null);
       setEditableFields([]);
       setResults(null);
-      setBrowserResultsNotice("");
-      setBrowserBookmarklet("");
-      setBrowserImportTimedOut(false);
+      resetBrowserResults();
       setSaveAdMode(false);
       return;
     }
@@ -109,9 +115,7 @@ export default function SavedSearchesWorkspace({
     setLoadingDetail(true);
     setResults(null);
     setResultsError("");
-    setBrowserResultsNotice("");
-    setBrowserBookmarklet("");
-    setBrowserImportTimedOut(false);
+    resetBrowserResults();
     setSaveAdMode(false);
 
     void fetchSavedSearchDetail(selectedId)
@@ -141,75 +145,7 @@ export default function SavedSearchesWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [selectedId, detail]);
-
-  useEffect(() => {
-    if (!detail?.search.id || results || browserResultsLoading) return;
-    const cachedResults = readMobileBgBrowserResults(detail.search.id);
-    if (cachedResults) setResults(cachedResults);
-  }, [detail?.search.id, results, browserResultsLoading]);
-
-  useEffect(() => {
-    if (!browserResultsLoading) return;
-    const timeout = window.setTimeout(() => {
-      setBrowserImportTimedOut(true);
-      setBrowserResultsNotice(
-        "Still waiting for the bookmarklet import. You can run the bookmarklet, reopen mobile.bg, or cancel this import.",
-      );
-    }, 75_000);
-    return () => window.clearTimeout(timeout);
-  }, [browserResultsLoading]);
-
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      if (
-        event.origin !== "https://www.mobile.bg" &&
-        !event.origin.endsWith(".mobile.bg")
-      ) {
-        return;
-      }
-
-      const message = event.data as Partial<MobileBgBrowserResultsMessage> | null;
-      if (
-        !message ||
-        message.type !== MOBILE_BG_BROWSER_RESULTS_MESSAGE ||
-        !message.token ||
-        message.token !== pendingBrowserSearchTokenRef.current ||
-        !message.payload
-      ) {
-        return;
-      }
-
-      const incoming = message.payload as MobileBgSearchResultsResponse;
-      const merged = mergeMobileBgBrowserResults(results, incoming);
-      setResults(merged);
-      if (detail?.search.id) persistMobileBgBrowserResults(detail.search.id, merged);
-      setResultsError("");
-      setBrowserResultsNotice("");
-      setBrowserBookmarklet("");
-      setBrowserImportTimedOut(false);
-      setBrowserResultsLoading(false);
-      toast.success(
-        `Imported ${incoming.rows.length} mobile.bg results from the browser`,
-      );
-    }
-
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [detail?.search.id, results]);
-
-  const selectedSummary = useMemo(
-    () => searches.find((entry) => entry.id === selectedId) ?? null,
-    [searches, selectedId],
-  );
-  const currentFields = useMemo(() => {
-    if (!detail) return [];
-    return mergeEditableFields(detail.prefill.form.fields, editableFields);
-  }, [detail, editableFields]);
-  const makeOrModelChanged = useMemo(() => {
-    if (!detail) return false;
-    return didMakeOrModelChange(detail.prefill.form.fields, currentFields);
-  }, [currentFields, detail]);
+  }, [resetBrowserResults, selectedId, detail]);
 
   function syncFromDetail(nextDetail: SavedSearchDetailResponse["detail"]) {
     setDetail(nextDetail);
@@ -308,15 +244,6 @@ export default function SavedSearchesWorkspace({
     submitMobileBgSearch(fields);
   }
 
-  function cancelBrowserImport() {
-    pendingBrowserSearchTokenRef.current = null;
-    pendingBrowserSearchFieldsRef.current = null;
-    setBrowserResultsLoading(false);
-    setBrowserResultsNotice("");
-    setBrowserBookmarklet("");
-    setBrowserImportTimedOut(false);
-  }
-
   async function showResultsHere(fields = currentFields) {
     if (!detail) return;
     setResultsLoading(true);
@@ -345,70 +272,6 @@ export default function SavedSearchesWorkspace({
     }
   }
 
-  async function showResultsInBrowser(fields = currentFields) {
-    if (!detail) return;
-    const token =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    pendingBrowserSearchTokenRef.current = token;
-    pendingBrowserSearchFieldsRef.current = fields;
-    setBrowserResultsLoading(true);
-    setBrowserImportTimedOut(false);
-    setResultsError("");
-    setResults(null);
-    setBrowserResultsNotice(
-      "Opened mobile.bg in a browser tab. Run the copied scrapeui bookmarklet on that results page to import parsed rows here.",
-    );
-
-    const browserSearchWindowName = buildMobileBgBrowserSearchWindowName({
-      appOrigin: window.location.origin,
-      token,
-      fields,
-    });
-    const bookmarklet = installBookmarklet;
-    setBrowserBookmarklet(bookmarklet);
-
-    if (navigator.clipboard?.writeText) {
-      void navigator.clipboard
-        .writeText(bookmarklet)
-        .then(() => toast.success("Copied the mobile.bg parser bookmarklet"))
-        .catch(() => {
-          toast.message("Could not copy the bookmarklet automatically", {
-            description:
-              "Use the parser bookmarklet link shown below the search controls.",
-          });
-        });
-    } else {
-      toast.message("Use the parser bookmarklet link shown below the search controls.");
-    }
-    submitMobileBgSearch(
-      fields,
-      "scrapeui-mobile-bg-browser-search",
-      browserSearchWindowName,
-    );
-  }
-
-  function reopenBrowserSearch() {
-    const fields = pendingBrowserSearchFieldsRef.current ?? currentFields;
-    if (!fields.length) return;
-    const token = pendingBrowserSearchTokenRef.current;
-    if (!token) {
-      void showResultsInBrowser(fields);
-      return;
-    }
-    const browserSearchWindowName = buildMobileBgBrowserSearchWindowName({
-      appOrigin: window.location.origin,
-      token,
-      fields,
-    });
-    submitMobileBgSearch(
-      fields,
-      "scrapeui-mobile-bg-browser-search",
-      browserSearchWindowName,
-    );
-  }
-
   async function activateSaveAdMode() {
     if (saveAdMode) {
       setSaveAdMode(false);
@@ -416,7 +279,7 @@ export default function SavedSearchesWorkspace({
     }
 
     setSaveAdMode(true);
-    if (!results && !resultsLoading) {
+    if (!results && !resultsLoading && !browserResults.loading) {
       await showResultsHere();
     }
   }
@@ -521,7 +384,7 @@ export default function SavedSearchesWorkspace({
               locationLoading={locationLoading}
               openAutocomplete={openAutocomplete}
               resultsLoading={resultsLoading}
-              browserResultsLoading={browserResultsLoading}
+              browserResultsLoading={browserResults.loading}
               saveAdMode={saveAdMode}
               makeOrModelChanged={makeOrModelChanged}
               saveBusy={saveBusy}
@@ -531,7 +394,7 @@ export default function SavedSearchesWorkspace({
                 void showResultsHere(buildFirstSevenSearchFields(currentFields))
               }
               onShowAll={() => void showResultsHere()}
-              onSearchInBrowser={() => void showResultsInBrowser()}
+              onSearchInBrowser={() => browserResults.showInBrowser()}
               onOpenMobileBg={() => openInMobileBg()}
               onSaveAd={() => void activateSaveAdMode()}
               onSave={() => void saveCurrent()}
@@ -548,16 +411,20 @@ export default function SavedSearchesWorkspace({
 
             <SavedSearchResultsPanel
               error={resultsError}
-              loading={resultsLoading || browserResultsLoading}
-              loadingNote={browserResultsLoading ? browserResultsNotice : ""}
-              bookmarkletHref={browserResultsLoading ? browserBookmarklet : ""}
-              installBookmarkletHref={!browserResultsLoading ? installBookmarklet : ""}
-              browserImportTimedOut={browserImportTimedOut}
+              loading={resultsLoading || browserResults.loading}
+              loadingNote={browserResults.loading ? browserResults.notice : ""}
+              bookmarkletHref={
+                browserResults.loading ? browserResults.bookmarklet : ""
+              }
+              installBookmarkletHref={
+                !browserResults.loading ? browserResults.installBookmarklet : ""
+              }
+              browserImportTimedOut={browserResults.timedOut}
               onCancelBrowserImport={
-                browserResultsLoading ? cancelBrowserImport : undefined
+                browserResults.loading ? browserResults.cancelImport : undefined
               }
               onReopenBrowserSearch={
-                browserResultsLoading ? reopenBrowserSearch : undefined
+                browserResults.loading ? browserResults.reopenSearch : undefined
               }
               results={results}
               listing={listing}
