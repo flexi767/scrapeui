@@ -9,6 +9,46 @@ function formatYear(search: SavedSearchSummary) {
   return "—";
 }
 
+function SavedSearchListRow({
+  search,
+  active,
+  onSelect,
+}: {
+  search: SavedSearchSummary;
+  active: boolean;
+  onSelect: (id: number) => void;
+}) {
+  const title =
+    [search.make, search.model].filter(Boolean).join(" ") ||
+    search.title ||
+    "—";
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(search.id)}
+      className={`w-full px-4 py-3 text-left transition-colors ${
+        active ? "bg-gray-800/80" : "hover:bg-gray-800/40"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-white">{title}</div>
+          <div className="truncate text-xs text-gray-400">
+            Year: {formatYear(search)}
+          </div>
+          {search.mobileId ? (
+            <div className="mt-1 truncate text-[11px] text-gray-500">
+              Entry: {search.title || "—"} • {search.mobileId}
+            </div>
+          ) : null}
+        </div>
+        <div className="shrink-0 text-[11px] text-gray-500">#{search.id}</div>
+      </div>
+    </button>
+  );
+}
+
 export function SavedSearchList({
   searches,
   selectedId,
@@ -31,40 +71,14 @@ export function SavedSearchList({
           </div>
         ) : (
           <div className="divide-y divide-gray-800">
-            {searches.map((search) => {
-              const active = search.id === selectedId;
-              return (
-                <button
-                  key={search.id}
-                  type="button"
-                  onClick={() => onSelect(search.id)}
-                  className={`w-full px-4 py-3 text-left transition-colors ${
-                    active ? "bg-gray-800/80" : "hover:bg-gray-800/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-white">
-                        {[search.make, search.model].filter(Boolean).join(" ") ||
-                          search.title ||
-                          "—"}
-                      </div>
-                      <div className="truncate text-xs text-gray-400">
-                        Year: {formatYear(search)}
-                      </div>
-                      {search.mobileId ? (
-                        <div className="mt-1 truncate text-[11px] text-gray-500">
-                          Entry: {search.title || "—"} • {search.mobileId}
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="shrink-0 text-[11px] text-gray-500">
-                      #{search.id}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+            {searches.map((search) => (
+              <SavedSearchListRow
+                key={search.id}
+                search={search}
+                active={search.id === selectedId}
+                onSelect={onSelect}
+              />
+            ))}
           </div>
         )}
       </div>
