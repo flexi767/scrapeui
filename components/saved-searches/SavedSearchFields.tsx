@@ -6,6 +6,8 @@ import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSear
 import {
   getSavedSearchFieldLabel,
   getSavedSearchFieldLayoutClass,
+  isSavedSearchAutocompleteField,
+  isSavedSearchPrimitiveField,
   orderSavedSearchFieldsForDisplay,
 } from "@/components/saved-searches/field-display-helpers";
 import {
@@ -118,6 +120,9 @@ export function SavedSearchFields({
         const selectedReferenceCount = selectedMakeCount ?? selectedModelCount;
         const autocompleteOptions =
           field.name === "marka" ? makeOptions : modelOptions;
+        const autocompleteKind = isSavedSearchAutocompleteField(field.name)
+          ? field.name
+          : null;
         const fieldLabel = getSavedSearchFieldLabel(field, subLocationLabel);
         const headerStepperDelta =
           MOBILE_BG_HEADER_STEPPER_FIELDS[field.name] ?? null;
@@ -153,10 +158,10 @@ export function SavedSearchFields({
               onNudge={onNudge}
             />
             <div className="min-w-0">
-              {field.name === "marka" ? (
+              {autocompleteKind ? (
                 <SavedSearchAutocompleteField
                   field={field}
-                  kind="marka"
+                  kind={autocompleteKind}
                   options={autocompleteOptions}
                   selectedCount={selectedReferenceCount}
                   openAutocomplete={openAutocomplete}
@@ -164,18 +169,7 @@ export function SavedSearchFields({
                   onUpdateField={onUpdateField}
                   onUpdateMake={onUpdateMake}
                 />
-              ) : field.name === "model" ? (
-                <SavedSearchAutocompleteField
-                  field={field}
-                  kind="model"
-                  options={autocompleteOptions}
-                  selectedCount={selectedReferenceCount}
-                  openAutocomplete={openAutocomplete}
-                  onOpenAutocompleteChange={onOpenAutocompleteChange}
-                  onUpdateField={onUpdateField}
-                  onUpdateMake={onUpdateMake}
-                />
-              ) : ["f12", "f13", "f14", "f17", "f18"].includes(field.name) ? (
+              ) : isSavedSearchPrimitiveField(field.name) ? (
                 <SavedSearchPrimitiveInput
                   field={field}
                   locationOptions={prefillOptions.locations}

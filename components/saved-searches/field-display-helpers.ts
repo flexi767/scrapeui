@@ -1,8 +1,32 @@
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import { MOBILE_BG_FIELD_LAYOUT_CLASS } from "@/lib/mobile-bg/search-field-config";
 
+type SavedSearchAutocompleteFieldName = "marka" | "model";
+
+const SAVED_SEARCH_AUTOCOMPLETE_FIELD_NAMES = new Set<string>([
+  "marka",
+  "model",
+]);
+const SAVED_SEARCH_PRIMITIVE_FIELD_NAMES = new Set([
+  "f12",
+  "f13",
+  "f14",
+  "f17",
+  "f18",
+]);
+
 export function getSavedSearchFieldLayoutClass(name: string) {
   return MOBILE_BG_FIELD_LAYOUT_CLASS[name] ?? "";
+}
+
+export function isSavedSearchAutocompleteField(
+  name: string,
+): name is SavedSearchAutocompleteFieldName {
+  return SAVED_SEARCH_AUTOCOMPLETE_FIELD_NAMES.has(name);
+}
+
+export function isSavedSearchPrimitiveField(name: string) {
+  return SAVED_SEARCH_PRIMITIVE_FIELD_NAMES.has(name);
 }
 
 export function getSavedSearchFieldLabel(
