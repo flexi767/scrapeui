@@ -13,18 +13,14 @@ import {
 import {
   createSavedSearch,
   deleteSavedSearch,
-  fetchMobileBgSearchResults,
   fetchSavedSearchDetail,
-  type MobileBgSearchResultsResponse,
   type SavedSearchDetailResponse,
   updateSavedSearch,
 } from "@/components/saved-searches/api";
 import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
-import {
-  persistMobileBgBrowserResults,
-} from "@/components/saved-searches/mobile-bg-results-bookmarklet";
 import { useMobileBgBrowserResults } from "@/components/saved-searches/useMobileBgBrowserResults";
 import { useSavedSearchFormState } from "@/components/saved-searches/useSavedSearchFormState";
+import { useSavedSearchResults } from "@/components/saved-searches/useSavedSearchResults";
 import {
   buildFirstSevenSearchFields,
 } from "@/lib/mobile-bg/search-form-shared";
@@ -45,16 +41,10 @@ export default function SavedSearchesWorkspace({
     SavedSearchDetailResponse["detail"] | null
   >(initialDetail);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [resultsLoading, setResultsLoading] = useState(false);
-  const [resultsError, setResultsError] = useState("");
-  const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(
-    null,
-  );
   const [saveBusy, setSaveBusy] = useState(false);
   const [cloneBusy, setCloneBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [saveAdMode, setSaveAdMode] = useState(false);
   const searchForm = useSavedSearchFormState(initialDetail);
   const getCurrentSearchFields = searchForm.getCurrentFields;
   const getMakeOrModelChanged = searchForm.getMakeOrModelChanged;
@@ -72,22 +62,27 @@ export default function SavedSearchesWorkspace({
   const makeOrModelChanged = useMemo(() => {
     return getMakeOrModelChanged(detail);
   }, [detail, getMakeOrModelChanged]);
+  const searchResults = useSavedSearchResults({
+    detail,
+    listing,
+    currentFields,
+  });
   const browserResults = useMobileBgBrowserResults({
     searchId: detail?.search.id ?? null,
     currentFields,
-    results,
-    setResults,
-    setResultsError,
+    results: searchResults.results,
+    setResults: searchResults.setResults,
+    setResultsError: searchResults.setError,
   });
   const resetBrowserResults = browserResults.reset;
+  const resetSearchResults = searchResults.reset;
 
   useEffect(() => {
     if (selectedId == null) {
       setDetail(null);
       resetSearchForm();
-      setResults(null);
+      resetSearchResults();
       resetBrowserResults();
-      setSaveAdMode(false);
       return;
     }
 
@@ -95,10 +90,8 @@ export default function SavedSearchesWorkspace({
 
     let cancelled = false;
     setLoadingDetail(true);
-    setResults(null);
-    setResultsError("");
+    resetSearchResults();
     resetBrowserResults();
-    setSaveAdMode(false);
 
     void fetchSavedSearchDetail(selectedId)
       .then((payload) => {
@@ -125,6 +118,7 @@ export default function SavedSearchesWorkspace({
     loadSearchFormFromDetail,
     resetBrowserResults,
     resetSearchForm,
+    resetSearchResults,
     selectedId,
     detail,
   ]);
@@ -136,46 +130,6 @@ export default function SavedSearchesWorkspace({
 
   function openInMobileBg(fields = currentFields) {
     submitMobileBgSearch(fields);
-  }
-
-  async function showResultsHere(fields = currentFields) {
-    if (!detail) return;
-    setResultsLoading(true);
-    setResultsError("");
-
-    try {
-      const payload = await fetchMobileBgSearchResults({
-        action: detail.prefill.form.action,
-        method: detail.prefill.form.method,
-        fields,
-        sourceListingId: listing?.id ?? null,
-        sourceMobileId: listing?.mobile_id ?? null,
-      });
-      setResults(payload);
-      persistMobileBgBrowserResults(detail.search.id, payload);
-    } catch (error) {
-      setResultsError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load mobile.bg results",
-      );
-      setResults(null);
-      persistMobileBgBrowserResults(detail.search.id, null);
-    } finally {
-      setResultsLoading(false);
-    }
-  }
-
-  async function activateSaveAdMode() {
-    if (saveAdMode) {
-      setSaveAdMode(false);
-      return;
-    }
-
-    setSaveAdMode(true);
-    if (!results && !resultsLoading && !browserResults.loading) {
-      await showResultsHere();
-    }
   }
 
   async function saveCurrent() {
@@ -231,8 +185,7 @@ export default function SavedSearchesWorkspace({
       if (nextSelectedId == null) {
         setDetail(null);
         resetSearchForm();
-        setResults(null);
-        setResultsError("");
+        resetSearchResults();
       }
 
       setDeleteDialogOpen(false);
@@ -277,20 +230,24 @@ export default function SavedSearchesWorkspace({
               subLocationOptions={searchForm.subLocationOptions}
               locationLoading={searchForm.locationLoading}
               openAutocomplete={searchForm.openAutocomplete}
-              resultsLoading={resultsLoading}
+              resultsLoading={searchResults.loading}
               browserResultsLoading={browserResults.loading}
-              saveAdMode={saveAdMode}
+              saveAdMode={searchResults.saveAdMode}
               makeOrModelChanged={makeOrModelChanged}
               saveBusy={saveBusy}
               cloneBusy={cloneBusy}
               deleteBusy={deleteBusy}
               onShowFirst={() =>
-                void showResultsHere(buildFirstSevenSearchFields(currentFields))
+                void searchResults.showHere(
+                  buildFirstSevenSearchFields(currentFields),
+                )
               }
-              onShowAll={() => void showResultsHere()}
+              onShowAll={() => void searchResults.showHere()}
               onSearchInBrowser={() => browserResults.showInBrowser()}
               onOpenMobileBg={() => openInMobileBg()}
-              onSaveAd={() => void activateSaveAdMode()}
+              onSaveAd={() =>
+                void searchResults.activateSaveAdMode(browserResults.loading)
+              }
               onSave={() => void saveCurrent()}
               onSaveAsNew={() => void saveAsNew()}
               onDelete={() => setDeleteDialogOpen(true)}
@@ -304,8 +261,8 @@ export default function SavedSearchesWorkspace({
             />
 
             <SavedSearchResultsPanel
-              error={resultsError}
-              loading={resultsLoading || browserResults.loading}
+              error={searchResults.error}
+              loading={searchResults.loading || browserResults.loading}
               loadingNote={browserResults.loading ? browserResults.notice : ""}
               bookmarkletHref={
                 browserResults.loading ? browserResults.bookmarklet : ""
@@ -320,9 +277,9 @@ export default function SavedSearchesWorkspace({
               onReopenBrowserSearch={
                 browserResults.loading ? browserResults.reopenSearch : undefined
               }
-              results={results}
+              results={searchResults.results}
               listing={listing}
-              saveAdMode={saveAdMode}
+              saveAdMode={searchResults.saveAdMode}
             />
           </>
         )}
