@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface MarketplaceListing {
   backupId: number;
@@ -16,51 +16,51 @@ interface MarketplaceListing {
 export function MarketplacePickerClient() {
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [query, setQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState("Waiting for listings");
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      void loadListings();
+    }, query.trim() ? 250 : 0);
 
     async function loadListings() {
       try {
-        const response = await fetch("/api/facebook-marketplace/listings?limit=250", { credentials: "same-origin" });
+        const params = new URLSearchParams({ limit: "50" });
+        const trimmedQuery = query.trim();
+        if (trimmedQuery) params.set("search", trimmedQuery);
+
+        setIsLoading(true);
+        setStatus("Loading listings...");
+        const response = await fetch(`/api/facebook-marketplace/listings?${params}`, {
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        if (cancelled) return;
         setListings(data.listings || []);
         setStatus(`Loaded ${(data.listings || []).length} listings`);
       } catch (error) {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setStatus(error instanceof Error ? error.message : String(error));
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }
 
-    void loadListings();
-
     return () => {
-      cancelled = true;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, []);
-
-  const visibleListings = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return listings
-      .filter((listing) => {
-        if (!normalizedQuery) return true;
-        return [
-          listing.title,
-          listing.make,
-          listing.model,
-          listing.year,
-          listing.price,
-          listing.mileage,
-        ].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
-      })
-      .slice(0, 100);
-  }, [listings, query]);
+  }, [query]);
 
   function chooseListing(listing: MarketplaceListing) {
-    const openerOrigin = new URLSearchParams(window.location.search).get("openerOrigin") || "*";
+    const openerOrigin = getFacebookOpenerOrigin();
+    if (!openerOrigin) {
+      setStatus("Open this picker from a Facebook Marketplace bookmarklet tab.");
+      return;
+    }
     if (!window.opener) {
       setStatus("Facebook tab is not available.");
       return;
@@ -86,12 +86,12 @@ export function MarketplacePickerClient() {
       />
 
       <div className="min-h-0 flex-1 overflow-auto border-y border-slate-800">
-        {visibleListings.length === 0 ? (
+        {listings.length === 0 ? (
           <div className="p-3 font-mono text-xs text-slate-400">
-            {listings.length === 0 ? "Loading listings..." : "No listings found."}
+            {emptyStateText({ isLoading, listingCount: listings.length, query })}
           </div>
         ) : (
-          visibleListings.map((listing) => (
+          listings.map((listing) => (
             <button
               key={listing.backupId}
               type="button"
@@ -134,4 +134,30 @@ function listingMeta(listing: MarketplaceListing) {
 
 function encodeCssUrl(value: string) {
   return value.replace(/["\\\n\r\f]/g, (char) => `\\${char}`);
+}
+
+function emptyStateText({
+  isLoading,
+  listingCount,
+  query,
+}: {
+  isLoading: boolean;
+  listingCount: number;
+  query: string;
+}) {
+  if (isLoading) return "Loading listings...";
+  if (listingCount === 0) return "No listings are available.";
+  return query.trim() ? "No listings match this search." : "No listings found.";
+}
+
+function getFacebookOpenerOrigin() {
+  const rawOrigin = new URLSearchParams(window.location.search).get("openerOrigin");
+  if (!rawOrigin) return null;
+
+  try {
+    const origin = new URL(rawOrigin).origin;
+    return /^https:\/\/([a-z0-9-]+\.)?facebook\.com$/i.test(origin) ? origin : null;
+  } catch {
+    return null;
+  }
 }

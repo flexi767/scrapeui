@@ -193,7 +193,7 @@ export default function SavedSearchesWorkspace({
                 )
               }
               onShowAll={() => void searchResults.showHere()}
-              onSearchInBrowser={() => browserResults.showInBrowser()}
+              onSearchInBrowser={() => void browserResults.showInBrowser()}
               onOpenMobileBg={() => openInMobileBg()}
               onSaveAd={() =>
                 void searchResults.activateSaveAdMode(browserResults.loading)

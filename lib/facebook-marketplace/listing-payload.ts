@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { appendSignedAssetToken } from "@/lib/signed-asset-token";
 
 export interface MarketplaceListingPayload {
   backupId: number;
@@ -22,6 +23,7 @@ export interface MarketplaceListingPayload {
 }
 
 interface BackupRow {
+  id?: number;
   title: string | null;
   price_amount: number | null;
   description: string | null;
@@ -37,7 +39,13 @@ interface BackupRow {
 
 interface BackupImageRow {
   id: number;
+  backup_id?: number;
   local_path: string;
+}
+
+interface SnapshotRow {
+  backup_id: number;
+  fields_json: string | null;
 }
 
 function mapVehicleType(category: string | null): string {
@@ -95,7 +103,18 @@ function mapTransmission(transmission: string | null): string | undefined {
   return transmission;
 }
 
-function getLocation(db: Database.Database, backupId: number): string | undefined {
+function parseLocation(fieldsJson: string | null | undefined): string | undefined {
+  if (!fieldsJson) return undefined;
+  try {
+    const fields = JSON.parse(fieldsJson) as Array<{ name?: string; value?: string }>;
+    const city = fields.find((field) => field.name === "f19")?.value?.trim();
+    return city ? city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function getLocationFieldsJson(db: Database.Database, backupId: number): string | undefined {
   const snapshot = db
     .prepare(
       `SELECT fields_json
@@ -106,21 +125,58 @@ function getLocation(db: Database.Database, backupId: number): string | undefine
     )
     .get(backupId) as { fields_json: string } | undefined;
 
-  if (!snapshot?.fields_json) return undefined;
+  return snapshot?.fields_json;
+}
 
-  try {
-    const fields = JSON.parse(snapshot.fields_json) as Array<{ name?: string; value?: string }>;
-    const city = fields.find((field) => field.name === "f19")?.value?.trim();
-    return city ? city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() : undefined;
-  } catch {
-    return undefined;
-  }
+function buildPayloadFromRows({
+  backupId,
+  backup,
+  images,
+  fieldsJson,
+  options,
+}: {
+  backupId: number;
+  backup: BackupRow;
+  images: BackupImageRow[];
+  fieldsJson?: string | null;
+  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean };
+}): MarketplaceListingPayload {
+  const title = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
+  const photoUrls = options.skipPhotos
+    ? []
+    : images.map((image) => {
+        const assetPath = options.signedPhotoUrls
+          ? appendSignedAssetToken(`/api/mobilebg-backup-images/${image.id}`, image.id)
+          : `/api/mobilebg-backup-images/${image.id}`;
+        return options.origin ? new URL(assetPath, options.origin).toString() : assetPath;
+      });
+
+  return {
+    backupId,
+    title,
+    price: backup.price_amount ?? 0,
+    description: backup.description ?? "",
+    make: backup.make ?? undefined,
+    model: backup.model ?? undefined,
+    year: backup.year ?? undefined,
+    mileage: backup.mileage ?? undefined,
+    fuel: mapFuel(backup.fuel),
+    color: mapColor(backup.color),
+    bodyType: backup.category ?? undefined,
+    transmission: mapTransmission(backup.transmission),
+    condition: "Отлично",
+    noDamage: true,
+    vehicleType: mapVehicleType(backup.category),
+    location: parseLocation(fieldsJson),
+    photos: options.skipPhotos ? [] : images.map((image) => image.local_path).filter(Boolean),
+    photoUrls,
+  };
 }
 
 export function buildMarketplaceListingPayload(
   db: Database.Database,
   backupId: number,
-  options: { skipPhotos?: boolean; origin?: string } = {},
+  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean } = {},
 ): MarketplaceListingPayload | null {
   const backup = db
     .prepare(
@@ -152,33 +208,94 @@ export function buildMarketplaceListingPayload(
     )
     .all(backupId) as BackupImageRow[];
 
-  const title = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
-  const photoUrls = options.skipPhotos
-    ? []
-    : images.map((image) => {
-        const path = `/api/mobilebg-backup-images/${image.id}`;
-        return options.origin ? new URL(path, options.origin).toString() : path;
-      });
-
-  return {
+  return buildPayloadFromRows({
     backupId,
-    title,
-    price: backup.price_amount ?? 0,
-    description: backup.description ?? "",
-    make: backup.make ?? undefined,
-    model: backup.model ?? undefined,
-    year: backup.year ?? undefined,
-    mileage: backup.mileage ?? undefined,
-    fuel: mapFuel(backup.fuel),
-    color: mapColor(backup.color),
-    bodyType: backup.category ?? undefined,
-    transmission: mapTransmission(backup.transmission),
-    condition: "Отлично",
-    noDamage: true,
-    vehicleType: mapVehicleType(backup.category),
-    location: getLocation(db, backupId),
-    photos: options.skipPhotos ? [] : images.map((image) => image.local_path).filter(Boolean),
-    photoUrls,
-  };
+    backup,
+    images,
+    fieldsJson: getLocationFieldsJson(db, backupId),
+    options,
+  });
 }
 
+export function buildMarketplaceListingPayloads(
+  db: Database.Database,
+  backupIds: number[],
+  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean } = {},
+) {
+  const uniqueIds = [...new Set(backupIds.filter(Number.isFinite))];
+  if (uniqueIds.length === 0) return [];
+
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const backups = db
+    .prepare(
+      `SELECT
+         b.id,
+         b.title,
+         b.price_amount,
+         b.description,
+         b.make,
+         b.model,
+         b.year,
+         b.mileage,
+         b.fuel,
+         b.color,
+         b.transmission,
+         b.category
+       FROM mobilebg_backups b
+       WHERE b.id IN (${placeholders})`,
+    )
+    .all(...uniqueIds) as Array<BackupRow & { id: number }>;
+
+  const images = options.skipPhotos
+    ? []
+    : (db
+        .prepare(
+          `SELECT id, backup_id, local_path
+           FROM mobilebg_backup_images
+           WHERE backup_id IN (${placeholders})
+           ORDER BY backup_id ASC, sort_order ASC, id ASC`,
+        )
+        .all(...uniqueIds) as BackupImageRow[]);
+
+  const snapshots = db
+    .prepare(
+      `WITH latest_snapshots AS (
+         SELECT
+           backup_id,
+           fields_json,
+           ROW_NUMBER() OVER (PARTITION BY backup_id ORDER BY id DESC) as row_num
+         FROM mobilebg_edit_form_snapshots
+         WHERE backup_id IN (${placeholders})
+       )
+       SELECT backup_id, fields_json
+       FROM latest_snapshots
+       WHERE row_num = 1`,
+    )
+    .all(...uniqueIds) as SnapshotRow[];
+
+  const backupsById = new Map(backups.map((backup) => [backup.id, backup]));
+  const imagesByBackupId = new Map<number, BackupImageRow[]>();
+  for (const image of images) {
+    if (!image.backup_id) continue;
+    const existing = imagesByBackupId.get(image.backup_id) ?? [];
+    existing.push(image);
+    imagesByBackupId.set(image.backup_id, existing);
+  }
+  const snapshotByBackupId = new Map(
+    snapshots.map((snapshot) => [snapshot.backup_id, snapshot.fields_json]),
+  );
+
+  return backupIds
+    .map((backupId) => {
+      const backup = backupsById.get(backupId);
+      if (!backup) return null;
+      return buildPayloadFromRows({
+        backupId,
+        backup,
+        images: imagesByBackupId.get(backupId) ?? [],
+        fieldsJson: snapshotByBackupId.get(backupId),
+        options,
+      });
+    })
+    .filter((payload): payload is MarketplaceListingPayload => Boolean(payload));
+}

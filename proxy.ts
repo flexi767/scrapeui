@@ -33,8 +33,9 @@ const { auth } = NextAuth({
       const isLoginPage = pathname === '/login';
       const isApiAuth = pathname.startsWith('/api/auth');
       const isPublicDealerPage = pathname.startsWith('/d/');
+      const isTokenCheckedBackupImage = pathname.startsWith('/api/mobilebg-backup-images/');
 
-      if (isLoginPage || isApiAuth || isPublicDealerPage) return true;
+      if (isLoginPage || isApiAuth || isPublicDealerPage || isTokenCheckedBackupImage) return true;
 
       const host = (request.headers.get('host') ?? '').split(':')[0];
       const slug = cachedDealerSlug(host);

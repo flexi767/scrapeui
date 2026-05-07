@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { NextRequest } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
+import { verifySignedAssetToken } from '@/lib/signed-asset-token';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 
 const MIME: Record<string, string> = {
@@ -28,15 +30,25 @@ export async function OPTIONS() {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const imageId = Number(id);
+  const signed = verifySignedAssetToken(
+    imageId,
+    request.nextUrl.searchParams.get('t'),
+  );
+  if (!signed) {
+    const check = await requireAuth();
+    if ('error' in check) return check.error;
+  }
+
   const row = raw.prepare(`
     SELECT local_path
     FROM mobilebg_backup_images
     WHERE id = ?
-  `).get(Number(id)) as { local_path?: string } | undefined;
+  `).get(imageId) as { local_path?: string } | undefined;
 
   const filePath = row?.local_path;
   if (!filePath) return new Response('Not found', { status: 404 });

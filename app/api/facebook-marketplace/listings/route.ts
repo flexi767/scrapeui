@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { raw } from "@/db/client";
-import { buildMarketplaceListingPayload } from "@/lib/facebook-marketplace/listing-payload";
+import { buildMarketplaceListingPayloads } from "@/lib/facebook-marketplace/listing-payload";
 import { getOwnListings } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
-  const limit = Math.min(Math.max(Number(sp.get("limit") || 100), 1), 300);
+  const limit = Math.min(Math.max(Number(sp.get("limit") || 50), 1), 300);
   const search = sp.get("search") || "";
   const origin = request.nextUrl.origin;
 
@@ -30,9 +30,11 @@ export async function GET(request: NextRequest) {
     order: "desc",
   });
 
-  const listings = data
-    .map((row) => buildMarketplaceListingPayload(raw, row.backup_id, { origin }))
-    .filter(Boolean);
+  const listings = buildMarketplaceListingPayloads(
+    raw,
+    data.map((row) => row.backup_id),
+    { origin, signedPhotoUrls: true },
+  );
 
   return Response.json(
     { listings },

@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
 import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
 import {
   buildMobileBgBrowserSearchWindowName,
-  buildMobileBgResultsBookmarklet,
   mergeMobileBgBrowserResults,
   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
   persistMobileBgBrowserResults,
   readMobileBgBrowserResults,
   type MobileBgBrowserResultsMessage,
-} from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+} from "@/components/saved-searches/mobile-bg-results-state";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 
 interface UseMobileBgBrowserResultsParams {
@@ -33,10 +32,10 @@ export function useMobileBgBrowserResults({
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [bookmarklet, setBookmarklet] = useState("");
+  const [installBookmarklet, setInstallBookmarklet] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const pendingTokenRef = useRef<string | null>(null);
   const pendingFieldsRef = useRef<SearchField[] | null>(null);
-  const installBookmarklet = useMemo(() => buildMobileBgResultsBookmarklet(), []);
 
   const clearImportState = useCallback(() => {
     setLoading(false);
@@ -104,8 +103,14 @@ export function useMobileBgBrowserResults({
   }, [clearImportState]);
 
   const showInBrowser = useCallback(
-    (fields = currentFields) => {
+    async (fields = currentFields) => {
       if (!fields.length) return;
+      const nextBookmarklet =
+        installBookmarklet ||
+        (await import("@/components/saved-searches/mobile-bg-results-bookmarklet"))
+          .buildMobileBgResultsBookmarklet();
+      if (!installBookmarklet) setInstallBookmarklet(nextBookmarklet);
+
       const token =
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
@@ -125,11 +130,11 @@ export function useMobileBgBrowserResults({
         token,
         fields,
       });
-      setBookmarklet(installBookmarklet);
+      setBookmarklet(nextBookmarklet);
 
       if (navigator.clipboard?.writeText) {
         void navigator.clipboard
-          .writeText(installBookmarklet)
+          .writeText(nextBookmarklet)
           .then(() => toast.success("Copied the mobile.bg parser bookmarklet"))
           .catch(() => {
             toast.message("Could not copy the bookmarklet automatically", {
@@ -156,7 +161,7 @@ export function useMobileBgBrowserResults({
     if (!fields.length) return;
     const token = pendingTokenRef.current;
     if (!token) {
-      showInBrowser(fields);
+      void showInBrowser(fields);
       return;
     }
     const browserSearchWindowName = buildMobileBgBrowserSearchWindowName({

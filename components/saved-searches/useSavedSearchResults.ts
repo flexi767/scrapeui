@@ -8,7 +8,7 @@ import {
 } from "@/components/saved-searches/api";
 import {
   persistMobileBgBrowserResults,
-} from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+} from "@/components/saved-searches/mobile-bg-results-state";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 
