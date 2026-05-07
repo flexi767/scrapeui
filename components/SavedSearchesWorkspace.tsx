@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
 import { SavedSearchEditorPanel } from "@/components/saved-searches/SavedSearchEditorPanel";
@@ -11,14 +11,12 @@ import {
   SavedSearchLoadingState,
 } from "@/components/saved-searches/SavedSearchWorkspaceStates";
 import {
-  createSavedSearch,
-  deleteSavedSearch,
   fetchSavedSearchDetail,
   type SavedSearchDetailResponse,
-  updateSavedSearch,
 } from "@/components/saved-searches/api";
 import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
 import { useMobileBgBrowserResults } from "@/components/saved-searches/useMobileBgBrowserResults";
+import { useSavedSearchActions } from "@/components/saved-searches/useSavedSearchActions";
 import { useSavedSearchFormState } from "@/components/saved-searches/useSavedSearchFormState";
 import { useSavedSearchResults } from "@/components/saved-searches/useSavedSearchResults";
 import {
@@ -41,9 +39,6 @@ export default function SavedSearchesWorkspace({
     SavedSearchDetailResponse["detail"] | null
   >(initialDetail);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [saveBusy, setSaveBusy] = useState(false);
-  const [cloneBusy, setCloneBusy] = useState(false);
-  const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const searchForm = useSavedSearchFormState(initialDetail);
   const getCurrentSearchFields = searchForm.getCurrentFields;
@@ -76,10 +71,32 @@ export default function SavedSearchesWorkspace({
   });
   const resetBrowserResults = browserResults.reset;
   const resetSearchResults = searchResults.reset;
+  const beginLoadingDetail = useCallback(() => {
+    setLoadingDetail(true);
+  }, []);
+  const syncFromDetail = useCallback(
+    (nextDetail: SavedSearchDetailResponse["detail"]) => {
+      setDetail(nextDetail);
+      loadSearchFormFromDetail(nextDetail);
+    },
+    [loadSearchFormFromDetail],
+  );
+  const handleDeletedLast = useCallback(() => {
+    setDetail(null);
+    resetSearchForm();
+    resetSearchResults();
+  }, [resetSearchForm, resetSearchResults]);
+  const savedSearchActions = useSavedSearchActions({
+    detail,
+    currentFields,
+    setSearches,
+    setSelectedId,
+    syncFromDetail,
+    onDeletedLast: handleDeletedLast,
+  });
 
   useEffect(() => {
     if (selectedId == null) {
-      setDetail(null);
       resetSearchForm();
       resetSearchResults();
       resetBrowserResults();
@@ -89,7 +106,9 @@ export default function SavedSearchesWorkspace({
     if (detail?.search.id === selectedId) return;
 
     let cancelled = false;
-    setLoadingDetail(true);
+    // The selected id is an external input to this workspace; loading state mirrors that subscription.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    beginLoadingDetail();
     resetSearchResults();
     resetBrowserResults();
 
@@ -115,6 +134,7 @@ export default function SavedSearchesWorkspace({
       cancelled = true;
     };
   }, [
+    beginLoadingDetail,
     loadSearchFormFromDetail,
     resetBrowserResults,
     resetSearchForm,
@@ -123,82 +143,8 @@ export default function SavedSearchesWorkspace({
     detail,
   ]);
 
-  function syncFromDetail(nextDetail: SavedSearchDetailResponse["detail"]) {
-    setDetail(nextDetail);
-    loadSearchFormFromDetail(nextDetail);
-  }
-
   function openInMobileBg(fields = currentFields) {
     submitMobileBgSearch(fields);
-  }
-
-  async function saveCurrent() {
-    if (!detail) return;
-    setSaveBusy(true);
-    try {
-      const data = await updateSavedSearch(detail.search.id, currentFields);
-      setSearches(data.searches);
-      syncFromDetail(data.detail);
-      toast.success("Saved search updated");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save search",
-      );
-    } finally {
-      setSaveBusy(false);
-    }
-  }
-
-  async function saveAsNew() {
-    if (!detail) return;
-    setCloneBusy(true);
-    try {
-      const data = await createSavedSearch(currentFields);
-      setSearches(data.searches);
-      syncFromDetail(data.detail);
-      setSelectedId(data.detail.search.id);
-      toast.success("Created a new saved search");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to create saved search",
-      );
-    } finally {
-      setCloneBusy(false);
-    }
-  }
-
-  async function deleteCurrent() {
-    if (!detail) return;
-
-    setDeleteBusy(true);
-    try {
-      const data = await deleteSavedSearch(detail.search.id);
-      const nextSearches = data.searches;
-      setSearches(nextSearches);
-
-      const nextSelectedId =
-        nextSearches.find((search) => search.id !== detail.search.id)?.id ??
-        null;
-      setSelectedId(nextSelectedId);
-      if (nextSelectedId == null) {
-        setDetail(null);
-        resetSearchForm();
-        resetSearchResults();
-      }
-
-      setDeleteDialogOpen(false);
-      toast.success("Saved search deleted");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete saved search",
-      );
-    } finally {
-      setDeleteBusy(false);
-    }
   }
 
   return (
@@ -218,10 +164,14 @@ export default function SavedSearchesWorkspace({
           <>
             <SavedSearchDeleteDialog
               open={deleteDialogOpen}
-              busy={deleteBusy}
+              busy={savedSearchActions.deleteBusy}
               onOpenChange={setDeleteDialogOpen}
               onCancel={() => setDeleteDialogOpen(false)}
-              onConfirm={() => void deleteCurrent()}
+              onConfirm={() => {
+                void savedSearchActions.deleteCurrent().then((deleted) => {
+                  if (deleted) setDeleteDialogOpen(false);
+                });
+              }}
             />
             <SavedSearchEditorPanel
               detail={detail}
@@ -234,9 +184,9 @@ export default function SavedSearchesWorkspace({
               browserResultsLoading={browserResults.loading}
               saveAdMode={searchResults.saveAdMode}
               makeOrModelChanged={makeOrModelChanged}
-              saveBusy={saveBusy}
-              cloneBusy={cloneBusy}
-              deleteBusy={deleteBusy}
+              saveBusy={savedSearchActions.saveBusy}
+              cloneBusy={savedSearchActions.cloneBusy}
+              deleteBusy={savedSearchActions.deleteBusy}
               onShowFirst={() =>
                 void searchResults.showHere(
                   buildFirstSevenSearchFields(currentFields),
@@ -248,8 +198,8 @@ export default function SavedSearchesWorkspace({
               onSaveAd={() =>
                 void searchResults.activateSaveAdMode(browserResults.loading)
               }
-              onSave={() => void saveCurrent()}
-              onSaveAsNew={() => void saveAsNew()}
+              onSave={() => void savedSearchActions.saveCurrent()}
+              onSaveAsNew={() => void savedSearchActions.saveAsNew()}
               onDelete={() => setDeleteDialogOpen(true)}
               getFieldValue={searchForm.getFieldValue}
               onClear={searchForm.clearField}
