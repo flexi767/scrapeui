@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { SavedSearchAutocompleteField } from "@/components/saved-searches/SavedSearchAutocompleteField";
 import { SavedSearchFieldHeader } from "@/components/saved-searches/SavedSearchFieldHeader";
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
 import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSearchPrimitiveInput";
@@ -8,7 +9,6 @@ import {
   orderSavedSearchFieldsForDisplay,
 } from "@/components/saved-searches/field-display-helpers";
 import {
-  AutocompleteInput,
   getSelectedOptionCount,
   normalizeAutocompleteValue,
   sortMakeOptions,
@@ -116,6 +116,8 @@ export function SavedSearchFields({
             ? getSelectedOptionCount(modelOptions, field.value)
             : null;
         const selectedReferenceCount = selectedMakeCount ?? selectedModelCount;
+        const autocompleteOptions =
+          field.name === "marka" ? makeOptions : modelOptions;
         const fieldLabel = getSavedSearchFieldLabel(field, subLocationLabel);
         const headerStepperDelta =
           MOBILE_BG_HEADER_STEPPER_FIELDS[field.name] ?? null;
@@ -152,54 +154,26 @@ export function SavedSearchFields({
             />
             <div className="min-w-0">
               {field.name === "marka" ? (
-                <AutocompleteInput
-                  value={field.value}
-                  onChange={onUpdateMake}
-                  options={makeOptions}
-                  placeholder="Type make"
-                  emptyLabel="No make matches"
-                  hideLowCountOnEmpty
-                  open={openAutocomplete === "marka"}
-                  focusWhenOpen
-                  trailingText={
-                    selectedReferenceCount != null
-                      ? selectedReferenceCount.toLocaleString("en-US")
-                      : null
-                  }
-                  onOpenChange={(open) => {
-                    if (open) {
-                      onOpenAutocompleteChange("marka");
-                      return;
-                    }
-                    onOpenAutocompleteChange((current) =>
-                      current === "marka" ? null : current,
-                    );
-                  }}
+                <SavedSearchAutocompleteField
+                  field={field}
+                  kind="marka"
+                  options={autocompleteOptions}
+                  selectedCount={selectedReferenceCount}
+                  openAutocomplete={openAutocomplete}
+                  onOpenAutocompleteChange={onOpenAutocompleteChange}
+                  onUpdateField={onUpdateField}
+                  onUpdateMake={onUpdateMake}
                 />
               ) : field.name === "model" ? (
-                <AutocompleteInput
-                  value={field.value}
-                  onChange={(value) => onUpdateField(field.name, value)}
-                  options={modelOptions}
-                  placeholder="Type model"
-                  emptyLabel="No model matches"
-                  focusWhenOpen
-                  open={openAutocomplete === "model"}
-                  onArrowLeft={() => onOpenAutocompleteChange("marka")}
-                  trailingText={
-                    selectedReferenceCount != null
-                      ? selectedReferenceCount.toLocaleString("en-US")
-                      : null
-                  }
-                  onOpenChange={(open) => {
-                    if (open) {
-                      onOpenAutocompleteChange("model");
-                      return;
-                    }
-                    onOpenAutocompleteChange((current) =>
-                      current === "model" ? null : current,
-                    );
-                  }}
+                <SavedSearchAutocompleteField
+                  field={field}
+                  kind="model"
+                  options={autocompleteOptions}
+                  selectedCount={selectedReferenceCount}
+                  openAutocomplete={openAutocomplete}
+                  onOpenAutocompleteChange={onOpenAutocompleteChange}
+                  onUpdateField={onUpdateField}
+                  onUpdateMake={onUpdateMake}
                 />
               ) : ["f12", "f13", "f14", "f17", "f18"].includes(field.name) ? (
                 <SavedSearchPrimitiveInput
