@@ -354,6 +354,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
       FROM mobilebg_backups b
     )
     SELECT
+      COUNT(*) OVER() as total_count,
       b.id as backup_id,
       l.id, l.mobile_id,
       COALESCE(b.title, l.title) as title,
@@ -402,11 +403,12 @@ export function getOwnListings(filters: ListingFilters = {}) {
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as OwnListingRow[];
+    .all(...params, limit, offset) as Array<OwnListingRow & { total_count: number }>;
 
-  const { count } = raw
-    .prepare(
-      `
+  const countOwnListings = () => {
+    const { count } = raw
+      .prepare(
+        `
     WITH ranked_backups AS (
       SELECT
         b.*,
@@ -422,8 +424,17 @@ export function getOwnListings(filters: ListingFilters = {}) {
     LEFT JOIN dealers d ON b.dealer_id = d.id
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
   `,
-    )
-    .get(...params) as { count: number };
+      )
+      .get(...params) as { count: number };
+    return count;
+  };
 
-  return { data: rows, total: count, page, limit };
+  const total = rows[0]?.total_count ?? (page > 1 ? countOwnListings() : 0);
+  const data = rows.map((row) => {
+    const listing = { ...row } as Partial<OwnListingRow & { total_count: number }>;
+    delete listing.total_count;
+    return listing as OwnListingRow;
+  });
+
+  return { data, total, page, limit };
 }

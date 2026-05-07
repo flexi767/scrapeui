@@ -1,7 +1,7 @@
-import fs from 'fs';
 import path from 'path';
 import { NextRequest } from 'next/server';
 import { raw } from '@/db/client';
+import { isPathInside, streamFileResponse } from '@/lib/file-response';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 
 const MIME: Record<string, string> = {
@@ -12,6 +12,8 @@ const MIME: Record<string, string> = {
 };
 
 const ALLOWED_ROOT = SCRAPED_ROOT;
+
+export const runtime = 'nodejs';
 
 export async function GET(
   _request: NextRequest,
@@ -28,21 +30,16 @@ export async function GET(
   if (!filePath) return new Response('Not found', { status: 404 });
 
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(ALLOWED_ROOT + path.sep) && resolved !== ALLOWED_ROOT) {
+  if (!isPathInside(ALLOWED_ROOT, resolved)) {
     return new Response('Forbidden', { status: 403 });
-  }
-
-  if (!fs.existsSync(resolved)) {
-    return new Response('Not found', { status: 404 });
   }
 
   const ext = path.extname(resolved).toLowerCase();
   const contentType = MIME[ext] ?? 'application/octet-stream';
-  const file = fs.readFileSync(resolved);
 
-  return new Response(file, {
+  return streamFileResponse(resolved, {
+    contentType,
     headers: {
-      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=86400',
     },
   });

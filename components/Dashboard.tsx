@@ -76,40 +76,59 @@ export function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight: AbortController | null = null;
+    let lastFetchAt = 0;
 
-    const fetchData = async (showLoading = false) => {
+    const fetchData = async ({
+      showLoading = false,
+      force = false,
+    }: {
+      showLoading?: boolean;
+      force?: boolean;
+    } = {}) => {
+      const now = Date.now();
+      if (inFlight) return;
+      if (!force && now - lastFetchAt < 15000) return;
+
+      const controller = new AbortController();
+      inFlight = controller;
       if (showLoading) setLoading(true);
       try {
         const [statsRes, dealersRes] = await Promise.all([
-          fetch('/api/dashboard/stats'),
-          fetch('/api/dealers'),
+          fetch('/api/dashboard/stats', { signal: controller.signal }),
+          fetch('/api/dealers', { signal: controller.signal }),
         ]);
         const statsData = await statsRes.json();
         const dealersData = await dealersRes.json();
         if (cancelled) return;
+        lastFetchAt = Date.now();
         setStats(statsData);
         setDealers(dealersData);
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+        if (!controller.signal.aborted) {
+          console.error('Failed to fetch dashboard data:', error);
+        }
       } finally {
+        if (inFlight === controller) inFlight = null;
         if (!cancelled) setLoading(false);
       }
     };
 
-    fetchData(true);
+    fetchData({ showLoading: true, force: true });
 
     const intervalId = window.setInterval(() => {
-      fetchData(false);
-    }, 30000);
+      fetchData();
+    }, 60000);
 
     const onFocus = () => {
-      fetchData(false);
+      fetchData();
     };
 
     window.addEventListener('focus', onFocus);
 
     return () => {
       cancelled = true;
+      inFlight?.abort();
       window.clearInterval(intervalId);
       window.removeEventListener('focus', onFocus);
     };

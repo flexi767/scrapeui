@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
-import fs from 'fs';
 import path from 'path';
+import { isPathInside, streamFileResponse } from '@/lib/file-response';
 import { UPLOADS_DIR } from '@/lib/storage-paths';
 
 const UPLOAD_DIR = UPLOADS_DIR;
+
+export const runtime = 'nodejs';
 
 const MIME: Record<string, string> = {
   '.webp': 'image/webp',
@@ -28,25 +30,19 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> },
 ) {
   const { filename } = await params;
-  const filePath = path.join(UPLOAD_DIR, filename);
+  const filePath = path.resolve(UPLOAD_DIR, filename);
 
   // Security: ensure path stays within UPLOAD_DIR
-  const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(UPLOAD_DIR + path.sep) && resolved !== UPLOAD_DIR) {
+  if (!isPathInside(UPLOAD_DIR, filePath)) {
     return new Response('Forbidden', { status: 403 });
-  }
-
-  if (!fs.existsSync(filePath)) {
-    return new Response('Not found', { status: 404 });
   }
 
   const ext = path.extname(filename).toLowerCase();
   const contentType = MIME[ext] ?? 'application/octet-stream';
 
-  const file = fs.readFileSync(filePath);
-  return new Response(file, {
+  return streamFileResponse(filePath, {
+    contentType,
     headers: {
-      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=86400',
     },
   });
