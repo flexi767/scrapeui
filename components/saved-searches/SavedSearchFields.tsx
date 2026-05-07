@@ -1,5 +1,5 @@
-import { Loader2 } from "lucide-react";
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
+import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSearchPrimitiveInput";
 import {
   getSavedSearchFieldLabel,
   getSavedSearchFieldLayoutClass,
@@ -14,15 +14,12 @@ import {
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
-  MOBILE_BG_CATEGORY_OPTIONS,
   MOBILE_BG_CLEARABLE_FIELDS,
-  MOBILE_BG_ENGINE_OPTIONS,
   MOBILE_BG_HEADER_STEPPER_FIELDS,
   MOBILE_BG_HIDDEN_FIELD_NAMES,
   MOBILE_BG_PAIRED_FIELD_END_NAMES,
   MOBILE_BG_PAIRED_FIELD_NAMES,
   MOBILE_BG_STEPPER_FIELDS,
-  MOBILE_BG_TRANSMISSION_OPTIONS,
 } from "@/lib/mobile-bg/search-field-config";
 
 export function SavedSearchFields({
@@ -209,89 +206,15 @@ export function SavedSearchFields({
                     );
                   }}
                 />
-              ) : field.name === "f12" ? (
-                <select
-                  value={field.value}
-                  onChange={(event) =>
-                    onUpdateField(field.name, event.target.value)
-                  }
-                  className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                >
-                  {MOBILE_BG_ENGINE_OPTIONS.map((option) => (
-                    <option key={option || "engine-all"} value={option}>
-                      {option || "Всички типове"}
-                    </option>
-                  ))}
-                </select>
-              ) : field.name === "f13" ? (
-                <select
-                  value={field.value}
-                  onChange={(event) =>
-                    onUpdateField(field.name, event.target.value)
-                  }
-                  className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                >
-                  {MOBILE_BG_TRANSMISSION_OPTIONS.map((option) => (
-                    <option key={option || "trans-all"} value={option}>
-                      {option || "Без значение"}
-                    </option>
-                  ))}
-                </select>
-              ) : field.name === "f14" ? (
-                <select
-                  value={field.value}
-                  onChange={(event) =>
-                    onUpdateField(field.name, event.target.value)
-                  }
-                  className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                >
-                  {MOBILE_BG_CATEGORY_OPTIONS.map((option) => (
-                    <option key={option || "cat-all"} value={option}>
-                      {option || "всички категории"}
-                    </option>
-                  ))}
-                </select>
-              ) : field.name === "f17" ? (
-                <select
-                  value={field.value}
-                  onChange={(event) => void onUpdateLocation(event.target.value)}
-                  className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none"
-                >
-                  {prefillOptions.locations.map((option) => (
-                    <option
-                      key={`${option.value || "loc-all"}-${option.label}`}
-                      value={option.value}
-                    >
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : field.name === "f18" ? (
-                <div className="relative">
-                  <select
-                    value={field.value}
-                    onChange={(event) =>
-                      onUpdateField(field.name, event.target.value)
-                    }
-                    disabled={locationLoading}
-                    className="h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 pr-10 text-sm text-gray-950 focus:border-blue-500 focus:outline-none disabled:cursor-wait"
-                  >
-                    <option value="">всички</option>
-                    {subLocationOptions
-                      .filter((option) => option.value !== "")
-                      .map((option) => (
-                        <option
-                          key={`${option.value}-${option.label}`}
-                          value={option.value}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                  </select>
-                  {locationLoading && (
-                    <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
-                  )}
-                </div>
+              ) : ["f12", "f13", "f14", "f17", "f18"].includes(field.name) ? (
+                <SavedSearchPrimitiveInput
+                  field={field}
+                  locationOptions={prefillOptions.locations}
+                  subLocationOptions={subLocationOptions}
+                  locationLoading={locationLoading}
+                  onUpdateField={onUpdateField}
+                  onUpdateLocation={onUpdateLocation}
+                />
               ) : (
                 <div className="flex items-center gap-2">
                   <input
