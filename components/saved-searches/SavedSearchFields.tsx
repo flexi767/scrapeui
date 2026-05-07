@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
 import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSearchPrimitiveInput";
 import {
@@ -57,11 +58,45 @@ export function SavedSearchFields({
   onUpdateLocation: (value: string) => void | Promise<void>;
   onUpdateMake: (value: string) => void;
 }) {
+  const visibleFields = useMemo(
+    () =>
+      orderSavedSearchFieldsForDisplay(
+        fields.filter(
+          (field) => !MOBILE_BG_HIDDEN_FIELD_NAMES.has(field.name),
+        ),
+      ),
+    [fields],
+  );
+  const selectedMake = getFieldValue("marka");
+  const makeOptions = useMemo(
+    () =>
+      sortMakeOptions(
+        prefillOptions.makes.map((option) => ({
+          value: option.value,
+          count: option.count,
+        })),
+      ),
+    [prefillOptions.makes],
+  );
+  const modelOptions = useMemo(() => {
+    const matchedMakeKey =
+      Object.keys(prefillOptions.modelsByMake).find(
+        (make) =>
+          normalizeAutocompleteValue(make) ===
+          normalizeAutocompleteValue(selectedMake),
+      ) ?? selectedMake;
+
+    return (prefillOptions.modelsByMake[matchedMakeKey] ?? []).map(
+      (option) => ({
+        value: option.value,
+        count: option.count,
+      }),
+    );
+  }, [prefillOptions.modelsByMake, selectedMake]);
+
   return (
     <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
-      {orderSavedSearchFieldsForDisplay(
-        fields.filter((field) => !MOBILE_BG_HIDDEN_FIELD_NAMES.has(field.name)),
-      ).map((field) => {
+      {visibleFields.map((field) => {
         if (MOBILE_BG_PAIRED_FIELD_END_NAMES.has(field.name)) return null;
 
         const pairedField =
@@ -71,25 +106,6 @@ export function SavedSearchFields({
                   item.name === MOBILE_BG_PAIRED_FIELD_NAMES[field.name],
               )
             : null;
-        const selectedMake = getFieldValue("marka");
-        const matchedMakeKey =
-          Object.keys(prefillOptions.modelsByMake).find(
-            (make) =>
-              normalizeAutocompleteValue(make) ===
-              normalizeAutocompleteValue(selectedMake),
-          ) ?? selectedMake;
-        const modelOptions = (
-          prefillOptions.modelsByMake[matchedMakeKey] ?? []
-        ).map((option) => ({
-          value: option.value,
-          count: option.count,
-        }));
-        const makeOptions = sortMakeOptions(
-          prefillOptions.makes.map((option) => ({
-            value: option.value,
-            count: option.count,
-          })),
-        );
         const selectedMakeCount =
           field.name === "marka"
             ? getSelectedOptionCount(makeOptions, field.value)
