@@ -9,6 +9,72 @@ import {
 import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 
+function SavedSearchResultsLoadingState({
+  loadingNote,
+  bookmarkletHref,
+  browserImportTimedOut,
+  onCancelBrowserImport,
+  onReopenBrowserSearch,
+}: {
+  loadingNote?: string;
+  bookmarkletHref?: string;
+  browserImportTimedOut?: boolean;
+  onCancelBrowserImport?: () => void;
+  onReopenBrowserSearch?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-10 text-center text-sm text-gray-400">
+      <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+      Loading mobile.bg results…
+      {loadingNote ? (
+        <div className="mx-auto mt-3 max-w-2xl text-xs leading-5 text-cyan-100/80">
+          {loadingNote}
+        </div>
+      ) : null}
+      {bookmarkletHref ? (
+        <ActiveBrowserImportCard
+          bookmarkletHref={bookmarkletHref}
+          browserImportTimedOut={browserImportTimedOut}
+          onCancelBrowserImport={onCancelBrowserImport}
+          onReopenBrowserSearch={onReopenBrowserSearch}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function SavedSearchResultsTableState({
+  results,
+  listing,
+  saveAdMode,
+}: {
+  results: MobileBgSearchResultsResponse;
+  listing: SearchPrefillData["listing"];
+  saveAdMode: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      {results.fallback_note ? (
+        <div className="rounded-lg border border-cyan-700/40 bg-cyan-950/35 px-4 py-2 text-xs text-cyan-100/85">
+          {results.fallback_note}
+        </div>
+      ) : null}
+      <MobileBgSearchResultsTable
+        rows={results.rows}
+        summaryText={results.summary_text}
+        page={results.page}
+        totalPages={results.total_pages}
+        hasNextPage={results.has_next_page}
+        loadedUntilPage={results.loaded_until_page}
+        sourceListingId={listing?.id ?? 0}
+        sourceMobileId={listing?.mobile_id ?? null}
+        initialIgnoredResultIds={results.ignored_search_result_ids}
+        saveAdMode={saveAdMode}
+      />
+    </div>
+  );
+}
+
 export function SavedSearchResultsPanel({
   error,
   loading,
@@ -44,23 +110,13 @@ export function SavedSearchResultsPanel({
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-10 text-center text-sm text-gray-400">
-        <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-        Loading mobile.bg results…
-        {loadingNote ? (
-          <div className="mx-auto mt-3 max-w-2xl text-xs leading-5 text-cyan-100/80">
-            {loadingNote}
-          </div>
-        ) : null}
-        {bookmarkletHref ? (
-          <ActiveBrowserImportCard
-            bookmarkletHref={bookmarkletHref}
-            browserImportTimedOut={browserImportTimedOut}
-            onCancelBrowserImport={onCancelBrowserImport}
-            onReopenBrowserSearch={onReopenBrowserSearch}
-            />
-        ) : null}
-      </div>
+      <SavedSearchResultsLoadingState
+        loadingNote={loadingNote}
+        bookmarkletHref={bookmarkletHref}
+        browserImportTimedOut={browserImportTimedOut}
+        onCancelBrowserImport={onCancelBrowserImport}
+        onReopenBrowserSearch={onReopenBrowserSearch}
+      />
     );
   }
 
@@ -70,24 +126,10 @@ export function SavedSearchResultsPanel({
   }
 
   return (
-    <div className="space-y-2">
-      {results.fallback_note ? (
-        <div className="rounded-lg border border-cyan-700/40 bg-cyan-950/35 px-4 py-2 text-xs text-cyan-100/85">
-          {results.fallback_note}
-        </div>
-      ) : null}
-      <MobileBgSearchResultsTable
-        rows={results.rows}
-        summaryText={results.summary_text}
-        page={results.page}
-        totalPages={results.total_pages}
-        hasNextPage={results.has_next_page}
-        loadedUntilPage={results.loaded_until_page}
-        sourceListingId={listing?.id ?? 0}
-        sourceMobileId={listing?.mobile_id ?? null}
-        initialIgnoredResultIds={results.ignored_search_result_ids}
-        saveAdMode={saveAdMode}
-      />
-    </div>
+    <SavedSearchResultsTableState
+      results={results}
+      listing={listing}
+      saveAdMode={saveAdMode}
+    />
   );
 }
