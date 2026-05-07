@@ -13,26 +13,20 @@ import {
 import {
   createSavedSearch,
   deleteSavedSearch,
-  fetchLocationOptions,
   fetchMobileBgSearchResults,
   fetchSavedSearchDetail,
   type MobileBgSearchResultsResponse,
   type SavedSearchDetailResponse,
   updateSavedSearch,
 } from "@/components/saved-searches/api";
-import {
-  didMakeOrModelChange,
-  mergeEditableFields,
-  normalizeLocationOptions,
-  submitMobileBgSearch,
-} from "@/components/saved-searches/helpers";
+import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
 import {
   persistMobileBgBrowserResults,
 } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
 import { useMobileBgBrowserResults } from "@/components/saved-searches/useMobileBgBrowserResults";
+import { useSavedSearchFormState } from "@/components/saved-searches/useSavedSearchFormState";
 import {
   buildFirstSevenSearchFields,
-  type SearchField,
 } from "@/lib/mobile-bg/search-form-shared";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 
@@ -50,17 +44,6 @@ export default function SavedSearchesWorkspace({
   const [detail, setDetail] = useState<
     SavedSearchDetailResponse["detail"] | null
   >(initialDetail);
-  const [editableFields, setEditableFields] = useState<SearchField[]>(
-    initialDetail?.prefill.form.fields.map((field) => ({ ...field })) ?? [],
-  );
-  const [subLocationLabel, setSubLocationLabel] = useState(
-    initialDetail?.prefill.options.subLocations.label ?? "Населено място",
-  );
-  const [subLocationOptions, setSubLocationOptions] = useState(
-    initialDetail?.prefill.options.subLocations.options ?? [
-      { value: "", label: "всички" },
-    ],
-  );
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState("");
@@ -72,10 +55,11 @@ export default function SavedSearchesWorkspace({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saveAdMode, setSaveAdMode] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [openAutocomplete, setOpenAutocomplete] = useState<
-    "marka" | "model" | null
-  >(null);
+  const searchForm = useSavedSearchFormState(initialDetail);
+  const getCurrentSearchFields = searchForm.getCurrentFields;
+  const getMakeOrModelChanged = searchForm.getMakeOrModelChanged;
+  const loadSearchFormFromDetail = searchForm.loadFromDetail;
+  const resetSearchForm = searchForm.reset;
 
   const listing = detail?.prefill.listing ?? null;
   const selectedSummary = useMemo(
@@ -83,13 +67,11 @@ export default function SavedSearchesWorkspace({
     [searches, selectedId],
   );
   const currentFields = useMemo(() => {
-    if (!detail) return [];
-    return mergeEditableFields(detail.prefill.form.fields, editableFields);
-  }, [detail, editableFields]);
+    return getCurrentSearchFields(detail);
+  }, [detail, getCurrentSearchFields]);
   const makeOrModelChanged = useMemo(() => {
-    if (!detail) return false;
-    return didMakeOrModelChange(detail.prefill.form.fields, currentFields);
-  }, [currentFields, detail]);
+    return getMakeOrModelChanged(detail);
+  }, [detail, getMakeOrModelChanged]);
   const browserResults = useMobileBgBrowserResults({
     searchId: detail?.search.id ?? null,
     currentFields,
@@ -102,7 +84,7 @@ export default function SavedSearchesWorkspace({
   useEffect(() => {
     if (selectedId == null) {
       setDetail(null);
-      setEditableFields([]);
+      resetSearchForm();
       setResults(null);
       resetBrowserResults();
       setSaveAdMode(false);
@@ -122,13 +104,7 @@ export default function SavedSearchesWorkspace({
       .then((payload) => {
         if (cancelled) return;
         setDetail(payload.detail);
-        setEditableFields(
-          payload.detail.prefill.form.fields.map((field) => ({ ...field })),
-        );
-        setSubLocationLabel(payload.detail.prefill.options.subLocations.label);
-        setSubLocationOptions(
-          payload.detail.prefill.options.subLocations.options,
-        );
+        loadSearchFormFromDetail(payload.detail);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -145,99 +121,17 @@ export default function SavedSearchesWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [resetBrowserResults, selectedId, detail]);
+  }, [
+    loadSearchFormFromDetail,
+    resetBrowserResults,
+    resetSearchForm,
+    selectedId,
+    detail,
+  ]);
 
   function syncFromDetail(nextDetail: SavedSearchDetailResponse["detail"]) {
     setDetail(nextDetail);
-    setEditableFields(
-      nextDetail.prefill.form.fields.map((field) => ({ ...field })),
-    );
-    setSubLocationLabel(nextDetail.prefill.options.subLocations.label);
-    setSubLocationOptions(nextDetail.prefill.options.subLocations.options);
-  }
-
-  function updateField(name: string, value: string) {
-    setEditableFields((prev) =>
-      prev.map((field) => (field.name === name ? { ...field, value } : field)),
-    );
-  }
-
-  function getFieldValue(name: string) {
-    return editableFields.find((field) => field.name === name)?.value ?? "";
-  }
-
-  function updateMake(value: string) {
-    setOpenAutocomplete("model");
-    setEditableFields((prev) => {
-      const next = prev.map((field) =>
-        field.name === "marka" ? { ...field, value } : field,
-      );
-      const validModels = detail?.prefill.options.modelsByMake[value] ?? [];
-      const currentModel =
-        next.find((field) => field.name === "model")?.value ?? "";
-      if (
-        currentModel &&
-        !validModels.some((option) => option.value === currentModel)
-      ) {
-        return next.map((field) =>
-          field.name === "model" ? { ...field, value: "" } : field,
-        );
-      }
-      return next;
-    });
-  }
-
-  async function updateLocation(value: string) {
-    updateField("f17", value);
-    setLocationLoading(true);
-    setSubLocationLabel("Населено място");
-    setSubLocationOptions([{ value: "", label: "всички" }]);
-    setEditableFields((prev) =>
-      prev.map((field) => {
-        if (field.name === "f17") return { ...field, value };
-        if (field.name === "f18")
-          return {
-            ...field,
-            value: "",
-            label: "Населено място",
-            source: "default",
-          };
-        return field;
-      }),
-    );
-
-    try {
-      const payload = await fetchLocationOptions(value);
-      const { label: nextLabel, options: nextOptions } =
-        normalizeLocationOptions(payload);
-
-      setSubLocationLabel(nextLabel);
-      setSubLocationOptions(nextOptions);
-      setEditableFields((prev) =>
-        prev.map((field) =>
-          field.name === "f18"
-            ? { ...field, label: nextLabel, value: "" }
-            : field,
-        ),
-      );
-    } finally {
-      setLocationLoading(false);
-    }
-  }
-
-  function nudgeField(name: string, delta: number) {
-    setEditableFields((prev) =>
-      prev.map((field) => {
-        if (field.name !== name) return field;
-        const parsed = Number.parseInt(field.value || "0", 10);
-        const base = Number.isFinite(parsed) ? parsed : 0;
-        return { ...field, value: String(base + delta) };
-      }),
-    );
-  }
-
-  function clearField(name: string) {
-    updateField(name, "");
+    loadSearchFormFromDetail(nextDetail);
   }
 
   function openInMobileBg(fields = currentFields) {
@@ -336,7 +230,7 @@ export default function SavedSearchesWorkspace({
       setSelectedId(nextSelectedId);
       if (nextSelectedId == null) {
         setDetail(null);
-        setEditableFields([]);
+        resetSearchForm();
         setResults(null);
         setResultsError("");
       }
@@ -378,11 +272,11 @@ export default function SavedSearchesWorkspace({
             />
             <SavedSearchEditorPanel
               detail={detail}
-              fields={editableFields}
-              subLocationLabel={subLocationLabel}
-              subLocationOptions={subLocationOptions}
-              locationLoading={locationLoading}
-              openAutocomplete={openAutocomplete}
+              fields={searchForm.editableFields}
+              subLocationLabel={searchForm.subLocationLabel}
+              subLocationOptions={searchForm.subLocationOptions}
+              locationLoading={searchForm.locationLoading}
+              openAutocomplete={searchForm.openAutocomplete}
               resultsLoading={resultsLoading}
               browserResultsLoading={browserResults.loading}
               saveAdMode={saveAdMode}
@@ -400,13 +294,13 @@ export default function SavedSearchesWorkspace({
               onSave={() => void saveCurrent()}
               onSaveAsNew={() => void saveAsNew()}
               onDelete={() => setDeleteDialogOpen(true)}
-              getFieldValue={getFieldValue}
-              onClear={clearField}
-              onNudge={nudgeField}
-              onOpenAutocompleteChange={setOpenAutocomplete}
-              onUpdateField={updateField}
-              onUpdateLocation={updateLocation}
-              onUpdateMake={updateMake}
+              getFieldValue={searchForm.getFieldValue}
+              onClear={searchForm.clearField}
+              onNudge={searchForm.nudgeField}
+              onOpenAutocompleteChange={searchForm.setOpenAutocomplete}
+              onUpdateField={searchForm.updateField}
+              onUpdateLocation={searchForm.updateLocation}
+              onUpdateMake={(value) => searchForm.updateMake(detail, value)}
             />
 
             <SavedSearchResultsPanel
