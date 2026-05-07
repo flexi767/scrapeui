@@ -1,6 +1,7 @@
 import {
   ExternalLink,
   Loader2,
+  type LucideIcon,
   Plus,
   Save,
   SearchIcon,
@@ -11,6 +12,39 @@ import { Button } from "@/components/ui/button";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 
 type SavedSearchListing = SearchPrefillData["listing"];
+
+function HeaderActionButton({
+  label,
+  className,
+  icon: Icon,
+  busy = false,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  className: string;
+  icon: LucideIcon;
+  busy?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className={className}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {busy ? (
+        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+      ) : (
+        <Icon className="mr-1 h-4 w-4" />
+      )}
+      {label}
+    </Button>
+  );
+}
 
 export function SavedSearchEditorHeader({
   listing,
@@ -51,56 +85,39 @@ export function SavedSearchEditorHeader({
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
       <SavedSearchEditorListingSummary listing={listing} />
       <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
+        <HeaderActionButton
+          label="First 7"
+          icon={SearchIcon}
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={onShowFirst}
           disabled={resultsLoading || browserResultsLoading}
-        >
-          <SearchIcon className="mr-1 h-4 w-4" />
-          First 7
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+        />
+        <HeaderActionButton
+          label="Search on Server"
+          icon={SearchIcon}
+          busy={resultsLoading}
           className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
           onClick={onShowAll}
           disabled={resultsLoading || browserResultsLoading}
-        >
-          {resultsLoading ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <SearchIcon className="mr-1 h-4 w-4" />
-          )}
-          Search on Server
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+        />
+        <HeaderActionButton
+          label="Open Browser Search"
+          icon={SearchIcon}
+          busy={browserResultsLoading}
           className="border-cyan-700 bg-cyan-950/80 text-cyan-200 hover:bg-cyan-900 hover:text-white"
           onClick={onSearchInBrowser}
           disabled={resultsLoading || browserResultsLoading}
-        >
-          {browserResultsLoading ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <SearchIcon className="mr-1 h-4 w-4" />
-          )}
-          Open Browser Search
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+        />
+        <HeaderActionButton
+          label="Open mobile.bg"
+          icon={ExternalLink}
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={onOpenMobileBg}
-        >
-          <ExternalLink className="mr-1 h-4 w-4" />
-          Open mobile.bg
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+        />
+        <HeaderActionButton
+          label="Save Ad"
+          icon={Plus}
+          busy={resultsLoading && saveAdMode}
           className={
             saveAdMode
               ? "border-emerald-600 bg-emerald-900 text-white hover:bg-emerald-800"
@@ -108,58 +125,33 @@ export function SavedSearchEditorHeader({
           }
           onClick={onSaveAd}
           disabled={resultsLoading || browserResultsLoading}
-        >
-          {resultsLoading && saveAdMode ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="mr-1 h-4 w-4" />
-          )}
-          Save Ad
-        </Button>
+        />
         {!makeOrModelChanged && (
-          <Button
-            type="button"
-            variant="outline"
+          <HeaderActionButton
+            label="Save"
+            icon={Save}
+            busy={saveBusy}
             className="border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
             onClick={onSave}
             disabled={saveBusy}
-          >
-            {saveBusy ? (
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-1 h-4 w-4" />
-            )}
-            Save
-          </Button>
+          />
         )}
-        <Button
-          type="button"
-          variant="outline"
+        <HeaderActionButton
+          label="Save As New"
+          icon={Plus}
+          busy={cloneBusy}
           className="border-amber-700 bg-amber-950/80 text-amber-200 hover:bg-amber-900 hover:text-white"
           onClick={onSaveAsNew}
           disabled={cloneBusy}
-        >
-          {cloneBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="mr-1 h-4 w-4" />
-          )}
-          Save As New
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
+        />
+        <HeaderActionButton
+          label="Delete"
+          icon={Trash2}
+          busy={deleteBusy}
           className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
           onClick={onDelete}
           disabled={deleteBusy}
-        >
-          {deleteBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="mr-1 h-4 w-4" />
-          )}
-          Delete
-        </Button>
+        />
       </div>
     </div>
   );
