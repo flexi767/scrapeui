@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { SavedSearchFieldHeader } from "@/components/saved-searches/SavedSearchFieldHeader";
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
 import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSearchPrimitiveInput";
 import {
@@ -142,35 +143,13 @@ export function SavedSearchFields({
             key={field.name}
             className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${getSavedSearchFieldLayoutClass(field.name)}`}
           >
-            <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
-              <div className="truncate text-xs font-medium text-gray-300">
-                {fieldLabel}
-              </div>
-              {headerStepperDelta != null ? (
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
-                    onClick={() => onNudge(field.name, -headerStepperDelta)}
-                    aria-label={`Decrease ${fieldLabel}`}
-                  >
-                    -{headerStepperDelta}
-                  </button>
-                  <button
-                    type="button"
-                    className="h-5 rounded border border-gray-600 px-1.5 text-[10px] leading-none text-gray-300 hover:bg-gray-700"
-                    onClick={() => onNudge(field.name, headerStepperDelta)}
-                    aria-label={`Increase ${fieldLabel}`}
-                  >
-                    +{headerStepperDelta}
-                  </button>
-                </div>
-              ) : (
-                <div className="shrink-0 text-[10px] uppercase tracking-wide text-gray-500">
-                  {field.name}
-                </div>
-              )}
-            </div>
+            <SavedSearchFieldHeader
+              name={field.name}
+              label={fieldLabel}
+              stepperDelta={headerStepperDelta}
+              onClear={onClear}
+              onNudge={onNudge}
+            />
             <div className="min-w-0">
               {field.name === "marka" ? (
                 <AutocompleteInput
