@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { getSavedSearchFieldLabel } from "@/components/saved-searches/field-display-helpers";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
@@ -9,14 +10,6 @@ import {
   MOBILE_BG_HIDDEN_FIELD_CODE_NAMES,
   MOBILE_BG_TRANSMISSION_OPTIONS,
 } from "@/lib/mobile-bg/search-field-config";
-
-function displayFieldLabel(field: SearchField, subLocationLabel: string) {
-  if (field.name === "f18") return subLocationLabel;
-  if (field.name === "f25" || field.name === "f26") {
-    return field.label.replace(/\s*\[к\.с\.\]\s*/g, "");
-  }
-  return field.label;
-}
 
 export function PairedSearchField({
   fields,
@@ -155,7 +148,7 @@ export function PairedSearchField({
     >
       <div className="grid gap-2 sm:grid-cols-2">
         {fields.map((field) => {
-          const label = displayFieldLabel(field, subLocationLabel);
+          const label = getSavedSearchFieldLabel(field, subLocationLabel);
           const stepperDelta = MOBILE_BG_HEADER_STEPPER_FIELDS[field.name] ?? null;
 
           return (

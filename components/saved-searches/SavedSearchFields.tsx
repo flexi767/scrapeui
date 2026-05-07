@@ -1,6 +1,11 @@
 import { Loader2 } from "lucide-react";
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
 import {
+  getSavedSearchFieldLabel,
+  getSavedSearchFieldLayoutClass,
+  orderSavedSearchFieldsForDisplay,
+} from "@/components/saved-searches/field-display-helpers";
+import {
   AutocompleteInput,
   getSelectedOptionCount,
   normalizeAutocompleteValue,
@@ -12,7 +17,6 @@ import {
   MOBILE_BG_CATEGORY_OPTIONS,
   MOBILE_BG_CLEARABLE_FIELDS,
   MOBILE_BG_ENGINE_OPTIONS,
-  MOBILE_BG_FIELD_LAYOUT_CLASS,
   MOBILE_BG_HEADER_STEPPER_FIELDS,
   MOBILE_BG_HIDDEN_FIELD_NAMES,
   MOBILE_BG_PAIRED_FIELD_END_NAMES,
@@ -20,55 +24,6 @@ import {
   MOBILE_BG_STEPPER_FIELDS,
   MOBILE_BG_TRANSMISSION_OPTIONS,
 } from "@/lib/mobile-bg/search-field-config";
-
-function fieldLayoutClass(name: string) {
-  return MOBILE_BG_FIELD_LAYOUT_CLASS[name] ?? "";
-}
-
-function displayFieldLabel(field: SearchField, subLocationLabel: string) {
-  if (field.name === "f18") return subLocationLabel;
-  if (field.name === "f25" || field.name === "f26") {
-    return field.label.replace(/\s*\[к\.с\.\]\s*/g, "");
-  }
-  return field.label;
-}
-
-function orderFieldsForDisplay(fields: SearchField[]) {
-  const fieldsByName = new Map(fields.map((field) => [field.name, field]));
-  const priorityNames = ["f14", "f15", "f17", "f18", "f10", "f11"];
-  const priorityFields = priorityNames
-    .map((name) => fieldsByName.get(name))
-    .filter((field): field is SearchField => field != null);
-  if (priorityFields.length === 0) return fields;
-
-  const orderedFields = fields.filter(
-    (field) => !priorityNames.includes(field.name),
-  );
-  const modelIndex = orderedFields.findIndex((field) => field.name === "model");
-  if (modelIndex === -1) return fields;
-
-  const [categoryFrom, mileageTo, locationFrom, locationTo, yearFrom, yearTo] =
-    priorityFields;
-  orderedFields.splice(
-    modelIndex + 1,
-    0,
-    ...[categoryFrom, mileageTo, locationFrom, locationTo].filter(
-      (field): field is SearchField => field != null,
-    ),
-  );
-
-  const engineIndex = orderedFields.findIndex((field) => field.name === "f12");
-  const yearFields = [yearFrom, yearTo].filter(
-    (field): field is SearchField => field != null,
-  );
-  if (engineIndex !== -1) {
-    orderedFields.splice(engineIndex + 1, 0, ...yearFields);
-    return orderedFields;
-  }
-
-  orderedFields.push(...yearFields);
-  return orderedFields;
-}
 
 export function SavedSearchFields({
   fields,
@@ -107,7 +62,7 @@ export function SavedSearchFields({
 }) {
   return (
     <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
-      {orderFieldsForDisplay(
+      {orderSavedSearchFieldsForDisplay(
         fields.filter((field) => !MOBILE_BG_HIDDEN_FIELD_NAMES.has(field.name)),
       ).map((field) => {
         if (MOBILE_BG_PAIRED_FIELD_END_NAMES.has(field.name)) return null;
@@ -147,7 +102,7 @@ export function SavedSearchFields({
             ? getSelectedOptionCount(modelOptions, field.value)
             : null;
         const selectedReferenceCount = selectedMakeCount ?? selectedModelCount;
-        const fieldLabel = displayFieldLabel(field, subLocationLabel);
+        const fieldLabel = getSavedSearchFieldLabel(field, subLocationLabel);
         const headerStepperDelta =
           MOBILE_BG_HEADER_STEPPER_FIELDS[field.name] ?? null;
 
@@ -156,7 +111,7 @@ export function SavedSearchFields({
             <PairedSearchField
               key={field.name}
               fields={[field, pairedField]}
-              className={fieldLayoutClass(field.name)}
+              className={getSavedSearchFieldLayoutClass(field.name)}
               subLocationLabel={subLocationLabel}
               locationOptions={prefillOptions.locations}
               subLocationOptions={subLocationOptions}
@@ -172,7 +127,7 @@ export function SavedSearchFields({
         return (
           <div
             key={field.name}
-            className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${fieldLayoutClass(field.name)}`}
+            className={`min-w-0 rounded border border-gray-700 bg-gray-800/70 px-2.5 py-2 ${getSavedSearchFieldLayoutClass(field.name)}`}
           >
             <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
               <div className="truncate text-xs font-medium text-gray-300">
