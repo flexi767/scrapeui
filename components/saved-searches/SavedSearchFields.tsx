@@ -65,6 +65,10 @@ export function SavedSearchFields({
       ),
     [fields],
   );
+  const fieldsByName = useMemo(
+    () => new Map(fields.map((field) => [field.name, field])),
+    [fields],
+  );
   const selectedMake = getFieldValue("marka");
   const { makeOptions, modelOptions, getSelectedCount } =
     useSavedSearchAutocompleteOptions({
@@ -79,10 +83,7 @@ export function SavedSearchFields({
 
         const pairedField =
           MOBILE_BG_PAIRED_FIELD_NAMES[field.name] != null
-            ? fields.find(
-                (item) =>
-                  item.name === MOBILE_BG_PAIRED_FIELD_NAMES[field.name],
-              )
+            ? fieldsByName.get(MOBILE_BG_PAIRED_FIELD_NAMES[field.name])
             : null;
         const selectedReferenceCount = getSelectedCount(
           field.name,
