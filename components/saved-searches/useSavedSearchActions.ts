@@ -13,6 +13,10 @@ import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 
 type SavedSearchDetail = SavedSearchDetailResponse["detail"];
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function useSavedSearchActions({
   detail,
   currentFields,
@@ -41,9 +45,7 @@ export function useSavedSearchActions({
       syncFromDetail(data.detail);
       toast.success("Saved search updated");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save search",
-      );
+      toast.error(getErrorMessage(error, "Failed to save search"));
     } finally {
       setSaveBusy(false);
     }
@@ -59,11 +61,7 @@ export function useSavedSearchActions({
       setSelectedId(data.detail.search.id);
       toast.success("Created a new saved search");
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to create saved search",
-      );
+      toast.error(getErrorMessage(error, "Failed to create saved search"));
     } finally {
       setCloneBusy(false);
     }
@@ -87,11 +85,7 @@ export function useSavedSearchActions({
       toast.success("Saved search deleted");
       return true;
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete saved search",
-      );
+      toast.error(getErrorMessage(error, "Failed to delete saved search"));
       return false;
     } finally {
       setDeleteBusy(false);
