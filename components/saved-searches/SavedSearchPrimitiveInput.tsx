@@ -10,6 +10,34 @@ import {
 const DEFAULT_INPUT_CLASS_NAME =
   "h-9 w-full rounded border border-gray-500 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-950 focus:border-blue-500 focus:outline-none";
 
+function SavedSearchSelect({
+  value,
+  options,
+  emptyLabel,
+  className,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  emptyLabel: string;
+  className: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={className}
+    >
+      {options.map((option) => (
+        <option key={option || emptyLabel} value={option}>
+          {option || emptyLabel}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SavedSearchPrimitiveInput({
   field,
   locationOptions,
@@ -29,49 +57,37 @@ export function SavedSearchPrimitiveInput({
 }) {
   if (field.name === "f12") {
     return (
-      <select
+      <SavedSearchSelect
         value={field.value}
-        onChange={(event) => onUpdateField(field.name, event.target.value)}
+        options={MOBILE_BG_ENGINE_OPTIONS}
+        emptyLabel="Всички типове"
         className={className}
-      >
-        {MOBILE_BG_ENGINE_OPTIONS.map((option) => (
-          <option key={option || "engine-all"} value={option}>
-            {option || "Всички типове"}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => onUpdateField(field.name, value)}
+      />
     );
   }
 
   if (field.name === "f13") {
     return (
-      <select
+      <SavedSearchSelect
         value={field.value}
-        onChange={(event) => onUpdateField(field.name, event.target.value)}
+        options={MOBILE_BG_TRANSMISSION_OPTIONS}
+        emptyLabel="Без значение"
         className={className}
-      >
-        {MOBILE_BG_TRANSMISSION_OPTIONS.map((option) => (
-          <option key={option || "trans-all"} value={option}>
-            {option || "Без значение"}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => onUpdateField(field.name, value)}
+      />
     );
   }
 
   if (field.name === "f14") {
     return (
-      <select
+      <SavedSearchSelect
         value={field.value}
-        onChange={(event) => onUpdateField(field.name, event.target.value)}
+        options={MOBILE_BG_CATEGORY_OPTIONS}
+        emptyLabel="всички категории"
         className={className}
-      >
-        {MOBILE_BG_CATEGORY_OPTIONS.map((option) => (
-          <option key={option || "cat-all"} value={option}>
-            {option || "всички категории"}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => onUpdateField(field.name, value)}
+      />
     );
   }
 
