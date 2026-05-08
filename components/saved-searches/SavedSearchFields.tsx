@@ -4,6 +4,7 @@ import { SavedSearchFieldHeader } from "@/components/saved-searches/SavedSearchF
 import { PairedSearchField } from "@/components/saved-searches/PairedSearchField";
 import { SavedSearchPrimitiveInput } from "@/components/saved-searches/SavedSearchPrimitiveInput";
 import { SavedSearchTextInput } from "@/components/saved-searches/SavedSearchTextInput";
+import { useSavedSearchAutocompleteOptions } from "@/components/saved-searches/useSavedSearchAutocompleteOptions";
 import {
   getSavedSearchFieldLabel,
   getSavedSearchFieldLayoutClass,
@@ -11,11 +12,6 @@ import {
   isSavedSearchPrimitiveField,
   orderSavedSearchFieldsForDisplay,
 } from "@/components/saved-searches/field-display-helpers";
-import {
-  getSelectedOptionCount,
-  normalizeAutocompleteValue,
-  sortMakeOptions,
-} from "@/components/new-listing-form/autocomplete";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
@@ -70,31 +66,11 @@ export function SavedSearchFields({
     [fields],
   );
   const selectedMake = getFieldValue("marka");
-  const makeOptions = useMemo(
-    () =>
-      sortMakeOptions(
-        prefillOptions.makes.map((option) => ({
-          value: option.value,
-          count: option.count,
-        })),
-      ),
-    [prefillOptions.makes],
-  );
-  const modelOptions = useMemo(() => {
-    const matchedMakeKey =
-      Object.keys(prefillOptions.modelsByMake).find(
-        (make) =>
-          normalizeAutocompleteValue(make) ===
-          normalizeAutocompleteValue(selectedMake),
-      ) ?? selectedMake;
-
-    return (prefillOptions.modelsByMake[matchedMakeKey] ?? []).map(
-      (option) => ({
-        value: option.value,
-        count: option.count,
-      }),
-    );
-  }, [prefillOptions.modelsByMake, selectedMake]);
+  const { makeOptions, modelOptions, getSelectedCount } =
+    useSavedSearchAutocompleteOptions({
+      selectedMake,
+      prefillOptions,
+    });
 
   return (
     <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4">
@@ -108,15 +84,10 @@ export function SavedSearchFields({
                   item.name === MOBILE_BG_PAIRED_FIELD_NAMES[field.name],
               )
             : null;
-        const selectedMakeCount =
-          field.name === "marka"
-            ? getSelectedOptionCount(makeOptions, field.value)
-            : null;
-        const selectedModelCount =
-          field.name === "model"
-            ? getSelectedOptionCount(modelOptions, field.value)
-            : null;
-        const selectedReferenceCount = selectedMakeCount ?? selectedModelCount;
+        const selectedReferenceCount = getSelectedCount(
+          field.name,
+          field.value,
+        );
         const autocompleteOptions =
           field.name === "marka" ? makeOptions : modelOptions;
         const autocompleteKind = isSavedSearchAutocompleteField(field.name)
