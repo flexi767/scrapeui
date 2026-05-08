@@ -14,16 +14,33 @@ import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 
 type SavedSearchDetail = SavedSearchDetailResponse["detail"];
 
+const DEFAULT_SUB_LOCATION_LABEL = "Населено място";
+const DEFAULT_SUB_LOCATION_OPTIONS = [{ value: "", label: "всички" }];
+
+function cloneFields(fields: SearchField[]) {
+  return fields.map((field) => ({ ...field }));
+}
+
+function resetSubLocationField(field: SearchField): SearchField {
+  return {
+    ...field,
+    value: "",
+    label: DEFAULT_SUB_LOCATION_LABEL,
+    source: "default",
+  };
+}
+
 export function useSavedSearchFormState(initialDetail: SavedSearchDetail | null) {
   const [editableFields, setEditableFields] = useState<SearchField[]>(
-    initialDetail?.prefill.form.fields.map((field) => ({ ...field })) ?? [],
+    initialDetail ? cloneFields(initialDetail.prefill.form.fields) : [],
   );
   const [subLocationLabel, setSubLocationLabel] = useState(
-    initialDetail?.prefill.options.subLocations.label ?? "Населено място",
+    initialDetail?.prefill.options.subLocations.label ??
+      DEFAULT_SUB_LOCATION_LABEL,
   );
   const [subLocationOptions, setSubLocationOptions] = useState(
     initialDetail?.prefill.options.subLocations.options ?? [
-      { value: "", label: "всички" },
+      ...DEFAULT_SUB_LOCATION_OPTIONS,
     ],
   );
   const [locationLoading, setLocationLoading] = useState(false);
@@ -32,15 +49,15 @@ export function useSavedSearchFormState(initialDetail: SavedSearchDetail | null)
   >(null);
 
   const loadFromDetail = useCallback((detail: SavedSearchDetail) => {
-    setEditableFields(detail.prefill.form.fields.map((field) => ({ ...field })));
+    setEditableFields(cloneFields(detail.prefill.form.fields));
     setSubLocationLabel(detail.prefill.options.subLocations.label);
     setSubLocationOptions(detail.prefill.options.subLocations.options);
   }, []);
 
   const reset = useCallback(() => {
     setEditableFields([]);
-    setSubLocationLabel("Населено място");
-    setSubLocationOptions([{ value: "", label: "всички" }]);
+    setSubLocationLabel(DEFAULT_SUB_LOCATION_LABEL);
+    setSubLocationOptions([...DEFAULT_SUB_LOCATION_OPTIONS]);
     setLocationLoading(false);
     setOpenAutocomplete(null);
   }, []);
@@ -93,18 +110,12 @@ export function useSavedSearchFormState(initialDetail: SavedSearchDetail | null)
     async (value: string) => {
       updateField("f17", value);
       setLocationLoading(true);
-      setSubLocationLabel("Населено място");
-      setSubLocationOptions([{ value: "", label: "всички" }]);
+      setSubLocationLabel(DEFAULT_SUB_LOCATION_LABEL);
+      setSubLocationOptions([...DEFAULT_SUB_LOCATION_OPTIONS]);
       setEditableFields((prev) =>
         prev.map((field) => {
           if (field.name === "f17") return { ...field, value };
-          if (field.name === "f18")
-            return {
-              ...field,
-              value: "",
-              label: "Населено място",
-              source: "default",
-            };
+          if (field.name === "f18") return resetSubLocationField(field);
           return field;
         }),
       );
