@@ -264,3 +264,28 @@ export const ownNeedsSyncExpr = `
     ELSE 0
   END
 `;
+
+/**
+ * Subquery: first backup image id for a listing (via backup join).
+ * Use when `l` is the listings alias and `b`/`i` aliases are not yet in scope.
+ */
+export const firstBackupImageIdExpr = `(
+  SELECT i.id
+  FROM mobilebg_backups b
+  JOIN mobilebg_backup_images i ON i.backup_id = b.id
+  WHERE b.listing_id = l.id
+  ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
+  LIMIT 1
+)`;
+
+/**
+ * Subquery: first backup image id when backup `b` is already joined.
+ * Use when `b` is in scope (own-listing queries with LEFT JOIN mobilebg_backups b).
+ */
+export const firstBackupImageIdFromBackupExpr = `(
+  SELECT i.id
+  FROM mobilebg_backup_images i
+  WHERE i.backup_id = b.id
+  ORDER BY i.sort_order ASC, i.id ASC
+  LIMIT 1
+)`;

@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { firstBackupImageIdExpr } from '../types';
 
 export interface TrackedChangeRow {
   id: number;
@@ -329,14 +330,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
         l.full_keys,
         l.images_downloaded,
         l.thumb_saved,
-        (
-          SELECT i.id
-          FROM mobilebg_backups b
-          JOIN mobilebg_backup_images i ON i.backup_id = b.id
-          WHERE b.listing_id = l.id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
-          LIMIT 1
-        ) as first_backup_image_id,
+        ${firstBackupImageIdExpr} as first_backup_image_id,
         s.price as snapshot_price,
         s.vat as snapshot_vat,
         s.last_edit as snapshot_last_edit,

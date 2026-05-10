@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { OwnListingRow } from '../types';
-import { ownNeedsSyncExpr, ownVatExpr } from '../types';
+import { firstBackupImageIdFromBackupExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
 
 export function getOwnListingByMobileId(
   mobileId: string,
@@ -34,13 +34,7 @@ export function getOwnListingByMobileId(
       COALESCE(b.ad_status, l.ad_status) as ad_status,
       l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, COALESCE(b.views, l.views) as views, l.cars_total_views, b.watching as watching, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
-      (
-        SELECT i.id
-        FROM mobilebg_backup_images i
-        WHERE i.backup_id = b.id
-        ORDER BY i.sort_order ASC, i.id ASC
-        LIMIT 1
-      ) as first_backup_image_id,
+      ${firstBackupImageIdFromBackupExpr} as first_backup_image_id,
       ${ownNeedsSyncExpr} as needs_sync,
       CASE WHEN EXISTS (
         SELECT 1
