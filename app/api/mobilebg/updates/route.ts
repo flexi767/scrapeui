@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
       id: dealer.id,
       slug: dealer.slug,
       name: dealer.name,
-      mobileUrl: '',
       mobileUser: dealer.mobile_user,
       mobilePassword: dealer.mobile_password,
     }, backupId, raw.name);
