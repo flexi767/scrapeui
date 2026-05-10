@@ -8,7 +8,7 @@ import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
 import { formatDateOnly } from '@/lib/date-format';
 import { listingHref } from '@/lib/listing-url';
 import { formatDate } from '@/lib/utils';
-import type { ListingRow } from '@/lib/query-modules/types';
+import type { ListingRow } from '@/lib/queries';
 
 interface Props {
   row: ListingRow;
