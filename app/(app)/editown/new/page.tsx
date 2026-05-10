@@ -14,7 +14,7 @@ import {
   parseJson,
   type ImageMeta,
 } from "@/lib/utils";
-import { notDuplicateLExpr } from "@/lib/query-modules/types";
+import { notDuplicateLExpr, rankedBackupsCte } from "@/lib/query-modules/types";
 
 interface DealerRow {
   id: number;
@@ -61,15 +61,7 @@ function getOwnListingsByDealer(): Record<
   const rows = raw
     .prepare(
       `
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT
       b.id as backup_id,
       b.dealer_id,
