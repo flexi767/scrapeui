@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Templates 5 & 6</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  .tab-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #111; display: flex; align-items: center;
+    padding: 0 1rem; border-bottom: 1px solid #333;
+  }
+  .tab-label { color: #888; font-size: 0.7rem; font-family: monospace; padding: 0 1rem 0 0; letter-spacing: 1px; text-transform: uppercase; }
+  .tab {
+    padding: 0.75rem 1.5rem; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+    border: none; background: transparent; color: #666; font-family: -apple-system, sans-serif;
+    border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+  .tab:hover:not(.active) { color: #aaa; }
+  .template { display: none; padding-top: 44px; }
+  .template.active { display: block; }
+
+
+  /* ===================== TEMPLATE 5: SUNSET — WARM LIFESTYLE ===================== */
+  #sunset {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #faf7f2;
+    color: #2c2416;
+  }
+
+  #sunset header {
+    background: #faf7f2;
+    border-bottom: 1px solid #e8dfd0;
+    padding: 0 2.5rem;
+    height: 68px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 44px; z-index: 100;
+  }
+  #sunset .logo { display: flex; align-items: center; gap: 0.6rem; }
+  #sunset .logo-icon {
+    width: 34px; height: 34px; background: #e07843;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  #sunset .logo-name { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; color: #2c2416; }
+  #sunset .logo-name span { color: #e07843; }
+  #sunset nav { display: flex; gap: 0.25rem; }
+  #sunset nav a {
+    text-decoration: none; color: #8a7563; font-size: 0.85rem; font-weight: 500;
+    padding: 0.5rem 0.9rem; border-radius: 8px;
+  }
+  #sunset nav a:hover { background: #f0e8dc; color: #2c2416; }
+  #sunset .header-cta {
+    background: #e07843; color: #fff; padding: 0.55rem 1.3rem;
+    border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 0.85rem;
+  }
+
+  /* Hero */
+  #sunset .hero { position: relative; overflow: hidden; }
+  #sunset .hero-img-wrap {
+    height: 480px;
+    background: url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=1300&h=520&fit=crop') center/cover;
+    position: relative;
+  }
+  #sunset .hero-img-wrap::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, rgba(42,28,14,0.75) 0%, rgba(42,28,14,0.3) 60%, transparent 100%);
+  }
+  #sunset .hero-content {
+    position: absolute; top: 50%; left: 0; transform: translateY(-50%);
+    padding: 0 3rem; z-index: 2; max-width: 560px;
+  }
+  #sunset .hero-eyebrow {
+    background: rgba(224,120,67,0.9); color: #fff;
+    display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+  }
+  #sunset .hero-content h1 {
+    font-size: 3rem; font-weight: 800; line-height: 1.1;
+    color: #fff; margin-bottom: 1rem; letter-spacing: -1px;
+  }
+  #sunset .hero-content p {
+    color: rgba(255,255,255,0.75); font-size: 1rem; line-height: 1.6; margin-bottom: 2rem;
+  }
+  #sunset .hero-actions { display: flex; gap: 0.75rem; }
+  #sunset .btn-warm {
+    background: #e07843; color: #fff; padding: 0.8rem 1.6rem;
+    border-radius: 10px; font-weight: 700; font-size: 0.9rem; text-decoration: none;
+  }
+  #sunset .btn-outline-warm {
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.4); color: #fff;
+    padding: 0.8rem 1.6rem; border-radius: 10px; font-weight: 600;
+    font-size: 0.9rem; text-decoration: none;
+  }
+
+  /* Search strip */
+  #sunset .search-strip {
+    background: #fff; border-bottom: 1px solid #e8dfd0;
+    padding: 1.2rem 2.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+  }
+  #sunset .search-strip select,
+  #sunset .search-strip input {
+    padding: 0.6rem 1rem; border: 1.5px solid #e0d5c5; border-radius: 10px;
+    font-size: 0.85rem; color: #2c2416; background: #fdf9f4; outline: none;
+    flex: 1; min-width: 120px;
+  }
+  #sunset .search-strip select:focus,
+  #sunset .search-strip input:focus { border-color: #e07843; }
+  #sunset .search-btn {
+    background: #e07843; color: #fff; border: none;
+    padding: 0.6rem 1.4rem; border-radius: 10px; font-weight: 700;
+    font-size: 0.85rem; cursor: pointer; white-space: nowrap;
+  }
+  #sunset .result-count { color: #8a7563; font-size: 0.82rem; margin-left: auto; white-space: nowrap; }
+
+  /* Body */
+  #sunset .body { max-width: 1160px; margin: 2rem auto; padding: 0 2.5rem; }
+  #sunset .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem; }
+  #sunset .section-head h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.3px; }
+  #sunset .section-head a { font-size: 0.82rem; color: #e07843; text-decoration: none; font-weight: 600; }
+
+  /* Cards */
+  #sunset .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+  #sunset .scard {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    border: 1px solid #ede5d8;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #sunset .scard:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(44,36,22,0.1); }
+  #sunset .scard-img { height: 165px; overflow: hidden; position: relative; }
+  #sunset .scard-img img { width: 100%; height: 100%; object-fit: cover; }
+  #sunset .scard-like {
+    position: absolute; top: 0.7rem; right: 0.7rem;
+    background: rgba(255,255,255,0.9); width: 32px; height: 32px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; cursor: pointer;
+  }
+  #sunset .scard-tag {
+    position: absolute; bottom: 0.7rem; left: 0.7rem;
+    background: #e07843; color: #fff; padding: 0.2rem 0.6rem;
+    border-radius: 6px; font-size: 0.68rem; font-weight: 700;
+  }
+  #sunset .scard-body { padding: 1rem; }
+  #sunset .scar-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem; color: #2c2416; }
+  #sunset .scar-sub { font-size: 0.75rem; color: #a09080; margin-bottom: 0.8rem; }
+  #sunset .scar-specs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  #sunset .sspec {
+    background: #faf5ee; border: 1px solid #ede5d8;
+    color: #7a6a58; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.72rem;
+  }
+  #sunset .scard-foot { display: flex; align-items: center; justify-content: space-between; }
+  #sunset .sprice { font-size: 1.05rem; font-weight: 800; color: #2c2416; }
+  #sunset .sview {
+    background: transparent; border: 1.5px solid #e07843; color: #e07843;
+    padding: 0.38rem 0.85rem; border-radius: 8px; font-size: 0.78rem;
+    font-weight: 700; cursor: pointer;
+  }
+  #sunset .sview:hover { background: #e07843; color: #fff; }
+
+  /* Trust bar */
+  #sunset .trust-bar {
+    background: #fff; border-top: 1px solid #e8dfd0; border-bottom: 1px solid #e8dfd0;
+    padding: 1.5rem 2.5rem; margin: 2.5rem 0;
+    display: flex; justify-content: center; gap: 4rem;
+  }
+  #sunset .trust-item { text-align: center; }
+  #sunset .trust-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+  #sunset .trust-val { font-size: 1rem; font-weight: 800; color: #2c2416; }
+  #sunset .trust-lbl { font-size: 0.72rem; color: #a09080; }
+
+  #sunset footer {
+    background: #2c2416; color: rgba(255,255,255,0.4); padding: 2.5rem;
+    text-align: center; font-size: 0.8rem; margin-top: 3rem;
+  }
+  #sunset footer strong { color: #e07843; }
+
+
+  /* ===================== TEMPLATE 6: PRO — DATA GRID ===================== */
+  #pro {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    background: #f0f2f5;
+    color: #1e2533;
+  }
+
+  #pro header {
+    background: #1e2533;
+    padding: 0 2rem; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 44px; z-index: 100;
+  }
+  #pro .logo { display: flex; align-items: center; gap: 0.5rem; }
+  #pro .logo-badge {
+    background: #2e6fef; color: #fff;
+    padding: 0.2rem 0.6rem; border-radius: 4px;
+    font-size: 0.78rem; font-weight: 800; letter-spacing: 0.5px;
+  }
+  #pro .logo-name { color: #fff; font-size: 1rem; font-weight: 700; }
+  #pro nav { display: flex; gap: 0.1rem; }
+  #pro nav a {
+    color: rgba(255,255,255,0.45); font-size: 0.8rem; padding: 0.4rem 0.85rem;
+    text-decoration: none; border-radius: 4px;
+  }
+  #pro nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  #pro nav a.active-pro { color: #fff; background: rgba(46,111,239,0.25); }
+  #pro .pro-cta {
+    background: #2e6fef; color: #fff; padding: 0.45rem 1.1rem;
+    border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* Toolbar */
+  #pro .toolbar {
+    background: #fff; border-bottom: 1px solid #dde1e9;
+    padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  }
+  #pro .toolbar select,
+  #pro .toolbar input {
+    border: 1px solid #dde1e9; background: #fff; color: #1e2533;
+    padding: 0.45rem 0.85rem; font-size: 0.8rem; border-radius: 5px; outline: none;
+  }
+  #pro .toolbar select:focus,
+  #pro .toolbar input:focus { border-color: #2e6fef; box-shadow: 0 0 0 2px rgba(46,111,239,0.15); }
+  #pro .toolbar input[type=search] { width: 200px; }
+  #pro .toolbar-spacer { flex: 1; }
+  #pro .toolbar-count { font-size: 0.78rem; color: #8a93a6; }
+  #pro .toolbar-sort { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #8a93a6; }
+  #pro .toolbar-sort select { padding: 0.4rem 0.7rem; }
+  #pro .view-btns { display: flex; gap: 2px; }
+  #pro .vbtn {
+    background: #f0f2f5; border: 1px solid #dde1e9; color: #8a93a6;
+    padding: 0.4rem 0.65rem; font-size: 0.8rem; cursor: pointer; border-radius: 4px;
+  }
+  #pro .vbtn.on { background: #2e6fef; border-color: #2e6fef; color: #fff; }
+
+  /* Main */
+  #pro .main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 2rem; display: grid; grid-template-columns: 220px 1fr; gap: 1.2rem; }
+
+  /* Sidebar */
+  #pro .sidebar {
+    background: #fff; border: 1px solid #dde1e9; border-radius: 8px;
+    padding: 1.2rem; height: fit-content;
+  }
+  #pro .sb-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #8a93a6; margin-bottom: 1rem; }
+  #pro .sb-section { margin-bottom: 1.2rem; }
+  #pro .sb-section label { display: block; font-size: 0.75rem; font-weight: 600; color: #4a5568; margin-bottom: 0.4rem; }
+  #pro .sb-section select,
+  #pro .sb-section input {
+    width: 100%; border: 1px solid #dde1e9; background: #f8f9fb;
+    color: #1e2533; padding: 0.45rem 0.7rem; font-size: 0.78rem; border-radius: 5px; outline: none;
+  }
+  #pro .sb-section select:focus,
+  #pro .sb-section input:focus { border-color: #2e6fef; }
+  #pro .sb-range { display: flex; gap: 0.4rem; }
+  #pro .sb-range input { flex: 1; }
+  #pro .sb-apply {
+    width: 100%; background: #2e6fef; color: #fff; border: none;
+    padding: 0.6rem; border-radius: 5px; font-weight: 700; font-size: 0.8rem;
+    cursor: pointer; margin-top: 0.4rem;
+  }
+  #pro .active-filters { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.8rem; }
+  #pro .af-tag {
+    background: #ebf0fd; color: #2e6fef; padding: 0.2rem 0.55rem;
+    border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+    border: 1px solid #c5d5fa;
+  }
+
+  /* Table / data grid */
+  #pro .grid-wrap { }
+  #pro .data-table { width: 100%; background: #fff; border: 1px solid #dde1e9; border-radius: 8px; overflow: hidden; }
+  #pro .dt-head { background: #f8f9fb; border-bottom: 1px solid #dde1e9; }
+  #pro .dt-head-row { display: grid; grid-template-columns: 240px 1fr 90px 90px 80px 85px 100px; padding: 0.6rem 0.8rem; align-items: center; }
+  #pro .dt-head-row th { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #8a93a6; text-align: left; cursor: pointer; user-select: none; }
+  #pro .dt-head-row th:hover { color: #2e6fef; }
+  #pro .dt-head-row th.sorted { color: #2e6fef; }
+  #pro .dt-row {
+    display: grid; grid-template-columns: 240px 1fr 90px 90px 80px 85px 100px;
+    padding: 0 0.8rem; align-items: center; border-bottom: 1px solid #f0f2f5;
+    transition: background 0.15s; cursor: pointer; min-height: 72px;
+  }
+  #pro .dt-row:last-child { border-bottom: none; }
+  #pro .dt-row:hover { background: #f5f7ff; }
+  #pro .dt-cell { font-size: 0.82rem; color: #1e2533; padding: 0.5rem 0; }
+  #pro .dt-car-col { display: flex; align-items: center; gap: 0.8rem; }
+  #pro .dt-thumb { width: 80px; height: 54px; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+  #pro .dt-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  #pro .dt-car-info { }
+  #pro .dt-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.15rem; }
+  #pro .dt-variant { font-size: 0.72rem; color: #8a93a6; }
+  #pro .dt-price { font-weight: 800; font-size: 0.9rem; color: #1e2533; }
+  #pro .dt-mileage { color: #4a5568; }
+  #pro .dt-year { color: #4a5568; }
+  #pro .dt-fuel-badge {
+    display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #pro .fuel-petrol { background: #fef3c7; color: #92400e; }
+  #pro .fuel-diesel { background: #dbeafe; color: #1e40af; }
+  #pro .fuel-hybrid { background: #d1fae5; color: #065f46; }
+  #pro .fuel-electric { background: #ede9fe; color: #5b21b6; }
+  #pro .dt-action {
+    background: transparent; border: 1px solid #dde1e9; color: #4a5568;
+    padding: 0.35rem 0.75rem; border-radius: 5px; font-size: 0.75rem;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  #pro .dt-action:hover { border-color: #2e6fef; color: #2e6fef; background: #ebf0fd; }
+  #pro .dt-status { display: flex; align-items: center; gap: 0.35rem; }
+  #pro .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+  #pro .status-dot.price-drop { background: #f59e0b; }
+  #pro .status-txt { font-size: 0.72rem; color: #8a93a6; }
+
+  /* Pagination */
+  #pro .pagination {
+    background: #fff; border: 1px solid #dde1e9; border-top: none;
+    border-radius: 0 0 8px 8px; padding: 0.8rem 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #pro .page-info { font-size: 0.78rem; color: #8a93a6; }
+  #pro .page-btns { display: flex; gap: 0.25rem; }
+  #pro .page-btn {
+    background: #fff; border: 1px solid #dde1e9; color: #4a5568;
+    padding: 0.35rem 0.65rem; font-size: 0.78rem; cursor: pointer; border-radius: 4px;
+  }
+  #pro .page-btn.current { background: #2e6fef; border-color: #2e6fef; color: #fff; }
+  #pro .page-btn:hover:not(.current) { border-color: #2e6fef; color: #2e6fef; }
+
+  #pro footer {
+    background: #1e2533; color: rgba(255,255,255,0.35); padding: 1.5rem 2rem;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.75rem; margin-top: 2rem;
+  }
+  #pro footer .fl { color: rgba(255,255,255,0.65); font-weight: 700; }
+  #pro footer a { color: rgba(255,255,255,0.3); text-decoration: none; margin-left: 1.5rem; }
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <span class="tab-label">Template Preview</span>
+  <button class="tab active" onclick="show('sunset', this)">Sunset &nbsp;·&nbsp; Warm Lifestyle</button>
+  <button class="tab" onclick="show('pro', this)">Pro &nbsp;·&nbsp; Data Grid</button>
+</div>
+
+
+<!-- ===== TEMPLATE 5: SUNSET ===== -->
+<div id="sunset" class="template active">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🚗</div>
+      <div class="logo-name">Car<span>Bros</span></div>
+    </div>
+    <nav>
+      <a href="#">Browse Cars</a>
+      <a href="#">New Arrivals</a>
+      <a href="#">Finance</a>
+      <a href="#">Contact</a>
+    </nav>
+    <a href="#" class="header-cta">☎ Call Us</a>
+  </header>
+
+  <div class="hero">
+    <div class="hero-img-wrap"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">✦ Sofia's Friendliest Dealer</div>
+      <h1>Every journey<br>starts here.</h1>
+      <p>312 quality cars. Real prices.<br>No pressure. Just great deals.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-warm">Browse Cars →</a>
+        <a href="#" class="btn-outline-warm">Book a Test Drive</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-strip">
+    <select><option>All Makes</option><option>BMW</option><option>Mercedes</option><option>Audi</option><option>Toyota</option><option>VW</option></select>
+    <select><option>All Models</option></select>
+    <select><option>Any Year</option><option>2020+</option><option>2018+</option><option>2015+</option></select>
+    <select><option>Any Fuel</option><option>Petrol</option><option>Diesel</option><option>Hybrid</option><option>Electric</option></select>
+    <input type="text" placeholder="Max price (лв)">
+    <button class="search-btn">Find My Car</button>
+    <span class="result-count">312 cars available</span>
+  </div>
+
+  <div class="body">
+    <div class="section-head">
+      <h2>Just In 🔥</h2>
+      <a href="#">View all →</a>
+    </div>
+    <div class="cards">
+      <div class="scard">
+        <div class="scard-img">
+          <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=200&fit=crop" alt="">
+          <div class="scard-like">♡</div>
+          <span class="scard-tag">New In</span>
+        </div>
+        <div class="scard-body">
+          <div class="scar-name">BMW 3 Series</div>
+          <div class="scar-sub">320d xDrive · 2022</div>
+          <div class="scar-specs">
+            <span class="sspec">Diesel</span>
+            <span class="sspec">45,000 km</span>
+            <span class="sspec">Auto</span>
+          </div>
+          <div class="scard-foot">
+            <div class="sprice">42,500 лв</div>
+            <button class="sview">View</button>
+          </div>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="scard-img">
+          <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&h=200&fit=crop" alt="">
+          <div class="scard-like">♡</div>
+          <span class="scard-tag">Hybrid ⚡</span>
+        </div>
+        <div class="scard-body">
+          <div class="scar-name">Toyota RAV4</div>
+          <div class="scar-sub">Hybrid 2.5 AWD · 2023</div>
+          <div class="scar-specs">
+            <span class="sspec">Hybrid</span>
+            <span class="sspec">12,500 km</span>
+            <span class="sspec">Auto</span>
+          </div>
+          <div class="scard-foot">
+            <div class="sprice">58,200 лв</div>
+            <button class="sview">View</button>
+          </div>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="scard-img">
+          <img src="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=200&fit=crop" alt="">
+          <div class="scard-like">♡</div>
+        </div>
+        <div class="scard-body">
+          <div class="scar-name">VW Golf GTI</div>
+          <div class="scar-sub">2.0 TSI · 2021</div>
+          <div class="scar-specs">
+            <span class="sspec">Petrol</span>
+            <span class="sspec">29,800 km</span>
+            <span class="sspec">Auto</span>
+          </div>
+          <div class="scard-foot">
+            <div class="sprice">39,500 лв</div>
+            <button class="sview">View</button>
+          </div>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="scard-img">
+          <img src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=200&fit=crop" alt="">
+          <div class="scard-like">♡</div>
+          <span class="scard-tag">Electric ⚡</span>
+        </div>
+        <div class="scard-body">
+          <div class="scar-name">Tesla Model 3</div>
+          <div class="scar-sub">Long Range AWD · 2022</div>
+          <div class="scar-specs">
+            <span class="sspec">Electric</span>
+            <span class="sspec">22,100 km</span>
+            <span class="sspec">Auto</span>
+          </div>
+          <div class="scard-foot">
+            <div class="sprice">54,900 лв</div>
+            <button class="sview">View</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trust-bar">
+      <div class="trust-item">
+        <div class="trust-icon">🏆</div>
+        <div class="trust-val">8 Years</div>
+        <div class="trust-lbl">In business</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">⭐</div>
+        <div class="trust-val">4.9 / 5</div>
+        <div class="trust-lbl">Customer rating</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">🚗</div>
+        <div class="trust-val">312 Cars</div>
+        <div class="trust-lbl">In stock today</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">🛡️</div>
+        <div class="trust-val">12 Months</div>
+        <div class="trust-lbl">Warranty included</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <strong>CarBros</strong> — Sofia's Trusted Car Dealer · ul. Cherni Vrah 42 · +359 88 123 4567
+  </footer>
+
+</div>
+
+
+<!-- ===== TEMPLATE 6: PRO ===== -->
+<div id="pro" class="template">
+
+  <header>
+    <div class="logo">
+      <span class="logo-badge">M</span>
+      <span class="logo-name">Motors</span>
+    </div>
+    <nav>
+      <a href="#" class="active-pro">Inventory</a>
+      <a href="#">New In</a>
+      <a href="#">Finance</a>
+      <a href="#">Fleet</a>
+      <a href="#">Contact</a>
+    </nav>
+    <a href="#" class="pro-cta">Enquire</a>
+  </header>
+
+  <div class="toolbar">
+    <select><option>All Makes</option><option>BMW</option><option>Mercedes-Benz</option><option>Porsche</option><option>Lexus</option></select>
+    <select><option>All Models</option></select>
+    <select><option>Any Year</option><option>2022+</option><option>2020+</option><option>2018+</option></select>
+    <select><option>Any Fuel</option><option>Petrol</option><option>Diesel</option><option>Hybrid</option><option>Electric</option></select>
+    <select><option>Any Transmission</option><option>Automatic</option><option>Manual</option></select>
+    <input type="search" placeholder="🔍  Search make, model...">
+    <div class="toolbar-spacer"></div>
+    <span class="toolbar-count">148 vehicles</span>
+    <div class="toolbar-sort">
+      Sort:
+      <select><option>Newest</option><option>Price ↑</option><option>Price ↓</option><option>Mileage ↑</option></select>
+    </div>
+    <div class="view-btns">
+      <button class="vbtn on">⊞</button>
+      <button class="vbtn">≡</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sb-title">Refine</div>
+      <div class="active-filters">
+        <span class="af-tag">Diesel ✕</span>
+        <span class="af-tag">Auto ✕</span>
+      </div>
+      <div class="sb-section">
+        <label>Make</label>
+        <select><option>All Makes</option><option>BMW</option><option>Mercedes-Benz</option><option>Porsche</option></select>
+      </div>
+      <div class="sb-section">
+        <label>Price Range (лв)</label>
+        <div class="sb-range">
+          <input placeholder="Min">
+          <input placeholder="Max">
+        </div>
+      </div>
+      <div class="sb-section">
+        <label>Year</label>
+        <div class="sb-range">
+          <input placeholder="From" value="2018">
+          <input placeholder="To">
+        </div>
+      </div>
+      <div class="sb-section">
+        <label>Mileage (km)</label>
+        <div class="sb-range">
+          <input placeholder="0">
+          <input placeholder="Max">
+        </div>
+      </div>
+      <div class="sb-section">
+        <label>Fuel Type</label>
+        <select><option>Any</option><option>Petrol</option><option selected>Diesel</option><option>Hybrid</option><option>Electric</option></select>
+      </div>
+      <div class="sb-section">
+        <label>Transmission</label>
+        <select><option>Any</option><option selected>Automatic</option><option>Manual</option></select>
+      </div>
+      <button class="sb-apply">Apply Filters</button>
+    </aside>
+
+    <div class="grid-wrap">
+      <div class="data-table">
+        <div class="dt-head">
+          <div class="dt-head-row">
+            <th>Vehicle</th>
+            <th class="sorted">Price ↑</th>
+            <th>Mileage</th>
+            <th>Year</th>
+            <th>Fuel</th>
+            <th>Status</th>
+            <th></th>
+          </div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">Porsche Cayenne</div>
+              <div class="dt-variant">3.0 V6 Tiptronic S · Carrara White</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">129,500 лв</div>
+          <div class="dt-cell dt-mileage">22,400 km</div>
+          <div class="dt-cell dt-year">2022</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-petrol">Petrol</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot"></div><span class="status-txt">Available</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">BMW 5 Series</div>
+              <div class="dt-variant">530d xDrive M Sport · Black Sapphire</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">72,800 лв</div>
+          <div class="dt-cell dt-mileage">41,200 km</div>
+          <div class="dt-cell dt-year">2021</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-diesel">Diesel</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot price-drop"></div><span class="status-txt">Price drop</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">Mercedes-Benz E-Class</div>
+              <div class="dt-variant">E300 AMG Line · Obsidian Black</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">94,200 лв</div>
+          <div class="dt-cell dt-mileage">8,900 km</div>
+          <div class="dt-cell dt-year">2023</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-hybrid">Hybrid</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot"></div><span class="status-txt">Available</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">Tesla Model S</div>
+              <div class="dt-variant">Long Range Plaid · Pearl White</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">112,000 лв</div>
+          <div class="dt-cell dt-mileage">19,800 km</div>
+          <div class="dt-cell dt-year">2022</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-electric">Electric</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot"></div><span class="status-txt">Available</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">Lexus RX</div>
+              <div class="dt-variant">450h+ F Sport · Sonic Titanium</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">88,900 лв</div>
+          <div class="dt-cell dt-mileage">18,500 km</div>
+          <div class="dt-cell dt-year">2022</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-hybrid">Hybrid</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot price-drop"></div><span class="status-txt">Price drop</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+
+        <div class="dt-row">
+          <div class="dt-cell dt-car-col">
+            <div class="dt-thumb"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=160&h=110&fit=crop" alt=""></div>
+            <div class="dt-car-info">
+              <div class="dt-name">Toyota Land Cruiser</div>
+              <div class="dt-variant">300 VXR · Midnight Black</div>
+            </div>
+          </div>
+          <div class="dt-cell dt-price">154,000 лв</div>
+          <div class="dt-cell dt-mileage">6,200 km</div>
+          <div class="dt-cell dt-year">2023</div>
+          <div class="dt-cell"><span class="dt-fuel-badge fuel-diesel">Diesel</span></div>
+          <div class="dt-cell dt-status"><div class="status-dot"></div><span class="status-txt">Available</span></div>
+          <div class="dt-cell"><button class="dt-action">View →</button></div>
+        </div>
+      </div>
+
+      <div class="pagination">
+        <span class="page-info">Showing 1–6 of 148 vehicles</span>
+        <div class="page-btns">
+          <button class="page-btn">←</button>
+          <button class="page-btn current">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">…</button>
+          <button class="page-btn">25</button>
+          <button class="page-btn">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="fl">MMMotors · Plovdiv</span>
+    <div>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.template').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

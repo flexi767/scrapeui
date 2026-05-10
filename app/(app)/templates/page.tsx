@@ -12,6 +12,11 @@ interface Config {
   isActive: number;
 }
 
+interface DealerOption {
+  id: number;
+  name: string;
+}
+
 async function getTemplatesForSession(session: { role: string; dealerId: number | null }) {
   if (session.role === "admin") {
     return raw
@@ -45,6 +50,12 @@ export default async function TemplatesPage() {
 
   const user = session.user as { role: string; dealerId: number | null };
   const configs = await getTemplatesForSession(user);
+  const dealerOptions =
+    user.role === "admin"
+      ? (raw
+          .prepare(`SELECT id, name FROM dealers ORDER BY active DESC, priority DESC, name ASC`)
+          .all() as DealerOption[])
+      : [];
 
   const bases = configs.filter((c) => c.dealerId === null);
   const mine = configs.filter((c) => c.dealerId !== null);
@@ -54,7 +65,7 @@ export default async function TemplatesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Template Configs</h1>
       </div>
-      <TemplatesClient mine={mine} bases={bases} />
+      <TemplatesClient mine={mine} bases={bases} dealerOptions={dealerOptions} />
     </div>
   );
 }

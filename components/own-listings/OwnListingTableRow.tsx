@@ -1,8 +1,10 @@
 "use client";
 
 import { type KeyboardEvent } from "react";
-import { SearchIcon } from "lucide-react";
+import Link from "next/link";
+import { InstagramIcon, SearchIcon } from "lucide-react";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
+import { TikTokIcon } from "@/components/tiktok/TikTokIcon";
 import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
@@ -103,6 +105,24 @@ export function OwnListingTableRow({
             >
               <FbIcon className="h-3 w-3" />
             </button>
+            <Link
+              href={`/instagram/publish/${row.backup_id}`}
+              onClick={(e) => e.stopPropagation()}
+              title="Publish to Instagram"
+              aria-label="Publish to Instagram"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-pink-500/50 text-pink-300 hover:bg-pink-950/40"
+            >
+              <InstagramIcon className="h-3 w-3" />
+            </Link>
+            <Link
+              href={`/tiktok/publish/${row.backup_id}`}
+              onClick={(e) => e.stopPropagation()}
+              title="Create TikTok video"
+              aria-label="Create TikTok video"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 text-cyan-200 hover:bg-cyan-950/40"
+            >
+              <TikTokIcon className="h-3 w-3" />
+            </Link>
           </div>
           <ListingSearchPrefillButton listingId={row.id} />
           <ListingThumbPreview

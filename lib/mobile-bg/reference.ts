@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { USER_AGENT } from './constants';
+import { fetchWin1251 } from './fetch-html';
 import { fetchMakesModels, normalizeMakeModelLabel, type MakeEntry, type MakesMap, type ModelEntry } from './makes-models';
 
 export const DEFAULT_MOBILEBG_SEARCH_PATH = '/search/avtomobili-dzhipove';
@@ -45,13 +45,6 @@ function compareModelEntries(a: ModelEntry, b: ModelEntry): number {
 
 function compareMakeEntries(a: MakeEntry, b: MakeEntry): number {
   return b.make.length - a.make.length || (b.count ?? -1) - (a.count ?? -1) || a.make.localeCompare(b.make, 'bg');
-}
-
-async function fetchWin1251(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return new TextDecoder('windows-1251').decode(buf);
 }
 
 function buildSearchUrl(searchPath: string, params: Record<string, string>): string {

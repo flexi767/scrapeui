@@ -1,0 +1,131 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "Search... ⌘K" [ref=e5] [cursor=pointer]:
+          - generic [ref=e6]: Search...
+          - generic [ref=e7]: ⌘K
+        - generic [ref=e8]:
+          - heading "Command Palette" [level=2] [ref=e9]
+          - paragraph [ref=e10]: Search for a command to run...
+        - button [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+      - navigation [ref=e15]:
+        - link "Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e17]
+          - text: Dashboard
+        - link "Listings" [ref=e19] [cursor=pointer]:
+          - /url: /listings
+          - img [ref=e20]
+          - text: Listings
+        - link "Changes" [ref=e22] [cursor=pointer]:
+          - /url: /listings/changes
+          - img [ref=e23]
+          - text: Changes
+        - link "Deleted Listings" [ref=e25] [cursor=pointer]:
+          - /url: /listings/deleted
+          - img [ref=e26]
+          - text: Deleted Listings
+        - link "Edit Own" [ref=e28] [cursor=pointer]:
+          - /url: /editown
+          - img [ref=e29]
+          - text: Edit Own
+        - link "Batch Sync" [ref=e31] [cursor=pointer]:
+          - /url: /editown/sync
+          - img [ref=e32]
+          - text: Batch Sync
+        - link "Cars.bg Sync" [ref=e34] [cursor=pointer]:
+          - /url: /editown/carsbg-sync
+          - img [ref=e35]
+          - text: Cars.bg Sync
+        - link "New Listing" [ref=e37] [cursor=pointer]:
+          - /url: /editown/new
+          - img [ref=e38]
+          - text: New Listing
+        - link "FB Bookmarklet" [ref=e40] [cursor=pointer]:
+          - /url: /facebook-marketplace/bookmarklet
+          - img [ref=e41]
+          - text: FB Bookmarklet
+        - link "Saved Searches" [ref=e43] [cursor=pointer]:
+          - /url: /editown/saved-searches
+          - img [ref=e44]
+          - text: Saved Searches
+        - link "Search Positions" [ref=e46] [cursor=pointer]:
+          - /url: /editown/search-positions
+          - img [ref=e47]
+          - text: Search Positions
+        - link "Mobile.bg" [ref=e49] [cursor=pointer]:
+          - /url: /mobilebg
+          - img [ref=e50]
+          - text: Mobile.bg
+        - link "Backups" [ref=e52] [cursor=pointer]:
+          - /url: /mobilebg/backups
+          - img [ref=e53]
+          - text: Backups
+        - link "Edit Forms" [ref=e55] [cursor=pointer]:
+          - /url: /mobilebg/edit-forms
+          - img [ref=e56]
+          - text: Edit Forms
+        - link "Reposts" [ref=e58] [cursor=pointer]:
+          - /url: /mobilebg/reposts
+          - img [ref=e59]
+          - text: Reposts
+        - link "Mapping" [ref=e61] [cursor=pointer]:
+          - /url: /mapping
+          - img [ref=e62]
+          - text: Mapping
+        - link "Tasks" [ref=e64] [cursor=pointer]:
+          - /url: /tasks
+          - img [ref=e65]
+          - text: Tasks
+        - link "My Tasks" [ref=e67] [cursor=pointer]:
+          - /url: /tasks/my
+          - img [ref=e68]
+          - text: My Tasks
+        - link "Expenses" [ref=e70] [cursor=pointer]:
+          - /url: /expenses
+          - img [ref=e71]
+          - text: Expenses
+        - link "Knowledge Base" [ref=e73] [cursor=pointer]:
+          - /url: /kb
+          - img [ref=e74]
+          - text: Knowledge Base
+        - link "Files" [ref=e76] [cursor=pointer]:
+          - /url: /files
+          - img [ref=e77]
+          - text: Files
+        - link "Templates" [ref=e79] [cursor=pointer]:
+          - /url: /templates
+          - img [ref=e80]
+          - text: Templates
+        - link "Config" [ref=e82] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e83]
+          - text: Config
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - paragraph [ref=e89]: Admin
+          - paragraph [ref=e90]: admin
+        - button "Sign out" [ref=e91] [cursor=pointer]:
+          - img [ref=e92]
+    - main [ref=e94]:
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - heading "Facebook Marketplace Bookmarklet" [level=1] [ref=e97]
+          - paragraph [ref=e98]: Runs scrapeui listing selection inside the currently open Marketplace tab.
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - link "scrapeui Marketplace" [ref=e101] [cursor=pointer]:
+              - /url: "javascript:(()=>{const s=document.createElement('script');s.src='http://localhost:3000/api/facebook-marketplace/bookmarklet?ts='+Date.now();document.body.appendChild(s);})()"
+            - generic [ref=e102]: Drag this link to the bookmarks bar.
+          - generic [ref=e103]:
+            - paragraph [ref=e104]: Open Facebook Marketplace create vehicle listing, then click the bookmark.
+            - paragraph [ref=e105]: The overlay loads recent own listings, lets you choose one, fills the form, and leaves publishing to you.
+        - generic [ref=e106]:
+          - heading "Bookmark URL" [level=2] [ref=e107]
+          - textbox [ref=e108]: "javascript:(()=>{const s=document.createElement('script');s.src='http://localhost:3000/api/facebook-marketplace/bookmarklet?ts='+Date.now();document.body.appendChild(s);})()"
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e114] [cursor=pointer]:
+    - img [ref=e115]
+  - alert [ref=e118]

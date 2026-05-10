@@ -1,0 +1,379 @@
+- generic [ref=e5]:
+  - banner:
+    - generic [ref=e8]:
+      - generic [ref=e10]:
+        - generic:
+          - button [disabled]:
+            - img
+        - button "Facebook" [ref=e12] [cursor=pointer]:
+          - img "Facebook" [ref=e13]
+      - generic [ref=e16]:
+        - button "Log in with QR code" [ref=e19] [cursor=pointer]:
+          - img [ref=e20]
+        - generic [ref=e23]:
+          - textbox "Email or phone" [ref=e26]
+          - textbox "Password" [ref=e29]
+          - button "Log In" [ref=e32] [cursor=pointer]:
+            - generic [ref=e36]: Log In
+          - link "Forgot Account?" [ref=e39] [cursor=pointer]:
+            - /url: https://www.facebook.com/recover/initiate?ars=royal_blue_bar
+  - generic [ref=e44]:
+    - navigation [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e49]:
+          - heading [level=1] [ref=e54]: Marketplace
+          - button [ref=e57] [cursor=pointer]:
+            - img [ref=e58]
+        - generic [ref=e70]:
+          - generic:
+            - img
+          - combobox [ref=e71]
+        - generic [ref=e76]:
+          - link [ref=e78] [cursor=pointer]:
+            - /url: /marketplace/
+            - generic [ref=e79]:
+              - img [ref=e82]
+              - generic [ref=e89]: Browse all
+          - link [ref=e91] [cursor=pointer]:
+            - /url: /marketplace/you/selling/
+            - generic [ref=e92]:
+              - img [ref=e95]
+              - generic [ref=e102]: Your account
+          - link [ref=e104] [cursor=pointer]:
+            - /url: /marketplace/create/
+            - generic [ref=e105]:
+              - img [ref=e106]
+              - generic [ref=e109]: Create new listing
+          - generic [ref=e110]:
+            - generic [ref=e124]: Location
+            - generic [ref=e125]:
+              - button [ref=e126] [cursor=pointer]:
+                - generic [ref=e129]: San Francisco, California
+              - button [ref=e133] [cursor=pointer]:
+                - generic [ref=e136]: Enter your city to show local results
+          - generic [ref=e150]: Categories
+          - list [ref=e151]:
+            - listitem [ref=e152]:
+              - link [ref=e154] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=546583916084032&query=Vehicles&referral_ui_component=category_menu_item
+                - generic [ref=e155]:
+                  - img [ref=e158]
+                  - generic [ref=e165]: Vehicles
+            - listitem [ref=e166]:
+              - link [ref=e168] [cursor=pointer]:
+                - /url: /marketplace/category/propertyrentals/
+                - generic [ref=e169]:
+                  - img [ref=e172]
+                  - generic [ref=e179]: Property Rentals
+            - listitem [ref=e180]:
+              - link [ref=e182] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=677457442746983&query=Apparel&referral_ui_component=category_menu_item
+                - generic [ref=e192]: Apparel
+            - listitem [ref=e193]:
+              - link [ref=e195] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=759201041254543&query=Classifieds&referral_ui_component=category_menu_item
+                - generic [ref=e196]:
+                  - img [ref=e199]
+                  - generic [ref=e206]: Classifieds
+            - listitem [ref=e207]:
+              - link [ref=e209] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=479353692612078&query=Electronics&referral_ui_component=category_menu_item
+                - generic [ref=e210]:
+                  - img [ref=e213]
+                  - generic [ref=e220]: Electronics
+            - listitem [ref=e221]:
+              - link [ref=e223] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=529595287638583&query=Entertainment&referral_ui_component=category_menu_item
+                - generic [ref=e224]:
+                  - img [ref=e227]
+                  - generic [ref=e234]: Entertainment
+            - listitem [ref=e235]:
+              - link [ref=e237] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=891748581240437&query=Family&referral_ui_component=category_menu_item
+                - generic [ref=e238]:
+                  - img [ref=e241]
+                  - generic [ref=e248]: Family
+            - listitem [ref=e249]:
+              - link [ref=e251] [cursor=pointer]:
+                - /url: /marketplace/category/free/
+                - generic [ref=e252]:
+                  - img [ref=e255]
+                  - generic [ref=e263]: Free Stuff
+            - listitem [ref=e264]:
+              - link [ref=e266] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=1109541402725436&query=Garden%20%26%20Outdoor&referral_ui_component=category_menu_item
+                - generic [ref=e267]:
+                  - img [ref=e270]
+                  - generic [ref=e277]: Garden & Outdoor
+            - listitem [ref=e278]:
+              - link [ref=e280] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=459026188375950&query=Hobbies&referral_ui_component=category_menu_item
+                - generic [ref=e290]: Hobbies
+            - listitem [ref=e291]:
+              - link [ref=e293] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=753380185098614&query=Home%20Goods&referral_ui_component=category_menu_item
+                - generic [ref=e294]:
+                  - img [ref=e297]
+                  - generic [ref=e304]: Home Goods
+            - listitem [ref=e305]:
+              - link [ref=e307] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=476291743038859&query=Home%20Improvement%20Supplies&referral_ui_component=category_menu_item
+                - generic [ref=e308]:
+                  - img [ref=e311]
+                  - generic [ref=e318]: Home Improvement Supplies
+            - listitem [ref=e319]:
+              - link [ref=e321] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=1270772586445798&query=Home%20Sales&referral_ui_component=category_menu_item
+                - generic [ref=e322]:
+                  - img [ref=e325]
+                  - generic [ref=e332]: Home Sales
+            - listitem [ref=e333]:
+              - link [ref=e335] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=1078592699170502&query=Musical%20Instruments&referral_ui_component=category_menu_item
+                - generic [ref=e336]:
+                  - img [ref=e339]
+                  - generic [ref=e346]: Musical Instruments
+            - listitem [ref=e347]:
+              - link [ref=e349] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=586894672179024&query=Office%20Supplies&referral_ui_component=category_menu_item
+                - generic [ref=e350]:
+                  - img [ref=e353]
+                  - generic [ref=e360]: Office Supplies
+            - listitem [ref=e361]:
+              - link [ref=e363] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=197143151659643&query=Pet%20Supplies&referral_ui_component=category_menu_item
+                - generic [ref=e364]:
+                  - img [ref=e367]
+                  - generic [ref=e374]: Pet Supplies
+            - listitem [ref=e375]:
+              - link [ref=e377] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=391335928190702&query=Sporting%20Goods&referral_ui_component=category_menu_item
+                - generic [ref=e378]:
+                  - img [ref=e381]
+                  - generic [ref=e389]: Sporting Goods
+            - listitem [ref=e390]:
+              - link [ref=e392] [cursor=pointer]:
+                - /url: /marketplace/sanfrancisco/search/?category_id=199404184572737&query=Toys%20%26%20Games&referral_ui_component=category_menu_item
+                - generic [ref=e402]: Toys & Games
+            - listitem [ref=e403]:
+              - link [ref=e405] [cursor=pointer]:
+                - /url: /marketplace/categories/
+                - generic [ref=e406]:
+                  - img [ref=e409]
+                  - generic [ref=e416]: More categories
+          - generic [ref=e418]:
+            - generic [ref=e419]: Nearby Cities
+            - generic [ref=e420]:
+              - link [ref=e425] [cursor=pointer]:
+                - /url: /marketplace/109415672417245/
+                - generic [ref=e427]: Daly City, California
+              - link [ref=e432] [cursor=pointer]:
+                - /url: /marketplace/112185842130946/
+                - generic [ref=e434]: Brisbane, California
+              - link [ref=e439] [cursor=pointer]:
+                - /url: /marketplace/112071458809549/
+                - generic [ref=e441]: Sausalito, California
+              - link [ref=e446] [cursor=pointer]:
+                - /url: /marketplace/103987616304844/
+                - generic [ref=e448]: Broadmoor, California
+              - link [ref=e453] [cursor=pointer]:
+                - /url: /marketplace/112180535464777/
+                - generic [ref=e455]: Belvedere, California
+              - link [ref=e457] [cursor=pointer]:
+                - /url: /marketplace/directory/US/
+                - generic [ref=e459]: See more
+    - main [ref=e461]:
+      - generic [ref=e469]:
+        - generic [ref=e477]:
+          - generic [ref=e479]:
+            - heading [level=2] [ref=e480]:
+              - generic [ref=e481]: Today's picks
+            - button [ref=e483] [cursor=pointer]:
+              - generic [ref=e484]:
+                - img [ref=e486]
+                - generic [ref=e488]:
+                  - text: San Francisco
+                  - generic [ref=e489]: ·
+                  - text: 65 km
+          - generic [ref=e491]:
+            - link [ref=e500] [cursor=pointer]:
+              - /url: /marketplace/item/1376613017559576/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e501]:
+                - img [ref=e508]
+                - generic [ref=e509]:
+                  - generic [ref=e513]: $1,800
+                  - generic [ref=e518]: 2006 Honda shadow
+                  - generic [ref=e523]: Fremont, CA
+                  - generic [ref=e527]: 34K miles
+            - link [ref=e536] [cursor=pointer]:
+              - /url: /marketplace/item/951397447524778/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e537]:
+                - img [ref=e544]
+                - generic [ref=e545]:
+                  - generic [ref=e549]: $7,500
+                  - generic [ref=e554]: 2011 BMW 3 series 328i Convertible 2D
+                  - generic [ref=e559]: Antioch, CA
+                  - generic [ref=e563]: 80K miles
+            - link [ref=e572] [cursor=pointer]:
+              - /url: /marketplace/item/873101811988629/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e573]:
+                - img [ref=e580]
+                - generic [ref=e581]:
+                  - generic [ref=e585]: $58,000
+                  - generic [ref=e590]: 2012 Mercedes-Benz sprinter 3500
+                  - generic [ref=e595]: San Rafael, CA
+            - link [ref=e606] [cursor=pointer]:
+              - /url: /marketplace/item/2376120213217219/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e607]:
+                - img [ref=e614]
+                - generic [ref=e615]:
+                  - generic [ref=e619]: $300
+                  - generic [ref=e624]: Solo Stove Pizza Oven for Ranger
+                  - generic [ref=e629]: Fairfield, CA
+            - link [ref=e638] [cursor=pointer]:
+              - /url: /marketplace/item/1252046490418285/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e639]:
+                - img [ref=e646]
+                - generic [ref=e647]:
+                  - generic [ref=e651]: $100
+                  - generic [ref=e656]: Herman Miller Aeron
+                  - generic [ref=e661]: Berkeley, CA
+            - link [ref=e670] [cursor=pointer]:
+              - /url: /marketplace/item/946069771683312/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e671]:
+                - img [ref=e678]
+                - generic [ref=e679]:
+                  - generic [ref=e683]: $75
+                  - generic [ref=e688]: Queen bed setup - queen metal black bed frame and zinus mattress - used with waterproof cover
+                  - generic [ref=e692]: Ships to you
+            - link [ref=e701] [cursor=pointer]:
+              - /url: /marketplace/item/1492671205739107/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e702]:
+                - img [ref=e709]
+                - generic [ref=e710]:
+                  - generic [ref=e714]: $150
+                  - generic [ref=e719]: Transformers Combiner Wars Devastator 18in Figure
+                  - generic [ref=e723]: Ships to you
+            - link [ref=e732] [cursor=pointer]:
+              - /url: /marketplace/item/4618243981750617/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e733]:
+                - img [ref=e740]
+                - generic [ref=e741]:
+                  - generic [ref=e745]: $750
+                  - generic [ref=e750]: Utility camper
+                  - generic [ref=e755]: San Pablo, CA
+            - link [ref=e764] [cursor=pointer]:
+              - /url: /marketplace/item/849862464177245/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e765]:
+                - img [ref=e772]
+                - generic [ref=e773]:
+                  - generic [ref=e777]: $2,600
+                  - generic [ref=e782]: 2023 Kawasaki 2023
+                  - generic [ref=e787]: Santa Clara, CA
+            - link [ref=e798] [cursor=pointer]:
+              - /url: /marketplace/item/975914735037196/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e799]:
+                - img [ref=e806]
+                - generic [ref=e807]:
+                  - generic [ref=e811]: $2,500
+                  - generic [ref=e816]: 2004 Nissan 350z Touring Roadster 2D
+                  - generic [ref=e821]: San Jose, CA
+                  - generic [ref=e825]: 160K miles
+            - link [ref=e834] [cursor=pointer]:
+              - /url: /marketplace/item/1583590589414597/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e835]:
+                - img [ref=e842]
+                - generic [ref=e843]:
+                  - generic [ref=e847]: FREE
+                  - generic [ref=e852]: Free Craftsman Gas motor
+                  - generic [ref=e857]: San Francisco, CA
+            - link [ref=e866] [cursor=pointer]:
+              - /url: /marketplace/item/1461522922320724/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e867]:
+                - img [ref=e874]
+                - generic [ref=e875]:
+                  - generic [ref=e879]: $100
+                  - generic [ref=e884]: Outdoor Patio Furniture and Coolers
+                  - generic [ref=e889]: Pittsburg, CA
+            - link [ref=e898] [cursor=pointer]:
+              - /url: /marketplace/item/822571277143562/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e899]:
+                - img [ref=e906]
+                - generic [ref=e907]:
+                  - generic [ref=e909]:
+                    - generic [ref=e911]: $55
+                    - img [ref=e913]
+                  - generic [ref=e919]: German silver embossed clutch with exclusive design
+                  - generic [ref=e923]: Ships to you
+            - link [ref=e932] [cursor=pointer]:
+              - /url: /marketplace/item/2087057521839275/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e933]:
+                - img [ref=e940]
+                - generic [ref=e941]:
+                  - generic [ref=e945]: $3,000
+                  - generic [ref=e950]: 1999 Volkswagen jetta GLS VR6 Sedan 4D
+                  - generic [ref=e955]: Sunnyvale, CA
+                  - generic [ref=e959]: 94K miles
+            - link [ref=e968] [cursor=pointer]:
+              - /url: /marketplace/item/896724390062825/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e969]:
+                - img [ref=e976]
+                - generic [ref=e977]:
+                  - generic [ref=e981]: $48,750
+                  - generic [ref=e986]: 2011 BMW m3
+                  - generic [ref=e991]: San Francisco, CA
+                  - generic [ref=e995]: 59K miles
+            - link [ref=e1004] [cursor=pointer]:
+              - /url: /marketplace/item/829240599705584/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e1005]:
+                - img [ref=e1012]
+                - generic [ref=e1013]:
+                  - generic [ref=e1017]: $30,000
+                  - generic [ref=e1022]: 2013 Ranger z521c
+                  - generic [ref=e1027]: Brentwood, CA
+            - link [ref=e1038] [cursor=pointer]:
+              - /url: /marketplace/item/1703237377526822/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e1039]:
+                - img [ref=e1046]
+                - generic [ref=e1047]:
+                  - generic [ref=e1049]:
+                    - generic [ref=e1051]: $25
+                    - img [ref=e1053]
+                  - generic [ref=e1059]: Fairfield
+                  - generic [ref=e1064]: Fairfield, CA
+            - link [ref=e1073] [cursor=pointer]:
+              - /url: /marketplace/item/2782806015430579/?ref=browse_tab&referral_code=marketplace_top_picks&referral_story_type=top_picks&__tn__=!%3AD
+              - generic [ref=e1074]:
+                - img [ref=e1081]
+                - generic [ref=e1082]:
+                  - generic [ref=e1086]: $4,950
+                  - generic [ref=e1091]: 2014 Volkswagen jetta 1.8T SE Sport Sedan 4D
+                  - generic [ref=e1096]: Redwood City, CA
+                  - generic [ref=e1100]: 167K miles
+        - status [ref=e1102]:
+          - generic [ref=e1105]:
+            - img [ref=e1108]
+            - img [ref=e1117]
+            - img [ref=e1125]
+  - dialog [ref=e1140]:
+    - button "Close" [ref=e1142] [cursor=pointer]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1152]: See more on Facebook
+        - generic [ref=e1157]:
+          - generic: Email or phone number
+          - textbox "Email or phone number" [active] [ref=e1158]
+        - generic [ref=e1163]:
+          - generic: Password
+          - textbox "Password" [ref=e1164]
+        - button "Log in to Facebook" [ref=e1166] [cursor=pointer]:
+          - generic [ref=e1169]: Log In
+        - link "Forgot password?" [ref=e1171] [cursor=pointer]:
+          - /url: https://www.facebook.com/recover/initiate?ars=royal_blue_bar
+          - generic [ref=e1172]: Forgot password?
+        - generic [ref=e1178]: or
+        - button "Create new account" [ref=e1182] [cursor=pointer]:
+          - generic [ref=e1185]: Create new account
+      - generic [ref=e1192]:
+        - generic [ref=e1193]: Scan the QR code and confirm the codes match to log in.
+        - generic [ref=e1195]: EPB-ONM-NHEX

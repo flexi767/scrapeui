@@ -4,19 +4,12 @@
  * Cities are fetched on-demand for a selected region.
  */
 
-import { USER_AGENT } from './constants';
+import { fetchWin1251 } from './fetch-html';
 
 export interface Region { value: string; label: string; }
 export interface City  { value: string; label: string; }
 
 let _regions: Region[] | null = null;
-
-async function fetchWin1251(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, cache: 'no-store' });
-  if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return new TextDecoder('windows-1251').decode(buf);
-}
 
 function parseSelect(html: string, ...names: string[]): { value: string; label: string }[] {
   for (const name of names) {
@@ -38,7 +31,7 @@ function parseSelect(html: string, ...names: string[]): { value: string; label: 
 export async function fetchRegions(): Promise<Region[]> {
   if (_regions) return _regions;
   try {
-    const html = await fetchWin1251('https://www.mobile.bg');
+    const html = await fetchWin1251('https://www.mobile.bg', { cache: 'no-store' });
     const parsed = parseSelect(html, 'sregion', 'region', 'f18');
     if (parsed.length >= 10) { _regions = parsed; return parsed; }
   } catch { /* fall through */ }
@@ -48,7 +41,8 @@ export async function fetchRegions(): Promise<Region[]> {
 
 export async function fetchCitiesForRegion(regionValue: string): Promise<City[]> {
   const html = await fetchWin1251(
-    `https://www.mobile.bg/pcgi/mobile.cgi?act=3&stype=1&f1=&f2=&sregion=${encodeURIComponent(regionValue)}`
+    `https://www.mobile.bg/pcgi/mobile.cgi?act=3&stype=1&f1=&f2=&sregion=${encodeURIComponent(regionValue)}`,
+    { cache: 'no-store' },
   );
   return parseSelect(html, 'scity', 'city', 'f19');
 }

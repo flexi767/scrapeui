@@ -2,16 +2,9 @@
  * Fetches canonical fuel types from mobile.bg's homepage engine_type select.
  */
 
-import { USER_AGENT } from './constants';
+import { fetchWin1251 } from './fetch-html';
 
 let _fuelMap: Map<string, string> | null = null;
-
-async function fetchWin1251(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return new TextDecoder('windows-1251').decode(buf);
-}
 
 export async function fetchFuelTypes(): Promise<Map<string, string>> {
   if (_fuelMap) return _fuelMap;

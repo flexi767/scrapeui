@@ -3,7 +3,7 @@
  * Returns a Map: make (string) → { make, makeId, models: [{ label, id }] }
  */
 
-import { USER_AGENT } from './constants';
+import { fetchWin1251 } from './fetch-html';
 
 export interface ModelEntry { label: string; id: number | null; count?: number | null }
 export interface MakeEntry { make: string; makeId: number | null; count?: number | null; models: ModelEntry[] }
@@ -21,12 +21,6 @@ export function normalizeMakeModelLabel(value = ''): string {
     .trim();
 }
 
-async function fetchWin1251(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return new TextDecoder('windows-1251').decode(buf);
-}
 
 // Raw (unfiltered) parse — cached independently
 let _rawJs: string | null = null;

@@ -1,0 +1,1193 @@
+[     318ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     376ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     524ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     552ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     760ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[     894ms] [LOG] [Fast Refresh] done in 235ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   27616ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   27696ms] [LOG] [Fast Refresh] done in 47ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   27838ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   27935ms] [LOG] [Fast Refresh] done in 197ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   28044ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   28051ms] [LOG] [Fast Refresh] done in 108ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   44444ms] [ERROR] ./components/saved-searches/mobile-bg-results-bookmarklet.ts:21:14
+Ecmascript file had an error
+  19 | export const MOBILE_BG_BROWSER_RESULTS_MESSAGE =
+  20 |   "scrapeui:mobile-bg-search-results";
+> 21 | export const MOBILE_BG_BROWSER_SEARCH_WINDOW_NAME_PREFIX =
+     |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  22 |   "scrapeui-mobile-bg-search:";
+  23 |
+  24 | export interface MobileBgBrowserSearchContext {
+
+the name `MOBILE_BG_BROWSER_SEARCH_WINDOW_NAME_PREFIX` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/mobile-bg-results-bookmarklet.ts [Client Component Browser]
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/mobile-bg-results-bookmarklet.ts [Client Component SSR]
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   44480ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   59924ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59925ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59925ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59926ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59926ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59926ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59926ms] [ERROR] ./components/saved-searches/useSavedSearchResults.ts:9:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   7 |   type SavedSearchDetailResponse,
+   8 | } from "@/components/saved-searches/api";
+>  9 | import {
+     | ^^^^^^^^
+> 10 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  12 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  13 | import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+  14 |
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59926ms] [ERROR] ./components/saved-searches/useSavedSearchResults.ts:9:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   7 |   type SavedSearchDetailResponse,
+   8 | } from "@/components/saved-searches/api";
+>  9 | import {
+     | ^^^^^^^^
+> 10 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  12 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  13 | import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+  14 |
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59927ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59927ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   59938ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   60295ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60296ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60296ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60296ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useSavedSearchResults.ts:9:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   7 |   type SavedSearchDetailResponse,
+   8 | } from "@/components/saved-searches/api";
+>  9 | import {
+     | ^^^^^^^^
+> 10 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  12 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  13 | import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+  14 |
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useSavedSearchResults.ts:9:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   7 |   type SavedSearchDetailResponse,
+   8 | } from "@/components/saved-searches/api";
+>  9 | import {
+     | ^^^^^^^^
+> 10 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  12 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  13 | import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+  14 |
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useSavedSearchResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60297ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   60319ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   72024ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72024ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export buildMobileBgBrowserSearchWindowName doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export buildMobileBgBrowserSearchWindowName was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72024ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72024ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export mergeMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export mergeMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72025ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72025ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export persistMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export persistMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72025ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-client] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72025ms] [ERROR] ./components/saved-searches/useMobileBgBrowserResults.ts:7:1
+Export readMobileBgBrowserResults doesn't exist in target module
+   5 | import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+   6 | import { submitMobileBgSearch } from "@/components/saved-searches/helpers";
+>  7 | import {
+     | ^^^^^^^^
+>  8 |   buildMobileBgBrowserSearchWindowName,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  9 |   buildMobileBgResultsBookmarklet,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 10 |   mergeMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 11 |   MOBILE_BG_BROWSER_RESULTS_MESSAGE,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 12 |   persistMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 13 |   readMobileBgBrowserResults,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 14 |   type MobileBgBrowserResultsMessage,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 15 | } from "@/components/saved-searches/mobile-bg-results-bookmarklet";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  16 | import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+  17 |
+  18 | interface UseMobileBgBrowserResultsParams {
+
+The export readMobileBgBrowserResults was not found in module [project]/components/saved-searches/mobile-bg-results-bookmarklet.ts [app-ssr] (ecmascript).
+Did you mean to import buildMobileBgResultsBookmarklet?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Client Component Browser]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/saved-searches/useMobileBgBrowserResults.ts [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Client Component SSR]
+    ./components/SavedSearchesWorkspace.tsx [Server Component]
+    ./app/(app)/editown/saved-searches/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   72053ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   72152ms] [LOG] [Fast Refresh] done in 38ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   72653ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   72681ms] [LOG] [Fast Refresh] done in 45ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   89933ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   89961ms] [LOG] [Fast Refresh] done in 37ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   89987ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   90016ms] [LOG] [Fast Refresh] done in 26ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  115742ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  115754ms] [LOG] [Fast Refresh] done in 114ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  116175ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  116221ms] [LOG] [Fast Refresh] done in 148ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  157713ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  158715ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  159717ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  160719ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  161721ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  166729ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  171738ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  176741ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[  181748ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[ 3023136ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[ 3028143ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
+[ 3033150ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=PKSudelcC7AKME4-lwy0Y' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10878
