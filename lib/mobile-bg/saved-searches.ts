@@ -1,5 +1,5 @@
 import { raw } from "@/db/client";
-import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+import { parseSearchFields, type SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
   getListingSearchPrefill,
   type SearchPrefillData,
@@ -36,37 +36,8 @@ let savedSearchTableEnsured = false;
 
 function parseSavedFields(json: string | null | undefined): SearchField[] {
   if (!json) return [];
-
   try {
-    const parsed = JSON.parse(json) as unknown;
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.flatMap((entry) => {
-      if (!entry || typeof entry !== "object") return [];
-      const candidate = entry as Record<string, unknown>;
-      if (
-        typeof candidate.name !== "string" ||
-        typeof candidate.label !== "string" ||
-        typeof candidate.value !== "string"
-      ) {
-        return [];
-      }
-
-      return [
-        {
-          name: candidate.name,
-          label: candidate.label,
-          value: candidate.value,
-          source:
-            candidate.source === "default" ||
-            candidate.source === "listing" ||
-            candidate.source === "derived" ||
-            candidate.source === "saved"
-              ? candidate.source
-              : "saved",
-        },
-      ];
-    });
+    return parseSearchFields(JSON.parse(json)) ?? [];
   } catch {
     return [];
   }
