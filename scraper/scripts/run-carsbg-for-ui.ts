@@ -47,6 +47,38 @@ import { emit, formatError, parseRunnerArgs, DB_PATH } from '@/scraper/lib/runne
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const CARS_BG_MAX_IMAGES = 15;
 
+interface DealerRow {
+  id: number;
+  slug: string;
+  name: string;
+  carsUrl: string;
+  own: number;
+  active: number;
+  cars_user: string | null;
+  cars_password: string | null;
+}
+
+interface CarsBgListingInput {
+  url: string;
+  title?: string | null;
+  fuel?: string | null;
+  bodyType?: string | null;
+  transmission?: string | null;
+  price?: { amount?: number | null; currency?: string | null } | null;
+  carsbgCreatedDate?: string | null;
+  carsbgEditedDate?: string | null;
+  description?: string | null;
+  dealer?: string | null;
+  thumb?: string | null;
+  images?: string[] | null;
+  color?: string | null;
+  power?: number | null;
+  mileage?: number | null;
+  adStatus?: string | null;
+  kaparo?: boolean | number | null;
+  year?: string | null;
+}
+
 interface CarsBgRunStats {
   processed: number;
   insertedUnique: number;
@@ -94,7 +126,17 @@ interface ExistingCarsListing {
   mileage: number | null;
   fuel: string | null;
   body_type: string | null;
+  transmission: string | null;
+  color: string | null;
+  power: number | null;
   current_price: number | null;
+  price_change: number | null;
+  ad_status: string | null;
+  kaparo: number | null;
+  last_edit: string | null;
+  carsbg_title: string | null;
+  carsbg_created_date: string | null;
+  carsbg_edited_date: string | null;
   cars_total_views?: number | null;
   image_count: number | null;
   full_keys: string | null;
@@ -323,7 +365,7 @@ function applyCarsBgOwnerDetails(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: Record<string, any>, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
+function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: CarsBgListingInput, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   const now = new Date().toISOString();
   const carsId = extractCarsId(listing.url);
   if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '', duplicate: false, trackedChange: false, syncNeeded: false };
@@ -333,11 +375,11 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
   const normalizedTitle = (titleRemainder || '').trim();
 
   // Normalize fuel/body/transmission through our mappings
-  const fuelRaw = normCarsBgFuel(listing.fuel);
+  const fuelRaw = normCarsBgFuel(listing.fuel ?? null);
   const fuel = normalizeFuelSync(fuelRaw, fuelMap);
-  const bodyRaw = normCarsBgBody(listing.bodyType);
+  const bodyRaw = normCarsBgBody(listing.bodyType ?? null);
   const bodyType = normalizeBodyTypeSync(bodyRaw, getBodyTypeMap());
-  const transRaw = normCarsBgTrans(listing.transmission);
+  const transRaw = normCarsBgTrans(listing.transmission ?? null);
   const transmission = normalizeTransmissionSync(transRaw, transmissionMap);
 
   const price: number | null = listing.price?.amount ?? null;
@@ -384,8 +426,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as Record<string, any> | undefined;
+  const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as ExistingCarsListing | undefined;
 
   if (existing) {
     const priceChanged = price !== null && price !== existing.current_price;
@@ -429,13 +470,13 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
       });
     }
 
-    const priceChangeDelta = priceChanged ? price! - existing.current_price : existing.price_change ?? null;
+    const priceChangeDelta = priceChanged ? price! - existing.current_price! : existing.price_change ?? null;
 
     // For deep crawl, update images too
     const hasImages = listing.images && listing.images.length > 0;
     const imageFields = hasImages ? 'image_count = ?, full_keys = ?,' : '';
     const imageValues = hasImages
-      ? [listing.images.length, JSON.stringify(listing.images)]
+      ? [listing.images!.length, JSON.stringify(listing.images)]
       : [];
 
     const descriptionField = descriptionProvided ? 'description = ?,' : '';
@@ -492,7 +533,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function deepCrawlCarsBgOwnListings(dealer: Record<string, any>, db: Database.Database) {
+async function deepCrawlCarsBgOwnListings(dealer: DealerRow, db: Database.Database) {
   if (!dealer.own || !dealer.cars_user || !dealer.cars_password) {
     emit({ type: 'log', message: `Skipping cars.bg own deep crawl for ${dealer.slug}: missing own-dealer credentials` });
     return 0;
@@ -600,7 +641,7 @@ async function deepCrawlCarsBgOwnListings(dealer: Record<string, any>, db: Datab
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Database, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
+async function scrapeCarsBgForUI(dealer: DealerRow, db: Database.Database, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   let count = 0;
   const maxPages = 20;
   const stats: CarsBgRunStats = {
@@ -936,9 +977,9 @@ async function main() {
     SELECT id, slug, name, cars_url as carsUrl, own, active,
            cars_user, cars_password
     FROM dealers WHERE active = 1 AND cars_url IS NOT NULL ORDER BY name
-  `).all() as Record<string, unknown>[];
+  `).all() as DealerRow[];
 
-  const selected = requestedSlugs.length > 0 ? dealers.filter(d => requestedSlugs.includes(d.slug as string)) : dealers;
+  const selected = requestedSlugs.length > 0 ? dealers.filter(d => requestedSlugs.includes(d.slug)) : dealers;
 
   if (selected.length === 0) {
     emit({ type: 'error', message: 'No matching dealers with cars.bg URL found' });
@@ -958,8 +999,7 @@ async function main() {
   for (const dealer of selected) {
     emit({ type: 'log', message: `Starting cars.bg scrape: ${dealer.name}` });
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count, stats } = await scrapeCarsBgForUI(dealer as Record<string, any>, db, makesMap, fuelMap, transmissionMap);
+      const { count, stats } = await scrapeCarsBgForUI(dealer, db, makesMap, fuelMap, transmissionMap);
       totals.processed += stats.processed;
       totals.insertedUnique += stats.insertedUnique;
       totals.insertedDuplicate += stats.insertedDuplicate;
