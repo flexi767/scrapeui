@@ -28,8 +28,12 @@ import { cleanDescription } from "@/lib/mobile-bg/description";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { saveListingThumb } from "@/lib/listing-thumbs";
 import { emit, formatError, parseRunnerArgs, DB_PATH } from "@/scraper/lib/runner";
+import fs from "fs";
+import path from "path";
+import { createCrawlRun, updateCrawlRun } from "@/lib/query-modules/mobilebg";
+import { SCRAPED_ROOT } from "@/lib/storage-paths";
 
-const { deepCrawl, requestedSlugs } = parseRunnerArgs();
+const { deepCrawl, downloadImages, requestedSlugs } = parseRunnerArgs();
 const HOMEPAGE_CATEGORY_OPTIONS = new Set([
   "Ван",
   "Джип",
@@ -109,6 +113,8 @@ interface DealerRow {
   slug: string;
   name: string;
   mobileBg: string;
+  own: number;        // 1 = own dealer, 0 = competitor
+  mobile_user: string | null;
 }
 
 function extractMobileId(url: string): string | null {
@@ -538,14 +544,115 @@ async function upsertListing(
   };
 }
 
+function seedDraft(
+  db: Database.Database,
+  dealer: DealerRow,
+  listing: ScrapedListingInput,
+  listingDbId: number,
+): number | null {
+  const mobileId = extractMobileId(listing.url ?? "");
+  if (!mobileId) return null;
+  const now = new Date().toISOString();
+  const { regYear } = parseReg(listing.year ?? null);
+  const result = db
+    .prepare(
+      `
+    INSERT OR IGNORE INTO mobilebg_backups
+      (dealer_id, listing_id, mobile_id, source_url, title,
+       price_amount, price_currency, description, year, mileage, fuel,
+       transmission, color, category, extras_json, image_count,
+       created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+    )
+    .run(
+      dealer.id,
+      listingDbId,
+      mobileId,
+      listing.url,
+      listing.title ?? null,
+      listing.price?.amount ?? null,
+      listing.price?.currency ?? "EUR",
+      listing.description ?? null,
+      regYear ? parseInt(regYear, 10) : null,
+      listing.mileage ?? null,
+      listing.fuel ?? null,
+      listing.transmission ?? null,
+      listing.color ?? null,
+      listing.bodyType ?? null,
+      listing.extras ? JSON.stringify(listing.extras) : null,
+      listing.imageCount ?? 0,
+      now,
+      now,
+    );
+  if (result.changes === 0) {
+    const row = db
+      .prepare(`SELECT id FROM mobilebg_backups WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`)
+      .get(dealer.id, mobileId) as { id: number } | undefined;
+    return row?.id ?? null;
+  }
+  return result.lastInsertRowid as number;
+}
+
+async function downloadListingImages(
+  db: Database.Database,
+  dealer: DealerRow,
+  mobileId: string,
+  backupId: number,
+  fullUrls: string[],
+): Promise<{ downloaded: number; failed: number }> {
+  const dir = path.join(SCRAPED_ROOT, "mobilebg-backups", dealer.slug, mobileId);
+  fs.mkdirSync(dir, { recursive: true });
+
+  let downloaded = 0;
+  let failed = 0;
+
+  for (let i = 0; i < fullUrls.length; i++) {
+    const srcUrl = fullUrls[i];
+    const keyMatch = srcUrl.match(/[^/_]+_([^.]+)\.webp$/);
+    const key = keyMatch?.[1] ?? `img_${i}`;
+    const filename = `${key}.webp`;
+    const localPath = path.join(dir, filename);
+
+    if (fs.existsSync(localPath)) {
+      downloaded++;
+      continue;
+    }
+
+    try {
+      const res = await fetch(srcUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = Buffer.from(await res.arrayBuffer());
+      fs.writeFileSync(localPath, buf);
+
+      const now = new Date().toISOString();
+      db.prepare(
+        `
+      INSERT OR IGNORE INTO mobilebg_backup_images
+        (backup_id, sort_order, filename, source_url, local_path, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      ).run(backupId, i, filename, srcUrl, localPath, now);
+
+      downloaded++;
+    } catch {
+      failed++;
+    }
+  }
+
+  return { downloaded, failed };
+}
+
 async function scrapeCompetitorForUI(
   dealer: DealerRow,
   db: Database.Database,
   makesMap: MakesMap | null,
   fuelMap: Map<string, string> | null,
   transmissionMap: Map<string, string> | null,
-) {
+): Promise<{ count: number; imagesDownloaded: number; imagesFailed: number }> {
   let count = 0;
+  let totalImagesDownloaded = 0;
+  let totalImagesFailed = 0;
   const maxPages = 20;
   const snapshotDate = new Date().toISOString().slice(0, 10);
   const seenMobileIds = new Set<string>();
@@ -910,6 +1017,7 @@ async function scrapeCompetitorForUI(
               imgMeta,
               thumbKeys,
               fullKeys,
+              fullUrls,
               firstThumbUrl: thumbUrls[0] || "",
               extras,
             };
@@ -1021,6 +1129,31 @@ async function scrapeCompetitorForUI(
             transmissionMap,
           );
           count++;
+
+          let detailImagesDownloaded = 0;
+          let detailImagesFailed = 0;
+
+          if (dealer.own === 1) {
+            const mobileId = extractMobileId(listing.url ?? "");
+            const listingRow = mobileId
+              ? (db.prepare(`SELECT id FROM listings WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`)
+                  .get(dealer.id, mobileId) as { id: number } | undefined)
+              : undefined;
+            const listingDbId = listingRow?.id ?? null;
+
+            if (listingDbId) {
+              const backupId = seedDraft(db, dealer, listing, listingDbId);
+              if (backupId && downloadImages && raw.fullUrls.length > 0) {
+                const counts = await downloadListingImages(db, dealer, mobileId!, backupId, raw.fullUrls);
+                detailImagesDownloaded = counts.downloaded;
+                detailImagesFailed = counts.failed;
+              }
+            }
+          }
+
+          totalImagesDownloaded += detailImagesDownloaded;
+          totalImagesFailed += detailImagesFailed;
+
           saveCrawlQueueStatus(
             db,
             dealer.id as number,
@@ -1084,7 +1217,7 @@ async function scrapeCompetitorForUI(
     type: "log",
     message: `Reconciled live mobile.bg listings for ${dealer.slug}: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
   });
-  return count;
+  return { count, imagesDownloaded: totalImagesDownloaded, imagesFailed: totalImagesFailed };
 }
 
 function killOtherInstances() {
@@ -1144,17 +1277,20 @@ async function main() {
   let hadErrors = false;
   for (const dealer of selected) {
     emit({ type: "log", message: `Starting scrape: ${dealer.name}` });
+    const runId = createCrawlRun(dealer.id, dealer.mobileBg ?? "");
     try {
-      const count = await scrapeCompetitorForUI(
+      const { count, imagesDownloaded, imagesFailed } = await scrapeCompetitorForUI(
         dealer,
         db,
         makesMap,
         fuelMap,
         transmissionMap,
       );
+      updateCrawlRun(runId, { status: 'completed', listingsCount: count, imagesDownloaded, imagesFailed });
       emit({ type: "done", dealer: dealer.slug, count });
     } catch (err) {
       hadErrors = true;
+      updateCrawlRun(runId, { status: 'failed', listingsCount: 0, imagesDownloaded: 0, imagesFailed: 0 });
       emit({
         type: "error",
         message: `Error scraping ${dealer.name}: ${formatError(err)}`,
