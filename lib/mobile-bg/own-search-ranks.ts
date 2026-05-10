@@ -4,7 +4,7 @@ import { getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
 import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
-import { buildImageList, getPreferredListingThumbUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { getListingThumbSrc } from '@/lib/listing-thumb';
 import { latestBackupOrderExpr, notDuplicateLExpr, rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface OwnSearchRankTarget {
@@ -135,33 +135,16 @@ function withPreview(targets: Array<OwnSearchRankTarget & {
   thumb_saved: number | null;
   first_backup_image_id: number | null;
 }>): OwnSearchRankTarget[] {
-  return targets.map((target) => {
-    const thumbKeys = parseJson<string[]>(target.thumb_keys, []);
-    const fullKeys = parseJson<string[]>(target.full_keys, []);
-    const imageMeta = parseJson<ImageMeta | null>(target.image_meta, null);
-    const images = target.mobile_id
-      ? buildImageList(
-          target.mobile_id,
-          fullKeys.length ? fullKeys : thumbKeys,
-          thumbKeys,
-          imageMeta,
-          target.images_downloaded === 1,
-        )
-      : [];
-
-    return {
-      backup_id: target.backup_id,
-      listing_id: target.listing_id,
-      mobile_id: target.mobile_id,
-      title: target.title,
-      make: target.make,
-      model: target.model,
-      thumb_url: target.first_backup_image_id
-        ? `/api/mobilebg-backup-images/${target.first_backup_image_id}`
-        : getPreferredListingThumbUrl(target.mobile_id, images[0]?.thumb, target.thumb_saved),
-      listing_url: target.mobile_id ? `/listings/${target.mobile_id}` : null,
-    };
-  });
+  return targets.map((target) => ({
+    backup_id: target.backup_id,
+    listing_id: target.listing_id,
+    mobile_id: target.mobile_id,
+    title: target.title,
+    make: target.make,
+    model: target.model,
+    thumb_url: getListingThumbSrc(target),
+    listing_url: target.mobile_id ? `/listings/${target.mobile_id}` : null,
+  }));
 }
 
 function saveOwnSearchRankResult(row: OwnSearchRankRunRow) {
