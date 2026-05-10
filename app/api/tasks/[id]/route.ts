@@ -4,6 +4,22 @@ import { raw } from '@/db/client';
 import { getTaskById } from '@/lib/queries';
 import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
+interface TaskRow {
+  id: number;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  priority: string | null;
+  assignee_id: number | null;
+  created_by_id: number | null;
+  parent_id: number | null;
+  deadline: string | null;
+  is_recurring: number | null;
+  recur_rule: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -32,7 +48,7 @@ export async function PATCH(
   const now = new Date().toISOString();
 
   // Get current task for activity log
-  const current = raw.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as Record<string, unknown> | undefined;
+  const current = raw.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as TaskRow | undefined;
   if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const bodyMap: Record<string, string> = {
@@ -87,7 +103,7 @@ export async function DELETE(
   return NextResponse.json({ ok: true });
 }
 
-function createNextRecurring(parentTaskId: number, parentTask: Record<string, unknown>) {
+function createNextRecurring(parentTaskId: number, parentTask: TaskRow) {
   const now = new Date().toISOString();
   let nextDeadline: string | null = null;
 
