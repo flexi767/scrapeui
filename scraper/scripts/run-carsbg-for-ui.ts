@@ -888,7 +888,7 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
     failedRequestHandler({ request }, error) {
       const url = request.url;
       failedUrls.push(url);
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = formatError(error);
       emit({ type: 'warn', message: `Permanently failed after ${request.retryCount} retries: ${url}` });
       db.prepare(`
         INSERT INTO scrape_failures (dealer_id, dealer_slug, url, source, retry_count, error, created_at)

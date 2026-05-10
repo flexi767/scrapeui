@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { emit } from '@/scraper/lib/runner';
+import { errorMessage } from '@/lib/utils';
 
 interface DealerRow {
   id: number;
@@ -147,8 +148,8 @@ async function processDealer(
         globalStats.failed += 1;
         emit({
           type: 'result', ...globalStats,
-          row: { mobile_id: listing.id, status: 'failed', error: error instanceof Error ? error.message : String(error) },
-          message: `${listing.title} — ${error instanceof Error ? error.message : 'failed'}`,
+          row: { mobile_id: listing.id, status: 'failed', error: errorMessage(error) },
+          message: `${listing.title} — ${errorMessage(error)}`,
         });
       }
     }
@@ -199,7 +200,7 @@ async function main() {
     try {
       await processDealer(dealer, onlyReset, stats);
     } catch (error) {
-      emit({ type: 'log', level: 'info', message: `${dealer.name}: ${error instanceof Error ? error.message : String(error)}` });
+      emit({ type: 'log', level: 'info', message: `${dealer.name}: ${errorMessage(error)}` });
     }
   }
 
@@ -210,6 +211,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+  emit({ type: 'error', message: errorMessage(error) });
   process.exitCode = 1;
 });

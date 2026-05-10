@@ -6,6 +6,7 @@ import {
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
 import { emit } from '@/scraper/lib/runner';
+import { errorMessage } from '@/lib/utils';
 
 interface DealerRow {
   id: number;
@@ -175,9 +176,9 @@ async function main() {
             mobile_id: row.mobile_id,
             status: 'failed',
             completed_at: new Date().toISOString(),
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           },
-          message: error instanceof Error ? error.message : 'Sync failed',
+          message: errorMessage(error),
         });
       }
     }
@@ -199,6 +200,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+  emit({ type: 'error', message: errorMessage(error) });
   process.exitCode = 1;
 });
