@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { errorMessage } from '@/lib/utils';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
 import { CarsBgSyncDoneBanner } from '@/components/cars-bg-sync/CarsBgSyncDoneBanner';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
@@ -100,7 +101,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
         finishRun();
         return;
       }
-      const message = error instanceof Error ? error.message : 'Cars.bg sync failed';
+      const message = errorMessage(error);
       setLogs([{ kind: 'error', message }]);
       toast.error(message);
       finishRun();
@@ -188,7 +189,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
-        const message = error instanceof Error ? error.message : 'Cars.bg sync failed';
+        const message = errorMessage(error);
         appendLog({ kind: 'error', message });
         toast.error(message);
       }
@@ -207,7 +208,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       if (!res.ok) throw new Error(data.error || 'Failed to stop cars.bg sync');
       appendLog({ kind: 'log', message: 'Stopping cars.bg sync…' });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to stop cars.bg sync';
+      const message = errorMessage(error);
       appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);

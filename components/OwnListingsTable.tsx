@@ -17,6 +17,7 @@ import {
   type OwnListingEditForm,
 } from "@/components/own-listings/editing";
 import { OwnListingRow } from "@/lib/queries";
+import { errorMessage } from "@/lib/utils";
 
 interface Props {
   initialRows: OwnListingRow[];
@@ -92,7 +93,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         setEditingKey(null);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Save failed");
+      toast.error(errorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -152,7 +153,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
       toast.success("Listing synced to mobile.bg");
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Sync failed";
+      const message = errorMessage(error);
       setRows((prev) =>
         prev.map((item) =>
           item.backup_id === row.backup_id
@@ -177,7 +178,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
       toast.success(message);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to launch",
+        errorMessage(error),
       );
     } finally {
       setPublishingToFbIds((prev) => ({ ...prev, [row.backup_id]: false }));

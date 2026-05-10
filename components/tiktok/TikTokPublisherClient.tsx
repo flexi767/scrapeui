@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, PlayIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 import { TikTokIcon } from "@/components/tiktok/TikTokIcon";
 import {
   buildDefaultTikTokCaption,
@@ -61,7 +62,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
         const savedCaption = window.localStorage.getItem(`${CAPTION_STORAGE_PREFIX}${data.backupId}`);
         setCaption(savedCaption || buildDefaultTikTokCaption(data));
       })
-      .catch((error) => toast.error(error instanceof Error ? error.message : "Could not load listing"))
+      .catch((error) => toast.error(errorMessage(error)))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -101,7 +102,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
       replaceVideo(nextVideo);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      toast.error(error instanceof Error ? error.message : "Could not create video");
+      toast.error(errorMessage(error));
     } finally {
       if (renderControllerRef.current === controller) {
         renderControllerRef.current = null;
@@ -150,7 +151,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
       });
       toast.success("Share sheet opened");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not open share sheet");
+      toast.error(errorMessage(error));
     } finally {
       setSharing(false);
     }

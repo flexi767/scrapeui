@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { errorMessage } from '@/lib/utils';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
 import { SearchPositionsDoneBanner } from '@/components/search-positions/SearchPositionsDoneBanner';
 import { SearchPositionsLogPanel } from '@/components/search-positions/SearchPositionsLogPanel';
@@ -72,7 +73,7 @@ export default function SearchPositionsRunner() {
         finishRun();
         return;
       }
-      toast.error(error instanceof Error ? error.message : 'Search check failed');
+      toast.error(errorMessage(error));
       finishRun();
       return;
     }
@@ -133,7 +134,7 @@ export default function SearchPositionsRunner() {
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
-        const message = error instanceof Error ? error.message : 'Search-position run failed';
+        const message = errorMessage(error);
         appendLog({ kind: 'error', message });
         toast.error(message);
       }
@@ -154,7 +155,7 @@ export default function SearchPositionsRunner() {
       }
       appendLog({ kind: 'log', message: 'Stopping search-position run…' });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to stop search-position run';
+      const message = errorMessage(error);
       appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);

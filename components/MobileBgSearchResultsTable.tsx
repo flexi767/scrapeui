@@ -15,7 +15,7 @@ import {
   getDisplayTitle,
   truncateDealerLabel,
 } from '@/components/mobile-bg-search-results/formatting';
-import { formatPrice } from '@/lib/utils';
+import { errorMessage, formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
   getOriginalPositionIgnoring,
@@ -85,7 +85,7 @@ export function MobileBgSearchResultsTable({
       setSavedDraftIds((prev) => ({ ...prev, [row.mobile_id]: backupId }));
       toast.success('Saved ad as Carbros draft');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save ad as draft');
+      toast.error(errorMessage(error));
     } finally {
       setSavingDraftIds((prev) => ({ ...prev, [row.mobile_id]: false }));
     }

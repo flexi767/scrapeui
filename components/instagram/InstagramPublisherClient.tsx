@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadImage } from "@/lib/canvas-utils";
+import { errorMessage } from "@/lib/utils";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, InstagramIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -54,7 +55,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
           setPosterPrompt(savedPrompt || buildDefaultPosterPrompt(data));
         }
       })
-      .catch((error) => toast.error(error instanceof Error ? error.message : "Could not load listing"))
+      .catch((error) => toast.error(errorMessage(error)))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -79,7 +80,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
         { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt) },
       ]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not generate posters");
+      toast.error(errorMessage(error));
     } finally {
       if (canvasSeedRef.current === seed) setGenerating(false);
     }
@@ -140,7 +141,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
       });
       toast.success("Share sheet opened");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not open share sheet");
+      toast.error(errorMessage(error));
     } finally {
       setSharing(false);
     }

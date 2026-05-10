@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { streamJsonEvents } from '@/lib/streaming-job';
+import { errorMessage } from '@/lib/utils';
 import { revertDraftToSource, startBatchSync, stopBatchSync } from './api';
 import { useAutoScroll } from './useAutoScroll';
 import {
@@ -48,7 +49,7 @@ export function useBatchSync(initialRows: EditOwnSyncRow[], autoRun: boolean) {
       toast.success('Draft reverted to original listing values');
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to revert draft');
+      toast.error(errorMessage(error));
     } finally {
       setRevertingId(null);
     }
@@ -76,7 +77,7 @@ export function useBatchSync(initialRows: EditOwnSyncRow[], autoRun: boolean) {
         abortRef.current = null;
         return;
       }
-      const message = error instanceof Error ? error.message : 'Batch sync failed';
+      const message = errorMessage(error);
       toast.error(message);
       setLogs([{ kind: 'error', message }]);
       setRunning(false);
@@ -138,7 +139,7 @@ export function useBatchSync(initialRows: EditOwnSyncRow[], autoRun: boolean) {
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
-        const message = error instanceof Error ? error.message : 'Batch sync failed';
+        const message = errorMessage(error);
         appendLog({ kind: 'error', message });
         toast.error(message);
       }
@@ -157,7 +158,7 @@ export function useBatchSync(initialRows: EditOwnSyncRow[], autoRun: boolean) {
       await stopBatchSync();
       appendLog({ kind: 'log', message: 'Stopping batch sync…' });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to stop batch sync';
+      const message = errorMessage(error);
       appendLog({ kind: 'error', message });
       toast.error(message);
       setStopping(false);

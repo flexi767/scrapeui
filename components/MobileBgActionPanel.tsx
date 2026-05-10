@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 interface DealerOption {
   slug: string;
   name: string;
@@ -50,7 +51,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
       toast.success(successMessage);
       if (typeof window !== 'undefined') window.location.reload();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Action failed');
+      toast.error(errorMessage(error));
     } finally {
       setRunning(false);
     }
