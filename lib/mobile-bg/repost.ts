@@ -9,6 +9,7 @@ import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
+import { errorMessage } from '@/lib/utils';
 
 interface BackupRow {
   id: number;
@@ -345,7 +346,7 @@ async function publishDraftBackupFromDb(
       UPDATE mobilebg_repost_jobs
       SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
       WHERE id = ?
-    `).run(error instanceof Error ? error.message : String(error), repostDir, now, jobId);
+    `).run(errorMessage(error), repostDir, now, jobId);
     markSyncFailed(db, backup.id, error);
     throw error;
   } finally {
@@ -537,7 +538,7 @@ export async function repostBackupFromDb(
       UPDATE mobilebg_repost_jobs
       SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
       WHERE id = ?
-    `).run(error instanceof Error ? error.message : String(error), repostDir, now, jobId);
+    `).run(errorMessage(error), repostDir, now, jobId);
     throw error;
   } finally {
     await browser.close();

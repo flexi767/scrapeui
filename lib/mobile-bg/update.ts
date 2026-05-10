@@ -8,6 +8,7 @@ import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDe
 import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
+import { errorMessage } from '@/lib/utils';
 
 interface BackupRow {
   id: number;
@@ -388,7 +389,7 @@ export async function updateBackupOnMobileBg(
   } catch (error) {
     const debugPath = path.join(updateDir, 'error.png');
     await page.screenshot({ path: debugPath, fullPage: true }).catch(() => {});
-    log(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
+    log(`Sync failed: ${errorMessage(error)}`);
     markSyncFailed(db, backup.id, error);
     throw error;
   } finally {

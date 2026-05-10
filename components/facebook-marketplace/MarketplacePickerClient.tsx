@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { errorMessage } from "@/lib/utils";
 
 interface MarketplaceListing {
   backupId: number;
@@ -43,7 +44,7 @@ export function MarketplacePickerClient() {
         setStatus(`Loaded ${(data.listings || []).length} listings`);
       } catch (error) {
         if (controller.signal.aborted) return;
-        setStatus(error instanceof Error ? error.message : String(error));
+        setStatus(errorMessage(error));
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }

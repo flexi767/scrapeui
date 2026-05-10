@@ -4,6 +4,7 @@ import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
 import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
+import { errorMessage } from '@/lib/utils';
 
 interface DealerLike {
   id: number;
@@ -47,7 +48,7 @@ export async function submitMyAdsEditForm(page: Page, listingId: string, listing
       form.submit();
     }, { listingId, listingToken });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     if (!/Execution context was destroyed|Cannot find context with specified id/i.test(message)) {
       throw error;
     }
