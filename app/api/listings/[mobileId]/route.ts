@@ -2,6 +2,15 @@ import { raw } from '@/db/client';
 import { getOwnListingByMobileId } from '@/lib/queries';
 import { NextResponse } from 'next/server';
 
+interface ListingPatchBody {
+  title?: unknown;
+  carsbg_title?: unknown;
+  current_price?: unknown;
+  vat?: unknown;
+  kaparo?: unknown;
+  ad_status?: unknown;
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ mobileId: string }> }
@@ -19,8 +28,7 @@ export async function PATCH(
       );
     }
 
-    // Type assertion for body fields
-    const bodyData = body as Record<string, unknown>;
+    const bodyData = body as ListingPatchBody;
 
     // Validate title
     const title = bodyData.title;
@@ -217,8 +225,7 @@ export async function PATCH(
     const updatedListing = getOwnListingByMobileId(mobileId);
 
     return NextResponse.json(updatedListing);
-  } catch (error) {
-    console.error('PATCH /api/listings/[mobileId] error:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal error' },
       { status: 500 }
