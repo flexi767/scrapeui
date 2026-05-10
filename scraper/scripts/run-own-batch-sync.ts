@@ -1,11 +1,10 @@
 import { raw } from '@/db/client';
-import { getEditOwnSyncRows } from '@/lib/queries';
+import { getEditOwnSyncRows, getMobileBgDealerBySlug } from '@/lib/queries';
 import {
   closeMobileBgUpdateSession,
   createMobileBgUpdateSession,
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
-import { getMobileBgDealerBySlug } from '@/lib/query-modules/mobilebg';
 import { emit } from '@/scraper/lib/runner';
 import { errorMessage } from '@/lib/utils';
 

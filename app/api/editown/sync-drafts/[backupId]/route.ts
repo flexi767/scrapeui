@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { getEditOwnSyncRows } from '@/lib/queries';
+import { errorMessage } from '@/lib/utils';
 
 export async function POST(
   _request: Request,
@@ -44,7 +45,7 @@ export async function POST(
     return NextResponse.json(updated ?? null);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to revert draft' },
+      { error: errorMessage(error) },
       { status: 500 },
     );
   }

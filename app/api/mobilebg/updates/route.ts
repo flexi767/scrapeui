@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { updateBackupOnMobileBg } from '@/lib/mobile-bg/update';
-import { getMobileBgDealerBySlug } from '@/lib/query-modules/mobilebg';
+import { getMobileBgDealerBySlug } from '@/lib/queries';
+import { errorMessage } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +30,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Sync failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }

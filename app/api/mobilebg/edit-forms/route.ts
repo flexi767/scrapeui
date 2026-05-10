@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { captureEditFormSnapshot } from '@/lib/mobile-bg/edit-form';
-import { getMobileBgDealerBySlug } from '@/lib/query-modules/mobilebg';
+import { getMobileBgDealerBySlug } from '@/lib/queries';
 
 export const runtime = 'nodejs';
 

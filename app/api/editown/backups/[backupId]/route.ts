@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
+import { errorMessage } from '@/lib/utils';
 import {
   buildBackupForm,
   buildExtrasJson,
@@ -185,7 +186,7 @@ export async function PATCH(
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Save failed' },
+      { error: errorMessage(error) },
       { status: 400 },
     );
   }
