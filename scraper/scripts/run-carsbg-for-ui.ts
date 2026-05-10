@@ -364,7 +364,6 @@ function applyCarsBgOwnerDetails(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: CarsBgListingInput, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   const now = new Date().toISOString();
   const carsId = extractCarsId(listing.url);
@@ -532,7 +531,6 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: C
   return { action: 'inserted' as const, snapshot: false, title: normalizedTitle, make, model, duplicate: isDuplicate === 1, trackedChange: false, syncNeeded, mobilePrice: matchingMobile?.current_price ?? null };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function deepCrawlCarsBgOwnListings(dealer: DealerRow, db: Database.Database) {
   if (!dealer.own || !dealer.cars_user || !dealer.cars_password) {
     emit({ type: 'log', message: `Skipping cars.bg own deep crawl for ${dealer.slug}: missing own-dealer credentials` });
@@ -640,7 +638,6 @@ async function deepCrawlCarsBgOwnListings(dealer: DealerRow, db: Database.Databa
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function scrapeCarsBgForUI(dealer: DealerRow, db: Database.Database, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
   let count = 0;
   const maxPages = 20;
