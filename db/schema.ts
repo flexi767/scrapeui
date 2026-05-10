@@ -357,13 +357,15 @@ export const scrapeFailures = sqliteTable("scrape_failures", {
 
 // ─── Mobile.bg Backup / Edit / Repost Artifacts ──────────────────
 
-export const mobileBgBackupRuns = sqliteTable("mobilebg_backup_runs", {
+export const mobileBgCrawlRuns = sqliteTable("mobilebg_crawl_runs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   dealerId: integer("dealer_id").references(() => dealers.id),
   status: text("status").notNull().default("pending"),
   sourceUrl: text("source_url"),
   listingsCount: integer("listings_count").default(0),
   imagesCount: integer("images_count").default(0),
+  imagesDownloaded: integer("images_downloaded").notNull().default(0),
+  imagesFailed: integer("images_failed").notNull().default(0),
   notes: text("notes"),
   startedAt: text("started_at"),
   finishedAt: text("finished_at"),
@@ -373,7 +375,7 @@ export const mobileBgBackupRuns = sqliteTable("mobilebg_backup_runs", {
 
 export const mobileBgBackups = sqliteTable("mobilebg_backups", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  runId: integer("run_id").references(() => mobileBgBackupRuns.id),
+  runId: integer("run_id").references(() => mobileBgCrawlRuns.id),
   dealerId: integer("dealer_id").references(() => dealers.id),
   listingId: integer("listing_id").references(() => listings.id),
   mobileId: text("mobile_id"),
@@ -508,36 +510,6 @@ export const listingSearchResultIgnores = sqliteTable(
   }),
 );
 
-// ─── Mobile.bg Crawl Queue (for managing rate limits) ────────────
-
-export const mobileBgCrawlQueue = sqliteTable(
-  "mobilebg_crawl_queue",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    dealerId: integer("dealer_id")
-      .notNull()
-      .references(() => dealers.id),
-    url: text("url").notNull(),
-    urlType: text("url_type").notNull(), // 'dealer_homepage' | 'listing_detail'
-    mobileId: text("mobile_id"), // for listing_detail: the mobile ID; null for dealer_homepage
-    status: text("status").notNull().default("pending"), // 'pending' | 'in_progress' | 'completed' | 'failed'
-    listingsCount: integer("listings_count"), // for dealer_homepage: # of ads found
-    price: integer("price"), // for listing_detail: cached price
-    views: integer("views"), // for listing_detail: cached views
-    lastCrawledAt: text("last_crawled_at"),
-    nextCrawlAt: text("next_crawl_at"),
-    error: text("error"),
-    createdAt: text("created_at"),
-    updatedAt: text("updated_at"),
-  },
-  (table) => ({
-    uniqueDealerUrl: uniqueIndex("mobilebg_crawl_queue_dealer_url_idx").on(
-      table.dealerId,
-      table.url,
-    ),
-  }),
-);
-
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;
@@ -545,7 +517,7 @@ export type Listing = typeof listings.$inferSelect;
 export type ListingSnapshot = typeof listingSnapshots.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Label = typeof labels.$inferSelect;
-export type MobileBgBackupRun = typeof mobileBgBackupRuns.$inferSelect;
+export type MobileBgCrawlRun = typeof mobileBgCrawlRuns.$inferSelect;
 export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;
 export type MobileBgBackupImage = typeof mobileBgBackupImages.$inferSelect;
 export type MobileBgEditFormSnapshot =
