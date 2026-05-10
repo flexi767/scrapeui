@@ -1,3 +1,8 @@
+import {
+  MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES,
+  MOBILE_BG_HIDDEN_FIELD_NAMES,
+} from "@/lib/mobile-bg/search-field-config";
+
 export interface SearchField {
   name: string;
   label: string;
@@ -52,7 +57,3 @@ export function buildFirstSevenSearchFields(fields: SearchField[]) {
     .slice(0, 7);
   return [...hiddenFields, ...alwaysIncludedFields, ...firstSevenVisibleFields];
 }
-import {
-  MOBILE_BG_ALWAYS_INCLUDED_FIELD_NAMES,
-  MOBILE_BG_HIDDEN_FIELD_NAMES,
-} from "@/lib/mobile-bg/search-field-config";
