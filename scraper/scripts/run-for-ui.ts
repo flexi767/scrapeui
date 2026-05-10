@@ -1212,15 +1212,22 @@ async function scrapeCompetitorForUI(
       status: "completed",
     },
   );
-  const reconciliation = reconcileDeletedMobileBgListings(
-    db,
-    dealer.id as number,
-    seenMobileIds,
-  );
-  emit({
-    type: "log",
-    message: `Reconciled live mobile.bg listings for ${dealer.slug}: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
-  });
+  if (seenMobileIds.size === 0) {
+    emit({
+      type: "log",
+      message: `Skipping reconciliation for ${dealer.slug}: crawl returned 0 listings (likely a failed fetch)`,
+    });
+  } else {
+    const reconciliation = reconcileDeletedMobileBgListings(
+      db,
+      dealer.id as number,
+      seenMobileIds,
+    );
+    emit({
+      type: "log",
+      message: `Reconciled live mobile.bg listings for ${dealer.slug}: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
+    });
+  }
   return { count, imagesDownloaded: totalImagesDownloaded, imagesFailed: totalImagesFailed };
 }
 
