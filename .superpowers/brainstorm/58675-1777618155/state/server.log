@@ -1,6 +1,0 @@
-{"type":"server-started","port":51701,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:51701","screen_dir":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/content","state_dir":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/state"}
-{"type":"screen-added","file":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/content/library-comparison.html"}
-{"type":"screen-added","file":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/content/waiting-1.html"}
-{"type":"screen-added","file":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/content/editor-layout.html"}
-{"type":"screen-added","file":"/Users/v/dev/scrapeui/.superpowers/brainstorm/58675-1777618155/content/blocks.html"}
-{"type":"server-stopped","reason":"idle timeout"}

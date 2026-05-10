@@ -48,3 +48,7 @@ crawlee-storage/
 fb-session/
 .claude/
 /public/t/
+.playwright-mcp/
+.superpowers/
+*.png
+/output/
