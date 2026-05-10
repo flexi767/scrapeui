@@ -68,19 +68,20 @@ export interface MakeModelMappingRow {
 }
 
 export interface MobileBgDashboardSummary {
-  runs: number;
+  crawlRuns: number;
   backups: number;
-  images: number;
   editForms: number;
   repostJobs: number;
 }
 
-export interface MobileBgBackupRunRow {
+export interface MobileBgCrawlRunRow {
   id: number;
   status: string;
   source_url: string | null;
   listings_count: number;
   images_count: number;
+  images_downloaded: number;
+  images_failed: number;
   notes: string | null;
   started_at: string | null;
   finished_at: string | null;
