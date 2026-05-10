@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
-import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { getListingThumbSrc } from '@/lib/listing-thumb';
 import { latestBackupOrderExpr, rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface DealerListingSummaryRow {
@@ -56,33 +56,14 @@ export async function GET(
     ORDER BY l.last_edit DESC, l.id DESC
   `).all(dealerId) as DealerListingSummaryRow[];
 
-  const listings = rows.map((row) => {
-    const imageMeta = parseJson<ImageMeta | null>(row.image_meta, null);
-    const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-    const fullKeys = parseJson<string[]>(row.full_keys, []);
-    const images = buildImageList(
-      row.mobile_id,
-      fullKeys.length ? fullKeys : thumbKeys,
-      thumbKeys,
-      imageMeta,
-      row.images_downloaded === 1,
-    );
-    const thumb = row.first_backup_image_id
-      ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-      : getThumbProxyUrl(
-          row.mobile_id,
-          images[0]?.thumb ?? null,
-        );
-
-    return {
-      mobileId: row.mobile_id,
-      make: row.make ?? '',
-      model: row.model ?? '',
-      title: row.title ?? '',
-      price: row.price_amount,
-      thumb,
-    };
-  });
+  const listings = rows.map((row) => ({
+    mobileId: row.mobile_id,
+    make: row.make ?? '',
+    model: row.model ?? '',
+    title: row.title ?? '',
+    price: row.price_amount,
+    thumb: getListingThumbSrc(row),
+  }));
 
   return NextResponse.json({ listings });
 }

@@ -8,12 +8,7 @@ import { CANONICAL_BODY_TYPES } from "@/lib/mobile-bg/body-types";
 import { fetchRegions } from "@/lib/mobile-bg/regions";
 import { MOBILE_BG_COLORS } from "@/lib/mobile-bg/colors";
 import { raw } from "@/db/client";
-import {
-  buildImageList,
-  getThumbProxyUrl,
-  parseJson,
-  type ImageMeta,
-} from "@/lib/utils";
+import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { notDuplicateLExpr, rankedBackupsCte } from "@/lib/query-modules/types";
 
 interface DealerRow {
@@ -110,23 +105,7 @@ function getOwnListingsByDealer(): Record<
 
   for (const row of rows) {
     const mobileId = row.mobile_id ?? "";
-    const imageMeta = parseJson<ImageMeta | null>(row.image_meta, null);
-    const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
-    const fullKeys = parseJson<string[]>(row.full_keys, []);
-    const images = buildImageList(
-      mobileId,
-      fullKeys.length ? fullKeys : thumbKeys,
-      thumbKeys,
-      imageMeta,
-      row.images_downloaded === 1,
-    );
-    const thumb = row.first_backup_image_id
-      ? `/api/mobilebg-backup-images/${row.first_backup_image_id}`
-      : images[0]?.thumb
-        ? getThumbProxyUrl(mobileId, images[0].thumb)
-        : row.thumb_saved === 1
-          ? getThumbProxyUrl(mobileId, null)
-          : null;
+    const thumb = getListingThumbSrc(row);
     const key = String(row.dealer_id);
     if (!byDealer[key]) byDealer[key] = [];
     byDealer[key].push({
