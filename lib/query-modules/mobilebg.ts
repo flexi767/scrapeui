@@ -1,5 +1,5 @@
 import { raw } from '@/db/client';
-import type { EditOwnSyncRow, MakeModelMappingRow, MobileBgBackupDetailRow, MobileBgBackupImageRow, MobileBgBackupListRow, MobileBgBackupRunRow, MobileBgDashboardSummary, MobileBgEditFormDetailRow, MobileBgEditFormRow, MobileBgRepostJobRow } from './types';
+import type { EditOwnSyncRow, MakeModelMappingRow, MobileBgDashboardSummary, MobileBgEditFormDetailRow, MobileBgEditFormRow, MobileBgCrawlRunRow, MobileBgRepostJobRow } from './types';
 import { ownNeedsSyncExpr, ownVatExpr } from './types';
 
 export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
@@ -43,8 +43,8 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
 }
 
 export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
-  const runs = raw
-    .prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_runs`)
+  const crawlRuns = raw
+    .prepare(`SELECT COUNT(*) as count FROM mobilebg_crawl_runs`)
     .get() as { count: number };
   const backups = raw
     .prepare(
@@ -58,9 +58,6 @@ export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
   `,
     )
     .get() as { count: number };
-  const images = raw
-    .prepare(`SELECT COUNT(*) as count FROM mobilebg_backup_images`)
-    .get() as { count: number };
   const editForms = raw
     .prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`)
     .get() as { count: number };
@@ -68,105 +65,74 @@ export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
     .prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`)
     .get() as { count: number };
   return {
-    runs: runs.count,
+    crawlRuns: crawlRuns.count,
     backups: backups.count,
-    images: images.count,
     editForms: editForms.count,
     repostJobs: repostJobs.count,
   };
 }
 
-export function getMobileBgBackupRuns(limit = 20): MobileBgBackupRunRow[] {
+export function getMobileBgCrawlRuns(limit = 20): MobileBgCrawlRunRow[] {
   return raw
     .prepare(
       `
     SELECT
-      r.id, r.status, r.source_url, r.listings_count, r.images_count, r.notes,
+      r.id, r.status, r.source_url, r.listings_count, r.images_count,
+      r.images_downloaded, r.images_failed, r.notes,
       r.started_at, r.finished_at, r.created_at, r.updated_at,
       d.name as dealer_name, d.slug as dealer_slug
-    FROM mobilebg_backup_runs r
+    FROM mobilebg_crawl_runs r
     LEFT JOIN dealers d ON r.dealer_id = d.id
     ORDER BY COALESCE(r.started_at, r.created_at) DESC, r.id DESC
     LIMIT ?
   `,
     )
-    .all(limit) as MobileBgBackupRunRow[];
+    .all(limit) as MobileBgCrawlRunRow[];
 }
 
-export function getMobileBgBackups(limit = 100): MobileBgBackupListRow[] {
-  return raw
+export function createCrawlRun(dealerId: number, sourceUrl: string): number {
+  const now = new Date().toISOString();
+  const result = raw
     .prepare(
       `
-    WITH ranked AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
-        ) as row_num
-      FROM mobilebg_backups b
-    )
-    SELECT
-      b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
-      b.make, b.model, b.title, b.price_amount, b.price_currency, b.image_count,
-      b.created_at, b.updated_at,
-      d.name as dealer_name, d.slug as dealer_slug,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved,
-      (
-        SELECT i.id
-        FROM mobilebg_backup_images i
-        WHERE i.backup_id = b.id
-        ORDER BY i.sort_order ASC, i.id ASC
-        LIMIT 1
-      ) as first_backup_image_id
-    FROM ranked b
-    LEFT JOIN dealers d ON b.dealer_id = d.id
-    LEFT JOIN listings l ON b.listing_id = l.id
-    WHERE b.row_num = 1
-    ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
-    LIMIT ?
+    INSERT INTO mobilebg_crawl_runs (dealer_id, source_url, status, started_at, created_at, updated_at)
+    VALUES (?, ?, 'running', ?, ?, ?)
   `,
     )
-    .all(limit) as MobileBgBackupListRow[];
+    .run(dealerId, sourceUrl, now, now, now);
+  return result.lastInsertRowid as number;
 }
 
-export function getMobileBgBackupById(
-  id: number,
-): (MobileBgBackupDetailRow & { images: MobileBgBackupImageRow[] }) | null {
-  const row = raw
+export function updateCrawlRun(
+  runId: number,
+  data: {
+    status: 'completed' | 'failed';
+    listingsCount: number;
+    imagesDownloaded: number;
+    imagesFailed: number;
+  },
+): void {
+  const now = new Date().toISOString();
+  raw
     .prepare(
       `
-    SELECT
-      b.id, b.run_id, b.listing_id, b.mobile_id, b.source_url, b.source_title,
-      b.make, b.model, b.title, b.price_amount, b.price_currency, b.vat_included,
-      b.year, b.mileage, b.fuel, b.power, b.engine, b.color, b.transmission,
-      b.category as body_type, b.description, b.phones_json, b.extras_json, b.tech_data_json, b.photo_order_json,
-      b.ad_status, b.kaparo, COALESCE(b.draft_needs_sync, 0) as draft_needs_sync,
-      b.last_mobile_sync_status, b.last_mobile_sync_error, b.last_mobile_sync_at,
-      b.image_count, b.created_at, b.updated_at,
-      d.name as dealer_name, d.slug as dealer_slug
-    FROM mobilebg_backups b
-    LEFT JOIN dealers d ON b.dealer_id = d.id
-    WHERE b.id = ?
+    UPDATE mobilebg_crawl_runs
+    SET status = ?, listings_count = ?, images_downloaded = ?, images_failed = ?,
+        finished_at = ?, updated_at = ?
+    WHERE id = ?
   `,
     )
-    .get(id) as MobileBgBackupDetailRow | undefined;
-
-  if (!row) return null;
-
-  const images = raw
-    .prepare(
-      `
-    SELECT id, backup_id, sort_order, filename, source_url, local_path, created_at
-    FROM mobilebg_backup_images
-    WHERE backup_id = ?
-    ORDER BY sort_order ASC, id ASC
-  `,
-    )
-    .all(id) as MobileBgBackupImageRow[];
-
-  return { ...row, images };
+    .run(
+      data.status,
+      data.listingsCount,
+      data.imagesDownloaded,
+      data.imagesFailed,
+      now,
+      now,
+      runId,
+    );
 }
+
 
 export function getEditOwnSyncRows(): EditOwnSyncRow[] {
   return raw
