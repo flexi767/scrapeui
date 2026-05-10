@@ -7,6 +7,7 @@ import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
+import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 
 interface BackupRow {
   id: number;
@@ -291,12 +292,7 @@ export async function updateBackupOnMobileBg(
   const page = ownedSession.page;
   const updateDir = getUpdateDir(dbPath, dealer.slug, backupId);
   await fsp.mkdir(updateDir, { recursive: true });
-  const startedAt = new Date().toISOString();
-  db.prepare(`
-    UPDATE mobilebg_backups
-    SET last_mobile_sync_status = 'running', last_mobile_sync_error = NULL, updated_at = ?
-    WHERE id = ?
-  `).run(startedAt, backup.id);
+  markSyncRunning(db, backup.id);
 
   try {
     if (sharedSession && sharedSession.dealerSlug !== dealer.slug) {
@@ -393,11 +389,7 @@ export async function updateBackupOnMobileBg(
     const debugPath = path.join(updateDir, 'error.png');
     await page.screenshot({ path: debugPath, fullPage: true }).catch(() => {});
     log(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
-    db.prepare(`
-      UPDATE mobilebg_backups
-      SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?
-      WHERE id = ?
-    `).run(error instanceof Error ? error.message : String(error), new Date().toISOString(), backup.id);
+    markSyncFailed(db, backup.id, error);
     throw error;
   } finally {
     if (!sharedSession) {

@@ -6,6 +6,7 @@ import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
+import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
 
@@ -137,12 +138,7 @@ async function publishDraftBackupFromDb(
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ userAgent: USER_AGENT });
   const page = await context.newPage();
-  const startedAt = new Date().toISOString();
-  db.prepare(`
-    UPDATE mobilebg_backups
-    SET last_mobile_sync_status = 'running', last_mobile_sync_error = NULL, updated_at = ?
-    WHERE id = ?
-  `).run(startedAt, backup.id);
+  markSyncRunning(db, backup.id);
 
   try {
     if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
@@ -350,11 +346,7 @@ async function publishDraftBackupFromDb(
       SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
       WHERE id = ?
     `).run(error instanceof Error ? error.message : String(error), repostDir, now, jobId);
-    db.prepare(`
-      UPDATE mobilebg_backups
-      SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?
-      WHERE id = ?
-    `).run(error instanceof Error ? error.message : String(error), now, backup.id);
+    markSyncFailed(db, backup.id, error);
     throw error;
   } finally {
     await browser.close();
