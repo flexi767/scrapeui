@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { drawCoverImage, drawWrappedText, loadImage } from "@/lib/canvas-utils";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, InstagramIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -51,32 +52,6 @@ function formatMileage(mileage?: number) {
   return mileage == null ? "-" : `${mileage.toLocaleString("en-US")} km`;
 }
 
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new window.Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Could not load image"));
-    image.src = src;
-  });
-}
-
-function drawCoverImage(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
-  const imageRatio = image.naturalWidth / image.naturalHeight;
-  const boxRatio = w / h;
-  const sw = imageRatio > boxRatio ? image.naturalHeight * boxRatio : image.naturalWidth;
-  const sh = imageRatio > boxRatio ? image.naturalHeight : image.naturalWidth / boxRatio;
-  const sx = (image.naturalWidth - sw) / 2;
-  const sy = (image.naturalHeight - sh) / 2;
-  ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
-}
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -98,31 +73,6 @@ function textFit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return size;
 }
 
-function drawWrappedText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-  maxLines: number,
-) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word;
-    if (ctx.measureText(next).width <= maxWidth) {
-      line = next;
-    } else {
-      if (line) lines.push(line);
-      line = word;
-    }
-    if (lines.length === maxLines) break;
-  }
-  if (line && lines.length < maxLines) lines.push(line);
-  lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
-}
 
 function drawSpec(ctx: CanvasRenderingContext2D, label: string, value: string, x: number, y: number, w: number) {
   ctx.fillStyle = "rgba(255,255,255,0.09)";
