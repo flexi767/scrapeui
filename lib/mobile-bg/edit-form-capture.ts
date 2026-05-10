@@ -3,7 +3,7 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
 import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
-import { getStorageRoot } from '@/lib/mobile-bg/backup';
+import { SCRAPED_ROOT } from '@/lib/storage-paths';
 
 interface DealerLike {
   id: number;
@@ -27,7 +27,8 @@ function normalizeMobileBgDateTime(value: string | null): string | null {
 }
 
 function getSnapshotDir(dbPath: string, dealerSlug: string, mobileId: string): string {
-  return path.join(getStorageRoot(dbPath), dealerSlug, mobileId, 'edit-form');
+  void dbPath;
+  return path.join(SCRAPED_ROOT, dealerSlug, mobileId, 'edit-form');
 }
 
 export async function submitMyAdsEditForm(page: Page, listingId: string, listingToken: string) {

@@ -4,7 +4,16 @@ import type Database from 'better-sqlite3';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
-import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
+import { SCRAPED_ROOT } from '@/lib/storage-paths';
+
+interface DealerBackupConfig {
+  id: number;
+  slug: string;
+  name?: string;
+  mobileUrl?: string;
+  mobileUser: string;
+  mobilePassword: string;
+}
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
 
@@ -63,7 +72,8 @@ function getLatestEditSnapshot(
 }
 
 function getUpdateDir(dbPath: string, dealerSlug: string, backupId: number): string {
-  return path.join(getStorageRoot(dbPath), dealerSlug, 'updates', String(backupId));
+  void dbPath;
+  return path.join(SCRAPED_ROOT, dealerSlug, 'updates', String(backupId));
 }
 
 function normalizePromoStatus(value: string | null | undefined): 'TOP' | 'VIP' | 'none' {

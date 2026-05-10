@@ -4,7 +4,16 @@ import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
-import { getStorageRoot, type DealerBackupConfig } from '@/lib/mobile-bg/backup';
+import { SCRAPED_ROOT } from '@/lib/storage-paths';
+
+interface DealerBackupConfig {
+  id: number;
+  slug: string;
+  name?: string;
+  mobileUrl?: string;
+  mobileUser: string;
+  mobilePassword: string;
+}
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
@@ -46,7 +55,8 @@ interface BackupImageRow {
 }
 
 function getRepostDir(dbPath: string, dealerSlug: string, backupId: number): string {
-  return path.join(getStorageRoot(dbPath), dealerSlug, 'reposts', String(backupId));
+  void dbPath;
+  return path.join(SCRAPED_ROOT, dealerSlug, 'reposts', String(backupId));
 }
 
 function createRepostJob(db: Database.Database, dealerId: number, backupId: number, listingId: number | null, sourceMobileId: string | null): number {
