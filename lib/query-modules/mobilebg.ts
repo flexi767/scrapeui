@@ -1,6 +1,15 @@
 import { raw } from '@/db/client';
 import type { EditOwnSyncRow, MakeModelMappingRow, MobileBgDashboardSummary, MobileBgEditFormDetailRow, MobileBgEditFormRow, MobileBgCrawlRunRow, MobileBgRepostJobRow } from './types';
 import { latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from './types';
+import type { MobileBgDealerRow } from '@/lib/mobile-bg/constants';
+
+export function getMobileBgDealerBySlug(slug: string): MobileBgDealerRow | undefined {
+  return raw.prepare(`
+    SELECT id, slug, name, mobile_user, mobile_password
+    FROM dealers
+    WHERE slug = ?
+  `).get(slug) as MobileBgDealerRow | undefined;
+}
 
 export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
   return raw

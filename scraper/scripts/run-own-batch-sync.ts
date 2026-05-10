@@ -5,7 +5,7 @@ import {
   createMobileBgUpdateSession,
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
-import type { MobileBgDealerRow } from '@/lib/mobile-bg/constants';
+import { getMobileBgDealerBySlug } from '@/lib/query-modules/mobilebg';
 import { emit } from '@/scraper/lib/runner';
 import { errorMessage } from '@/lib/utils';
 
@@ -66,11 +66,7 @@ async function main() {
         message: `Syncing ${[row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`}…`,
       });
 
-      const dealer = raw.prepare(`
-      SELECT id, slug, name, mobile_user, mobile_password
-      FROM dealers
-      WHERE slug = ?
-    `).get(row.dealer_slug) as MobileBgDealerRow | undefined;
+      const dealer = getMobileBgDealerBySlug(row.dealer_slug ?? '');
 
       if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
         completed += 1;

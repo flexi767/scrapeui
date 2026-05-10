@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { captureEditFormSnapshot } from '@/lib/mobile-bg/edit-form';
-import type { MobileBgDealerRow } from '@/lib/mobile-bg/constants';
+import { getMobileBgDealerBySlug } from '@/lib/query-modules/mobilebg';
 
 export const runtime = 'nodejs';
 
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'dealerSlug and mobileId are required' }, { status: 400 });
   }
 
-  const dealer = raw.prepare(`
-    SELECT id, slug, name, mobile_user, mobile_password
-    FROM dealers
-    WHERE slug = ?
-  `).get(dealerSlug) as MobileBgDealerRow | undefined;
+  const dealer = getMobileBgDealerBySlug(dealerSlug);
 
   if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
     return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
