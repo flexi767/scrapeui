@@ -1,36 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
-import { streamJsonEvents } from '@/lib/streaming-job';
-import {
-  revertDraftToSource,
-  startBatchSync,
-  startRenewReset,
-  stopBatchSync,
-  stopRenewResetJob,
-} from './edit-own-batch-sync/api';
 import { BatchSyncPanel } from './edit-own-batch-sync/BatchSyncPanel';
 import { ChangedListingsTable } from './edit-own-batch-sync/ChangedListingsTable';
 import { DoneSummaryBanner } from './edit-own-batch-sync/DoneSummaryBanner';
 import { LogPanel } from './edit-own-batch-sync/LogPanel';
 import { RecentResults } from './edit-own-batch-sync/RecentResults';
 import { RenewResetPanel } from './edit-own-batch-sync/RenewResetPanel';
-import { useAutoScroll } from './edit-own-batch-sync/useAutoScroll';
-import {
-  countBatchRows,
-  applyRowResult,
-  labelForRow,
-  markRowRunning,
-  prepareRowsForRun,
-  recentCompletedRows,
-  statsFromStreamEvent,
-  streamEventMessageKind,
-  toBatchRow,
-} from './edit-own-batch-sync/helpers';
-import type { BatchRow, LogEntry, OwnDealer, RunStats, StreamEntry } from './edit-own-batch-sync/types';
+import { useBatchSync } from './edit-own-batch-sync/useBatchSync';
+import { useRenewReset } from './edit-own-batch-sync/useRenewReset';
+import type { OwnDealer } from './edit-own-batch-sync/types';
 
 interface Props {
   initialRows: EditOwnSyncRow[];
@@ -39,323 +18,53 @@ interface Props {
 }
 
 export default function EditOwnBatchSync({ initialRows, autoRun = false, ownDealers }: Props) {
-  const router = useRouter();
-  const [rows, setRows] = useState<BatchRow[]>(() => initialRows.map(toBatchRow));
-  const [running, setRunning] = useState(false);
-  const [stopping, setStopping] = useState(false);
-  const [stats, setStats] = useState<RunStats | null>(null);
-  const [currentLabel, setCurrentLabel] = useState<string | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [doneSummary, setDoneSummary] = useState<RunStats | null>(null);
-  const [revertingId, setRevertingId] = useState<number | null>(null);
-  const [renewDealers, setRenewDealers] = useState<string[]>(() => ownDealers.map((d) => d.slug));
-  const [renewOnlyReset, setRenewOnlyReset] = useState(false);
-  const [renewRunning, setRenewRunning] = useState(false);
-  const [renewStopping, setRenewStopping] = useState(false);
-  const [renewStats, setRenewStats] = useState<RunStats | null>(null);
-  const [renewLogs, setRenewLogs] = useState<LogEntry[]>([]);
-  const [renewDone, setRenewDone] = useState<RunStats | null>(null);
-  const startedRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const renewAbortRef = useRef<AbortController | null>(null);
-  const logRef = useRef<HTMLDivElement>(null);
-  const renewLogRef = useRef<HTMLDivElement>(null);
-  const runInitialBatchSync = useEffectEvent(() => {
-    void run();
-  });
-
-  useAutoScroll(logRef, logs);
-  useAutoScroll(renewLogRef, renewLogs);
-
-  const rowCounts = useMemo(() => countBatchRows(rows), [rows]);
-
-  const recentResults = useMemo(
-    () => recentCompletedRows(rows),
-    [rows],
-  );
-  const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
-
-  async function revertDraft(row: BatchRow) {
-    setRevertingId(row.backup_id);
-    try {
-      const data = await revertDraftToSource(row.backup_id);
-      setRows((prev) => prev.map((entry) => entry.backup_id === row.backup_id ? toBatchRow(data) : entry));
-      toast.success('Draft reverted to original listing values');
-      router.refresh();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to revert draft');
-    } finally {
-      setRevertingId(null);
-    }
-  }
-
-  async function run() {
-    setRunning(true);
-    setStopping(false);
-    setLogs([]);
-    setCurrentLabel(null);
-    setDoneSummary(null);
-    setStats({
-      total: rowCounts.pending,
-      completed: 0,
-      succeeded: 0,
-      failed: 0,
-    });
-    setRows(prepareRowsForRun);
-
-    const abortController = new AbortController();
-    abortRef.current = abortController;
-
-    let res: Response;
-    try {
-      res = await startBatchSync(abortController.signal);
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        setRunning(false);
-        setStopping(false);
-        abortRef.current = null;
-        return;
-      }
-      const message = error instanceof Error ? error.message : 'Batch sync failed';
-      toast.error(message);
-      setLogs([{ kind: 'error', message }]);
-      setRunning(false);
-      setStopping(false);
-      abortRef.current = null;
-      return;
-    }
-
-    try {
-      await streamJsonEvents<StreamEntry>(res, (event) => {
-            if (event.type === 'start') {
-              setStats(statsFromStreamEvent(event));
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'checking') {
-              setStats(statsFromStreamEvent(event));
-              setCurrentLabel(labelForRow({ ...event.target, mobile_id: event.target.mobile_id }));
-              setRows((prev) => markRowRunning(prev, event.target.backup_id));
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'result') {
-              setStats(statsFromStreamEvent(event));
-              setRows((prev) => applyRowResult(prev, event.row));
-              if (event.message) {
-                appendLog({
-                  kind: 'result',
-                  ok: event.row.status === 'success',
-                  message: event.message,
-                });
-              }
-              return;
-            }
-
-            if (event.type === 'log') {
-              if (event.message) {
-                appendLog({
-                  kind: event.level === 'stderr' ? 'error' : 'log',
-                  message: event.message,
-                });
-              }
-              return;
-            }
-
-            if (event.type === 'error') {
-              const message = event.message || 'Batch sync failed';
-              appendLog({ kind: 'error', message });
-              toast.error(message);
-              return;
-            }
-
-            if (event.type === 'complete') {
-              const summary = statsFromStreamEvent(event);
-              setDoneSummary(summary);
-              setStats(summary);
-              setCurrentLabel(null);
-              setRunning(false);
-              setStopping(false);
-              abortRef.current = null;
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              if (event.failed === 0) {
-                toast.success(`Synced ${event.succeeded} listing${event.succeeded === 1 ? '' : 's'} to mobile.bg`);
-              } else {
-                toast.error(`Synced ${event.succeeded}, ${event.failed} failed`);
-              }
-              router.refresh();
-              return;
-            }
-      });
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        const message = error instanceof Error ? error.message : 'Batch sync failed';
-        appendLog({ kind: 'error', message });
-        toast.error(message);
-      }
-    } finally {
-      setRunning(false);
-      setStopping(false);
-      abortRef.current = null;
-      setCurrentLabel(null);
-    }
-  }
-
-  async function stop() {
-    if (!running || stopping) return;
-    setStopping(true);
-
-    try {
-      await stopBatchSync();
-      appendLog({ kind: 'log', message: 'Stopping batch sync…' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to stop batch sync';
-      appendLog({ kind: 'error', message });
-      toast.error(message);
-      setStopping(false);
-      return;
-    }
-
-    abortRef.current?.abort();
-  }
-
-  const appendRenewLog = (entry: LogEntry) => setRenewLogs((prev) => [...prev, entry]);
-
-  async function runRenewReset() {
-    if (renewDealers.length === 0) {
-      toast.error('Select at least one dealer');
-      return;
-    }
-    setRenewRunning(true);
-    setRenewStopping(false);
-    setRenewLogs([]);
-    setRenewDone(null);
-    setRenewStats({ total: 0, completed: 0, succeeded: 0, failed: 0 });
-
-    const abortController = new AbortController();
-    renewAbortRef.current = abortController;
-
-    let res: Response;
-    try {
-      res = await startRenewReset({
-        dealerSlugs: renewDealers,
-        onlyReset: renewOnlyReset,
-        signal: abortController.signal,
-      });
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        setRenewRunning(false);
-        setRenewStopping(false);
-        renewAbortRef.current = null;
-        return;
-      }
-      toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
-      setRenewRunning(false);
-      setRenewStopping(false);
-      renewAbortRef.current = null;
-      return;
-    }
-
-    try {
-      await streamJsonEvents<StreamEntry>(res, (event) => {
-            if (event.type === 'start' || event.type === 'checking' || event.type === 'result' || event.type === 'complete') {
-              const s = statsFromStreamEvent(event);
-              setRenewStats(s);
-              if (event.type === 'complete') {
-                setRenewDone(s);
-                setRenewRunning(false);
-                setRenewStopping(false);
-                renewAbortRef.current = null;
-                if (s.failed === 0) toast.success(`Renewed ${s.succeeded} listing${s.succeeded === 1 ? '' : 's'}`);
-                else toast.error(`Renewed ${s.succeeded}, ${s.failed} failed`);
-              }
-            }
-
-            if ('message' in event && event.message) {
-              const kind = streamEventMessageKind(event);
-              const ok = event.type === 'result' ? event.row.status === 'success' : undefined;
-              appendRenewLog({ kind, ok, message: event.message });
-            }
-      });
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
-      }
-    } finally {
-      setRenewRunning(false);
-      setRenewStopping(false);
-      renewAbortRef.current = null;
-    }
-  }
-
-  async function stopRenewReset() {
-    if (!renewRunning || renewStopping) return;
-    setRenewStopping(true);
-    try {
-      await stopRenewResetJob();
-      appendRenewLog({ kind: 'log', message: 'Stopping…' });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to stop');
-      setRenewStopping(false);
-      return;
-    }
-    renewAbortRef.current?.abort();
-  }
-
-  useEffect(() => {
-    if (!autoRun || startedRef.current || rows.length === 0) {
-      return;
-    }
-    startedRef.current = true;
-    runInitialBatchSync();
-  }, [autoRun, rows.length]);
+  const sync = useBatchSync(initialRows, autoRun);
+  const renew = useRenewReset(ownDealers);
 
   return (
     <div className="space-y-6">
       <BatchSyncPanel
-        currentLabel={currentLabel}
-        doneSummary={doneSummary}
-        failedCount={rowCounts.failed}
-        pendingCount={rowCounts.pending}
-        running={running}
-        stats={stats}
-        stopping={stopping}
-        successCount={rowCounts.success}
-        onRunOrStop={running ? stop : () => void run()}
+        currentLabel={sync.currentLabel}
+        doneSummary={sync.doneSummary}
+        failedCount={sync.rowCounts.failed}
+        pendingCount={sync.rowCounts.pending}
+        running={sync.running}
+        stats={sync.stats}
+        stopping={sync.stopping}
+        successCount={sync.rowCounts.success}
+        onRunOrStop={sync.running ? sync.stop : () => void sync.run()}
       />
 
-      <DoneSummaryBanner summary={doneSummary} />
+      <DoneSummaryBanner summary={sync.doneSummary} />
 
-      <RecentResults rows={recentResults} />
+      <RecentResults rows={sync.recentResults} />
 
       <ChangedListingsTable
-        rows={rows}
-        running={running}
-        revertingId={revertingId}
-        onRevert={(row) => void revertDraft(row)}
+        rows={sync.rows}
+        running={sync.running}
+        revertingId={sync.revertingId}
+        onRevert={(row) => void sync.revertDraft(row)}
       />
 
-      {logs.length > 0 && (
-        <LogPanel entries={logs} panelRef={logRef} />
+      {sync.logs.length > 0 && (
+        <LogPanel entries={sync.logs} panelRef={sync.logRef} />
       )}
 
       <RenewResetPanel
         ownDealers={ownDealers}
-        renewDealers={renewDealers}
-        renewOnlyReset={renewOnlyReset}
-        renewRunning={renewRunning}
-        renewStopping={renewStopping}
-        renewStats={renewStats}
-        renewDone={renewDone}
-        renewLogs={renewLogs}
-        running={running}
-        renewLogRef={renewLogRef}
-        onToggleDealer={(slug) => setRenewDealers((prev) => prev.includes(slug) ? prev.filter((entry) => entry !== slug) : [...prev, slug])}
-        onToggleAllDealers={() => setRenewDealers(renewDealers.length === ownDealers.length ? [] : ownDealers.map((dealer) => dealer.slug))}
-        onToggleOnlyReset={() => setRenewOnlyReset((value) => !value)}
-        onRunOrStop={renewRunning ? stopRenewReset : () => void runRenewReset()}
+        renewDealers={renew.renewDealers}
+        renewOnlyReset={renew.renewOnlyReset}
+        renewRunning={renew.renewRunning}
+        renewStopping={renew.renewStopping}
+        renewStats={renew.renewStats}
+        renewDone={renew.renewDone}
+        renewLogs={renew.renewLogs}
+        running={sync.running}
+        renewLogRef={renew.renewLogRef}
+        onToggleDealer={renew.toggleDealer}
+        onToggleAllDealers={renew.toggleAllDealers}
+        onToggleOnlyReset={renew.toggleOnlyReset}
+        onRunOrStop={renew.renewRunning ? renew.stopRenewReset : () => void renew.runRenewReset()}
       />
     </div>
   );
