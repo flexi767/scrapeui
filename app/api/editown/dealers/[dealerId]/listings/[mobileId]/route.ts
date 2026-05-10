@@ -3,6 +3,7 @@ import { raw } from '@/db/client';
 import { getMobileBgVatLabel } from '@/lib/vat';
 import { parseJson, normalizeVin } from '@/lib/utils';
 import { normalizeExtras } from '@/lib/mobile-bg/extras';
+import { latestBackupOrderExpr } from '@/lib/query-modules/types';
 
 const MONTH_NAMES = [
   '',
@@ -76,7 +77,7 @@ export async function GET(
         b.*,
         ROW_NUMBER() OVER (
           PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+          ORDER BY ${latestBackupOrderExpr}
         ) as row_num
       FROM mobilebg_backups b
     )

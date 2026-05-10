@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
-import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
+import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
 
 const VALID_SORT: Record<string, string> = {
   price: "l.current_price",
@@ -335,7 +335,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
         b.*,
         ROW_NUMBER() OVER (
           PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+          ORDER BY ${latestBackupOrderExpr}
         ) as row_num
       FROM mobilebg_backups b
     )
@@ -394,7 +394,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
         b.*,
         ROW_NUMBER() OVER (
           PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+          ORDER BY ${latestBackupOrderExpr}
         ) as row_num
       FROM mobilebg_backups b
     )

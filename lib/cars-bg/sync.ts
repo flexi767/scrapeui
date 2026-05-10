@@ -9,7 +9,7 @@ import {
   extractOfferId,
 } from '@/lib/cars-bg/urls';
 import { getCdnImageUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { notDuplicateExpr } from '@/lib/query-modules/types';
+import { latestBackupOrderExpr, notDuplicateExpr } from '@/lib/query-modules/types';
 import {
   type CarsBgExtrasPayload,
   normalizeLabel,
@@ -308,7 +308,7 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
         SELECT b.id
         FROM mobilebg_backups b
         WHERE b.listing_id = listings.id
-        ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+        ORDER BY ${latestBackupOrderExpr}
         LIMIT 1
       ) as latest_backup_id
     FROM listings

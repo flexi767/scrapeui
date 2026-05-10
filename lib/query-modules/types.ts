@@ -246,6 +246,8 @@ export interface ListingFilters {
 export const notDuplicateExpr = `(duplicate = 0 OR duplicate IS NULL)`;
 export const notDuplicateLExpr = `(l.duplicate = 0 OR l.duplicate IS NULL)`;
 
+export const latestBackupOrderExpr = `COALESCE(b.updated_at, b.created_at) DESC, b.id DESC`;
+
 export const ownVatExpr = `
   CASE
     WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
@@ -277,7 +279,7 @@ export const firstBackupImageIdExpr = `(
   FROM mobilebg_backups b
   JOIN mobilebg_backup_images i ON i.backup_id = b.id
   WHERE b.listing_id = l.id
-  ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC, i.sort_order ASC, i.id ASC
+  ORDER BY ${latestBackupOrderExpr}, i.sort_order ASC, i.id ASC
   LIMIT 1
 )`;
 

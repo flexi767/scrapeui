@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { EditOwnSyncRow, MakeModelMappingRow, MobileBgDashboardSummary, MobileBgEditFormDetailRow, MobileBgEditFormRow, MobileBgCrawlRunRow, MobileBgRepostJobRow } from './types';
-import { ownNeedsSyncExpr, ownVatExpr } from './types';
+import { latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr } from './types';
 
 export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
   return raw
@@ -143,7 +143,7 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
         b.*,
         ROW_NUMBER() OVER (
           PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+          ORDER BY ${latestBackupOrderExpr}
         ) as row_num
       FROM mobilebg_backups b
     )

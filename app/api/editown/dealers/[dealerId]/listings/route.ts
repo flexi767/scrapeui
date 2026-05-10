@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { latestBackupOrderExpr } from '@/lib/query-modules/types';
 
 interface DealerListingSummaryRow {
   mobile_id: string;
@@ -31,7 +32,7 @@ export async function GET(
         b.*,
         ROW_NUMBER() OVER (
           PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY COALESCE(b.updated_at, b.created_at) DESC, b.id DESC
+          ORDER BY ${latestBackupOrderExpr}
         ) as row_num
       FROM mobilebg_backups b
     )
