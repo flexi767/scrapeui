@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 import { SavedSearchDeleteDialog } from "@/components/saved-searches/SavedSearchDeleteDialog";
 import { SavedSearchEditorPanel } from "@/components/saved-searches/SavedSearchEditorPanel";
 import { SavedSearchList } from "@/components/saved-searches/SavedSearchList";
@@ -120,11 +121,7 @@ export default function SavedSearchesWorkspace({
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to load saved search",
-        );
+        toast.error(errorMessage(error));
       })
       .finally(() => {
         if (!cancelled) setLoadingDetail(false);

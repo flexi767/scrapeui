@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { errorMessage } from '@/lib/utils';
 
 interface UploadRow {
   id: number;
@@ -55,7 +56,7 @@ export default function FilesPage() {
       }
       await loadFiles();
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload files');
+      setError(errorMessage(uploadError));
     } finally {
       setUploading(false);
     }

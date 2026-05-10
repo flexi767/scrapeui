@@ -26,6 +26,7 @@ import {
   mergeEditableFields,
   takeFirstVisibleFields,
 } from '@/components/listing-search-prefill/field-utils';
+import { errorMessage } from '@/lib/utils';
 import type {
   MobileBgSearchResultsResponse,
   PendingAction,
@@ -71,7 +72,7 @@ export default function ListingSearchPrefillButton({
       syncEditableFields(nextData);
       toast.success('Saved custom search values');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save search values');
+      toast.error(errorMessage(err));
     } finally {
       setProfileSaving(false);
     }
@@ -86,7 +87,7 @@ export default function ListingSearchPrefillButton({
       syncEditableFields(nextData);
       toast.success('Reset to default search values');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset saved search values');
+      toast.error(errorMessage(err));
     } finally {
       setProfileSaving(false);
     }
@@ -110,7 +111,7 @@ export default function ListingSearchPrefillButton({
       setData(nextData);
       syncEditableFields(nextData);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load search fields');
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -250,7 +251,7 @@ export default function ListingSearchPrefillButton({
       });
       setResults(payload);
     } catch (err: unknown) {
-      setResultsError(err instanceof Error ? err.message : 'Failed to load mobile.bg results');
+      setResultsError(errorMessage(err));
       setResults(null);
     } finally {
       setResultsLoading(false);
