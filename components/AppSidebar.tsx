@@ -20,7 +20,6 @@ const navItems = [
   { href: '/editown/saved-searches', label: 'Saved Searches', icon: SearchIcon, indent: true },
   { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
   { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
-  { href: '/mobilebg/backups', label: 'Backups', icon: ArchiveIcon, indent: true },
   { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon, indent: true },
   { href: '/mobilebg/reposts', label: 'Reposts', icon: UploadIcon, indent: true },
   { href: '/mapping', label: 'Mapping', icon: MapIcon },

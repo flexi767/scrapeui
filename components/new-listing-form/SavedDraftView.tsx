@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BackupImageManager } from "@/components/new-listing-form/BackupImageManager";
 import { SavedListingSummary } from "@/components/new-listing-form/SavedListingSummary";
 import type { FormState } from "@/components/new-listing-form/constants";
@@ -27,14 +26,6 @@ export function SavedDraftView({
       {backupId ? (
         <>
           <BackupImageManager backupId={backupId} />
-          <div className="flex items-center gap-4 text-sm">
-            <Link
-              href={`/mobilebg/backups/${backupId}`}
-              className="text-sky-300 underline hover:text-sky-200"
-            >
-              Отвори черновата
-            </Link>
-          </div>
         </>
       ) : (
         <div className="rounded-xl border border-red-800/60 bg-red-950/30 p-4 text-sm text-red-300">
