@@ -35,6 +35,7 @@ export function parseRunnerArgs(args = process.argv.slice(2)) {
 
   return {
     deepCrawl: args.includes("--deep"),
+    downloadImages: args.includes("--download-images"),
     requestedSlugs: dealerArg ? dealerArg.split(",").map((s) => s.trim()) : [],
   };
 }

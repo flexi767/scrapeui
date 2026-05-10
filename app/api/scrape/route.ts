@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 const state = new ChildStreamState();
 
 export async function POST(req: NextRequest) {
-  const { dealers, deepCrawl, source } = await req.json();
+  const { dealers, deepCrawl, downloadImages, source } = await req.json();
 
   state.clearStale();
 
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
 
   const scriptArgs = ['--dealers', (dealers as string[]).join(',')];
   if (deepCrawl) scriptArgs.push('--deep');
+  if (downloadImages && deepCrawl) scriptArgs.push('--download-images');
 
   const scriptName = source === 'carsbg'
     ? 'scraper/scripts/run-carsbg-for-ui.ts'

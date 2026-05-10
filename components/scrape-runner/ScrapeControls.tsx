@@ -5,6 +5,7 @@ interface ScrapeControlsProps {
   running: boolean;
   stopping: boolean;
   deepCrawl: boolean;
+  downloadImages: boolean;
   activeDealers: ScrapeDealer[];
   availableDealers: ScrapeDealer[];
   effectiveSelected: string[];
@@ -13,6 +14,7 @@ interface ScrapeControlsProps {
   onToggleDealer: (slug: string) => void;
   onToggleSelectAllDealers: () => void;
   onToggleDeepCrawl: () => void;
+  onToggleDownloadImages: () => void;
   onRunClick: () => void;
 }
 
@@ -21,6 +23,7 @@ export function ScrapeControls({
   running,
   stopping,
   deepCrawl,
+  downloadImages,
   activeDealers,
   availableDealers,
   effectiveSelected,
@@ -29,6 +32,7 @@ export function ScrapeControls({
   onToggleDealer,
   onToggleSelectAllDealers,
   onToggleDeepCrawl,
+  onToggleDownloadImages,
   onRunClick,
 }: ScrapeControlsProps) {
   return (
@@ -111,6 +115,21 @@ export function ScrapeControls({
           <div>
             <span className="text-sm font-medium text-gray-200">Deep crawl</span>
             <p className="mt-0.5 text-xs text-gray-400">Opens each listing detail page to extract full data</p>
+          </div>
+        </div>
+
+        <div
+          onClick={onToggleDownloadImages}
+          className={`flex items-center gap-3 ${(running || !deepCrawl) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+        >
+          <div
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${downloadImages && deepCrawl ? 'bg-blue-600' : 'bg-gray-600'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${downloadImages && deepCrawl ? 'translate-x-6' : 'translate-x-1'}`} />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-200">Download images</span>
+            <p className="mt-0.5 text-xs text-gray-400">Save full-res images to disk (requires deep crawl)</p>
           </div>
         </div>
       </div>

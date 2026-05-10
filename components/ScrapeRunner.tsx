@@ -12,6 +12,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const dealerSelection = useScrapeDealerSelection(initialDealers);
 
   const [deepCrawl, setDeepCrawl] = useState(false);
+  const [downloadImages, setDownloadImages] = useState(false);
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [log, setLog] = useState<ScrapeLogEntry[]>([]);
@@ -27,6 +28,10 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       }
     });
   };
+
+  useEffect(() => {
+    if (!deepCrawl) setDownloadImages(false);
+  }, [deepCrawl]);
 
   const changes = log.filter((e) => e.type === 'change');
 
@@ -52,7 +57,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       res = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, source: dealerSelection.source }),
+        body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, downloadImages, source: dealerSelection.source }),
         signal: abortController.signal,
       });
     } catch (err) {
@@ -131,6 +136,8 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
         onToggleDealer={dealerSelection.toggleDealer}
         onToggleSelectAllDealers={dealerSelection.toggleSelectAllDealers}
         onToggleDeepCrawl={() => !running && setDeepCrawl((value) => !value)}
+        downloadImages={downloadImages}
+        onToggleDownloadImages={() => !running && deepCrawl && setDownloadImages((v) => !v)}
         onRunClick={running ? stop : run}
       />
 
