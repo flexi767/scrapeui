@@ -5,6 +5,7 @@ import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-res
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
 import { buildImageList, getPreferredListingThumbUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { notDuplicateLExpr } from '@/lib/query-modules/types';
 
 interface OwnSearchRankTarget {
   backup_id: number;
@@ -120,7 +121,7 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
       AND d.own = 1
       AND d.active = 1
       AND l.is_active = 1
-      AND (l.duplicate = 0 OR l.duplicate IS NULL)
+      AND ${notDuplicateLExpr}
       AND l.mobile_id IS NOT NULL
       ${whereExtras}
     ORDER BY d.priority DESC, d.name, COALESCE(b.make, l.make), COALESCE(b.model, l.model), l.mobile_id

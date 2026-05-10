@@ -9,6 +9,7 @@ import {
   extractOfferId,
 } from '@/lib/cars-bg/urls';
 import { getCdnImageUrl, parseJson, type ImageMeta } from '@/lib/utils';
+import { notDuplicateExpr } from '@/lib/query-modules/types';
 import {
   type CarsBgExtrasPayload,
   normalizeLabel,
@@ -314,7 +315,7 @@ function loadDealerMobileListings(db: Database.Database, dealerId: number): Cars
     WHERE dealer_id = ?
       AND source = 'm'
       AND is_active = 1
-      AND (duplicate = 0 OR duplicate IS NULL)
+      AND ${notDuplicateExpr}
   `).all(dealerId) as SyncListingRow[];
 
   return rows.map((row) => mapRowToSyncListing(db, row));

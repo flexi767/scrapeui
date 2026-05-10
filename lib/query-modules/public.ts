@@ -1,4 +1,5 @@
 import { raw } from "@/db/client";
+import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ export function getRelatedListings(
        FROM listings l
        WHERE l.dealer_id = ? AND l.is_active = 1 AND l.make = ?
          AND l.mobile_id != ?
-         AND (l.duplicate = 0 OR l.duplicate IS NULL)
+         AND ${notDuplicateLExpr}
        ORDER BY l.last_edit DESC
        LIMIT ?`,
     )
@@ -144,7 +145,7 @@ export function getPublicListings(
   const wheres: string[] = [
     "l.dealer_id = ?",
     "l.is_active = 1",
-    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+    notDuplicateLExpr,
   ];
   const params: (string | number)[] = [dealerId];
 

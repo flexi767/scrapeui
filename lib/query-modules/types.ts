@@ -243,6 +243,9 @@ export interface ListingFilters {
   limit?: number;
 }
 
+export const notDuplicateExpr = `(duplicate = 0 OR duplicate IS NULL)`;
+export const notDuplicateLExpr = `(l.duplicate = 0 OR l.duplicate IS NULL)`;
+
 export const ownVatExpr = `
   CASE
     WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included

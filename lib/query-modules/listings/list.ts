@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
-import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
+import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
 
 const VALID_SORT: Record<string, string> = {
   price: "l.current_price",
@@ -101,7 +101,7 @@ export function getListings(filters: ListingFilters = {}) {
   const { wheres, params } = buildListingFilters(filters, [
     "l.is_active = 1",
     "d.active = 1",
-    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+    notDuplicateLExpr,
   ]);
 
   const where = `WHERE ${wheres.join(" AND ")}`;
@@ -149,7 +149,7 @@ export function getDeletedListings(filters: ListingFilters = {}) {
     "l.is_active = 0",
     "l.deleted_at IS NOT NULL",
     "d.active = 1",
-    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+    notDuplicateLExpr,
   ]);
 
   const where = `WHERE ${wheres.join(" AND ")}`;
@@ -216,7 +216,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     "(l.is_active = 1 OR l.id IS NULL)",
     "d.active = 1",
     "d.own = 1",
-    "(l.duplicate = 0 OR l.duplicate IS NULL)",
+    notDuplicateLExpr,
   ];
   const params: (string | number)[] = [];
 

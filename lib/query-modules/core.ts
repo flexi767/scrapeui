@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { notDuplicateExpr, notDuplicateLExpr } from './types';
 
 export interface MakeModel {
   make: string;
@@ -9,7 +10,7 @@ export function getMakeModels(): Record<string, string[]> {
   const rows = raw
     .prepare(
       `
-    SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY make, model
+    SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND ${notDuplicateExpr} ORDER BY make, model
   `,
     )
     .all() as MakeModel[];
@@ -50,7 +51,7 @@ export function getAllDealers(): DealerRow[] {
 export function getDistinctYears(): string[] {
   const rows = raw
     .prepare(
-      `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY reg_year DESC`,
+      `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND ${notDuplicateExpr} ORDER BY reg_year DESC`,
     )
     .all() as { reg_year: string }[];
   return rows.map((r) => r.reg_year);
@@ -59,7 +60,7 @@ export function getDistinctYears(): string[] {
 export function getPriceRange(): { min: number; max: number } | null {
   const row = raw
     .prepare(
-      `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`,
+      `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND ${notDuplicateExpr}`,
     )
     .get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
@@ -69,7 +70,7 @@ export function getPriceRange(): { min: number; max: number } | null {
 export function getPriceChangeRange(): { min: number; max: number } | null {
   const row = raw
     .prepare(
-      `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL)`,
+      `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND ${notDuplicateExpr}`,
     )
     .get() as { min: number | null; max: number | null };
   if (row.min == null || row.max == null) return null;
@@ -79,7 +80,7 @@ export function getPriceChangeRange(): { min: number; max: number } | null {
 export function getDistinctFuels(): string[] {
   const rows = raw
     .prepare(
-      `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY fuel`,
+      `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND ${notDuplicateExpr} ORDER BY fuel`,
     )
     .all() as { fuel: string }[];
   return rows.map((r) => r.fuel);
@@ -88,7 +89,7 @@ export function getDistinctFuels(): string[] {
 export function getDistinctCategories(): string[] {
   const rows = raw
     .prepare(
-      `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND (duplicate = 0 OR duplicate IS NULL) ORDER BY body_type`,
+      `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND ${notDuplicateExpr} ORDER BY body_type`,
     )
     .all() as { body_type: string }[];
   return rows.map((r) => r.body_type);
@@ -143,7 +144,7 @@ export function getListingSummaries(): ListingSummary[] {
     SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price, l.vat
     FROM listings l
     JOIN dealers d ON l.dealer_id = d.id
-    WHERE l.is_active = 1 AND d.own = 1 AND (l.duplicate = 0 OR l.duplicate IS NULL)
+    WHERE l.is_active = 1 AND d.own = 1 AND ${notDuplicateLExpr}
     ORDER BY l.make, l.model, l.reg_year
   `,
     )

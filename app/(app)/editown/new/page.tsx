@@ -14,6 +14,7 @@ import {
   parseJson,
   type ImageMeta,
 } from "@/lib/utils";
+import { notDuplicateLExpr } from "@/lib/query-modules/types";
 
 interface DealerRow {
   id: number;
@@ -96,7 +97,7 @@ function getOwnListingsByDealer(): Record<
     WHERE b.row_num = 1
       AND d.own = 1 AND d.active = 1
       AND (l.is_active = 1 OR l.id IS NULL)
-      AND (l.duplicate = 0 OR l.duplicate IS NULL)
+      AND ${notDuplicateLExpr}
     ORDER BY b.dealer_id, is_draft DESC, l.last_edit DESC, b.id DESC
   `,
     )
