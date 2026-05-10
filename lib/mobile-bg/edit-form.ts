@@ -1,17 +1,8 @@
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
-import { USER_AGENT } from '@/lib/mobile-bg/constants';
+import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { captureEditFormSnapshotWithPage, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form-capture';
-
-interface DealerBackupConfig {
-  id: number;
-  slug: string;
-  name?: string;
-  mobileUrl?: string;
-  mobileUser: string;
-  mobilePassword: string;
-}
 
 export { captureEditFormSnapshotWithPage, submitMyAdsEditForm };
 

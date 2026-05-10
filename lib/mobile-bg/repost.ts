@@ -3,18 +3,9 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
-import { USER_AGENT } from '@/lib/mobile-bg/constants';
-import { SCRAPED_ROOT } from '@/lib/storage-paths';
-
-interface DealerBackupConfig {
-  id: number;
-  slug: string;
-  name?: string;
-  mobileUrl?: string;
-  mobileUser: string;
-  mobilePassword: string;
-}
+import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
+import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
 
