@@ -549,6 +549,8 @@ function seedDraft(
   dealer: DealerRow,
   listing: ScrapedListingInput,
   listingDbId: number,
+  make: string | null,
+  model: string | null,
 ): number | null {
   const mobileId = extractMobileId(listing.url ?? "");
   if (!mobileId) return null;
@@ -558,11 +560,11 @@ function seedDraft(
     .prepare(
       `
     INSERT OR IGNORE INTO mobilebg_backups
-      (dealer_id, listing_id, mobile_id, source_url, title,
+      (dealer_id, listing_id, mobile_id, source_url, title, make, model,
        price_amount, price_currency, description, year, mileage, fuel,
        transmission, color, category, extras_json, image_count,
        created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     )
     .run(
@@ -571,6 +573,8 @@ function seedDraft(
       mobileId,
       listing.url,
       listing.title ?? null,
+      make,
+      model,
       listing.price?.amount ?? null,
       listing.price?.currency ?? "EUR",
       listing.description ?? null,
@@ -1142,7 +1146,7 @@ async function scrapeCompetitorForUI(
             const listingDbId = listingRow?.id ?? null;
 
             if (listingDbId) {
-              const backupId = seedDraft(db, dealer, listing, listingDbId);
+              const backupId = seedDraft(db, dealer, listing, listingDbId, result.make ?? null, result.model ?? null);
               if (backupId && downloadImages && raw.fullUrls.length > 0) {
                 const counts = await downloadListingImages(db, dealer, mobileId!, backupId, raw.fullUrls);
                 detailImagesDownloaded = counts.downloaded;
