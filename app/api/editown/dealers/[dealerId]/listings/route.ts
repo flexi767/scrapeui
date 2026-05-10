@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { latestBackupOrderExpr } from '@/lib/query-modules/types';
+import { latestBackupOrderExpr, rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface DealerListingSummaryRow {
   mobile_id: string;
@@ -27,15 +27,7 @@ export async function GET(
   }
 
   const rows = raw.prepare(`
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY ${latestBackupOrderExpr}
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT
       l.mobile_id,
       COALESCE(b.make, l.make) as make,

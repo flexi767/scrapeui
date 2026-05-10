@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
-import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
+import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
 
 const VALID_SORT: Record<string, string> = {
   price: "l.current_price",
@@ -330,15 +330,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
   const rows = raw
     .prepare(
       `
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY ${latestBackupOrderExpr}
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT
       COUNT(*) OVER() as total_count,
       b.id as backup_id,
@@ -389,15 +381,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     const { count } = raw
       .prepare(
         `
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY ${latestBackupOrderExpr}
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT COUNT(*) as count
     FROM ranked_backups b
     LEFT JOIN listings l ON l.id = b.listing_id

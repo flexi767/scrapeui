@@ -248,6 +248,16 @@ export const notDuplicateLExpr = `(l.duplicate = 0 OR l.duplicate IS NULL)`;
 
 export const latestBackupOrderExpr = `COALESCE(b.updated_at, b.created_at) DESC, b.id DESC`;
 
+export const rankedBackupsCte = `WITH ranked_backups AS (
+  SELECT
+    b.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY b.dealer_id, b.mobile_id
+      ORDER BY ${latestBackupOrderExpr}
+    ) as row_num
+  FROM mobilebg_backups b
+)`;
+
 export const ownVatExpr = `
   CASE
     WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included

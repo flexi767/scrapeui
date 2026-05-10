@@ -5,7 +5,7 @@ import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-res
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
 import { buildImageList, getPreferredListingThumbUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { latestBackupOrderExpr, notDuplicateLExpr } from '@/lib/query-modules/types';
+import { latestBackupOrderExpr, notDuplicateLExpr, rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface OwnSearchRankTarget {
   backup_id: number;
@@ -84,15 +84,7 @@ function getOwnSearchRankTargets(missingOnly: boolean) {
     : '';
 
   return raw.prepare(`
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY ${latestBackupOrderExpr}
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT
       b.id as backup_id,
       l.id as listing_id,

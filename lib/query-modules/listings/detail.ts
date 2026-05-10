@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { OwnListingRow } from '../types';
-import { firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr } from '../types';
+import { firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
 
 export function getOwnListingByMobileId(
   mobileId: string,
@@ -8,15 +8,7 @@ export function getOwnListingByMobileId(
   return raw
     .prepare(
       `
-    WITH ranked_backups AS (
-      SELECT
-        b.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY b.dealer_id, b.mobile_id
-          ORDER BY ${latestBackupOrderExpr}
-        ) as row_num
-      FROM mobilebg_backups b
-    )
+    ${rankedBackupsCte}
     SELECT
       b.id as backup_id,
       l.id, l.mobile_id,
