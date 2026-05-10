@@ -1,0 +1,258 @@
+import { drawCoverImage, drawWrappedText } from "@/lib/canvas-utils";
+
+export interface InstagramListingPhoto {
+  id: number;
+  url: string;
+  filename: string;
+}
+
+export interface InstagramListingPayload {
+  backupId: number;
+  title: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  mileage?: number;
+  price?: number;
+  fuel?: string;
+  transmission?: string;
+  color?: string;
+  power?: number;
+  bodyType?: string;
+  description: string;
+  extras: string[];
+  caption: string;
+  photos: InstagramListingPhoto[];
+}
+
+export interface PosterVariant {
+  id: string;
+  name: string;
+  dataUrl: string;
+}
+
+export const POSTER_SIZE = 1080;
+export const PROMPT_STORAGE_PREFIX = "scrapeui:instagram-poster-prompt:";
+
+export function formatPosterPrice(price?: number) {
+  return price == null ? "-" : `€${price.toLocaleString("en-US")}`;
+}
+
+export function formatPosterMileage(mileage?: number) {
+  return mileage == null ? "-" : `${mileage.toLocaleString("en-US")} km`;
+}
+
+interface PosterDirection {
+  accent: string;
+  background: [string, string];
+  compact: boolean;
+  includeExtras: boolean;
+  layout: "hero" | "grid" | "editorial";
+  moodLabel: string;
+  shotCount: number;
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function textFit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, startSize: number, weight = 800) {
+  let size = startSize;
+  do {
+    ctx.font = `${weight} ${size}px Arial`;
+    if (ctx.measureText(text).width <= maxWidth) return size;
+    size -= 2;
+  } while (size > 30);
+  return size;
+}
+
+function drawSpec(ctx: CanvasRenderingContext2D, label: string, value: string, x: number, y: number, w: number) {
+  ctx.fillStyle = "rgba(255,255,255,0.09)";
+  roundRect(ctx, x, y, w, 92, 18);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.font = "700 24px Arial";
+  ctx.fillText(label.toUpperCase(), x + 24, y + 34);
+  ctx.fillStyle = "#ffffff";
+  const size = textFit(ctx, value, w - 48, 34);
+  ctx.font = `800 ${size}px Arial`;
+  ctx.fillText(value, x + 24, y + 72);
+}
+
+export function buildDefaultPosterPrompt(listing: InstagramListingPayload) {
+  const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
+  const extras = listing.extras.slice(0, 5).join(", ");
+  return [
+    "Create a premium square Instagram car-sale poster.",
+    "Use clean dealership photography, a polished editorial layout, strong contrast, and no clutter.",
+    `Hero car: ${title}.`,
+    `Show important data: make, model, mileage ${formatPosterMileage(listing.mileage)}, extras ${extras || "top options"}, price ${formatPosterPrice(listing.price)}.`,
+    "Use 2-3 cleaned shots, large readable typography, subtle luxury feel, and a clear price block.",
+  ].join("\n");
+}
+
+function parsePosterPrompt(prompt: string, fallbackLayout: PosterDirection["layout"]): PosterDirection {
+  const p = prompt.toLowerCase();
+  const sporty = /\b(sport|dynamic|aggressive|bold|performance|fast)\b/.test(p);
+  const luxury = /\b(luxury|premium|elegant|exclusive|high.?end)\b/.test(p);
+  const clean = /\b(clean|minimal|simple|subtle|no clutter|declutter)\b/.test(p);
+  const bright = /\b(bright|white|light|daylight|studio)\b/.test(p);
+  const warm = /\b(warm|gold|bronze|champagne)\b/.test(p);
+  const blue = /\b(blue|tech|electric|modern)\b/.test(p);
+  const manyShots = /\b(three shot|triple|multiple|gallery|collage|grid)\b/.test(p);
+  const singleShot = /\b(single|one shot|hero only)\b/.test(p);
+
+  const layout: PosterDirection["layout"] = manyShots
+    ? "grid"
+    : singleShot
+      ? "hero"
+      : /\b(editorial|magazine)\b/.test(p)
+        ? "editorial"
+        : fallbackLayout;
+
+  const background: [string, string] = bright
+    ? ["#f3f4f0", "#d7d9d2"]
+    : warm
+      ? ["#191714", "#4a3b28"]
+      : blue
+        ? ["#111820", "#244052"]
+        : sporty
+          ? ["#151515", "#3a1f24"]
+          : ["#14181f", "#26313a"];
+
+  return {
+    accent: warm ? "#f1c27d" : blue ? "#7dd3fc" : sporty ? "#fb7185" : luxury ? "#d7b56d" : "#f472b6",
+    background,
+    compact: clean,
+    includeExtras: !/\b(no extras|hide extras|without extras)\b/.test(p),
+    layout,
+    moodLabel: sporty ? "Performance offer" : luxury ? "Premium offer" : clean ? "Clean offer" : "Featured offer",
+    shotCount: singleShot ? 1 : manyShots ? 3 : 2,
+  };
+}
+
+export function makePoster(
+  listing: InstagramListingPayload,
+  images: HTMLImageElement[],
+  variant: "hero" | "grid" | "editorial",
+  prompt: string,
+): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = POSTER_SIZE;
+  canvas.height = POSTER_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+
+  const direction = parsePosterPrompt(prompt, variant);
+  const layout = direction.layout === variant ? variant : direction.layout;
+  const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
+  const subtitle = listing.title.replace(title, "").trim();
+  const specs = [
+    ["Price", formatPosterPrice(listing.price)],
+    ["Mileage", formatPosterMileage(listing.mileage)],
+    ["Year", listing.year ? String(listing.year) : "-"],
+    ["Fuel", listing.fuel ?? "-"],
+  ] as const;
+
+  const grad = ctx.createLinearGradient(0, 0, POSTER_SIZE, POSTER_SIZE);
+  grad.addColorStop(0, direction.background[0]);
+  grad.addColorStop(1, direction.background[1]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, POSTER_SIZE, POSTER_SIZE);
+
+  const primary = images[0];
+  if (layout === "grid") {
+    const slots = [
+      [48, 48, 640, 610],
+      [716, 48, 316, 290],
+      [716, 368, 316, 290],
+    ] as const;
+    slots.forEach(([x, y, w, h], index) => {
+      if (index >= direction.shotCount) return;
+      const image = images[index] ?? primary;
+      if (!image) return;
+      ctx.save();
+      roundRect(ctx, x, y, w, h, 32);
+      ctx.clip();
+      drawCoverImage(ctx, image, x, y, w, h);
+      ctx.restore();
+    });
+    ctx.fillStyle = "rgba(0,0,0,0.48)";
+    ctx.fillRect(0, 662, POSTER_SIZE, 418);
+  } else {
+    if (primary) {
+      ctx.save();
+      roundRect(ctx, 48, 48, 984, layout === "hero" ? 640 : 570, 36);
+      ctx.clip();
+      drawCoverImage(ctx, primary, 48, 48, 984, layout === "hero" ? 640 : 570);
+      ctx.restore();
+    }
+    if (layout === "editorial" && direction.shotCount > 1) {
+      for (let index = 1; index < Math.min(images.length, direction.shotCount + 1); index += 1) {
+        const x = 64 + (index - 1) * 318;
+        ctx.save();
+        roundRect(ctx, x, 640, 288, 168, 22);
+        ctx.clip();
+        drawCoverImage(ctx, images[index], x, 640, 288, 168);
+        ctx.restore();
+      }
+    }
+    const overlay = ctx.createLinearGradient(0, 600, 0, POSTER_SIZE);
+    overlay.addColorStop(0, "rgba(0,0,0,0)");
+    overlay.addColorStop(0.35, "rgba(0,0,0,0.62)");
+    overlay.addColorStop(1, "rgba(0,0,0,0.88)");
+    ctx.fillStyle = overlay;
+    ctx.fillRect(0, 520, POSTER_SIZE, 560);
+  }
+
+  ctx.fillStyle = direction.accent;
+  ctx.font = "800 24px Arial";
+  ctx.fillText(direction.moodLabel.toUpperCase(), 64, layout === "grid" ? 704 : 728);
+
+  ctx.fillStyle = "#ffffff";
+  const titleSize = textFit(ctx, title.toUpperCase(), 900, layout === "grid" ? 68 : 76);
+  ctx.font = `900 ${titleSize}px Arial`;
+  ctx.fillText(title.toUpperCase(), 64, layout === "grid" ? 760 : 784);
+
+  if (subtitle && !direction.compact) {
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = "700 30px Arial";
+    drawWrappedText(ctx, subtitle, 66, layout === "grid" ? 808 : 832, 900, 38, 2);
+  }
+
+  const specY = layout === "grid" ? 878 : 884;
+  specs.forEach(([label, value], index) => {
+    drawSpec(ctx, label, value, 64 + (index % 2) * 486, specY + Math.floor(index / 2) * 106, 448);
+  });
+
+  const extras = listing.extras.slice(0, 4).join("  /  ");
+  if (extras && direction.includeExtras) {
+    ctx.fillStyle = "rgba(255,255,255,0.64)";
+    ctx.font = "700 24px Arial";
+    drawWrappedText(ctx, extras, 66, 1042, 930, 30, 1);
+  }
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+export function dataUrlToFile(dataUrl: string, filename: string) {
+  const [meta, base64] = dataUrl.split(",");
+  const mime = meta.match(/data:(.*?);/)?.[1] ?? "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], filename, { type: mime });
+}
+
+export async function imageUrlToFile(url: string, filename: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not fetch ${filename}`);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || "image/jpeg" });
+}
