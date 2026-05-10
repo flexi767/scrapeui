@@ -5,16 +5,9 @@ import {
   createMobileBgUpdateSession,
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
+import type { MobileBgDealerRow } from '@/lib/mobile-bg/constants';
 import { emit } from '@/scraper/lib/runner';
 import { errorMessage } from '@/lib/utils';
-
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_user: string | null;
-  mobile_password: string | null;
-}
 
 interface SyncTarget {
   backup_id: number;
@@ -77,7 +70,7 @@ async function main() {
       SELECT id, slug, name, mobile_user, mobile_password
       FROM dealers
       WHERE slug = ?
-    `).get(row.dealer_slug) as DealerRow | undefined;
+    `).get(row.dealer_slug) as MobileBgDealerRow | undefined;
 
       if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
         completed += 1;

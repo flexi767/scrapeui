@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { repostBackupFromDb } from '@/lib/mobile-bg/repost';
+import type { MobileBgDealerRow } from '@/lib/mobile-bg/constants';
 
 export const runtime = 'nodejs';
-
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_user: string | null;
-  mobile_password: string | null;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +16,7 @@ export async function POST(req: NextRequest) {
       SELECT id, slug, name, mobile_user, mobile_password
       FROM dealers
       WHERE slug = ?
-    `).get(dealerSlug) as DealerRow | undefined;
+    `).get(dealerSlug) as MobileBgDealerRow | undefined;
 
     if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
       return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
