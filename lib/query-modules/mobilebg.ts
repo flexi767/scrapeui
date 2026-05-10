@@ -1,6 +1,19 @@
-import { raw } from '@/db/client';
-import type { EditOwnSyncRow, MakeModelMappingRow, MobileBgDashboardSummary, MobileBgEditFormDetailRow, MobileBgEditFormRow, MobileBgCrawlRunRow, MobileBgRepostJobRow } from './types';
-import { latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from './types';
+import { raw } from "@/db/client";
+import type {
+  EditOwnSyncRow,
+  MakeModelMappingRow,
+  MobileBgDashboardSummary,
+  MobileBgEditFormDetailRow,
+  MobileBgEditFormRow,
+  MobileBgCrawlRunRow,
+  MobileBgRepostJobRow,
+} from "./types";
+import {
+  latestBackupOrderExpr,
+  ownNeedsSyncExpr,
+  ownVatExpr,
+  rankedBackupsCte,
+} from "./types";
 
 export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
   return raw
@@ -106,7 +119,7 @@ export function createCrawlRun(dealerId: number, sourceUrl: string): number {
 export function updateCrawlRun(
   runId: number,
   data: {
-    status: 'completed' | 'failed';
+    status: "completed" | "failed";
     listingsCount: number;
     imagesDownloaded: number;
     imagesFailed: number;
@@ -132,7 +145,6 @@ export function updateCrawlRun(
       runId,
     );
 }
-
 
 export function getEditOwnSyncRows(): EditOwnSyncRow[] {
   return raw
@@ -233,102 +245,4 @@ export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
   `,
     )
     .all(limit) as MobileBgRepostJobRow[];
-}
-
-export interface MobileBgCrawlQueueRow {
-  id: number;
-  dealer_id: number;
-  url: string;
-  url_type: string;
-  mobile_id: string | null;
-  status: string;
-  listings_count: number | null;
-  price: number | null;
-  views: number | null;
-  last_crawled_at: string | null;
-  next_crawl_at: string | null;
-  error: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  dealer_name: string | null;
-  dealer_slug: string | null;
-}
-
-export interface MobileBgCrawlQueueFilters {
-  dealer?: string | string[];
-  urlType?: string | string[];
-  status?: string | string[];
-  search?: string;
-  page?: number;
-  limit?: number;
-}
-
-export function getMobileBgCrawlQueue(filters: MobileBgCrawlQueueFilters = {}) {
-  const {
-    dealer = "",
-    urlType = "",
-    status = "",
-    search = "",
-    page = 1,
-    limit = 50,
-  } = filters;
-
-  const dealerSlugs = Array.isArray(dealer) ? dealer : dealer ? [dealer] : [];
-  const urlTypes = Array.isArray(urlType) ? urlType : urlType ? [urlType] : [];
-  const statuses = Array.isArray(status) ? status : status ? [status] : [];
-  const wheres: string[] = [];
-  const params: (string | number)[] = [];
-
-  if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => "?").join(",");
-    wheres.push(`d.slug IN (${ph})`);
-    params.push(...dealerSlugs);
-  }
-  if (urlTypes.length > 0) {
-    const ph = urlTypes.map(() => "?").join(",");
-    wheres.push(`c.url_type IN (${ph})`);
-    params.push(...urlTypes);
-  }
-  if (statuses.length > 0) {
-    const ph = statuses.map(() => "?").join(",");
-    wheres.push(`c.status IN (${ph})`);
-    params.push(...statuses);
-  }
-  if (search) {
-    wheres.push("(c.url LIKE ? OR c.mobile_id LIKE ?)");
-    params.push(`%${search}%`, `%${search}%`);
-  }
-
-  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
-  const offset = (page - 1) * limit;
-
-  const rows = raw
-    .prepare(
-      `
-    SELECT
-      c.id, c.dealer_id, c.url, c.url_type, c.mobile_id, c.status,
-      c.listings_count, c.price, c.views, c.last_crawled_at, c.next_crawl_at, c.error,
-      c.created_at, c.updated_at,
-      d.name as dealer_name, d.slug as dealer_slug
-    FROM mobilebg_crawl_queue c
-    LEFT JOIN dealers d ON c.dealer_id = d.id
-    ${where}
-    ORDER BY c.last_crawled_at DESC NULLS LAST, c.created_at DESC, c.id DESC
-    LIMIT ? OFFSET ?
-  `,
-    )
-    .all(...params, limit, offset) as MobileBgCrawlQueueRow[];
-
-  const { count } = raw
-    .prepare(
-      `
-    SELECT COUNT(*) as count
-    FROM mobilebg_crawl_queue c
-    LEFT JOIN dealers d ON c.dealer_id = d.id
-    ${where}
-  `,
-    )
-    .get(...params) as { count: number };
-
-  return { data: rows, total: count, page, limit };
 }

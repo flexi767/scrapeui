@@ -52,7 +52,14 @@ interface PosterDirection {
   shotCount: number;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -62,7 +69,13 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function textFit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, startSize: number, weight = 800) {
+function textFit(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  startSize: number,
+  weight = 800,
+) {
   let size = startSize;
   do {
     ctx.font = `${weight} ${size}px Arial`;
@@ -72,7 +85,14 @@ function textFit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return size;
 }
 
-function drawSpec(ctx: CanvasRenderingContext2D, label: string, value: string, x: number, y: number, w: number) {
+function drawSpec(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  w: number,
+) {
   ctx.fillStyle = "rgba(255,255,255,0.09)";
   roundRect(ctx, x, y, w, 92, 18);
   ctx.fill();
@@ -86,26 +106,35 @@ function drawSpec(ctx: CanvasRenderingContext2D, label: string, value: string, x
 }
 
 export function buildDefaultPosterPrompt(listing: InstagramListingPayload) {
-  const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
-  const extras = listing.extras.slice(0, 5).join(", ");
-  return [
-    "Create a premium square Instagram car-sale poster.",
-    "Use clean dealership photography, a polished editorial layout, strong contrast, and no clutter.",
-    `Hero car: ${title}.`,
-    `Show important data: make, model, mileage ${formatPosterMileage(listing.mileage)}, extras ${extras || "top options"}, price ${formatPosterPrice(listing.price)}.`,
-    "Use 2-3 cleaned shots, large readable typography, subtle luxury feel, and a clear price block.",
-  ].join("\n");
+  const carBrand = listing.make || "Premium";
+  const carModel = listing.model || "Vehicle";
+  const description =
+    listing.description ||
+    "Exceptional performance and luxury in one stunning package.";
+  const mainColor = "silver"; // You could make this dynamic based on listing.color if available
+
+  return `A hyperrealistic vertical poster showcasing a premium vehicle. The subject is defined by ${carBrand} and its model ${carModel}. At the top of the composition, a dynamic top-down render of this specific car appears in motion under cinematic lighting. A large architectural headline spelling the brand overlaps the upper half of the car by 30–50%, cleanly integrated into the layout. Above the title, aligned left, the model name appears in smaller uppercase text.
+
+The central section features a glossy side-profile render of the same vehicle, placed prominently in the middle. To the right, two smaller insets show close-up rear and angled front views. Below, a centered model label is followed by a short description block: ${description}.
+
+The full poster design follows a unified ${mainColor} visual palette that influences all lighting, reflections, accents, and background tones. The overall aesthetic is inspired by high-end editorial car photography, with crisp detailing, modern poster hierarchy, and cinematic framing. Poster aspect ratio is always 2:3.`;
 }
 
-function parsePosterPrompt(prompt: string, fallbackLayout: PosterDirection["layout"]): PosterDirection {
+function parsePosterPrompt(
+  prompt: string,
+  fallbackLayout: PosterDirection["layout"],
+): PosterDirection {
   const p = prompt.toLowerCase();
   const sporty = /\b(sport|dynamic|aggressive|bold|performance|fast)\b/.test(p);
   const luxury = /\b(luxury|premium|elegant|exclusive|high.?end)\b/.test(p);
-  const clean = /\b(clean|minimal|simple|subtle|no clutter|declutter)\b/.test(p);
+  const clean = /\b(clean|minimal|simple|subtle|no clutter|declutter)\b/.test(
+    p,
+  );
   const bright = /\b(bright|white|light|daylight|studio)\b/.test(p);
   const warm = /\b(warm|gold|bronze|champagne)\b/.test(p);
   const blue = /\b(blue|tech|electric|modern)\b/.test(p);
-  const manyShots = /\b(three shot|triple|multiple|gallery|collage|grid)\b/.test(p);
+  const manyShots =
+    /\b(three shot|triple|multiple|gallery|collage|grid)\b/.test(p);
   const singleShot = /\b(single|one shot|hero only)\b/.test(p);
 
   const layout: PosterDirection["layout"] = manyShots
@@ -127,12 +156,26 @@ function parsePosterPrompt(prompt: string, fallbackLayout: PosterDirection["layo
           : ["#14181f", "#26313a"];
 
   return {
-    accent: warm ? "#f1c27d" : blue ? "#7dd3fc" : sporty ? "#fb7185" : luxury ? "#d7b56d" : "#f472b6",
+    accent: warm
+      ? "#f1c27d"
+      : blue
+        ? "#7dd3fc"
+        : sporty
+          ? "#fb7185"
+          : luxury
+            ? "#d7b56d"
+            : "#f472b6",
     background,
     compact: clean,
     includeExtras: !/\b(no extras|hide extras|without extras)\b/.test(p),
     layout,
-    moodLabel: sporty ? "Performance offer" : luxury ? "Premium offer" : clean ? "Clean offer" : "Featured offer",
+    moodLabel: sporty
+      ? "Performance offer"
+      : luxury
+        ? "Premium offer"
+        : clean
+          ? "Clean offer"
+          : "Featured offer",
     shotCount: singleShot ? 1 : manyShots ? 3 : 2,
   };
 }
@@ -151,7 +194,8 @@ export function makePoster(
 
   const direction = parsePosterPrompt(prompt, variant);
   const layout = direction.layout === variant ? variant : direction.layout;
-  const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
+  const title =
+    [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
   const subtitle = listing.title.replace(title, "").trim();
   const specs = [
     ["Price", formatPosterPrice(listing.price)],
@@ -194,7 +238,11 @@ export function makePoster(
       ctx.restore();
     }
     if (layout === "editorial" && direction.shotCount > 1) {
-      for (let index = 1; index < Math.min(images.length, direction.shotCount + 1); index += 1) {
+      for (
+        let index = 1;
+        index < Math.min(images.length, direction.shotCount + 1);
+        index += 1
+      ) {
         const x = 64 + (index - 1) * 318;
         ctx.save();
         roundRect(ctx, x, 640, 288, 168, 22);
@@ -213,22 +261,46 @@ export function makePoster(
 
   ctx.fillStyle = direction.accent;
   ctx.font = "800 24px Arial";
-  ctx.fillText(direction.moodLabel.toUpperCase(), 64, layout === "grid" ? 704 : 728);
+  ctx.fillText(
+    direction.moodLabel.toUpperCase(),
+    64,
+    layout === "grid" ? 704 : 728,
+  );
 
   ctx.fillStyle = "#ffffff";
-  const titleSize = textFit(ctx, title.toUpperCase(), 900, layout === "grid" ? 68 : 76);
+  const titleSize = textFit(
+    ctx,
+    title.toUpperCase(),
+    900,
+    layout === "grid" ? 68 : 76,
+  );
   ctx.font = `900 ${titleSize}px Arial`;
   ctx.fillText(title.toUpperCase(), 64, layout === "grid" ? 760 : 784);
 
   if (subtitle && !direction.compact) {
     ctx.fillStyle = "rgba(255,255,255,0.78)";
     ctx.font = "700 30px Arial";
-    drawWrappedText(ctx, subtitle, 66, layout === "grid" ? 808 : 832, 900, 38, 2);
+    drawWrappedText(
+      ctx,
+      subtitle,
+      66,
+      layout === "grid" ? 808 : 832,
+      900,
+      38,
+      2,
+    );
   }
 
   const specY = layout === "grid" ? 878 : 884;
   specs.forEach(([label, value], index) => {
-    drawSpec(ctx, label, value, 64 + (index % 2) * 486, specY + Math.floor(index / 2) * 106, 448);
+    drawSpec(
+      ctx,
+      label,
+      value,
+      64 + (index % 2) * 486,
+      specY + Math.floor(index / 2) * 106,
+      448,
+    );
   });
 
   const extras = listing.extras.slice(0, 4).join("  /  ");

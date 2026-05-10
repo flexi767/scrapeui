@@ -27,7 +27,12 @@ import {
 import { cleanDescription } from "@/lib/mobile-bg/description";
 import { reconcileDeletedMobileBgListings } from "@/lib/mobile-bg/reconcile-deleted";
 import { saveListingThumb } from "@/lib/listing-thumbs";
-import { emit, formatError, parseRunnerArgs, DB_PATH } from "@/scraper/lib/runner";
+import {
+  emit,
+  formatError,
+  parseRunnerArgs,
+  DB_PATH,
+} from "@/scraper/lib/runner";
 import fs from "fs";
 import path from "path";
 import { createCrawlRun, updateCrawlRun } from "@/lib/query-modules/mobilebg";
@@ -113,7 +118,7 @@ interface DealerRow {
   slug: string;
   name: string;
   mobileBg: string;
-  own: number;        // 1 = own dealer, 0 = competitor
+  own: number; // 1 = own dealer, 0 = competitor
   mobile_user: string | null;
 }
 
@@ -180,93 +185,6 @@ function parseViewsCount(text: string | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getCrawlQueueEntryId(
-  db: Database.Database,
-  dealerId: number,
-  url: string,
-): number | null {
-  const row = db
-    .prepare(
-      `
-      SELECT id
-      FROM mobilebg_crawl_queue
-      WHERE dealer_id = ? AND url = ?
-      LIMIT 1
-    `,
-    )
-    .get(dealerId, url) as { id: number } | undefined;
-  return row?.id ?? null;
-}
-
-function saveCrawlQueueStatus(
-  db: Database.Database,
-  dealerId: number,
-  url: string,
-  urlType: "dealer_homepage" | "listing_detail",
-  data: {
-    listingsCount?: number;
-    price?: number | null;
-    views?: number | null;
-    mobileId?: string | null;
-    status?: string;
-    error?: string | null;
-  },
-) {
-  const now = new Date().toISOString();
-  const existingId = getCrawlQueueEntryId(db, dealerId, url);
-
-  if (existingId) {
-    db.prepare(
-      `
-      UPDATE mobilebg_crawl_queue
-      SET
-        status = ?,
-        mobile_id = COALESCE(?, mobile_id),
-        listings_count = COALESCE(?, listings_count),
-        price = COALESCE(?, price),
-        views = COALESCE(?, views),
-        last_crawled_at = ?,
-        error = ?,
-        updated_at = ?
-      WHERE id = ?
-    `,
-    ).run(
-      data.status ?? "completed",
-      data.mobileId ?? null,
-      data.listingsCount ?? null,
-      data.price ?? null,
-      data.views ?? null,
-      now,
-      data.error ?? null,
-      now,
-      existingId,
-    );
-    return;
-  }
-
-  db.prepare(
-    `
-      INSERT INTO mobilebg_crawl_queue (
-        dealer_id, url, url_type, mobile_id, status, listings_count, price, views,
-        last_crawled_at, error, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-  ).run(
-    dealerId,
-    url,
-    urlType,
-    data.mobileId ?? null,
-    data.status ?? "completed",
-    data.listingsCount ?? null,
-    data.price ?? null,
-    data.views ?? null,
-    now,
-    data.error ?? null,
-    now,
-    now,
-  );
-}
-
 async function upsertListing(
   db: Database.Database,
   dealerId: number,
@@ -291,7 +209,10 @@ async function upsertListing(
   }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year ?? null);
   const fuel = normalizeFuelSync(listing.fuel ?? null, fuelMap);
-  const bodyType = normalizeBodyTypeSync(listing.bodyType ?? null, getBodyTypeMap());
+  const bodyType = normalizeBodyTypeSync(
+    listing.bodyType ?? null,
+    getBodyTypeMap(),
+  );
   const transmission = normalizeTransmissionSync(
     listing.transmission ?? null,
     transmissionMap,
@@ -591,7 +512,9 @@ function seedDraft(
     );
   if (result.changes === 0) {
     const row = db
-      .prepare(`SELECT id FROM mobilebg_backups WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`)
+      .prepare(
+        `SELECT id FROM mobilebg_backups WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`,
+      )
       .get(dealer.id, mobileId) as { id: number } | undefined;
     return row?.id ?? null;
   }
@@ -605,7 +528,12 @@ async function downloadListingImages(
   backupId: number,
   fullUrls: string[],
 ): Promise<{ downloaded: number; failed: number }> {
-  const dir = path.join(SCRAPED_ROOT, "mobilebg-backups", dealer.slug, mobileId);
+  const dir = path.join(
+    SCRAPED_ROOT,
+    "mobilebg-backups",
+    dealer.slug,
+    mobileId,
+  );
   fs.mkdirSync(dir, { recursive: true });
 
   let downloaded = 0;
@@ -1140,15 +1068,31 @@ async function scrapeCompetitorForUI(
           if (dealer.own === 1) {
             const mobileId = extractMobileId(listing.url ?? "");
             const listingRow = mobileId
-              ? (db.prepare(`SELECT id FROM listings WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`)
+              ? (db
+                  .prepare(
+                    `SELECT id FROM listings WHERE dealer_id = ? AND mobile_id = ? LIMIT 1`,
+                  )
                   .get(dealer.id, mobileId) as { id: number } | undefined)
               : undefined;
             const listingDbId = listingRow?.id ?? null;
 
             if (listingDbId) {
-              const backupId = seedDraft(db, dealer, listing, listingDbId, result.make ?? null, result.model ?? null);
+              const backupId = seedDraft(
+                db,
+                dealer,
+                listing,
+                listingDbId,
+                result.make ?? null,
+                result.model ?? null,
+              );
               if (backupId && downloadImages && raw.fullUrls.length > 0) {
-                const counts = await downloadListingImages(db, dealer, mobileId!, backupId, raw.fullUrls);
+                const counts = await downloadListingImages(
+                  db,
+                  dealer,
+                  mobileId!,
+                  backupId,
+                  raw.fullUrls,
+                );
                 detailImagesDownloaded = counts.downloaded;
                 detailImagesFailed = counts.failed;
               }
@@ -1158,18 +1102,6 @@ async function scrapeCompetitorForUI(
           totalImagesDownloaded += detailImagesDownloaded;
           totalImagesFailed += detailImagesFailed;
 
-          saveCrawlQueueStatus(
-            db,
-            dealer.id as number,
-            detailUrl,
-            "listing_detail",
-            {
-              mobileId: detailMobileId,
-              price: priceAmount,
-              views,
-              status: "completed",
-            },
-          );
           emit({
             type: "listing",
             dealer: dealer.slug,
@@ -1184,17 +1116,6 @@ async function scrapeCompetitorForUI(
             views,
           });
         } catch (err) {
-          saveCrawlQueueStatus(
-            db,
-            dealer.id as number,
-            detailUrl,
-            "listing_detail",
-            {
-              mobileId: detailMobileId,
-              status: "failed",
-              error: formatError(err),
-            },
-          );
           throw err;
         }
       }
@@ -1202,16 +1123,6 @@ async function scrapeCompetitorForUI(
   });
 
   await crawler.run([{ url: dealer.mobileBg, label: "LIST" }]);
-  saveCrawlQueueStatus(
-    db,
-    dealer.id as number,
-    dealer.mobileBg as string,
-    "dealer_homepage",
-    {
-      listingsCount: seenMobileIds.size,
-      status: "completed",
-    },
-  );
   if (seenMobileIds.size === 0) {
     emit({
       type: "log",
@@ -1228,16 +1139,19 @@ async function scrapeCompetitorForUI(
       message: `Reconciled live mobile.bg listings for ${dealer.slug}: reactivated ${reconciliation.reactivatedCount}, marked ${reconciliation.deletedCount} deleted`,
     });
   }
-  return { count, imagesDownloaded: totalImagesDownloaded, imagesFailed: totalImagesFailed };
+  return {
+    count,
+    imagesDownloaded: totalImagesDownloaded,
+    imagesFailed: totalImagesFailed,
+  };
 }
 
 function killOtherInstances() {
   const myPid = process.pid;
   try {
-    const out = execSync(
-      `pgrep -f 'run-for-ui\\.ts' || true`,
-      { encoding: "utf-8" },
-    ).trim();
+    const out = execSync(`pgrep -f 'run-for-ui\\.ts' || true`, {
+      encoding: "utf-8",
+    }).trim();
     if (!out) return;
     const pids = out
       .split("\n")
@@ -1246,7 +1160,10 @@ function killOtherInstances() {
     for (const pid of pids) {
       try {
         process.kill(pid, "SIGTERM");
-        emit({ type: "log", message: `Killed previous scrapeui instance (pid ${pid})` });
+        emit({
+          type: "log",
+          message: `Killed previous scrapeui instance (pid ${pid})`,
+        });
       } catch {
         // already dead
       }
@@ -1290,18 +1207,29 @@ async function main() {
     emit({ type: "log", message: `Starting scrape: ${dealer.name}` });
     const runId = createCrawlRun(dealer.id, dealer.mobileBg ?? "");
     try {
-      const { count, imagesDownloaded, imagesFailed } = await scrapeCompetitorForUI(
-        dealer,
-        db,
-        makesMap,
-        fuelMap,
-        transmissionMap,
-      );
-      updateCrawlRun(runId, { status: 'completed', listingsCount: count, imagesDownloaded, imagesFailed });
+      const { count, imagesDownloaded, imagesFailed } =
+        await scrapeCompetitorForUI(
+          dealer,
+          db,
+          makesMap,
+          fuelMap,
+          transmissionMap,
+        );
+      updateCrawlRun(runId, {
+        status: "completed",
+        listingsCount: count,
+        imagesDownloaded,
+        imagesFailed,
+      });
       emit({ type: "done", dealer: dealer.slug, count });
     } catch (err) {
       hadErrors = true;
-      updateCrawlRun(runId, { status: 'failed', listingsCount: 0, imagesDownloaded: 0, imagesFailed: 0 });
+      updateCrawlRun(runId, {
+        status: "failed",
+        listingsCount: 0,
+        imagesDownloaded: 0,
+        imagesFailed: 0,
+      });
       emit({
         type: "error",
         message: `Error scraping ${dealer.name}: ${formatError(err)}`,
