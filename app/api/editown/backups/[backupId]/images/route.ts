@@ -20,8 +20,6 @@ interface ImageRow {
   created_at: string | null;
 }
 
-const parseBackupId = parsePositiveIntParam;
-
 function backupExists(backupId: number): boolean {
   const row = raw
     .prepare('SELECT id FROM mobilebg_backups WHERE id = ? LIMIT 1')
@@ -72,7 +70,7 @@ export async function GET(
   { params }: { params: Promise<{ backupId: string }> },
 ) {
   const { backupId: backupIdParam } = await params;
-  const backupId = parseBackupId(backupIdParam);
+  const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
@@ -88,7 +86,7 @@ export async function POST(
   { params }: { params: Promise<{ backupId: string }> },
 ) {
   const { backupId: backupIdParam } = await params;
-  const backupId = parseBackupId(backupIdParam);
+  const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
@@ -151,7 +149,7 @@ export async function PATCH(
   { params }: { params: Promise<{ backupId: string }> },
 ) {
   const { backupId: backupIdParam } = await params;
-  const backupId = parseBackupId(backupIdParam);
+  const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }

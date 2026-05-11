@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
+import { readJsonError } from "@/lib/streaming-job";
 import { IMAGE_UPLOAD_BATCH_SIZE, type BackupImage } from "./constants";
 
 export function BackupImageManager({ backupId }: { backupId: number }) {
@@ -165,11 +166,8 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
         `/api/editown/backups/${backupId}/images/${imageId}`,
         { method: "DELETE" },
       );
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
       if (!response.ok) {
-        setError(data.error || "Грешка при изтриване на снимката.");
+        setError(await readJsonError(response, "Грешка при изтриване на снимката."));
         return;
       }
       setImages((current) => current.filter((image) => image.id !== imageId));
