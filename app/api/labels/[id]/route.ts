@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
+import { runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -10,16 +11,14 @@ export async function PATCH(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  const { name, color } = await request.json();
+  const body = await request.json() as { name?: string; color?: string };
 
-  const updates: string[] = [];
-  const values: (string | number)[] = [];
-  if (name) { updates.push('name = ?'); values.push(name.trim()); }
-  if (color) { updates.push('color = ?'); values.push(color); }
+  const toUpdate: Record<string, unknown> = {};
+  if (body.name) toUpdate.name = body.name.trim();
+  if (body.color) toUpdate.color = body.color;
 
-  if (updates.length === 0) return NextResponse.json({ error: 'No updates' }, { status: 400 });
-
-  raw.prepare(`UPDATE labels SET ${updates.join(', ')} WHERE id = ?`).run(...values, Number(id));
+  const updated = runMappedUpdate(raw, 'labels', 'id', Number(id), toUpdate, { name: 'name', color: 'color' });
+  if (!updated) return NextResponse.json({ error: 'No updates' }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
 
