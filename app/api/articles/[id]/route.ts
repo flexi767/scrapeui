@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
-import { replaceJoinRows } from '@/lib/api/db-helpers';
+import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -12,20 +12,14 @@ export async function PATCH(
 
   const { id } = await params;
   const articleId = Number(id);
-  const body = await request.json();
+  const body = await request.json() as Record<string, unknown>;
   const now = new Date().toISOString();
 
-  const updates: string[] = [];
-  const values: (string | number | null)[] = [];
+  const toUpdate: Record<string, unknown> = {};
+  if (body.title) toUpdate.title = (body.title as string).trim();
+  if (body.content) toUpdate.content = body.content;
 
-  if (body.title) { updates.push('title = ?'); values.push(body.title.trim()); }
-  if (body.content) { updates.push('body = ?'); values.push(body.content); }
-
-  if (updates.length > 0) {
-    updates.push('updated_at = ?');
-    values.push(now);
-    raw.prepare(`UPDATE articles SET ${updates.join(', ')} WHERE id = ?`).run(...values, articleId);
-  }
+  runMappedUpdate(raw, 'articles', 'id', articleId, toUpdate, { title: 'title', content: 'body' }, { updated_at: now });
 
   replaceJoinRows(raw, 'article_labels', 'article_id', 'label_id', articleId, body.labelIds);
   replaceJoinRows(raw, 'article_listings', 'article_id', 'listing_id', articleId, body.listingIds);

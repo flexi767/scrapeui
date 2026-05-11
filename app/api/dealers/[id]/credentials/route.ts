@@ -1,6 +1,9 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
+import { runMappedUpdate } from '@/lib/api/db-helpers';
+
+const ALLOWED_TEMPLATES = new Set(['bold', 'executive', 'atlas', 'night', 'sunset', 'pro']);
 
 // GET own dealer credentials (dealer user or admin)
 export async function GET(
@@ -55,51 +58,27 @@ export async function PATCH(
   const body = await req.json() as Record<string, unknown>;
 
   const credentialFields: Record<string, string> = {
-    mobile_user: 'mobile_user',
-    mobile_password: 'mobile_password',
-    cars_url: 'cars_url',
-    cars_user: 'cars_user',
-    cars_password: 'cars_password',
-    facebook_user: 'facebook_user',
-    facebook_password: 'facebook_password',
-    instagram_user: 'instagram_user',
-    instagram_password: 'instagram_password',
-    tiktok_user: 'tiktok_user',
-    tiktok_password: 'tiktok_password',
+    mobile_user: 'mobile_user', mobile_password: 'mobile_password',
+    cars_url: 'cars_url', cars_user: 'cars_user', cars_password: 'cars_password',
+    facebook_user: 'facebook_user', facebook_password: 'facebook_password',
+    instagram_user: 'instagram_user', instagram_password: 'instagram_password',
+    tiktok_user: 'tiktok_user', tiktok_password: 'tiktok_password',
   };
-
-  // Admins can also update public page settings
   const adminOnlyFields: Record<string, string> = {
-    public_enabled: 'public_enabled',
-    template: 'template',
-    public_domain: 'public_domain',
-    mobile_url: 'mobile_url',
+    public_enabled: 'public_enabled', template: 'template',
+    public_domain: 'public_domain', mobile_url: 'mobile_url',
   };
-
-  const allowedTemplates = new Set(['bold', 'executive', 'atlas', 'night', 'sunset', 'pro']);
-  const fields: string[] = [];
-  const values: (string | number | null)[] = [];
 
   const map = isAdmin ? { ...credentialFields, ...adminOnlyFields } : credentialFields;
 
-  for (const [k, col] of Object.entries(map)) {
-    if (k in body) {
-      if (k === 'template' && !allowedTemplates.has(body[k] as string)) {
-        return NextResponse.json({ error: `template must be one of: ${[...allowedTemplates].join(', ')}` }, { status: 400 });
-      }
-      if (k === 'public_enabled') {
-        fields.push(`${col} = ?`);
-        values.push(body[k] ? 1 : 0);
-      } else {
-        fields.push(`${col} = ?`);
-        values.push((body[k] ?? null) as string | null);
-      }
-    }
+  if ('template' in body && !ALLOWED_TEMPLATES.has(body.template as string)) {
+    return NextResponse.json({ error: `template must be one of: ${[...ALLOWED_TEMPLATES].join(', ')}` }, { status: 400 });
   }
 
-  if (!fields.length) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
+  const processed: Record<string, unknown> = { ...body };
+  if ('public_enabled' in processed) processed.public_enabled = processed.public_enabled ? 1 : 0;
 
-  values.push(dealerId);
-  raw.prepare(`UPDATE dealers SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, map);
+  if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
