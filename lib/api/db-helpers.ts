@@ -2,6 +2,11 @@ import type Database from "better-sqlite3";
 
 type DbValue = string | number | null;
 
+export function parseIntParam(rawValue: string): number | null {
+  const id = Number.parseInt(rawValue, 10);
+  return Number.isFinite(id) ? id : null;
+}
+
 export function collectMappedUpdates(
   body: Record<string, unknown>,
   fieldMap: Record<string, string>,

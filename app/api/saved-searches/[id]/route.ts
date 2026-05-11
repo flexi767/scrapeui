@@ -7,11 +7,9 @@ import {
   updateSavedSearch,
 } from '@/lib/mobile-bg/saved-searches';
 import { parseSearchFields } from '@/lib/mobile-bg/search-form-shared';
+import { parseIntParam } from '@/lib/api/db-helpers';
 
-function parseId(rawValue: string) {
-  const id = Number.parseInt(rawValue, 10);
-  return Number.isFinite(id) ? id : null;
-}
+const parseId = parseIntParam;
 
 export async function GET(
   _request: Request,

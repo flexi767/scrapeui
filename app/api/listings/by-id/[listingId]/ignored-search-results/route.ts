@@ -4,11 +4,9 @@ import {
   listIgnoredSearchResults,
   removeIgnoredSearchResult,
 } from '@/lib/mobile-bg/search-ignores';
+import { parseIntParam } from '@/lib/api/db-helpers';
 
-function parseListingId(rawValue: string) {
-  const listingId = Number.parseInt(rawValue, 10);
-  return Number.isFinite(listingId) ? listingId : null;
-}
+const parseListingId = parseIntParam;
 
 export async function GET(
   _request: Request,
