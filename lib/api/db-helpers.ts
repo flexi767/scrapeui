@@ -46,6 +46,36 @@ export function runMappedUpdate(
   return true;
 }
 
+export function insertJoinRows(
+  db: Database.Database,
+  table: string,
+  ownerColumn: string,
+  relatedColumn: string,
+  ownerId: number,
+  relatedIds: unknown,
+) {
+  if (!Array.isArray(relatedIds) || relatedIds.length === 0) return;
+  const insert = db.prepare(`INSERT INTO ${table} (${ownerColumn}, ${relatedColumn}) VALUES (?, ?)`);
+  for (const relatedId of relatedIds) {
+    insert.run(ownerId, relatedId);
+  }
+}
+
+export function logActivity(
+  db: Database.Database,
+  entityType: string,
+  entityId: number,
+  action: string,
+  detail: string | null,
+  userId: number,
+  createdAt: string,
+) {
+  db.prepare(`
+    INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(entityType, entityId, action, detail, userId, createdAt);
+}
+
 export function replaceJoinRows(
   db: Database.Database,
   table: string,

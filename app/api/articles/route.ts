@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getArticles } from '@/lib/queries';
+import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -53,16 +54,9 @@ export async function POST(request: NextRequest) {
 
   const articleId = result.lastInsertRowid as number;
 
-  const linkLabel = raw.prepare('INSERT INTO article_labels (article_id, label_id) VALUES (?, ?)');
-  for (const lid of labelIds) linkLabel.run(articleId, lid);
-
-  const linkListing = raw.prepare('INSERT INTO article_listings (article_id, listing_id) VALUES (?, ?)');
-  for (const lid of listingIds) linkListing.run(articleId, lid);
-
-  raw.prepare(`
-    INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
-    VALUES ('article', ?, 'created', NULL, ?, ?)
-  `).run(articleId, Number(session.user.id), now);
+  insertJoinRows(raw, 'article_labels', 'article_id', 'label_id', articleId, labelIds);
+  insertJoinRows(raw, 'article_listings', 'article_id', 'listing_id', articleId, listingIds);
+  logActivity(raw, 'article', articleId, 'created', null, Number(session.user.id), now);
 
   return NextResponse.json({ id: articleId, slug }, { status: 201 });
 }
