@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskComments } from '@/lib/queries';
+import { logActivity } from '@/lib/api/db-helpers';
 
 export async function GET(
   _request: NextRequest,
@@ -36,10 +37,7 @@ export async function POST(
     VALUES (?, ?, ?, ?, ?)
   `).run(Number(id), Number(session.user.id), body, now, now);
 
-  raw.prepare(`
-    INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
-    VALUES ('task', ?, 'comment_added', NULL, ?, ?)
-  `).run(Number(id), Number(session.user.id), now);
+  logActivity(raw, 'task', Number(id), 'comment_added', null, Number(session.user.id), now);
 
   return NextResponse.json({ id: result.lastInsertRowid }, { status: 201 });
 }

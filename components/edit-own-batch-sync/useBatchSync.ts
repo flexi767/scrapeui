@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { streamJsonEvents } from '@/lib/streaming-job';
 import { revertDraftToSource, startBatchSync, stopBatchSync } from './api';
-import { useAutoScroll } from './useAutoScroll';
+import { useAutoScroll } from '@/components/shared/useAutoScroll';
 import {
   applyRowResult,
   countBatchRows,

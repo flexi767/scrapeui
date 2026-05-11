@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { streamJsonEvents } from '@/lib/streaming-job';
 import { startRenewReset, stopRenewResetJob } from './api';
-import { useAutoScroll } from './useAutoScroll';
+import { useAutoScroll } from '@/components/shared/useAutoScroll';
 import { statsFromStreamEvent, streamEventMessageKind } from './helpers';
 import type { LogEntry, OwnDealer, RunStats, StreamEntry } from './types';
 
