@@ -1,6 +1,10 @@
 import util from "util";
 import path from "path";
 import { fileURLToPath } from "url";
+import Database from "better-sqlite3";
+import { fetchMakesModels, type MakesMap } from "@/lib/mobile-bg/makes-models";
+import { fetchFuelTypes } from "@/lib/mobile-bg/fuel-types";
+import { fetchTransmissionTypes } from "@/lib/mobile-bg/transmission-types";
 
 const _dir = fileURLToPath(new URL(".", import.meta.url));
 export const DB_PATH =
@@ -38,4 +42,26 @@ export function parseRunnerArgs(args = process.argv.slice(2)) {
     downloadImages: args.includes("--download-images"),
     requestedSlugs: dealerArg ? dealerArg.split(",").map((s) => s.trim()) : [],
   };
+}
+
+export function openDb(dbPath?: string): Database.Database {
+  const db = new Database(dbPath ?? DB_PATH);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  return db;
+}
+
+export async function fetchRunnerRefData(overrides: { makesMap?: MakesMap | null } = {}): Promise<{
+  makesMap: MakesMap | null;
+  fuelMap: Map<string, string> | null;
+  transmissionMap: Map<string, string> | null;
+}> {
+  const [makesMap, fuelMap, transmissionMap] = await Promise.all([
+    overrides.makesMap !== undefined
+      ? Promise.resolve(overrides.makesMap)
+      : fetchMakesModels().catch(() => null),
+    fetchFuelTypes().catch(() => null),
+    fetchTransmissionTypes().catch(() => null),
+  ]);
+  return { makesMap, fuelMap, transmissionMap };
 }

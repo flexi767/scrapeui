@@ -20,11 +20,11 @@
  */
 import { PlaywrightCrawler } from 'crawlee';
 
-import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
-import { fetchMakesModels, parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
-import { fetchFuelTypes, normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
-import { fetchTransmissionTypes, normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
+import type Database from 'better-sqlite3';
+import { parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
+import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
+import { normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
 import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
 import { loadMobileBgMakesMapFromDb } from '@/lib/mobile-bg/reference';
 import { loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
@@ -42,7 +42,7 @@ import {
   parseSpecsString,
   titleOverlapScore,
 } from '@/lib/cars-bg/parse';
-import { emit, formatError, parseRunnerArgs, DB_PATH } from '@/scraper/lib/runner';
+import { emit, formatError, parseRunnerArgs, openDb, fetchRunnerRefData } from '@/scraper/lib/runner';
 
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const CARS_BG_MAX_IMAGES = 15;
@@ -925,12 +925,11 @@ async function scrapeCarsBgForUI(dealer: Record<string, any>, db: Database.Datab
 }
 
 async function main() {
-  const db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  const makesMap = loadMobileBgMakesMapFromDb(db) ?? await fetchMakesModels().catch(() => null);
-  const fuelMap = await fetchFuelTypes().catch(() => null);
-  const transmissionMap = await fetchTransmissionTypes().catch(() => null);
+  const db = openDb();
+  const dbMakesMap = loadMobileBgMakesMapFromDb(db);
+  const { makesMap, fuelMap, transmissionMap } = await fetchRunnerRefData(
+    dbMakesMap ? { makesMap: dbMakesMap } : {}
+  );
 
   const dealers = db.prepare(`
     SELECT id, slug, name, cars_url as carsUrl, own, active,

@@ -8,16 +8,14 @@
 import { PlaywrightCrawler } from "crawlee";
 
 import { execSync } from "child_process";
-import Database from "better-sqlite3";
+import type Database from "better-sqlite3";
 import {
-  fetchMakesModels,
   parseMakeModelSync,
   type MakesMap,
 } from "@/lib/mobile-bg/makes-models";
 import { resolveCarsBgMakeModelIds } from "@/lib/cars-bg/makes-models";
-import { fetchFuelTypes, normalizeFuelSync } from "@/lib/mobile-bg/fuel-types";
+import { normalizeFuelSync } from "@/lib/mobile-bg/fuel-types";
 import {
-  fetchTransmissionTypes,
   normalizeTransmissionSync,
 } from "@/lib/mobile-bg/transmission-types";
 import {
@@ -31,7 +29,8 @@ import {
   emit,
   formatError,
   parseRunnerArgs,
-  DB_PATH,
+  openDb,
+  fetchRunnerRefData,
 } from "@/scraper/lib/runner";
 import fs from "fs";
 import path from "path";
@@ -863,8 +862,6 @@ async function scrapeCompetitorForUI(
       }
 
       if (request.label === "DETAIL") {
-        const detailUrl = (request.userData?.originalUrl as string) || url;
-        const detailMobileId = extractMobileId(detailUrl);
         try {
           await page
             .waitForSelector(".Price, .disp", { timeout: 15000 })
@@ -1175,12 +1172,8 @@ function killOtherInstances() {
 
 async function main() {
   killOtherInstances();
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  const makesMap = await fetchMakesModels().catch(() => null);
-  const fuelMap = await fetchFuelTypes().catch(() => null);
-  const transmissionMap = await fetchTransmissionTypes().catch(() => null);
+  const db = openDb();
+  const { makesMap, fuelMap, transmissionMap } = await fetchRunnerRefData();
 
   const dealers = db
     .prepare(
