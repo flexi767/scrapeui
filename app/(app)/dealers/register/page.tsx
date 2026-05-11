@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
+import { slugifyDealerName } from '@/components/dealers/utils';
 
 export default function DealerRegisterPage() {
   const { data: session, status } = useSession();
@@ -41,7 +38,7 @@ export default function DealerRegisterPage() {
 
   function handleNameChange(v: string) {
     set('name', v);
-    if (!slugManual) set('slug', slugify(v));
+    if (!slugManual) set('slug', slugifyDealerName(v));
   }
 
   async function handleSubmit(e: React.FormEvent) {
