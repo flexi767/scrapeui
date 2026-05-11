@@ -1,4 +1,5 @@
 import { OwnListingRow } from '@/lib/queries';
+import { readJsonError } from '@/lib/streaming-job';
 import {
   buildOwnListingPatchBody,
   getOwnListingSaveEndpoint,
@@ -29,11 +30,7 @@ export async function syncOwnListingToMobileBg(row: OwnListingRow) {
       backupId: row.backup_id,
     }),
   });
-  const data = await res.json().catch(() => ({})) as { error?: string };
-
-  if (!res.ok) {
-    throw new Error(data.error || 'Sync failed');
-  }
+  if (!res.ok) throw new Error(await readJsonError(res, 'Sync failed'));
 }
 
 export async function launchFacebookMarketplaceDraft(row: OwnListingRow) {

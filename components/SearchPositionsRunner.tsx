@@ -148,10 +148,7 @@ export default function SearchPositionsRunner() {
 
     try {
       const res = await fetch('/api/editown/search-ranks', { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to stop search-position run');
-      }
+      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop search-position run'));
       appendLog({ kind: 'log', message: 'Stopping search-position run…' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop search-position run';

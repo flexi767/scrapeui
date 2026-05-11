@@ -27,10 +27,7 @@ export async function startBatchSync(signal: AbortSignal) {
 
 export async function stopBatchSync() {
   const res = await fetch('/api/editown/batch-sync', { method: 'DELETE' });
-  const data = await res.json().catch(() => ({})) as { error?: string };
-  if (!res.ok) {
-    throw new Error(data.error || 'Failed to stop batch sync');
-  }
+  if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop batch sync'));
 }
 
 export async function startRenewReset({
@@ -58,6 +55,5 @@ export async function startRenewReset({
 
 export async function stopRenewResetJob() {
   const res = await fetch('/api/editown/renew-reset', { method: 'DELETE' });
-  const data = await res.json().catch(() => ({})) as { error?: string };
-  if (!res.ok) throw new Error(data.error || 'Failed to stop');
+  if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop'));
 }

@@ -1,3 +1,5 @@
+import { readJsonError } from "@/lib/streaming-job";
+
 export async function setIgnoredSearchResult({
   sourceListingId,
   mobileId,
@@ -12,11 +14,7 @@ export async function setIgnoredSearchResult({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ignoredMobileId: mobileId }),
   });
-  const payload = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error((payload as { error?: string }).error || "Failed to update ignored search result");
-  }
+  if (!res.ok) throw new Error(await readJsonError(res, "Failed to update ignored search result"));
 }
 
 export async function saveAdAsCarbrosDraft(url: string) {

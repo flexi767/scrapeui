@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { readJsonError } from '@/lib/streaming-job';
 
 interface Props {
   backupId: number;
@@ -79,9 +80,8 @@ export function MobileBgBackupEditor({ backupId, initialValues }: Props) {
       }),
     });
 
-    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      toast.error(data.error || 'Could not save backup draft');
+      toast.error(await readJsonError(res, 'Could not save backup draft'));
       return;
     }
 
