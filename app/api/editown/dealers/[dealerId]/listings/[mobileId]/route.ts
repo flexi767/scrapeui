@@ -4,6 +4,7 @@ import { getMobileBgVatLabel } from '@/lib/vat';
 import { parseJson, normalizeVin } from '@/lib/utils';
 import { normalizeExtras } from '@/lib/mobile-bg/extras';
 import { rankedBackupsCte } from '@/lib/query-modules/types';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 const MONTH_NAMES = [
   '',
@@ -66,8 +67,8 @@ export async function GET(
   { params }: { params: Promise<{ dealerId: string; mobileId: string }> },
 ) {
   const { dealerId: dealerIdParam, mobileId } = await params;
-  const dealerId = Number(dealerIdParam);
-  if (!Number.isInteger(dealerId) || dealerId <= 0) {
+  const dealerId = parsePositiveIntParam(dealerIdParam);
+  if (!dealerId) {
     return NextResponse.json({ error: 'Invalid dealer ID' }, { status: 400 });
   }
 

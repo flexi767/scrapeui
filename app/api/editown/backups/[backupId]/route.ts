@@ -49,8 +49,8 @@ export async function PATCH(
 ) {
   try {
     const { backupId: backupIdParam } = await params;
-    const backupId = Number(backupIdParam);
-    if (!Number.isInteger(backupId) || backupId <= 0) {
+    const backupId = parsePositiveIntParam(backupIdParam);
+    if (!backupId) {
       return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
     }
 
