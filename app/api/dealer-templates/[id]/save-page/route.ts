@@ -17,8 +17,8 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ error: "Base templates are read-only" }, { status: 403 });
   }
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const isAdmin = session.user.role === "admin";
+  const sessionDealerId = session.user.dealerId;
   if (!isAdmin && sessionDealerId !== config.dealerId) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

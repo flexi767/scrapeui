@@ -13,8 +13,8 @@ export async function POST(request: Request, { params }: Params) {
   const source = getDealerTemplateConfig(sourceId);
   if (!source) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const isAdmin = session.user.role === "admin";
+  const sessionDealerId = session.user.dealerId;
 
   const body = await request.json() as { name: string; dealerId?: number };
   if (!body.name?.trim()) return Response.json({ error: "name required" }, { status: 400 });

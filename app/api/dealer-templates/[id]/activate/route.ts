@@ -15,8 +15,8 @@ export async function POST(_request: Request, { params }: Params) {
     return Response.json({ error: "Not found or base template" }, { status: 404 });
   }
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const isAdmin = session.user.role === "admin";
+  const sessionDealerId = session.user.dealerId;
   if (!isAdmin && sessionDealerId !== config.dealerId) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

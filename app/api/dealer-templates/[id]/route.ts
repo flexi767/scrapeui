@@ -16,8 +16,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const config = getDealerTemplateConfig(configId);
   if (!config) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const isAdmin = session.user.role === "admin";
+  const sessionDealerId = session.user.dealerId;
   if (!isAdmin && (config.dealerId === null || sessionDealerId !== config.dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

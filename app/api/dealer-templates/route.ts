@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const dealerIdParam = url.searchParams.get("dealerId");
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
+  const isAdmin = session.user.role === "admin";
 
   if (isAdmin && !dealerIdParam) {
     return Response.json(listAllDealerTemplateConfigs());
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "dealerId required" }, { status: 400 });
   }
 
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const sessionDealerId = session.user.dealerId;
   if (!isAdmin && sessionDealerId !== dealerId) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   if ('error' in check) return check.error;
   const session = check.session;
 
-  const isAdmin = (session.user as { role: string }).role === "admin";
+  const isAdmin = session.user.role === "admin";
   const body = await request.json() as { dealerId: number; baseTemplateId: number; name: string };
 
   const { dealerId, baseTemplateId, name } = body;
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "dealerId, baseTemplateId, and name are required" }, { status: 400 });
   }
 
-  const sessionDealerId = (session.user as { dealerId?: number | null }).dealerId;
+  const sessionDealerId = session.user.dealerId;
   if (!isAdmin && sessionDealerId !== dealerId) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
