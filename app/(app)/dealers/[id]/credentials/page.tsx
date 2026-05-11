@@ -6,8 +6,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
-
-const TEMPLATES = ['bold', 'executive', 'atlas', 'night', 'sunset', 'pro'] as const;
+import { DEALER_TEMPLATES as TEMPLATES } from '@/lib/dealer-config';
 
 interface DealerCreds {
   id: number;

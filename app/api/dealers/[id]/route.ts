@@ -2,6 +2,7 @@ import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { runMappedUpdate } from '@/lib/api/db-helpers';
+import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
 
 const DEALER_FIELD_MAP: Record<string, string> = {
   name: 'name', slug: 'slug', mobile_url: 'mobile_url',
@@ -13,8 +14,6 @@ const DEALER_FIELD_MAP: Record<string, string> = {
   instagram_user: 'instagram_user', instagram_password: 'instagram_password',
   tiktok_user: 'tiktok_user', tiktok_password: 'tiktok_password',
 };
-
-const ALLOWED_TEMPLATES = new Set(['bold', 'executive', 'atlas', 'night', 'sunset', 'pro']);
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const check = await requireAdmin();

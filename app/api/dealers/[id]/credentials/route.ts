@@ -2,8 +2,7 @@ import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { runMappedUpdate } from '@/lib/api/db-helpers';
-
-const ALLOWED_TEMPLATES = new Set(['bold', 'executive', 'atlas', 'night', 'sunset', 'pro']);
+import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
 
 // GET own dealer credentials (dealer user or admin)
 export async function GET(
