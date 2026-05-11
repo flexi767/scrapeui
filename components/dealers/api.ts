@@ -1,18 +1,9 @@
+import { readJsonResponse } from '@/lib/utils';
 import type { Dealer, DealerCreateForm, DealerEditForm, DealerLoginResult } from './types';
 
 type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-async function parseJson(response: Response) {
-  return response.json().catch(() => ({}));
-}
-
-function failureMessage(data: unknown, fallback: string) {
-  return typeof data === 'object' && data !== null && 'error' in data && typeof data.error === 'string'
-    ? data.error
-    : fallback;
-}
 
 export async function createDealer(form: DealerCreateForm): Promise<ApiResult<Dealer>> {
   const response = await fetch('/api/dealers', {
@@ -20,10 +11,10 @@ export async function createDealer(form: DealerCreateForm): Promise<ApiResult<De
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(form),
   });
-  const data = await parseJson(response);
+  const data = await readJsonResponse(response);
 
-  if (!response.ok) return { ok: false, error: failureMessage(data, 'Failed to add') };
-  return { ok: true, data: data as Dealer };
+  if (!response.ok) return { ok: false, error: (data.error as string | undefined) || 'Failed to add' };
+  return { ok: true, data: data as unknown as Dealer };
 }
 
 export async function patchDealer(id: number, body: Partial<DealerEditForm> | Partial<Dealer>): Promise<ApiResult<unknown>> {
@@ -32,9 +23,9 @@ export async function patchDealer(id: number, body: Partial<DealerEditForm> | Pa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await parseJson(response);
+  const data = await readJsonResponse(response);
 
-  if (!response.ok) return { ok: false, error: failureMessage(data, 'Failed to save') };
+  if (!response.ok) return { ok: false, error: (data.error as string | undefined) || 'Failed to save' };
   return { ok: true, data };
 }
 
