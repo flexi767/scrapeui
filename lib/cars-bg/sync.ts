@@ -35,8 +35,6 @@ import { getExtraLabels } from '@/lib/mobile-bg/extras';
 import { downloadImages, uploadImages } from '@/lib/cars-bg/sync-images';
 import { applyCarsBgSupplementalFields } from '@/lib/cars-bg/sync-extras';
 
-export { extractCarsBgExtras, applyCarsBgExtras } from '@/lib/cars-bg/sync-extras';
-
 export {
   buildCarsBgEditUrl,
   buildCarsBgOfferUrl,
