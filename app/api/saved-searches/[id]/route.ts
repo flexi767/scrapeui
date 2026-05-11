@@ -9,13 +9,11 @@ import {
 import { parseSearchFields } from '@/lib/mobile-bg/search-form-shared';
 import { parseIntParam } from '@/lib/api/db-helpers';
 
-const parseId = parseIntParam;
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const id = parseId((await params).id);
+  const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
   }
@@ -32,7 +30,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const id = parseId((await params).id);
+  const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
   }
@@ -63,7 +61,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const id = parseId((await params).id);
+  const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
   }

@@ -6,13 +6,11 @@ import {
 } from '@/lib/mobile-bg/search-ignores';
 import { parseIntParam } from '@/lib/api/db-helpers';
 
-const parseListingId = parseIntParam;
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
-  const listingId = parseListingId((await params).listingId);
+  const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
@@ -26,7 +24,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
-  const listingId = parseListingId((await params).listingId);
+  const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
@@ -45,7 +43,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
-  const listingId = parseListingId((await params).listingId);
+  const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
