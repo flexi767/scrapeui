@@ -7,6 +7,7 @@ import { ScrapeControls } from '@/components/scrape-runner/ScrapeControls';
 import { ScrapeLogPanel } from '@/components/scrape-runner/ScrapeLogPanel';
 import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/types';
 import { useScrapeDealerSelection } from '@/components/scrape-runner/useScrapeDealerSelection';
+import { useAutoScroll } from '@/components/shared/useAutoScroll';
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
   const dealerSelection = useScrapeDealerSelection(initialDealers);
@@ -21,13 +22,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   const changesRef = useRef<HTMLDivElement>(null);
   const runAbortRef = useRef<AbortController | null>(null);
 
-  const scrollToBottom = () => {
-    requestAnimationFrame(() => {
-      if (logRef.current) {
-        logRef.current.scrollTop = logRef.current.scrollHeight;
-      }
-    });
-  };
+  useAutoScroll(logRef, log);
 
   useEffect(() => {
     if (!deepCrawl) setDownloadImages(false);
@@ -92,7 +87,6 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
           setStopping(false);
           runAbortRef.current = null;
         }
-        scrollToBottom();
       });
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
