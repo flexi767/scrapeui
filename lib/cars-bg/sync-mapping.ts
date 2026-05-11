@@ -143,8 +143,6 @@ export function hasMappedBooleanExtra(
   return expected.some((label) => normalized.has(label));
 }
 
-export { getExtraLabels } from '@/lib/mobile-bg/extras';
-
 export function parseCarsBgExtrasPayload(extrasJson: string | null): CarsBgExtrasPayload | null {
   const parsed = parseJson<CarsBgExtrasPayload | null>(extrasJson, null);
   if (!parsed || !Array.isArray(parsed.selected)) return null;

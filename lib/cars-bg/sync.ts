@@ -19,7 +19,6 @@ import {
   titleOverlapScore,
   normalizeFuelFamily,
   parseCarsBgExtrasPayload,
-  getExtraLabels,
   optionSets,
   findOptionByLabel,
   fetchModelOptions,
@@ -32,6 +31,7 @@ import {
   mapColor,
   currencyIdFromCode,
 } from '@/lib/cars-bg/sync-mapping';
+import { getExtraLabels } from '@/lib/mobile-bg/extras';
 import { downloadImages, uploadImages } from '@/lib/cars-bg/sync-images';
 import { applyCarsBgSupplementalFields } from '@/lib/cars-bg/sync-extras';
 
