@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import {
   buildBackupForm,
   buildExtrasJson,
@@ -19,8 +20,8 @@ export async function GET(
   { params }: { params: Promise<{ backupId: string }> },
 ) {
   const { backupId: backupIdParam } = await params;
-  const backupId = Number(backupIdParam);
-  if (!Number.isInteger(backupId) || backupId <= 0) {
+  const backupId = parsePositiveIntParam(backupIdParam);
+  if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
 
@@ -196,8 +197,8 @@ export async function DELETE(
   { params }: { params: Promise<{ backupId: string }> },
 ) {
   const { backupId: backupIdParam } = await params;
-  const backupId = Number(backupIdParam);
-  if (!Number.isInteger(backupId) || backupId <= 0) {
+  const backupId = parsePositiveIntParam(backupIdParam);
+  if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
 

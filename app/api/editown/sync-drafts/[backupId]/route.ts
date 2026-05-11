@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { getEditOwnSyncRows } from '@/lib/queries';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> }
 ) {
   try {
-    const backupId = Number((await params).backupId);
-    if (!Number.isInteger(backupId) || backupId <= 0) {
+    const backupId = parsePositiveIntParam((await params).backupId);
+    if (!backupId) {
       return NextResponse.json({ error: 'Invalid backup id' }, { status: 400 });
     }
 

@@ -7,6 +7,11 @@ export function parseIntParam(rawValue: string): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
+export function parsePositiveIntParam(rawValue: string): number | null {
+  const id = Number(rawValue);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 export function collectMappedUpdates(
   body: Record<string, unknown>,
   fieldMap: Record<string, string>,

@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -20,10 +21,7 @@ interface ImageRow {
   created_at: string | null;
 }
 
-function parseBackupId(value: string): number | null {
-  const backupId = Number(value);
-  return Number.isInteger(backupId) && backupId > 0 ? backupId : null;
-}
+const parseBackupId = parsePositiveIntParam;
 
 function backupExists(backupId: number): boolean {
   const row = raw

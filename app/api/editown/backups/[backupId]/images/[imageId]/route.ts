@@ -2,13 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
-
-function parsePositiveInteger(value: string): number | null {
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : null;
-}
 
 function refreshImageCount(backupId: number): void {
   raw
@@ -61,8 +57,8 @@ export async function DELETE(
   { params }: { params: Promise<{ backupId: string; imageId: string }> },
 ) {
   const { backupId: backupIdParam, imageId: imageIdParam } = await params;
-  const backupId = parsePositiveInteger(backupIdParam);
-  const imageId = parsePositiveInteger(imageIdParam);
+  const backupId = parsePositiveIntParam(backupIdParam);
+  const imageId = parsePositiveIntParam(imageIdParam);
   if (!backupId || !imageId) {
     return NextResponse.json({ error: 'Invalid image or backup ID' }, { status: 400 });
   }

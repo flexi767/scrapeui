@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
 import { rankedBackupsCte } from '@/lib/query-modules/types';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 interface DealerListingSummaryRow {
   mobile_id: string;
@@ -21,8 +22,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ dealerId: string }> },
 ) {
-  const dealerId = Number((await params).dealerId);
-  if (!Number.isInteger(dealerId) || dealerId <= 0) {
+  const dealerId = parsePositiveIntParam((await params).dealerId);
+  if (!dealerId) {
     return NextResponse.json({ error: 'Invalid dealer ID' }, { status: 400 });
   }
 
