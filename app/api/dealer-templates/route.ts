@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api/auth-helpers";
+import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import {
   listDealerTemplateConfigs,
   listAllDealerTemplateConfigs,
@@ -20,8 +21,8 @@ export async function GET(request: Request) {
     return Response.json(listAllDealerTemplateConfigs());
   }
 
-  const dealerId = dealerIdParam ? parseInt(dealerIdParam, 10) : null;
-  if (!dealerId || isNaN(dealerId)) {
+  const dealerId = dealerIdParam ? parsePositiveIntParam(dealerIdParam) : null;
+  if (!dealerId) {
     return Response.json({ error: "dealerId required" }, { status: 400 });
   }
 

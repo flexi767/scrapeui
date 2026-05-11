@@ -2,8 +2,6 @@ import { parseJson, normalizeVin } from '@/lib/utils';
 import { getMobileBgVatLabel, getVatFromMobileBgLabel } from '@/lib/vat';
 import { normalizeExtras as normalizeExtrasShared } from '@/lib/mobile-bg/extras';
 
-export { normalizeVin };
-
 export function inferBatteryRangeKm(fuel: string | null, description: string | null): string {
   if (!fuel?.toLowerCase().includes('електр')) return '';
   const match = (description || '').match(
@@ -155,8 +153,6 @@ export function buildExtrasJson(body: FullFormBody): string | null {
 export function getFullFormVat(body: FullFormBody) {
   return getVatFromMobileBgLabel(body.vat);
 }
-
-export { normalizeExtrasShared as normalizeExtras };
 
 export function buildBackupForm(row: BackupRow) {
   const techData = parseJson<Record<string, string>>(row.tech_data_json, {});

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { refreshImageCount } from './image-helpers';
 
 const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -54,23 +55,6 @@ function toPayload(row: ImageRow) {
   };
 }
 
-function refreshImageCount(backupId: number): void {
-  raw
-    .prepare(
-      `
-      UPDATE mobilebg_backups
-      SET image_count = (
-        SELECT COUNT(*) FROM mobilebg_backup_images WHERE backup_id = ?
-      ),
-      draft_needs_sync = CASE WHEN listing_id IS NULL THEN draft_needs_sync ELSE 1 END,
-      last_mobile_sync_status = CASE WHEN listing_id IS NULL THEN last_mobile_sync_status ELSE 'pending' END,
-      last_mobile_sync_error = CASE WHEN listing_id IS NULL THEN last_mobile_sync_error ELSE NULL END,
-      updated_at = ?
-      WHERE id = ?
-    `,
-    )
-    .run(backupId, new Date().toISOString(), backupId);
-}
 
 async function resizeToMobileBgImage(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
