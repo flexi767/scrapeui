@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTasks } from '@/lib/queries';
+import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -48,23 +49,9 @@ export async function POST(request: NextRequest) {
 
   const taskId = result.lastInsertRowid as number;
 
-  // Link listings
-  const linkListing = raw.prepare('INSERT INTO task_listings (task_id, listing_id) VALUES (?, ?)');
-  for (const lid of listingIds) {
-    linkListing.run(taskId, lid);
-  }
-
-  // Link labels
-  const linkLabel = raw.prepare('INSERT INTO task_labels (task_id, label_id) VALUES (?, ?)');
-  for (const lid of labelIds) {
-    linkLabel.run(taskId, lid);
-  }
-
-  // Activity log
-  raw.prepare(`
-    INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
-    VALUES ('task', ?, 'created', NULL, ?, ?)
-  `).run(taskId, Number(session.user.id), now);
+  insertJoinRows(raw, 'task_listings', 'task_id', 'listing_id', taskId, listingIds);
+  insertJoinRows(raw, 'task_labels', 'task_id', 'label_id', taskId, labelIds);
+  logActivity(raw, 'task', taskId, 'created', null, Number(session.user.id), now);
 
   return NextResponse.json({ id: taskId }, { status: 201 });
 }

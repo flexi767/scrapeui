@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskById } from '@/lib/queries';
-import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { logActivity, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function GET(
   _request: NextRequest,
@@ -53,10 +53,7 @@ export async function PATCH(
 
   // Log status changes
   if (body.status && body.status !== current.status) {
-    raw.prepare(`
-      INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
-      VALUES ('task', ?, 'status_changed', ?, ?, ?)
-    `).run(taskId, JSON.stringify({ from: current.status, to: body.status }), Number(session.user.id), now);
+    logActivity(raw, 'task', taskId, 'status_changed', JSON.stringify({ from: current.status, to: body.status }), Number(session.user.id), now);
 
     // Handle recurring task completion
     if (body.status === 'done' && current.is_recurring === 1 && current.recur_rule) {
@@ -66,10 +63,7 @@ export async function PATCH(
 
   // Log assignment changes
   if ('assigneeId' in body && body.assigneeId !== current.assignee_id) {
-    raw.prepare(`
-      INSERT INTO activity_log (entity_type, entity_id, action, detail, user_id, created_at)
-      VALUES ('task', ?, 'assigned', ?, ?, ?)
-    `).run(taskId, JSON.stringify({ from: current.assignee_id, to: body.assigneeId }), Number(session.user.id), now);
+    logActivity(raw, 'task', taskId, 'assigned', JSON.stringify({ from: current.assignee_id, to: body.assigneeId }), Number(session.user.id), now);
   }
 
   return NextResponse.json({ ok: true });
