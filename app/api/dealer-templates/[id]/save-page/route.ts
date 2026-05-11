@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api/auth-helpers";
+import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import { getDealerTemplateConfig, updateDealerTemplateConfig } from "@/lib/queries";
 
 interface Params { params: Promise<{ id: string }> }
@@ -9,7 +10,8 @@ export async function POST(request: Request, { params }: Params) {
   const session = check.session;
 
   const { id } = await params;
-  const configId = parseInt(id, 10);
+  const configId = parsePositiveIntParam(id);
+  if (!configId) return Response.json({ error: "Invalid ID" }, { status: 400 });
   const config = getDealerTemplateConfig(configId);
   if (!config) return Response.json({ error: "Not found" }, { status: 404 });
 
