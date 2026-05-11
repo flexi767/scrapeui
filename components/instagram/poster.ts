@@ -1,4 +1,7 @@
 import { drawCoverImage, drawWrappedText } from "@/lib/canvas-utils";
+import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
+
+export { formatListingPrice as formatPosterPrice, formatListingMileage as formatPosterMileage };
 
 export interface InstagramListingPhoto {
   id: number;
@@ -33,14 +36,6 @@ export interface PosterVariant {
 
 export const POSTER_SIZE = 1080;
 export const PROMPT_STORAGE_PREFIX = "scrapeui:instagram-poster-prompt:";
-
-export function formatPosterPrice(price?: number) {
-  return price == null ? "-" : `€${price.toLocaleString("en-US")}`;
-}
-
-export function formatPosterMileage(mileage?: number) {
-  return mileage == null ? "-" : `${mileage.toLocaleString("en-US")} km`;
-}
 
 interface PosterDirection {
   accent: string;
@@ -198,8 +193,8 @@ export function makePoster(
     [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
   const subtitle = listing.title.replace(title, "").trim();
   const specs = [
-    ["Price", formatPosterPrice(listing.price)],
-    ["Mileage", formatPosterMileage(listing.mileage)],
+    ["Price", formatListingPrice(listing.price)],
+    ["Mileage", formatListingMileage(listing.mileage)],
     ["Year", listing.year ? String(listing.year) : "-"],
     ["Fuel", listing.fuel ?? "-"],
   ] as const;

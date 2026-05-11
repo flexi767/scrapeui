@@ -33,15 +33,11 @@ export const TIKTOK_VIDEO_WIDTH = 720;
 export const TIKTOK_VIDEO_HEIGHT = 1280;
 export const TIKTOK_VIDEO_LENGTH_MS = 15000;
 
+import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
+
+export { formatListingPrice as formatTikTokPrice, formatListingMileage as formatTikTokMileage };
+
 const FPS = 30;
-
-export function formatTikTokPrice(price?: number) {
-  return price == null ? "-" : `€${price.toLocaleString("en-US")}`;
-}
-
-export function formatTikTokMileage(mileage?: number) {
-  return mileage == null ? "-" : `${mileage.toLocaleString("en-US")} km`;
-}
 
 export function buildDefaultTikTokCaption(listing: TikTokVideoListingPayload) {
   const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
@@ -55,7 +51,7 @@ export function buildDefaultTikTokCaption(listing: TikTokVideoListingPayload) {
 
   return [
     `${title} for sale`,
-    `${formatTikTokMileage(listing.mileage)} • ${listing.year ?? "-"} • ${formatTikTokPrice(listing.price)}`,
+    `${formatListingMileage(listing.mileage)} • ${listing.year ?? "-"} • ${formatListingPrice(listing.price)}`,
     listing.extras.slice(0, 5).join(" • "),
     tags.join(" "),
   ]
@@ -93,7 +89,7 @@ function drawVideoFrame(
   const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
   const subtitle = [
     listing.year,
-    formatTikTokMileage(listing.mileage),
+    formatListingMileage(listing.mileage),
     listing.fuel,
     listing.transmission,
   ].filter((item) => item && item !== "-").join("  /  ");
@@ -136,7 +132,7 @@ function drawVideoFrame(
 
   ctx.fillStyle = "#67e8f9";
   ctx.font = "900 46px Arial";
-  ctx.fillText(formatTikTokPrice(listing.price), 44, 990);
+  ctx.fillText(formatListingPrice(listing.price), 44, 990);
 
   ctx.fillStyle = "rgba(255,255,255,0.86)";
   ctx.font = "700 28px Arial";
