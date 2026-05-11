@@ -5,9 +5,7 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
-import { refreshImageCount } from './image-helpers';
-
-const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
+import { refreshImageCount, STORAGE_IMAGE_ROOT } from './image-helpers';
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MOBILEBG_IMAGE_WIDTH = 1600;
 const MOBILEBG_IMAGE_HEIGHT = 1200;

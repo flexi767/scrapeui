@@ -1,4 +1,7 @@
+import path from 'path';
 import { raw } from '@/db/client';
+
+export const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 
 export function refreshImageCount(backupId: number): void {
   raw

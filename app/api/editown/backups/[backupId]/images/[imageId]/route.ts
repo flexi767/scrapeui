@@ -3,9 +3,7 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
-import { refreshImageCount, normalizeImageOrder } from '../image-helpers';
-
-const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
+import { refreshImageCount, normalizeImageOrder, STORAGE_IMAGE_ROOT } from '../image-helpers';
 
 function maybeDeleteStoredFile(localPath: string): void {
   const resolved = path.resolve(localPath);
