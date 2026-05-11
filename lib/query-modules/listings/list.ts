@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
-import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
+import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
 
 const VALID_SORT: Record<string, string> = {
   price: "l.current_price",

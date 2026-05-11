@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { OwnListingRow } from '../types';
-import { firstBackupImageIdFromBackupExpr, latestBackupOrderExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
+import { firstBackupImageIdFromBackupExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
 
 export function getOwnListingByMobileId(
   mobileId: string,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { latestBackupOrderExpr, rankedBackupsCte } from '@/lib/query-modules/types';
+import { rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface DealerListingSummaryRow {
   mobile_id: string;

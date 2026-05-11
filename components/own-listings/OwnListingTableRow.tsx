@@ -1,7 +1,6 @@
 "use client";
 
 import { type KeyboardEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { InstagramIcon, SearchIcon } from "lucide-react";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";

@@ -5,7 +5,7 @@ import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-res
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { getFirstNonIgnoredResultPrice, getPriceSortedPositionIgnoring, getOriginalPositionIgnoring } from '@/lib/mobile-bg/search-ranking';
 import { buildImageList, getPreferredListingThumbUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { latestBackupOrderExpr, notDuplicateLExpr, rankedBackupsCte } from '@/lib/query-modules/types';
+import { notDuplicateLExpr, rankedBackupsCte } from '@/lib/query-modules/types';
 
 interface OwnSearchRankTarget {
   backup_id: number;

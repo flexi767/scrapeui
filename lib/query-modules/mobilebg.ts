@@ -9,7 +9,6 @@ import type {
   MobileBgRepostJobRow,
 } from "./types";
 import {
-  latestBackupOrderExpr,
   ownNeedsSyncExpr,
   ownVatExpr,
   rankedBackupsCte,

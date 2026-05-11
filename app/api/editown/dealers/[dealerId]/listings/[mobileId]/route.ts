@@ -3,7 +3,7 @@ import { raw } from '@/db/client';
 import { getMobileBgVatLabel } from '@/lib/vat';
 import { parseJson, normalizeVin } from '@/lib/utils';
 import { normalizeExtras } from '@/lib/mobile-bg/extras';
-import { latestBackupOrderExpr, rankedBackupsCte } from '@/lib/query-modules/types';
+import { rankedBackupsCte } from '@/lib/query-modules/types';
 
 const MONTH_NAMES = [
   '',
