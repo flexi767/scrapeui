@@ -2,7 +2,7 @@ import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { runMappedUpdate } from '@/lib/api/db-helpers';
-import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
+import { ALLOWED_TEMPLATES, isValidDealerSlug } from '@/lib/dealer-config';
 
 const DEALER_FIELD_MAP: Record<string, string> = {
   name: 'name', slug: 'slug', mobile_url: 'mobile_url',
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json() as Record<string, unknown>;
 
-  if (body.slug && !/^[a-z0-9-]+$/.test(body.slug as string)) {
+  if (body.slug && !isValidDealerSlug(body.slug as string)) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
   }
   if (body.template && !ALLOWED_TEMPLATES.has(body.template as string)) {

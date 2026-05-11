@@ -2,6 +2,7 @@ import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import bcrypt from 'bcryptjs';
+import { isValidDealerSlug } from '@/lib/dealer-config';
 
 // POST /api/dealers/register
 // Admin creates a dealer + an associated user account in one step.
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!name?.trim() || !slug?.trim() || !username?.trim() || !password?.trim()) {
     return NextResponse.json({ error: 'name, slug, username, password are required' }, { status: 400 });
   }
-  if (!/^[a-z0-9-]+$/.test(slug)) {
+  if (!isValidDealerSlug(slug)) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
   }
   if ((password as string).length < 6) {
