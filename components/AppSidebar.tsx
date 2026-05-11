@@ -36,6 +36,15 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  const isAdmin = session?.user?.role === 'admin';
+  const dealerId = session?.user?.dealerId;
+
+  const dynamicItems = [
+    ...navItems,
+    ...(isAdmin ? [{ href: '/dealers/register', label: 'Register Dealer', icon: PlusIcon, indent: true }] : []),
+    ...(dealerId ? [{ href: `/dealers/${dealerId}/credentials`, label: 'My Settings', icon: GearIcon, indent: false }] : []),
+  ];
+
   return (
     <aside className="flex h-screen w-52 flex-col border-r border-gray-700 bg-gray-900">
       <div className="flex h-14 items-center gap-2 border-b border-gray-700 px-3">
@@ -44,7 +53,7 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {navItems.map((item) => {
+        {dynamicItems.map((item) => {
           const exactActive = pathname === item.href;
           const sectionOpen = !exactActive && pathname.startsWith(`${item.href}/`);
 

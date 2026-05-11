@@ -26,6 +26,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     public_enabled: 'public_enabled',
     template: 'template',
     public_domain: 'public_domain',
+    facebook_user: 'facebook_user',
+    facebook_password: 'facebook_password',
+    instagram_user: 'instagram_user',
+    instagram_password: 'instagram_password',
+    tiktok_user: 'tiktok_user',
+    tiktok_password: 'tiktok_password',
   };
 
   const boolFields = new Set(['own', 'active', 'public_enabled']);

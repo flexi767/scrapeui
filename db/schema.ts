@@ -25,6 +25,12 @@ export const dealers = sqliteTable("dealers", {
   template: text("template").notNull().default("bold"),
   publicEnabled: integer("public_enabled").notNull().default(0),
   activeTemplateConfigId: integer("active_template_config_id"),
+  facebookUser: text("facebook_user"),
+  facebookPassword: text("facebook_password"),
+  instagramUser: text("instagram_user"),
+  instagramPassword: text("instagram_password"),
+  tiktokUser: text("tiktok_user"),
+  tiktokPassword: text("tiktok_password"),
 });
 
 export const listings = sqliteTable("listings", {
