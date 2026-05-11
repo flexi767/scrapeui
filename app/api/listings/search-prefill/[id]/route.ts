@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
+import { parseIntParam } from '@/lib/api/db-helpers';
 
 export const runtime = 'nodejs';
 
@@ -7,8 +8,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const listingId = Number.parseInt((await params).id, 10);
-  if (!Number.isFinite(listingId)) {
+  const listingId = parseIntParam((await params).id);
+  if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
 
