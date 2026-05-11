@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { readJsonError } from '@/lib/streaming-job';
 import Link from 'next/link';
 
 interface Config {
@@ -55,8 +56,7 @@ function ForkModal({
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => null) as { error?: string } | null;
-        setError(body?.error ?? 'Fork failed');
+        setError(await readJsonError(res, 'Fork failed'));
         return;
       }
       router.refresh();

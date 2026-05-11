@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { readJsonError } from '@/lib/streaming-job';
 
 interface UploadRow {
   id: number;
@@ -49,9 +50,8 @@ export default function FilesPage() {
         method: 'POST',
         body: formData,
       });
-      const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) {
-        throw new Error(payload.error || 'Failed to upload files');
+        throw new Error(await readJsonError(response, 'Failed to upload files'));
       }
       await loadFiles();
     } catch (uploadError) {
