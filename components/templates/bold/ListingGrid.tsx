@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
-import { fmtPrice, fmtMileage, filterHref } from "../utils";
+import { fmtPrice, fmtMileage } from "../utils";
+import { MakeSelect, FuelSelect, SortSelect, PriceMaxInput, YearRangeInputs, Pagination } from "../FilterBar";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
@@ -32,50 +33,26 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           <div className={s.sidebarTitle}>Filters</div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Make</label>
-            <select className={s.filterSelect} defaultValue={filters.make ?? ""}
-              onChange={(e) => { window.location.href = filterHref(base, filters, { make: e.target.value, page: 1 }); }}>
-              <option value="">All Makes</option>
-              {makes.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
+            <MakeSelect base={base} filters={filters} makes={makes} className={s.filterSelect} />
           </div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Fuel</label>
-            <select className={s.filterSelect} defaultValue={filters.fuel ?? ""}
-              onChange={(e) => { window.location.href = filterHref(base, filters, { fuel: e.target.value, page: 1 }); }}>
-              <option value="">Any</option>
-              <option value="Бензин">Petrol</option>
-              <option value="Дизел">Diesel</option>
-              <option value="Електрически">Electric</option>
-              <option value="Хибрид">Hybrid</option>
-            </select>
+            <FuelSelect base={base} filters={filters} className={s.filterSelect} allLabel="Any" />
           </div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Year</label>
-            <div className={s.rangeRow}>
-              <input className={s.filterInput} placeholder="From" defaultValue={filters.yearFrom ?? ""}
-                onBlur={(e) => { if (e.target.value) window.location.href = filterHref(base, filters, { yearFrom: e.target.value, page: 1 }); }} />
-              <input className={s.filterInput} placeholder="To" defaultValue={filters.yearTo ?? ""}
-                onBlur={(e) => { if (e.target.value) window.location.href = filterHref(base, filters, { yearTo: e.target.value, page: 1 }); }} />
-            </div>
+            <YearRangeInputs base={base} filters={filters} inputClassName={s.filterInput} rowClassName={s.rangeRow} />
           </div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Max Price (лв)</label>
-            <input className={s.filterInput} placeholder="e.g. 50000" defaultValue={filters.priceMax ?? ""}
-              onBlur={(e) => { if (e.target.value) window.location.href = filterHref(base, filters, { priceMax: Number(e.target.value), page: 1 }); }} />
+            <PriceMaxInput base={base} filters={filters} className={s.filterInput} />
           </div>
         </aside>
 
         <div>
           <div className={s.listHeader}>
             <div><span className={s.listTitle}>Available Cars</span><span className={s.listCount}>{total} results</span></div>
-            <select className={s.sortSelect} defaultValue={filters.sort ?? "newest"}
-              onChange={(e) => { window.location.href = filterHref(base, filters, { sort: e.target.value, page: 1 }); }}>
-              <option value="newest">Newest First</option>
-              <option value="price_asc">Price ↑</option>
-              <option value="price_desc">Price ↓</option>
-              <option value="mileage_asc">Mileage ↑</option>
-              <option value="year_desc">Year ↓</option>
-            </select>
+            <SortSelect base={base} filters={filters} className={s.sortSelect} includeMileage />
           </div>
 
           <div className={s.grid}>
@@ -104,15 +81,10 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className={s.pagination}>
-              {page > 1 && <Link href={filterHref(base, filters, { page: page - 1 })} className={s.pageBtn}>←</Link>}
-              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
-                <Link key={p} href={filterHref(base, filters, { page: p })} className={`${s.pageBtn} ${p === page ? s.pageBtnActive : ""}`}>{p}</Link>
-              ))}
-              {page < totalPages && <Link href={filterHref(base, filters, { page: page + 1 })} className={s.pageBtn}>→</Link>}
-            </div>
-          )}
+          <Pagination
+            page={page} totalPages={totalPages} base={base} filters={filters}
+            wrapperClassName={s.pagination} btnClassName={s.pageBtn} btnActiveClassName={s.pageBtnActive}
+          />
         </div>
       </div>
 

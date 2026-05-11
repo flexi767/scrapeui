@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
-import { fmtPrice, fmtMileage, filterHref } from "../utils";
+import { fmtPrice, fmtMileage } from "../utils";
+import { MakeSelect, FuelSelect, SortSelect, Pagination } from "../FilterBar";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
@@ -17,26 +18,9 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
       </header>
 
       <div className={s.filterBar}>
-        <select defaultValue={filters.make ?? ""}
-          onChange={(e) => { window.location.href = filterHref(base, filters, { make: e.target.value, page: 1 }); }}>
-          <option value="">All Makes</option>
-          {makes.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select defaultValue={filters.fuel ?? ""}
-          onChange={(e) => { window.location.href = filterHref(base, filters, { fuel: e.target.value, page: 1 }); }}>
-          <option value="">Any Fuel</option>
-          <option value="Бензин">Petrol</option>
-          <option value="Дизел">Diesel</option>
-          <option value="Електрически">Electric</option>
-          <option value="Хибрид">Hybrid</option>
-        </select>
-        <select defaultValue={filters.sort ?? "newest"}
-          onChange={(e) => { window.location.href = filterHref(base, filters, { sort: e.target.value, page: 1 }); }}>
-          <option value="newest">Newest First</option>
-          <option value="price_asc">Price ↑</option>
-          <option value="price_desc">Price ↓</option>
-          <option value="year_desc">Year ↓</option>
-        </select>
+        <MakeSelect base={base} filters={filters} makes={makes} />
+        <FuelSelect base={base} filters={filters} allLabel="Any Fuel" />
+        <SortSelect base={base} filters={filters} />
         <div className={s.filterCount}>{total} vehicles</div>
       </div>
 
@@ -68,15 +52,10 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
         })}
       </div>
 
-      {totalPages > 1 && (
-        <div className={s.pagination}>
-          {page > 1 && <Link href={filterHref(base, filters, { page: page - 1 })} className={s.pageBtn}>←</Link>}
-          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
-            <Link key={p} href={filterHref(base, filters, { page: p })} className={`${s.pageBtn} ${p === page ? s.pageBtnActive : ""}`}>{p}</Link>
-          ))}
-          {page < totalPages && <Link href={filterHref(base, filters, { page: page + 1 })} className={s.pageBtn}>→</Link>}
-        </div>
-      )}
+      <Pagination
+        page={page} totalPages={totalPages} base={base} filters={filters}
+        wrapperClassName={s.pagination} btnClassName={s.pageBtn} btnActiveClassName={s.pageBtnActive}
+      />
 
       <footer className={s.footer}>
         <span className={s.footLogo}>{dealer.name}</span>
