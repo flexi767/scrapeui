@@ -48,6 +48,14 @@ export function getAllDealers(): DealerRow[] {
     .all() as DealerRow[];
 }
 
+export function getDealerBySlug(slug: string): DealerRowFull | undefined {
+  return raw
+    .prepare(
+      "SELECT id, slug, name, own, active, priority, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers WHERE slug = ?",
+    )
+    .get(slug) as DealerRowFull | undefined;
+}
+
 export function getDistinctYears(): string[] {
   const rows = raw
     .prepare(
