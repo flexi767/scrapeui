@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import { DEALER_TEMPLATES as TEMPLATES } from '@/lib/dealer-config';
+import { readJsonError } from '@/lib/streaming-job';
 
 interface DealerCreds {
   id: number;
@@ -165,8 +166,7 @@ export default function DealerCredentialsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json() as { error?: string };
-      if (!res.ok) { toast.error(data.error ?? 'Save failed'); return; }
+      if (!res.ok) { toast.error(await readJsonError(res, 'Save failed')); return; }
       toast.success(`${sectionName} saved`);
     } finally {
       setSaving(null);
@@ -185,8 +185,7 @@ export default function DealerCredentialsPage() {
           public_domain: publicForm.public_domain || null,
         }),
       });
-      const data = await res.json() as { error?: string };
-      if (!res.ok) { toast.error(data.error ?? 'Save failed'); return; }
+      if (!res.ok) { toast.error(await readJsonError(res, 'Save failed')); return; }
       toast.success('Public page settings saved');
       await load();
     } finally {
