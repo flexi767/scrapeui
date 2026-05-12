@@ -15,7 +15,7 @@ import {
   getDisplayTitle,
   truncateDealerLabel,
 } from '@/components/mobile-bg-search-results/formatting';
-import { formatPrice } from '@/lib/utils';
+import { formatCount, formatPrice } from '@/lib/utils';
 import {
   getEffectiveSortPrice,
   getOriginalPositionIgnoring,
@@ -284,7 +284,7 @@ export function MobileBgSearchResultsTable({
                 </td>
 
                 <td className="px-3 py-1 text-right text-xs text-slate-200/80">
-                  {row.power != null ? row.power.toLocaleString('en-US') : '—'}
+                  {formatCount(row.power)}
                 </td>
 
                 <td className="px-3 py-1 text-center">

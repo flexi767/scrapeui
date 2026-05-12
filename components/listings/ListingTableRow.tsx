@@ -7,7 +7,7 @@ import { KaparoBadge, VatBadge } from './VatBadge';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
 import { formatDateOnly } from '@/lib/date-format';
 import { listingHref } from '@/lib/listing-url';
-import { formatDate } from '@/lib/utils';
+import { formatCount, formatDate } from '@/lib/utils';
 import type { ListingRow } from '@/lib/query-modules/types';
 
 interface Props {
@@ -118,7 +118,7 @@ export function ListingTableRow({ row, currentParams, statuses, basePath }: Prop
 
       {/* Views */}
       <td className="px-3 py-1 text-right text-xs text-gray-300">
-        <div>{row.views != null ? row.views.toLocaleString('en-US') : '—'}</div>
+        <div>{formatCount(row.views)}</div>
         {row.cars_total_views != null && (
           <div className="text-[11px] text-orange-200/85">
             {row.cars_total_views.toLocaleString('en-US')}
@@ -179,7 +179,7 @@ export function ListingTableRow({ row, currentParams, statuses, basePath }: Prop
 
       {/* Mileage */}
       <td className="px-2 py-1.5 text-right text-gray-400 text-xs whitespace-nowrap">
-        {row.mileage != null ? row.mileage.toLocaleString('en-US') : '—'}
+        {formatCount(row.mileage)}
       </td>
     </tr>
   );

@@ -11,7 +11,7 @@ import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton"
 import { formatDateOnly } from "@/lib/date-format";
 import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
-import { formatDate, formatPrice } from "@/lib/utils";
+import { formatCount, formatDate, formatPrice } from "@/lib/utils";
 import { getPriceWithVat } from "@/lib/vat";
 import {
   FbIcon,
@@ -60,7 +60,7 @@ export function OwnListingTableRow({
 }: OwnListingTableRowProps) {  const router = useRouter();  const thumbSrc = getListingThumbSrc(row);
   const thumbAlt = getListingThumbAlt(row);
   const kmFormatted =
-    row.mileage != null ? row.mileage.toLocaleString("en-US") : "—";
+    formatCount(row.mileage);
 
   return (
     <tr
@@ -370,11 +370,11 @@ export function OwnListingTableRow({
       </td>
 
       <td className="px-3 py-1.5 text-right text-xs text-gray-300">
-        {row.watching != null ? row.watching.toLocaleString("en-US") : "—"}
+        {formatCount(row.watching)}
       </td>
 
       <td className="px-3 py-1.5 text-right text-xs text-gray-300">
-        <div>{row.views != null ? row.views.toLocaleString("en-US") : "—"}</div>
+        <div>{formatCount(row.views)}</div>
         {row.cars_total_views != null && (
           <div className="text-[11px] text-orange-200/85">
             {row.cars_total_views.toLocaleString("en-US")}

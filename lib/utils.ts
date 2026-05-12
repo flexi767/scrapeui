@@ -15,6 +15,11 @@ export function formatMileage(mileage: number | null | undefined): string {
   return mileage.toLocaleString('en-US') + ' km';
 }
 
+export function formatCount(value: number | null | undefined): string {
+  if (value == null) return '—';
+  return value.toLocaleString('en-US');
+}
+
 // Standard datetime display: dd.mm.yy hh:mm
 // Supports both "YYYY-MM-DD HH:MM" and ISO timestamps like "2026-03-16T10:21:00.000Z"
 export function formatDate(dateStr: string | null | undefined): string {
