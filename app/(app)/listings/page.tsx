@@ -7,6 +7,7 @@ import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYear
 import {
   buildListingParams,
   LISTING_EXTRA_OPTIONS,
+  parseOptionalNum,
   toParamArray,
 } from '@/lib/listing-url';
 
@@ -49,10 +50,10 @@ export default async function ListingsPage({
   const vatValues = toParamArray(sp.vat);
   const fuels = toParamArray(sp.fuel);
   const extras = toParamArray(sp.extra);
-  const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
-  const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
-  const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
-  const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
+  const priceMin = parseOptionalNum(sp.p_min);
+  const priceMax = parseOptionalNum(sp.p_max);
+  const priceChangeMin = parseOptionalNum(sp.pc_min);
+  const priceChangeMax = parseOptionalNum(sp.pc_max);
   const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'price';
   const order = sp.order ?? 'desc';

@@ -10,6 +10,10 @@ export function toParamArray(value: string | string[] | undefined) {
   return value ? [value] : [];
 }
 
+export function parseOptionalNum(value: string | undefined | null): number | null {
+  return value !== undefined && value !== null ? Number(value) : null;
+}
+
 export function buildListingParams({
   statuses,
   vatValues,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { parseOptionalNum, toParamArray } from '@/lib/listing-url';
 import OwnListingsTable from '@/components/OwnListingsTable';
 
 interface SearchParams {
@@ -32,19 +33,15 @@ export default async function EditOwnPage({
 
   const make = sp.make ?? '';
   const model = sp.model ?? '';
-  const dealerSlugs = sp.dealer
-    ? Array.isArray(sp.dealer)
-      ? sp.dealer
-      : [sp.dealer]
-    : [];
-  const years = sp.year ? (Array.isArray(sp.year) ? sp.year : [sp.year]) : [];
-  const statuses = sp.status ? (Array.isArray(sp.status) ? sp.status : [sp.status]) : [];
-  const vatValues = sp.vat ? (Array.isArray(sp.vat) ? sp.vat : [sp.vat]) : [];
-  const fuels = sp.fuel ? (Array.isArray(sp.fuel) ? sp.fuel : [sp.fuel]) : [];
-  const priceMin = sp.p_min !== undefined ? Number(sp.p_min) : null;
-  const priceMax = sp.p_max !== undefined ? Number(sp.p_max) : null;
-  const priceChangeMin = sp.pc_min !== undefined ? Number(sp.pc_min) : null;
-  const priceChangeMax = sp.pc_max !== undefined ? Number(sp.pc_max) : null;
+  const dealerSlugs = toParamArray(sp.dealer);
+  const years = toParamArray(sp.year);
+  const statuses = toParamArray(sp.status);
+  const vatValues = toParamArray(sp.vat);
+  const fuels = toParamArray(sp.fuel);
+  const priceMin = parseOptionalNum(sp.p_min);
+  const priceMax = parseOptionalNum(sp.p_max);
+  const priceChangeMin = parseOptionalNum(sp.pc_min);
+  const priceChangeMax = parseOptionalNum(sp.pc_max);
   const kaparo = sp.kaparo ?? '';
   const sort = sp.sort ?? 'last_edit';
   const order = sp.order ?? 'desc';
