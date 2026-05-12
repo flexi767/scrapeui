@@ -7,6 +7,17 @@ export async function fetchWin1251(url: string, init?: RequestInit): Promise<str
   return new TextDecoder('windows-1251').decode(buf);
 }
 
+export function parseSelectOptionMap(selectInnerHtml: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const optionRegex = /<option\s+value="([^"]+)"[^>]*>\s*([^<\n]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = optionRegex.exec(selectInnerHtml)) !== null) {
+    const value = m[1].trim();
+    if (value) map.set(value.toLowerCase(), value);
+  }
+  return map;
+}
+
 export function normalizeFromSelectMap(raw: string | null | undefined, map: Map<string, string> | null): string | null {
   if (!raw || !map) return raw ?? null;
   const text = String(raw).trim();

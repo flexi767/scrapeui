@@ -2,7 +2,7 @@
  * Fetches canonical fuel types from mobile.bg's homepage engine_type select.
  */
 
-import { fetchWin1251, normalizeFromSelectMap } from './fetch-html';
+import { fetchWin1251, normalizeFromSelectMap, parseSelectOptionMap } from './fetch-html';
 
 let _fuelMap: Map<string, string> | null = null;
 
@@ -13,16 +13,8 @@ export async function fetchFuelTypes(): Promise<Map<string, string>> {
   const selectMatch = html.match(/name="engine_type"[^>]*>([\s\S]*?)<\/select>/);
   if (!selectMatch) throw new Error('Could not find engine_type select on mobile.bg');
 
-  const map = new Map<string, string>();
-  const optionRegex = /<option\s+value="([^"]+)"[^>]*>\s*([^<\n]+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = optionRegex.exec(selectMatch[1])) !== null) {
-    const value = m[1].trim();
-    if (value) map.set(value.toLowerCase(), value);
-  }
-
-  _fuelMap = map;
-  return map;
+  _fuelMap = parseSelectOptionMap(selectMatch[1]);
+  return _fuelMap;
 }
 
 export function normalizeFuelSync(rawFuel: string | null | undefined, map: Map<string, string> | null): string | null {
