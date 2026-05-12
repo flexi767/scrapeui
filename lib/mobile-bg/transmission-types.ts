@@ -2,7 +2,7 @@
  * Fetches canonical transmission types from mobile.bg's homepage transmission select.
  */
 
-import { fetchWin1251 } from './fetch-html';
+import { fetchWin1251, normalizeFromSelectMap } from './fetch-html';
 
 let _transmissionMap: Map<string, string> | null = null;
 
@@ -26,13 +26,5 @@ export async function fetchTransmissionTypes(): Promise<Map<string, string>> {
 }
 
 export function normalizeTransmissionSync(rawTransmission: string | null | undefined, map: Map<string, string> | null): string | null {
-  if (!rawTransmission || !map) return rawTransmission ?? null;
-  const text = String(rawTransmission).trim();
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  if (map.has(lower)) return map.get(lower)!;
-  for (const [key, canonical] of map) {
-    if (lower.includes(key) || key.includes(lower)) return canonical;
-  }
-  return text;
+  return normalizeFromSelectMap(rawTransmission, map);
 }

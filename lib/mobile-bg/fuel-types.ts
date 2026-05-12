@@ -2,7 +2,7 @@
  * Fetches canonical fuel types from mobile.bg's homepage engine_type select.
  */
 
-import { fetchWin1251 } from './fetch-html';
+import { fetchWin1251, normalizeFromSelectMap } from './fetch-html';
 
 let _fuelMap: Map<string, string> | null = null;
 
@@ -26,13 +26,5 @@ export async function fetchFuelTypes(): Promise<Map<string, string>> {
 }
 
 export function normalizeFuelSync(rawFuel: string | null | undefined, map: Map<string, string> | null): string | null {
-  if (!rawFuel || !map) return rawFuel ?? null;
-  const text = String(rawFuel).trim();
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  if (map.has(lower)) return map.get(lower)!;
-  for (const [key, canonical] of map) {
-    if (lower.includes(key) || key.includes(lower)) return canonical;
-  }
-  return text;
+  return normalizeFromSelectMap(rawFuel, map);
 }
