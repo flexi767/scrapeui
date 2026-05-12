@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { DealerTextInput } from './DealerTextInput';
 import { LoginBadge } from './LoginBadge';
 import { DEALER_TEMPLATES, type Dealer, type DealerEditForm, type DealerLoginResult, type TemplateName } from './types';
 import { slugifyDealerName } from './utils';
@@ -44,14 +45,29 @@ export function DealerTableRow({
     <tr className={`align-top transition-colors duration-500 ${flashActive ? 'bg-blue-900/40' : 'hover:bg-gray-800/40'}`}>
       <td className="px-4 py-2 text-white">
         {editing ? (
-          <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+          <DealerTextInput
+            value={editForm.name}
+            onValueChange={(value) =>
+              setEditForm((current) => ({ ...current, name: value }))
+            }
+            className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+          />
         ) : (
           <button onClick={() => onStartEdit(dealer)} className="text-left text-white hover:text-blue-300">{dealer.name}</button>
         )}
       </td>
       <td className="px-4 py-2 text-gray-400 font-mono text-xs">
         {editing ? (
-          <input value={editForm.slug} onChange={e => setEditForm(f => ({ ...f, slug: slugifyDealerName(e.target.value) }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono" />
+          <DealerTextInput
+            value={editForm.slug}
+            onValueChange={(value) =>
+              setEditForm((current) => ({
+                ...current,
+                slug: slugifyDealerName(value),
+              }))
+            }
+            className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none font-mono"
+          />
         ) : (
           <button onClick={() => onStartEdit(dealer)} className="text-left font-mono text-xs text-gray-400 hover:text-blue-300">{dealer.slug}</button>
         )}
@@ -59,11 +75,38 @@ export function DealerTableRow({
       <td className="px-4 py-2">
         {editing ? (
           <div className="space-y-2">
-            <input value={editForm.mobile_url} onChange={e => setEditForm(f => ({ ...f, mobile_url: e.target.value }))} placeholder="https://dealer.mobile.bg" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            <DealerTextInput
+              value={editForm.mobile_url}
+              onValueChange={(value) =>
+                setEditForm((current) => ({ ...current, mobile_url: value }))
+              }
+              placeholder="https://dealer.mobile.bg"
+              className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+            />
             {editForm.own && (
               <>
-                <input value={editForm.mobile_user} onChange={e => setEditForm(f => ({ ...f, mobile_user: e.target.value }))} placeholder="mobile user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                <input value={editForm.mobile_password} onChange={e => setEditForm(f => ({ ...f, mobile_password: e.target.value }))} placeholder="mobile password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                <DealerTextInput
+                  value={editForm.mobile_user}
+                  onValueChange={(value) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      mobile_user: value,
+                    }))
+                  }
+                  placeholder="mobile user"
+                  className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
+                <DealerTextInput
+                  value={editForm.mobile_password}
+                  onValueChange={(value) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      mobile_password: value,
+                    }))
+                  }
+                  placeholder="mobile password"
+                  className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
               </>
             )}
           </div>
@@ -76,11 +119,35 @@ export function DealerTableRow({
       <td className="px-4 py-2">
         {editing ? (
           <div className="space-y-2">
-            <input value={editForm.cars_url} onChange={e => setEditForm(f => ({ ...f, cars_url: e.target.value }))} placeholder="https://www.cars.bg/company/dealer" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+            <DealerTextInput
+              value={editForm.cars_url}
+              onValueChange={(value) =>
+                setEditForm((current) => ({ ...current, cars_url: value }))
+              }
+              placeholder="https://www.cars.bg/company/dealer"
+              className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+            />
             {editForm.own && (
               <>
-                <input value={editForm.cars_user} onChange={e => setEditForm(f => ({ ...f, cars_user: e.target.value }))} placeholder="cars user" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
-                <input value={editForm.cars_password} onChange={e => setEditForm(f => ({ ...f, cars_password: e.target.value }))} placeholder="cars password" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none" />
+                <DealerTextInput
+                  value={editForm.cars_user}
+                  onValueChange={(value) =>
+                    setEditForm((current) => ({ ...current, cars_user: value }))
+                  }
+                  placeholder="cars user"
+                  className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
+                <DealerTextInput
+                  value={editForm.cars_password}
+                  onValueChange={(value) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      cars_password: value,
+                    }))
+                  }
+                  placeholder="cars password"
+                  className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
               </>
             )}
           </div>
@@ -131,7 +198,14 @@ export function DealerTableRow({
             <select value={editForm.template} onChange={e => setEditForm(f => ({ ...f, template: e.target.value as TemplateName }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
               {DEALER_TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-            <input value={editForm.public_domain} onChange={e => setEditForm(f => ({ ...f, public_domain: e.target.value }))} placeholder="www.example.com" className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono" />
+            <DealerTextInput
+              value={editForm.public_domain}
+              onValueChange={(value) =>
+                setEditForm((current) => ({ ...current, public_domain: value }))
+              }
+              placeholder="www.example.com"
+              className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono"
+            />
           </div>
         ) : (
           <div className="flex flex-col items-center gap-0.5">
