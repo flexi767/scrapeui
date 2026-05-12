@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getListingThumbSrc } from "@/lib/listing-thumb";
+import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingDetailProps } from "../types";
 import { fmt } from "../utils";
@@ -7,7 +7,7 @@ import s from "./ListingDetail.module.css";
 
 export function ListingDetail({ dealer, listing }: ListingDetailProps) {
   const base = `/d/${dealer.slug}`;
-  const thumb = getListingThumbSrc({ mobile_id: listing.mobileId, thumb_keys: listing.thumbKeys, full_keys: listing.fullKeys, image_meta: listing.imageMeta, images_downloaded: listing.imagesDownloaded, thumb_saved: listing.thumbSaved });
+  const thumb = getPublicThumbSrc(listing);
 
   return (
     <div className={s.page}>

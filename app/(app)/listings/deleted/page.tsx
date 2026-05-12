@@ -6,12 +6,12 @@ import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { ListingPriceCell } from '@/components/listings/ListingPriceCell';
 import { SortLink } from '@/components/listings/SortLink';
 import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
+import { ListingsPagination } from '@/components/listings/ListingsPagination';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
 import {
   buildListingParams,
-  listingPageHref,
   LISTING_EXTRA_OPTIONS,
   parseOptionalNum,
   toParamArray,
@@ -91,7 +91,6 @@ export default async function DeletedListingsPage({
   });
 
   const totalPages = Math.ceil(total / 50);
-  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   return (
     <div className="min-h-screen bg-[#111827]">
@@ -193,44 +192,12 @@ export default async function DeletedListingsPage({
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm">
-            {page > 1 && (
-              <Link
-                href={listingPageHref(BASE_PATH, currentParams, page - 1)}
-                className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800"
-              >
-                Prev
-              </Link>
-            )}
-            {pageNumbers.map((pageNumber) => (
-              pageNumber === page ? (
-                <span
-                  key={pageNumber}
-                  className="min-w-9 cursor-default rounded border border-blue-500 bg-blue-500/15 px-3 py-1.5 text-center text-white"
-                >
-                  {pageNumber}
-                </span>
-              ) : (
-                <Link
-                  key={pageNumber}
-                  href={listingPageHref(BASE_PATH, currentParams, pageNumber)}
-                  className="min-w-9 rounded border border-gray-700 px-3 py-1.5 text-center text-gray-300 hover:bg-gray-800"
-                >
-                  {pageNumber}
-                </Link>
-              )
-            ))}
-            {page < totalPages && (
-              <Link
-                href={listingPageHref(BASE_PATH, currentParams, page + 1)}
-                className="rounded border border-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-800"
-              >
-                Next
-              </Link>
-            )}
-          </div>
-        )}
+        <ListingsPagination
+          page={page}
+          totalPages={totalPages}
+          currentParams={currentParams}
+          basePath={BASE_PATH}
+        />
       </main>
     </div>
   );

@@ -377,7 +377,7 @@ export function OwnListingTableRow({
         <div>{formatCount(row.views)}</div>
         {row.cars_total_views != null && (
           <div className="text-[11px] text-orange-200/85">
-            {row.cars_total_views.toLocaleString("en-US")}
+            {formatCount(row.cars_total_views)}
           </div>
         )}
       </td>

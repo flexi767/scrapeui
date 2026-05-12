@@ -5,20 +5,11 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { MobileBgBackupImageRow } from '@/lib/queries';
 import { refreshImageCount, STORAGE_IMAGE_ROOT } from './image-helpers';
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MOBILEBG_IMAGE_WIDTH = 1600;
 const MOBILEBG_IMAGE_HEIGHT = 1200;
-
-interface ImageRow {
-  id: number;
-  backup_id: number;
-  sort_order: number;
-  filename: string;
-  source_url: string | null;
-  local_path: string;
-  created_at: string | null;
-}
 
 function backupExists(backupId: number): boolean {
   const row = raw
@@ -27,7 +18,7 @@ function backupExists(backupId: number): boolean {
   return Boolean(row);
 }
 
-function listImages(backupId: number): ImageRow[] {
+function listImages(backupId: number): MobileBgBackupImageRow[] {
   return raw
     .prepare(
       `
@@ -37,10 +28,10 @@ function listImages(backupId: number): ImageRow[] {
       ORDER BY sort_order ASC, id ASC
     `,
     )
-    .all(backupId) as ImageRow[];
+    .all(backupId) as MobileBgBackupImageRow[];
 }
 
-function toPayload(row: ImageRow) {
+function toPayload(row: MobileBgBackupImageRow) {
   return {
     id: row.id,
     backupId: row.backup_id,

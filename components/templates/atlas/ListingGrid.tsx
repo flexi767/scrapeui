@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { getListingThumbSrc } from "@/lib/listing-thumb";
+import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
 import { fmtPrice, fmtMileage } from "../utils";
@@ -26,7 +26,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
 
       <div className={s.grid}>
         {listings.map((l, idx) => {
-          const thumb = getListingThumbSrc({ mobile_id: l.mobileId, thumb_keys: l.thumbKeys, full_keys: l.fullKeys, image_meta: l.imageMeta, images_downloaded: l.imagesDownloaded, thumb_saved: l.thumbSaved });
+          const thumb = getPublicThumbSrc(l);
           const isFeatured = idx === 0;
           return (
             <Link key={l.mobileId} href={`${base}/${l.mobileId}`} className={`${s.card} ${isFeatured ? s.cardFeatured : ""}`}>

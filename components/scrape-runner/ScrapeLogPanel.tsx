@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import { formatPrice } from '@/lib/utils';
+import { formatCount, formatPrice } from '@/lib/utils';
 import { ScrapeThumbnail } from '@/components/scrape-runner/ScrapeThumbnail';
 import type { ScrapeLogEntry } from '@/components/scrape-runner/types';
 
@@ -42,7 +42,7 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
                   <span className="font-semibold text-green-400">{formatPrice(entry.price)}</span>
                   {entry.views != null && (
                     <span className="text-gray-500">
-                      <span className="text-white">{entry.views.toLocaleString('en-US')}</span> views
+                      <span className="text-white">{formatCount(entry.views)}</span> views
                     </span>
                   )}
                   {entry.newListing && (

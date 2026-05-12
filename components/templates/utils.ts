@@ -1,4 +1,9 @@
+import { getListingThumbSrc } from "@/lib/listing-thumb";
 import type { PublicListingFilters } from "./types";
+
+export function getPublicThumbSrc(l: { mobileId: string; thumbKeys: string | null; fullKeys: string | null; imageMeta: string | null; imagesDownloaded: number | null; thumbSaved: number | null }) {
+  return getListingThumbSrc({ mobile_id: l.mobileId, thumb_keys: l.thumbKeys, full_keys: l.fullKeys, image_meta: l.imageMeta, images_downloaded: l.imagesDownloaded, thumb_saved: l.thumbSaved });
+}
 
 export function fmtPrice(p: number | null): string {
   return p ? p.toLocaleString("bg-BG") + " лв" : "—";

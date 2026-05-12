@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ChangesFilterBar from '@/components/ChangesFilterBar';
+import { ListingsPagination } from '@/components/listings/ListingsPagination';
 import {
   getAllDealers,
   getMakeModels,
@@ -115,7 +116,6 @@ export default async function ListingsChangesPage({
   const makes = Object.keys(makeModels).sort();
   const allDealers = getAllDealers();
   const totalPages = Math.ceil(total / 50);
-  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   const currentParams = new URLSearchParams();
   if (make) currentParams.set('make', make);
@@ -252,44 +252,12 @@ export default async function ListingsChangesPage({
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm">
-            {page > 1 && (
-              <Link
-                href={`/listings/changes?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page - 1) }).toString()}`}
-                className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
-              >
-                Prev
-              </Link>
-            )}
-            {pageNumbers.map((pageNumber) => (
-              pageNumber === page ? (
-                <span
-                  key={pageNumber}
-                  className="min-w-9 cursor-default rounded border border-blue-500 bg-blue-500/15 px-3 py-1.5 text-center text-white"
-                >
-                  {pageNumber}
-                </span>
-              ) : (
-                <Link
-                  key={pageNumber}
-                  href={`/listings/changes?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(pageNumber) }).toString()}`}
-                  className="min-w-9 rounded border border-gray-600 px-3 py-1.5 text-center text-gray-300 hover:border-gray-400 hover:text-white"
-                >
-                  {pageNumber}
-                </Link>
-              )
-            ))}
-            {page < totalPages && (
-              <Link
-                href={`/listings/changes?${new URLSearchParams({ ...Object.fromEntries(currentParams), page: String(page + 1) }).toString()}`}
-                className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
-              >
-                Next
-              </Link>
-            )}
-          </div>
-        )}
+        <ListingsPagination
+          page={page}
+          totalPages={totalPages}
+          currentParams={currentParams}
+          basePath="/listings/changes"
+        />
       </main>
     </div>
   );
