@@ -5,7 +5,7 @@ import {
   createMobileBgUpdateSession,
   updateBackupOnMobileBg,
 } from '@/lib/mobile-bg/update';
-import { emit } from '@/scraper/lib/runner';
+import { emit, formatError } from '@/scraper/lib/runner';
 
 
 interface SyncTarget {
@@ -164,9 +164,9 @@ async function main() {
             mobile_id: row.mobile_id,
             status: 'failed',
             completed_at: new Date().toISOString(),
-            error: error instanceof Error ? error.message : String(error),
+            error: formatError(error),
           },
-          message: error instanceof Error ? error.message : 'Sync failed',
+          message: formatError(error),
         });
       }
     }
@@ -188,6 +188,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+  emit({ type: 'error', message: formatError(error) });
   process.exitCode = 1;
 });

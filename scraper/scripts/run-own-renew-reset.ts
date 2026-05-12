@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { getDealerBySlug, type DealerRowFull } from '@/lib/queries';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
-import { emit } from '@/scraper/lib/runner';
+import { emit, formatError } from '@/scraper/lib/runner';
 
 
 function parseArgs(): { dealerSlugs: string[]; onlyReset: boolean } {
@@ -140,8 +140,8 @@ async function processDealer(
         globalStats.failed += 1;
         emit({
           type: 'result', ...globalStats,
-          row: { mobile_id: listing.id, status: 'failed', error: error instanceof Error ? error.message : String(error) },
-          message: `${listing.title} — ${error instanceof Error ? error.message : 'failed'}`,
+          row: { mobile_id: listing.id, status: 'failed', error: formatError(error) },
+          message: `${listing.title} — ${formatError(error)}`,
         });
       }
     }
@@ -187,7 +187,7 @@ async function main() {
     try {
       await processDealer(dealer, onlyReset, stats);
     } catch (error) {
-      emit({ type: 'log', level: 'info', message: `${dealer.name}: ${error instanceof Error ? error.message : String(error)}` });
+      emit({ type: 'log', level: 'info', message: `${dealer.name}: ${formatError(error)}` });
     }
   }
 
@@ -198,6 +198,6 @@ async function main() {
 }
 
 void main().catch((error) => {
-  emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+  emit({ type: 'error', message: formatError(error) });
   process.exitCode = 1;
 });
