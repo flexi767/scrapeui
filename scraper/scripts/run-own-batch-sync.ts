@@ -1,5 +1,5 @@
 import { raw } from '@/db/client';
-import { getEditOwnSyncRows } from '@/lib/queries';
+import { getDealerBySlug, getEditOwnSyncRows } from '@/lib/queries';
 import {
   closeMobileBgUpdateSession,
   createMobileBgUpdateSession,
@@ -7,13 +7,6 @@ import {
 } from '@/lib/mobile-bg/update';
 import { emit } from '@/scraper/lib/runner';
 
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_user: string | null;
-  mobile_password: string | null;
-}
 
 interface SyncTarget {
   backup_id: number;
@@ -72,11 +65,7 @@ async function main() {
         message: `Syncing ${[row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`}…`,
       });
 
-      const dealer = raw.prepare(`
-      SELECT id, slug, name, mobile_user, mobile_password
-      FROM dealers
-      WHERE slug = ?
-    `).get(row.dealer_slug) as DealerRow | undefined;
+      const dealer = getDealerBySlug(row.dealer_slug);
 
       if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
         completed += 1;

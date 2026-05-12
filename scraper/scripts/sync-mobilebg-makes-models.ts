@@ -1,13 +1,12 @@
 #!/usr/bin/env tsx
 
-import Database from 'better-sqlite3';
 import {
   DEFAULT_MOBILEBG_PUBTYPE,
   DEFAULT_MOBILEBG_SEARCH_PATH,
   syncMobileBgMakeModelReference,
   type MobileBgMakeModelSyncProgressEvent,
 } from '@/lib/mobile-bg/reference';
-import { emit, formatError, DB_PATH } from '@/scraper/lib/runner';
+import { emit, formatError, openDb, DB_PATH } from '@/scraper/lib/runner';
 
 const args = process.argv.slice(2);
 
@@ -17,9 +16,7 @@ function getArg(name: string): string | null {
 }
 
 async function main() {
-  const db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const db = openDb();
 
   const onlyMake = getArg('--make');
   const searchPath = getArg('--search-path') || DEFAULT_MOBILEBG_SEARCH_PATH;

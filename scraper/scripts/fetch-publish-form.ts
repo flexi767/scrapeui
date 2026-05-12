@@ -3,11 +3,10 @@
  * CLI wrapper — logs in to mobile.bg and dumps the publish/edit form fields.
  * Usage: tsx scraper/scripts/fetch-publish-form.ts --dealer <slug> [--adv <mobileId>]
  */
-import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { fetchPublishForm } from '@/lib/mobile-bg/fetch-publish-form';
-import { DB_PATH } from '@/scraper/lib/runner';
+import { openDb } from '@/scraper/lib/runner';
 
 const args = process.argv.slice(2);
 const dealerIdx = args.indexOf('--dealer');
@@ -24,7 +23,7 @@ interface DealerRow { id: number; mobile_user: string | null; mobile_password: s
 interface ListingRow { mobile_id: string; }
 
 async function main() {
-  const db = new Database(DB_PATH);
+  const db = openDb();
   const dealer = db.prepare('SELECT id, mobile_user, mobile_password FROM dealers WHERE slug = ?').get(dealerSlug) as DealerRow | undefined;
   if (!dealer) { console.error(`Dealer "${dealerSlug}" not found`); process.exit(1); }
   if (!dealer.mobile_user || !dealer.mobile_password) { console.error(`Dealer "${dealerSlug}" has no mobile.bg credentials`); process.exit(1); }

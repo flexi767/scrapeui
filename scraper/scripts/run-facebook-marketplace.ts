@@ -5,8 +5,7 @@
  * Usage: tsx scraper/scripts/run-facebook-marketplace.ts --backup-id <id>
  */
 
-import Database from "better-sqlite3";
-import { DB_PATH } from "@/scraper/lib/runner";
+import { openDb } from "@/scraper/lib/runner";
 import { buildMarketplaceListingPayload } from "@/lib/facebook-marketplace/listing-payload";
 import { postToFacebookMarketplace } from "../../facebook-marketplace";
 
@@ -24,8 +23,7 @@ if (isNaN(backupId)) {
 }
 
 async function main() {
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
+  const db = openDb();
 
   const listing = buildMarketplaceListingPayload(db, backupId, { skipPhotos });
   if (!listing) {

@@ -1,11 +1,10 @@
 #!/usr/bin/env tsx
-import Database from 'better-sqlite3';
 import {
   planCarsBgDealerSync,
   syncCarsBgDealer,
   type CarsBgDealerAccount,
 } from '@/lib/cars-bg/sync';
-import { emit, formatError, parseRunnerArgs, DB_PATH } from '@/scraper/lib/runner';
+import { emit, formatError, openDb, parseRunnerArgs } from '@/scraper/lib/runner';
 
 const { requestedSlugs } = parseRunnerArgs();
 const dryRun = !process.argv.includes('--live');
@@ -42,7 +41,7 @@ function loadDealers(db: Database.Database): CarsBgDealerAccount[] {
 }
 
 async function main() {
-  const db = new Database(DB_PATH);
+  const db = openDb();
 
   try {
     const dealers = loadDealers(db);

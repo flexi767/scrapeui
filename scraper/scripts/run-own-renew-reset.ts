@@ -1,16 +1,9 @@
-import { raw } from '@/db/client';
 import { chromium } from 'playwright';
+import { getDealerBySlug, type DealerRowFullFull } from '@/lib/queries';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { emit } from '@/scraper/lib/runner';
 
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-  mobile_user: string | null;
-  mobile_password: string | null;
-}
 
 function parseArgs(): { dealerSlugs: string[]; onlyReset: boolean } {
   const slugs: string[] = [];
@@ -25,7 +18,7 @@ function parseArgs(): { dealerSlugs: string[]; onlyReset: boolean } {
 }
 
 async function processDealer(
-  dealer: DealerRow,
+  dealer: DealerRowFull,
   onlyReset: boolean,
   globalStats: { total: number; completed: number; succeeded: number; failed: number },
 ) {
@@ -165,15 +158,10 @@ async function main() {
     return;
   }
 
-  const dealers: DealerRow[] = [];
+  const dealers: DealerRowFull[] = [];
   for (const slug of dealerSlugs) {
-    const dealer = raw.prepare(`
-      SELECT id, slug, name, mobile_user, mobile_password
-      FROM dealers
-      WHERE slug = ? AND own = 1 AND active = 1
-    `).get(slug) as DealerRow | undefined;
-
-    if (!dealer?.mobile_user || !dealer.mobile_password) {
+    const dealer = getDealerBySlug(slug);
+    if (!dealer?.own || !dealer.active || !dealer.mobile_user || !dealer.mobile_password) {
       emit({ type: 'log', level: 'info', message: `Dealer "${slug}" not found or missing credentials, skipping.` });
       continue;
     }
