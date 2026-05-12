@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { getDealerBySlug, type DealerRowFullFull } from '@/lib/queries';
+import { getDealerBySlug, type DealerRowFull } from '@/lib/queries';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { emit } from '@/scraper/lib/runner';

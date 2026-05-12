@@ -65,7 +65,7 @@ async function main() {
         message: `Syncing ${[row.make, row.model, row.title].filter(Boolean).join(' ') || row.mobile_id || `backup ${row.backup_id}`}…`,
       });
 
-      const dealer = getDealerBySlug(row.dealer_slug);
+      const dealer = row.dealer_slug ? getDealerBySlug(row.dealer_slug) : undefined;
 
       if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
         completed += 1;

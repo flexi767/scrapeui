@@ -6,7 +6,7 @@ import {
   syncMobileBgMakeModelReference,
   type MobileBgMakeModelSyncProgressEvent,
 } from '@/lib/mobile-bg/reference';
-import { emit, formatError, openDb, DB_PATH } from '@/scraper/lib/runner';
+import { emit, formatError, openDb } from '@/scraper/lib/runner';
 
 const args = process.argv.slice(2);
 
@@ -43,7 +43,6 @@ async function main() {
     emit({
       type: 'complete',
       ok: true,
-      dbPath: DB_PATH,
       searchPath,
       pubtype,
       onlyMake,

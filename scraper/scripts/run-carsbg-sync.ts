@@ -4,6 +4,7 @@ import {
   syncCarsBgDealer,
   type CarsBgDealerAccount,
 } from '@/lib/cars-bg/sync';
+import type Database from 'better-sqlite3';
 import { emit, formatError, openDb, parseRunnerArgs } from '@/scraper/lib/runner';
 
 const { requestedSlugs } = parseRunnerArgs();
