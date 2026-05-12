@@ -1,7 +1,7 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
-import { runMappedUpdate } from '@/lib/api/db-helpers';
+import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
 
 // GET own dealer credentials (dealer user or admin)
@@ -14,7 +14,8 @@ export async function GET(
   const { session } = check;
 
   const { id } = await params;
-  const dealerId = Number(id);
+  const dealerId = parsePositiveIntParam(id);
+  if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const isAdmin = session.user.role === 'admin';
   const isOwn = session.user.dealerId === dealerId;
@@ -46,7 +47,8 @@ export async function PATCH(
   const { session } = check;
 
   const { id } = await params;
-  const dealerId = Number(id);
+  const dealerId = parsePositiveIntParam(id);
+  if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const isAdmin = session.user.role === 'admin';
   const isOwn = session.user.dealerId === dealerId;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskTimeEntries } from '@/lib/queries';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 export async function GET(
   _request: NextRequest,
@@ -11,7 +12,9 @@ export async function GET(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  const entries = getTaskTimeEntries(Number(id));
+  const taskId = parsePositiveIntParam(id);
+  if (!taskId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  const entries = getTaskTimeEntries(taskId);
   return NextResponse.json(entries);
 }
 
@@ -24,6 +27,8 @@ export async function POST(
   const session = check.session;
 
   const { id } = await params;
+  const taskId = parsePositiveIntParam(id);
+  if (!taskId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const { description, durationMinutes, date } = await request.json();
 
   if (!durationMinutes || !date) {
@@ -34,7 +39,7 @@ export async function POST(
   const result = raw.prepare(`
     INSERT INTO time_entries (task_id, user_id, description, duration_minutes, date, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(Number(id), Number(session.user.id), description || null, durationMinutes, date, now);
+  `).run(taskId, Number(session.user.id), description || null, durationMinutes, date, now);
 
   return NextResponse.json({ id: result.lastInsertRowid }, { status: 201 });
 }

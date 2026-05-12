@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
-import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -11,7 +11,8 @@ export async function PATCH(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  const articleId = Number(id);
+  const articleId = parsePositiveIntParam(id);
+  if (!articleId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await request.json() as Record<string, unknown>;
   const now = new Date().toISOString();
 
@@ -35,6 +36,8 @@ export async function DELETE(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  raw.prepare('DELETE FROM articles WHERE id = ?').run(Number(id));
+  const articleId = parsePositiveIntParam(id);
+  if (!articleId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  raw.prepare('DELETE FROM articles WHERE id = ?').run(articleId);
   return NextResponse.json({ ok: true });
 }

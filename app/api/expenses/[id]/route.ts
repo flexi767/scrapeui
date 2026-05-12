@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getExpenseById } from '@/lib/queries';
-import { replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
 export async function GET(
   _request: NextRequest,
@@ -12,7 +12,9 @@ export async function GET(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  const expense = getExpenseById(Number(id));
+  const expenseId = parsePositiveIntParam(id);
+  if (!expenseId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  const expense = getExpenseById(expenseId);
   if (!expense) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(expense);
 }
@@ -25,7 +27,8 @@ export async function PATCH(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  const expenseId = Number(id);
+  const expenseId = parsePositiveIntParam(id);
+  if (!expenseId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await request.json();
   const now = new Date().toISOString();
 
@@ -50,6 +53,8 @@ export async function DELETE(
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  raw.prepare('DELETE FROM expenses WHERE id = ?').run(Number(id));
+  const expenseId = parsePositiveIntParam(id);
+  if (!expenseId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  raw.prepare('DELETE FROM expenses WHERE id = ?').run(expenseId);
   return NextResponse.json({ ok: true });
 }

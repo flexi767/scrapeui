@@ -2,6 +2,7 @@ import path from 'path';
 import { NextRequest } from 'next/server';
 import { raw } from '@/db/client';
 import { requireAuth } from '@/lib/api/auth-helpers';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { isPathInside, streamFileResponse } from '@/lib/file-response';
 import { verifySignedAssetToken } from '@/lib/signed-asset-token';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
@@ -36,7 +37,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const imageId = Number(id);
+  const imageId = parsePositiveIntParam(id);
+  if (!imageId) return new Response('Invalid ID', { status: 400 });
   const signed = verifySignedAssetToken(
     imageId,
     request.nextUrl.searchParams.get('t'),

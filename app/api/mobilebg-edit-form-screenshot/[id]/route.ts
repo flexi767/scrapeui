@@ -1,6 +1,7 @@
 import path from 'path';
 import { NextRequest } from 'next/server';
 import { raw } from '@/db/client';
+import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { isPathInside, streamFileResponse } from '@/lib/file-response';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 
@@ -20,11 +21,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const snapshotId = parsePositiveIntParam(id);
+  if (!snapshotId) return new Response('Invalid ID', { status: 400 });
   const row = raw.prepare(`
     SELECT screenshot_path
     FROM mobilebg_edit_form_snapshots
     WHERE id = ?
-  `).get(Number(id)) as { screenshot_path?: string } | undefined;
+  `).get(snapshotId) as { screenshot_path?: string } | undefined;
 
   const filePath = row?.screenshot_path;
   if (!filePath) return new Response('Not found', { status: 404 });

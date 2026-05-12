@@ -1,7 +1,7 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
-import { runMappedUpdate } from '@/lib/api/db-helpers';
+import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES, isValidDealerSlug } from '@/lib/dealer-config';
 
 const DEALER_FIELD_MAP: Record<string, string> = {
@@ -20,6 +20,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('error' in check) return check.error;
 
   const { id } = await params;
+  const dealerId = parsePositiveIntParam(id);
+  if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await req.json() as Record<string, unknown>;
 
   if (body.slug && !isValidDealerSlug(body.slug as string)) {
@@ -34,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('priority' in processed) processed.priority = Number(processed.priority);
 
   try {
-    const updated = runMappedUpdate(raw, 'dealers', 'id', Number(id), processed, DEALER_FIELD_MAP);
+    const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, DEALER_FIELD_MAP);
     if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
     return NextResponse.json({ ok: true });
   } catch {
@@ -47,6 +49,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if ('error' in check) return check.error;
 
   const { id } = await params;
-  raw.prepare('DELETE FROM dealers WHERE id = ?').run(Number(id));
+  const dealerId = parsePositiveIntParam(id);
+  if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  raw.prepare('DELETE FROM dealers WHERE id = ?').run(dealerId);
   return NextResponse.json({ ok: true });
 }
