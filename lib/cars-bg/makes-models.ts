@@ -2,9 +2,8 @@
  * Resolves cars.bg make and model IDs from the publish form.
  */
 
+import { CARS_BG_BASE_URL } from '@/lib/cars-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
-
-const CARS_BG_BASE_URL = 'https://www.cars.bg';
 
 interface OptionEntry { id: number; label: string; normalized: string }
 interface OptionSet { options: OptionEntry[]; map: Map<string, OptionEntry>; sorted: OptionEntry[] }
