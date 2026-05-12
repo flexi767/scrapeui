@@ -56,13 +56,15 @@ export function getDealerBySlug(slug: string): DealerRowFull | undefined {
     .get(slug) as DealerRowFull | undefined;
 }
 
+function distinctListingStrings(col: string, order: 'ASC' | 'DESC' = 'ASC'): string[] {
+  return (raw
+    .prepare(`SELECT DISTINCT ${col} FROM listings WHERE is_active = 1 AND ${col} IS NOT NULL AND ${notDuplicateExpr} ORDER BY ${col} ${order}`)
+    .all() as Record<string, string>[])
+    .map((r) => r[col]);
+}
+
 export function getDistinctYears(): string[] {
-  const rows = raw
-    .prepare(
-      `SELECT DISTINCT reg_year FROM listings WHERE is_active = 1 AND reg_year IS NOT NULL AND ${notDuplicateExpr} ORDER BY reg_year DESC`,
-    )
-    .all() as { reg_year: string }[];
-  return rows.map((r) => r.reg_year);
+  return distinctListingStrings('reg_year', 'DESC');
 }
 
 export function getPriceRange(): { min: number; max: number } | null {
@@ -86,21 +88,11 @@ export function getPriceChangeRange(): { min: number; max: number } | null {
 }
 
 export function getDistinctFuels(): string[] {
-  const rows = raw
-    .prepare(
-      `SELECT DISTINCT fuel FROM listings WHERE is_active = 1 AND fuel IS NOT NULL AND ${notDuplicateExpr} ORDER BY fuel`,
-    )
-    .all() as { fuel: string }[];
-  return rows.map((r) => r.fuel);
+  return distinctListingStrings('fuel');
 }
 
 export function getDistinctCategories(): string[] {
-  const rows = raw
-    .prepare(
-      `SELECT DISTINCT body_type FROM listings WHERE is_active = 1 AND body_type IS NOT NULL AND ${notDuplicateExpr} ORDER BY body_type`,
-    )
-    .all() as { body_type: string }[];
-  return rows.map((r) => r.body_type);
+  return distinctListingStrings('body_type');
 }
 
 // ─── Users ────────────────────────────────────────────────────────
