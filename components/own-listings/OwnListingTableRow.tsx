@@ -9,9 +9,9 @@ import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton"
 import { formatDateOnly } from "@/lib/date-format";
 import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
-import { formatCount, formatDate, formatPrice } from "@/lib/utils";
-import { getPriceWithVat } from "@/lib/vat";
+import { formatCount, formatDate } from "@/lib/utils";
 import { OwnListingPublishButtons } from "./OwnListingPublishButtons";
+import { OwnListingPriceCell } from "./OwnListingPriceCell";
 import { SyncStateButton, stopEditorPointerPropagation } from "./TableControls";
 import { getOwnListingRowKey, type OwnListingEditForm } from "./editing";
 
@@ -211,44 +211,15 @@ export function OwnListingTableRow({
         )}
       </td>
 
-      <td className="px-2 py-1.5 text-right whitespace-nowrap">
-        {editing ? (
-          <input
-            type="number"
-            min="0"
-            step="100"
-            value={editForm.current_price}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              const nextForm = { ...editForm, current_price: isNaN(v) ? 0 : v };
-              onEditFormChange(nextForm);
-              onDebouncedPriceSave(nextForm);
-            }}
-            onBlur={() => onSave({ closeAfterSave: true })}
-            onClick={stopEditorPointerPropagation}
-            onMouseDown={stopEditorPointerPropagation}
-            onPointerDown={stopEditorPointerPropagation}
-            onKeyDown={onEditorKeyDown}
-            className="h-8 w-24 bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm text-right"
-          />
-        ) : (
-          <div>
-            <span className="text-green-400 font-medium">
-              {formatPrice(row.current_price)}
-            </span>
-            {getPriceWithVat(row.current_price, row.vat) != null && (
-              <div className="text-xs text-emerald-200/85">
-                {formatPrice(getPriceWithVat(row.current_price, row.vat))}
-              </div>
-            )}
-            {row.search_first_result_price != null && (
-              <div className="text-[11px] text-gray-400">
-                {formatPrice(row.search_first_result_price)}
-              </div>
-            )}
-          </div>
-        )}
-      </td>
+      <OwnListingPriceCell
+        editing={editing}
+        editForm={editForm}
+        row={row}
+        onDebouncedPriceSave={onDebouncedPriceSave}
+        onEditFormChange={onEditFormChange}
+        onEditorKeyDown={onEditorKeyDown}
+        onSave={onSave}
+      />
 
       <td className="px-2 py-1.5 text-center">
         <div className="flex items-center justify-center gap-1.5">
