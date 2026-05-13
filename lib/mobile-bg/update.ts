@@ -64,8 +64,7 @@ function getLatestEditSnapshot(
   `).get(backupId, mobileId) as EditSnapshotRow | undefined;
 }
 
-function getUpdateDir(dbPath: string, dealerSlug: string, backupId: number): string {
-  void dbPath;
+function getUpdateDir(dealerSlug: string, backupId: number): string {
   return path.join(SCRAPED_ROOT, dealerSlug, 'updates', String(backupId));
 }
 
@@ -234,7 +233,6 @@ export async function updateBackupOnMobileBg(
   db: Database.Database,
   dealer: DealerBackupConfig,
   backupId: number,
-  dbPath: string,
   options?: UpdateBackupOptions,
 ): Promise<{ mobileId: string }> {
   const log = options?.log ?? (() => {});
@@ -278,7 +276,7 @@ export async function updateBackupOnMobileBg(
 
   if (!editSnapshot?.listing_token || !editSnapshot.fields_json) {
     log('No saved edit snapshot found. Capturing one first…');
-    await captureEditFormSnapshot(db, dealer, backup.mobile_id, dbPath);
+    await captureEditFormSnapshot(db, dealer, backup.mobile_id);
     editSnapshot = getLatestEditSnapshot(db, backupId, backup.mobile_id);
   }
 
@@ -291,7 +289,7 @@ export async function updateBackupOnMobileBg(
   const fieldOverrides = buildBackupFieldOverrides(backup);
   const ownedSession = sharedSession ?? await createMobileBgUpdateSession(dealer, log);
   const page = ownedSession.page;
-  const updateDir = getUpdateDir(dbPath, dealer.slug, backupId);
+  const updateDir = getUpdateDir(dealer.slug, backupId);
   await fsp.mkdir(updateDir, { recursive: true });
   markSyncRunning(db, backup.id);
 

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     mobileUrl: '',
     mobileUser: dealer.mobile_user,
     mobilePassword: dealer.mobile_password,
-  }, mobileId, raw.name);
+  }, mobileId);
 
   return NextResponse.json(result);
 }

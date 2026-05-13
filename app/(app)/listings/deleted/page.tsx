@@ -177,8 +177,8 @@ export default async function DeletedListingsPage({
                     </td>
                     <td className="px-2 py-1 text-center"><KaparoBadge kaparo={row.kaparo} /></td>
                     <td className="px-3 py-1 text-right text-xs text-gray-300">{formatCount(row.views)}</td>
-                    <td className="w-20 px-2 py-1 text-right text-xs text-gray-400"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.last_edit).replace(/,\s+/, '\n')}</span></td>
-                    <td className="w-20 px-2 py-1 text-right text-xs text-red-300"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.deleted_at).replace(/,\s+/, '\n')}</span></td>
+                    <td className="w-20 px-2 py-1 text-right text-xs text-gray-400"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.last_edit)}</span></td>
+                    <td className="w-20 px-2 py-1 text-right text-xs text-red-300"><span className="inline-block whitespace-pre-line leading-tight">{formatDate(row.deleted_at)}</span></td>
                     <td className="px-2 py-1 text-center">{row.is_new ? <span className="rounded-full bg-emerald-800/70 px-2 py-0.5 text-[11px] text-emerald-200">new</span> : <span className="text-gray-600">—</span>}</td>
                     <td className="px-3 py-1 text-right text-gray-300">{row.reg_month ?? '—'}</td>
                     <td className="px-3 py-1 text-right text-gray-300">{row.reg_year ?? '—'}</td>

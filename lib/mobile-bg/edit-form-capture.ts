@@ -27,8 +27,7 @@ function normalizeMobileBgDateTime(value: string | null): string | null {
   return `${year}-${month}-${day}T${hour}:${minute}:00`;
 }
 
-function getSnapshotDir(dbPath: string, dealerSlug: string, mobileId: string): string {
-  void dbPath;
+function getSnapshotDir(dealerSlug: string, mobileId: string): string {
   return path.join(SCRAPED_ROOT, dealerSlug, mobileId, 'edit-form');
 }
 
@@ -59,7 +58,6 @@ export async function captureEditFormSnapshotWithPage(
   db: Database.Database,
   dealer: DealerLike,
   mobileId: string,
-  dbPath: string,
   page: Page,
   refs?: { listingId?: number | null; backupId?: number | null },
 ): Promise<{ snapshotId: number; screenshotPath: string | null; views: number | null; watching: number | null; adStatus: 'TOP' | 'VIP' | 'none' }> {
@@ -82,7 +80,7 @@ export async function captureEditFormSnapshotWithPage(
         LIMIT 1
       `).get(mobileId, dealer.id) as { id?: number } | undefined;
 
-  const snapshotDir = getSnapshotDir(dbPath, dealer.slug, mobileId);
+  const snapshotDir = getSnapshotDir(dealer.slug, mobileId);
   await fsp.mkdir(snapshotDir, { recursive: true });
 
   await page.goto('https://www.mobile.bg/pcgi/mobile.cgi?act=6&subact=4&actions=23', { waitUntil: 'domcontentloaded' });

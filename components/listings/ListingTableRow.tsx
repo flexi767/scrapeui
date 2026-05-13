@@ -129,7 +129,7 @@ export function ListingTableRow({ row, currentParams, statuses, basePath }: Prop
       {/* Last Edit */}
       <td className="w-20 px-2 py-1 text-right text-xs text-gray-400">
         <span className="inline-block whitespace-pre-line leading-tight">
-          {formatDate(row.last_edit).replace(/,\s+/, '\n')}
+          {formatDate(row.last_edit)}
         </span>
       </td>
 

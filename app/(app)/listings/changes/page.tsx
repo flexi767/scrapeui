@@ -242,7 +242,7 @@ export default async function ListingsChangesPage({
 
                     <td className="w-24 px-2 py-1 text-right text-xs text-gray-400">
                       <span className="inline-block whitespace-pre-line leading-tight">
-                        {formatDate(row.recorded_at).replace(/,\s+/, '\n')}
+                        {formatDate(row.recorded_at)}
                       </span>
                     </td>
                   </tr>

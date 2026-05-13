@@ -121,7 +121,6 @@ async function main() {
             mobilePassword: dealer.mobile_password,
           },
           row.backup_id,
-          raw.name,
           {
             log: (message) => emit({ type: 'log', level: 'info', backup_id: row.backup_id, message }),
             session: activeSession,

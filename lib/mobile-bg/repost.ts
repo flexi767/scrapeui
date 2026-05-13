@@ -47,8 +47,7 @@ interface BackupImageRow {
   local_path: string;
 }
 
-function getRepostDir(dbPath: string, dealerSlug: string, backupId: number): string {
-  void dbPath;
+function getRepostDir(dealerSlug: string, backupId: number): string {
   return path.join(SCRAPED_ROOT, dealerSlug, 'reposts', String(backupId));
 }
 
@@ -358,7 +357,6 @@ export async function repostBackupFromDb(
   db: Database.Database,
   dealer: DealerBackupConfig,
   backupId: number,
-  dbPath: string,
 ): Promise<{ jobId: number; targetMobileId: string }> {
   const backup = db.prepare(`
     SELECT
@@ -380,7 +378,7 @@ export async function repostBackupFromDb(
   `).get(backupId) as EditSnapshotRow | undefined;
 
   const jobId = createRepostJob(db, dealer.id, backupId, backup.listing_id ?? null, backup.mobile_id);
-  const repostDir = getRepostDir(dbPath, dealer.slug, backupId);
+  const repostDir = getRepostDir(dealer.slug, backupId);
   await fsp.mkdir(repostDir, { recursive: true });
 
   if (!backup.mobile_id) {

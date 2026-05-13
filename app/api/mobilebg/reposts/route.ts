@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       mobileUrl: '',
       mobileUser: dealer.mobile_user,
       mobilePassword: dealer.mobile_password,
-    }, Number(backupId), raw.name);
+    }, Number(backupId));
 
     return NextResponse.json(result);
   } catch (error) {

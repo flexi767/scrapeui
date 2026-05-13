@@ -10,7 +10,6 @@ export async function captureEditFormSnapshot(
   db: Database.Database,
   dealer: DealerBackupConfig,
   mobileId: string,
-  dbPath: string,
 ): Promise<{ snapshotId: number; screenshotPath: string | null }> {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ userAgent: USER_AGENT });
@@ -20,7 +19,7 @@ export async function captureEditFormSnapshot(
     if (!await loginMobileBg(page, dealer.mobileUser, dealer.mobilePassword)) {
       throw new Error(`Login failed for ${dealer.slug}`);
     }
-    return await captureEditFormSnapshotWithPage(db, dealer, mobileId, dbPath, page);
+    return await captureEditFormSnapshotWithPage(db, dealer, mobileId, page);
   } finally {
     await browser.close();
   }
