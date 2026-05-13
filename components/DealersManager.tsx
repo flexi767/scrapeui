@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import { AddDealerForm } from '@/components/dealers/AddDealerForm';
 import { DealersTable } from '@/components/dealers/DealersTable';
 import { createDealer, deleteDealer, patchDealer, testDealerLogins } from '@/components/dealers/api';
-import { type Dealer, type DealerCreateForm, type DealerEditForm, type DealerLoginResult, type TemplateName } from '@/components/dealers/types';
-import { hasHttpProtocol } from '@/components/dealers/utils';
+import { createEmptyDealerEditForm, createEmptyDealerForm, dealerToEditForm, validateDealerUrls } from '@/components/dealers/formUtils';
+import { type Dealer, type DealerCreateForm, type DealerEditForm, type DealerLoginResult } from '@/components/dealers/types';
 
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
@@ -22,15 +22,8 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     setDealers(prev => fn(prev));
   }
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<DealerEditForm>({
-    name: '', slug: '', mobile_url: '', own: false, priority: 0,
-    mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
-    public_enabled: false, template: 'bold' as TemplateName, public_domain: '',
-  });
-  const [form, setForm] = useState<DealerCreateForm>({
-    name: '', slug: '', mobile_url: '', own: false, priority: 0,
-    mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '',
-  });
+  const [editForm, setEditForm] = useState<DealerEditForm>(() => createEmptyDealerEditForm());
+  const [form, setForm] = useState<DealerCreateForm>(() => createEmptyDealerForm());
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,12 +52,9 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
     e.preventDefault();
     setError('');
 
-    if (!hasHttpProtocol(form.mobile_url)) {
-      showValidationError('Mobile URL must start with http:// or https://');
-      return;
-    }
-    if (form.cars_url.trim() && !hasHttpProtocol(form.cars_url)) {
-      showValidationError('Cars URL must start with http:// or https://');
+    const validationError = validateDealerUrls(form);
+    if (validationError) {
+      showValidationError(validationError);
       return;
     }
 
@@ -73,7 +63,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       const result = await createDealer(form);
       if (!result.ok) { setError(result.error); return; }
       updateDealers(d => [...d, result.data]);
-      setForm({ name: '', slug: '', mobile_url: '', own: false, priority: 0, mobile_user: '', mobile_password: '', cars_url: '', cars_user: '', cars_password: '' });
+      setForm(createEmptyDealerForm());
     } finally { setAdding(false); }
   }
 
@@ -102,23 +92,15 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
   function startEdit(d: Dealer) {
     setError('');
     setEditingId(d.id);
-    setEditForm({
-      name: d.name, slug: d.slug, mobile_url: d.mobile_url || '', own: Boolean(d.own), priority: d.priority || 0,
-      mobile_user: d.mobile_user || '', mobile_password: d.mobile_password || '',
-      cars_url: d.cars_url || '', cars_user: d.cars_user || '', cars_password: d.cars_password || '',
-      public_enabled: d.public_enabled === 1, template: d.template, public_domain: d.public_domain || '',
-    });
+    setEditForm(dealerToEditForm(d));
   }
 
   async function saveEdit(id: number) {
     setError('');
 
-    if (!hasHttpProtocol(editForm.mobile_url)) {
-      showValidationError('Mobile URL must start with http:// or https://');
-      return;
-    }
-    if (editForm.cars_url.trim() && !hasHttpProtocol(editForm.cars_url)) {
-      showValidationError('Cars URL must start with http:// or https://');
+    const validationError = validateDealerUrls(editForm);
+    if (validationError) {
+      showValidationError(validationError);
       return;
     }
 
