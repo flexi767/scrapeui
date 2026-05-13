@@ -1,10 +1,8 @@
 "use client";
 
 import { type KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
-import { InstagramIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
-import { TikTokIcon } from "@/components/tiktok/TikTokIcon";
 import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
@@ -13,11 +11,8 @@ import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
 import { formatCount, formatDate, formatPrice } from "@/lib/utils";
 import { getPriceWithVat } from "@/lib/vat";
-import {
-  FbIcon,
-  SyncStateButton,
-  stopEditorPointerPropagation,
-} from "./TableControls";
+import { OwnListingPublishButtons } from "./OwnListingPublishButtons";
+import { SyncStateButton, stopEditorPointerPropagation } from "./TableControls";
 import { getOwnListingRowKey, type OwnListingEditForm } from "./editing";
 
 interface OwnListingTableRowProps {
@@ -57,10 +52,10 @@ export function OwnListingTableRow({
   onSync,
   onPublishToFacebook,
   onEditorKeyDown,
-}: OwnListingTableRowProps) {  const router = useRouter();  const thumbSrc = getListingThumbSrc(row);
+}: OwnListingTableRowProps) {
+  const thumbSrc = getListingThumbSrc(row);
   const thumbAlt = getListingThumbAlt(row);
-  const kmFormatted =
-    formatCount(row.mileage);
+  const kmFormatted = formatCount(row.mileage);
 
   return (
     <tr
@@ -78,42 +73,11 @@ export function OwnListingTableRow({
       <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-2">
           <div className="flex flex-row items-start gap-1">
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPublishToFacebook(row);
-                }}
-                disabled={publishingToFb}
-                title="Publish to Facebook Marketplace"
-                aria-label="Publish to Facebook Marketplace"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-600/50 text-[#1877F2] hover:bg-blue-900/30 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FbIcon className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/instagram/publish/${row.backup_id}`);
-                }}
-                title="Publish to Instagram"
-                aria-label="Publish to Instagram"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-pink-500/50 text-pink-300 hover:bg-pink-950/40"
-              >
-                <InstagramIcon className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/tiktok/publish/${row.backup_id}`);
-                }}
-                title="Create TikTok video"
-                aria-label="Create TikTok video"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 text-cyan-200 hover:bg-cyan-950/40"
-              >
-                <TikTokIcon className="h-3 w-3" />
-              </button>
-            </div>
+            <OwnListingPublishButtons
+              publishingToFb={publishingToFb}
+              row={row}
+              onPublishToFacebook={onPublishToFacebook}
+            />
             <div className="flex flex-col items-center gap-1">
               <SyncStateButton
                 row={row}
