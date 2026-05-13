@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { raw } from '@/db/client';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { DB_PATH } from '@/lib/storage-paths';
@@ -13,14 +12,13 @@ interface TestResult {
 
 function runTest(slug: string): Promise<Record<string, TestResult>> {
   return new Promise((resolve, reject) => {
-    const routeDir = path.dirname(fileURLToPath(import.meta.url));
-    const scriptPath = path.resolve(routeDir, '../../../../scraper/scripts/test-dealer-logins.js');
-    const dbPath = DB_PATH;
+    const tsxPath = path.join(process.cwd(), 'node_modules/.bin/tsx');
+    const scriptPath = path.join(process.cwd(), 'scraper/scripts/test-dealer-logins.ts');
 
     const child = spawn(
-      process.execPath,
+      tsxPath,
       [scriptPath, slug],
-      { env: { ...process.env, SCRAPEUI_DB_PATH: dbPath } },
+      { env: { ...process.env, DB_PATH } },
     );
 
     let stdout = '';
