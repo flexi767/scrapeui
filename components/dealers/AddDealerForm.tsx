@@ -1,4 +1,5 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import { DealerPlatformFields } from './DealerPlatformFields';
 import { DealerTextInput } from './DealerTextInput';
 import type { DealerCreateForm } from './types';
 import { slugifyDealerName } from './utils';
@@ -65,36 +66,43 @@ export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDea
         {form.own && (
           <>
             <div className="flex flex-col gap-2">
-              <DealerTextInput
-                placeholder="mobile user"
-                value={form.mobile_user}
-                onValueChange={(value) =>
+              <DealerPlatformFields
+                url={form.mobile_url}
+                urlPlaceholder="https://dealer.mobile.bg"
+                user={form.mobile_user}
+                userPlaceholder="mobile user"
+                password={form.mobile_password}
+                passwordPlaceholder="mobile password"
+                showCredentials
+                showUrl={false}
+                onUrlChange={(value) =>
+                  setForm((current) => ({ ...current, mobile_url: value }))
+                }
+                onUserChange={(value) =>
                   setForm((current) => ({ ...current, mobile_user: value }))
                 }
-              />
-              <DealerTextInput
-                placeholder="mobile password"
-                value={form.mobile_password}
-                onValueChange={(value) =>
-                  setForm((current) => ({
-                    ...current,
-                    mobile_password: value,
-                  }))
+                onPasswordChange={(value) =>
+                  setForm((current) => ({ ...current, mobile_password: value }))
                 }
               />
             </div>
             <div className="flex flex-col gap-2">
-              <DealerTextInput
-                placeholder="cars user"
-                value={form.cars_user}
-                onValueChange={(value) =>
+              <DealerPlatformFields
+                url={form.cars_url}
+                urlPlaceholder="https://www.cars.bg/company/dealer"
+                user={form.cars_user}
+                userPlaceholder="cars user"
+                password={form.cars_password}
+                passwordPlaceholder="cars password"
+                showCredentials
+                showUrl={false}
+                onUrlChange={(value) =>
+                  setForm((current) => ({ ...current, cars_url: value }))
+                }
+                onUserChange={(value) =>
                   setForm((current) => ({ ...current, cars_user: value }))
                 }
-              />
-              <DealerTextInput
-                placeholder="cars password"
-                value={form.cars_password}
-                onValueChange={(value) =>
+                onPasswordChange={(value) =>
                   setForm((current) => ({ ...current, cars_password: value }))
                 }
               />
