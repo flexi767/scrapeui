@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
-
-interface LabelOption { id: number; name: string; color: string; }
+import type { LabelRow } from '@/lib/queries';
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -18,7 +17,7 @@ export default function NewArticlePage() {
   const [selectedListings, setSelectedListings] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const [labels, setLabels] = useState<LabelOption[]>([]);
+  const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
     fetch('/api/labels').then(r => r.json()).then(setLabels);

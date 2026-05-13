@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
-
-interface LabelOption { id: number; name: string; color: string; }
+import type { LabelRow } from '@/lib/queries';
 
 export default function NewExpensePage() {
   const router = useRouter();
@@ -23,7 +22,7 @@ export default function NewExpensePage() {
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const [labels, setLabels] = useState<LabelOption[]>([]);
+  const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
     fetch('/api/labels').then(r => r.json()).then(setLabels);

@@ -7,9 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
-
-interface UserOption { id: number; name: string; }
-interface LabelOption { id: number; name: string; color: string; }
+import type { LabelRow, UserRow } from '@/lib/queries';
 
 export default function EditTaskPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -25,8 +23,8 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [labels, setLabels] = useState<LabelOption[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
     Promise.all([
