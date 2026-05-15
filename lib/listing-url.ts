@@ -1,3 +1,47 @@
+export interface ListingSearchParams {
+  make?: string;
+  model?: string;
+  dealer?: string | string[];
+  year?: string | string[];
+  category?: string | string[];
+  status?: string | string[];
+  vat?: string | string[];
+  fuel?: string | string[];
+  extra?: string | string[];
+  kaparo?: string;
+  p_min?: string;
+  p_max?: string;
+  pc_min?: string;
+  pc_max?: string;
+  sort?: string;
+  order?: string;
+  search?: string;
+  page?: string;
+}
+
+export function parseListingSearchParams(sp: ListingSearchParams, defaultSort = 'last_edit') {
+  return {
+    make: sp.make ?? '',
+    model: sp.model ?? '',
+    dealerSlugs: toParamArray(sp.dealer),
+    years: toParamArray(sp.year),
+    categories: toParamArray(sp.category),
+    statuses: toParamArray(sp.status),
+    vatValues: toParamArray(sp.vat),
+    fuels: toParamArray(sp.fuel),
+    extras: toParamArray(sp.extra),
+    priceMin: parseOptionalNum(sp.p_min),
+    priceMax: parseOptionalNum(sp.p_max),
+    priceChangeMin: parseOptionalNum(sp.pc_min),
+    priceChangeMax: parseOptionalNum(sp.pc_max),
+    kaparo: sp.kaparo ?? '',
+    sort: sp.sort ?? defaultSort,
+    order: sp.order ?? 'desc',
+    search: sp.search ?? '',
+    page: parseInt(sp.page ?? '1', 10),
+  };
+}
+
 export const LISTING_EXTRA_OPTIONS = [
   "4x4",
   "С регистрация",

@@ -47,6 +47,38 @@ interface PosterDirection {
   shotCount: number;
 }
 
+function hashText(text: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: number) {
+  let value = seed >>> 0;
+  return () => {
+    value += 0x6d2b79f5;
+    let next = value;
+    next = Math.imul(next ^ (next >>> 15), next | 1);
+    next ^= next + Math.imul(next ^ (next >>> 7), next | 61);
+    return ((next ^ (next >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pickImages<T>(items: T[], seed: number) {
+  const random = seededRandom(seed);
+  return [...items]
+    .map((item) => ({ item, sort: random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ item }) => item);
+}
+
+function jitter(random: () => number, amount: number) {
+  return (random() - 0.5) * amount;
+}
+
 function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -106,7 +138,7 @@ export function buildDefaultPosterPrompt(listing: InstagramListingPayload) {
   const description =
     listing.description ||
     "Exceptional performance and luxury in one stunning package.";
-  const mainColor = "silver"; // You could make this dynamic based on listing.color if available
+  const mainColor = listing.color || "silver";
 
   return `A hyperrealistic vertical poster showcasing a premium vehicle. The subject is defined by ${carBrand} and its model ${carModel}. At the top of the composition, a dynamic top-down render of this specific car appears in motion under cinematic lighting. A large architectural headline spelling the brand overlaps the upper half of the car by 30–50%, cleanly integrated into the layout. Above the title, aligned left, the model name appears in smaller uppercase text.
 
@@ -120,7 +152,7 @@ function parsePosterPrompt(
   fallbackLayout: PosterDirection["layout"],
 ): PosterDirection {
   const p = prompt.toLowerCase();
-  const sporty = /\b(sport|dynamic|aggressive|bold|performance|fast)\b/.test(p);
+  const sporty = /\b(sport|aggressive|bold|performance|fast)\b/.test(p);
   const luxury = /\b(luxury|premium|elegant|exclusive|high.?end)\b/.test(p);
   const clean = /\b(clean|minimal|simple|subtle|no clutter|declutter)\b/.test(
     p,
@@ -128,6 +160,7 @@ function parsePosterPrompt(
   const bright = /\b(bright|white|light|daylight|studio)\b/.test(p);
   const warm = /\b(warm|gold|bronze|champagne)\b/.test(p);
   const blue = /\b(blue|tech|electric|modern)\b/.test(p);
+  const silver = /\b(silver|chrome|gray|grey|metallic|neutral)\b/.test(p);
   const manyShots =
     /\b(three shot|triple|multiple|gallery|collage|grid)\b/.test(p);
   const singleShot = /\b(single|one shot|hero only)\b/.test(p);
@@ -146,20 +179,26 @@ function parsePosterPrompt(
       ? ["#191714", "#4a3b28"]
       : blue
         ? ["#111820", "#244052"]
-        : sporty
-          ? ["#151515", "#3a1f24"]
-          : ["#14181f", "#26313a"];
+        : silver
+          ? ["#101318", "#4b5563"]
+          : sporty
+            ? ["#151515", "#3a1f24"]
+            : luxury
+              ? ["#14120f", "#2f2a20"]
+              : ["#14181f", "#26313a"];
 
   return {
     accent: warm
       ? "#f1c27d"
       : blue
         ? "#7dd3fc"
-        : sporty
-          ? "#fb7185"
-          : luxury
-            ? "#d7b56d"
-            : "#f472b6",
+        : silver
+          ? "#d1d5db"
+          : sporty
+            ? "#fb7185"
+            : luxury
+              ? "#d7b56d"
+              : "#f472b6",
     background,
     compact: clean,
     includeExtras: !/\b(no extras|hide extras|without extras)\b/.test(p),
@@ -180,6 +219,7 @@ export function makePoster(
   images: HTMLImageElement[],
   variant: "hero" | "grid" | "editorial",
   prompt: string,
+  seed = 0,
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = POSTER_SIZE;
@@ -189,6 +229,8 @@ export function makePoster(
 
   const direction = parsePosterPrompt(prompt, variant);
   const layout = direction.layout === variant ? variant : direction.layout;
+  const random = seededRandom(hashText(`${prompt}:${variant}:${seed}`));
+  const orderedImages = seed ? pickImages(images, hashText(`${variant}:${seed}`)) : images;
   const title =
     [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
   const subtitle = listing.title.replace(title, "").trim();
@@ -205,7 +247,7 @@ export function makePoster(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, POSTER_SIZE, POSTER_SIZE);
 
-  const primary = images[0];
+  const primary = orderedImages[0] ?? images[0];
   if (layout === "grid") {
     const slots = [
       [48, 48, 640, 610],
@@ -214,12 +256,22 @@ export function makePoster(
     ] as const;
     slots.forEach(([x, y, w, h], index) => {
       if (index >= direction.shotCount) return;
-      const image = images[index] ?? primary;
+      const image = orderedImages[index] ?? primary;
       if (!image) return;
       ctx.save();
       roundRect(ctx, x, y, w, h, 32);
       ctx.clip();
-      drawCoverImage(ctx, image, x, y, w, h);
+      drawCoverImage(
+        ctx,
+        image,
+        x,
+        y,
+        w,
+        h,
+        1 + random() * 0.08,
+        jitter(random, 0.28),
+        jitter(random, 0.18),
+      );
       ctx.restore();
     });
     ctx.fillStyle = "rgba(0,0,0,0.48)";
@@ -229,20 +281,40 @@ export function makePoster(
       ctx.save();
       roundRect(ctx, 48, 48, 984, layout === "hero" ? 640 : 570, 36);
       ctx.clip();
-      drawCoverImage(ctx, primary, 48, 48, 984, layout === "hero" ? 640 : 570);
+      drawCoverImage(
+        ctx,
+        primary,
+        48,
+        48,
+        984,
+        layout === "hero" ? 640 : 570,
+        1 + random() * 0.1,
+        jitter(random, 0.32),
+        jitter(random, 0.2),
+      );
       ctx.restore();
     }
     if (layout === "editorial" && direction.shotCount > 1) {
       for (
         let index = 1;
-        index < Math.min(images.length, direction.shotCount + 1);
+        index < Math.min(orderedImages.length, direction.shotCount + 1);
         index += 1
       ) {
         const x = 64 + (index - 1) * 318;
         ctx.save();
         roundRect(ctx, x, 640, 288, 168, 22);
         ctx.clip();
-        drawCoverImage(ctx, images[index], x, 640, 288, 168);
+        drawCoverImage(
+          ctx,
+          orderedImages[index],
+          x,
+          640,
+          288,
+          168,
+          1 + random() * 0.06,
+          jitter(random, 0.24),
+          jitter(random, 0.16),
+        );
         ctx.restore();
       }
     }

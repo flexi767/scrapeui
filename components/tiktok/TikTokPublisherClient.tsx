@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CopyIcon, DownloadIcon, PlayIcon, RefreshCwIcon, SendIcon } from "lucide-react";
+import {
+  CopyIcon,
+  DownloadIcon,
+  EyeIcon,
+  EyeOffIcon,
+  GripVerticalIcon,
+  PlayIcon,
+  RefreshCwIcon,
+  SendIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { TikTokIcon } from "@/components/tiktok/TikTokIcon";
 import {
@@ -18,23 +27,81 @@ interface Props {
   backupId: number;
 }
 
+type TikTokPhoto = TikTokVideoListingPayload["photos"][number] & {
+  usable: boolean;
+};
+
 const CAPTION_STORAGE_PREFIX = "scrapeui:tiktok-caption:";
+const PHOTO_STATE_STORAGE_PREFIX = "scrapeui:tiktok-photo-state:";
+
+function applySavedPhotoState(
+  photos: TikTokVideoListingPayload["photos"],
+  rawState: string | null,
+): TikTokPhoto[] {
+  let savedOrder: number[] = [];
+  let savedUnusable = new Set<number>();
+
+  if (rawState) {
+    try {
+      const parsed = JSON.parse(rawState) as { order?: unknown; unusable?: unknown };
+      if (Array.isArray(parsed.order)) {
+        savedOrder = parsed.order.filter((id): id is number => Number.isFinite(id));
+      }
+      if (Array.isArray(parsed.unusable)) {
+        savedUnusable = new Set(parsed.unusable.filter((id): id is number => Number.isFinite(id)));
+      }
+    } catch {
+      savedOrder = [];
+      savedUnusable = new Set<number>();
+    }
+  }
+
+  const byId = new Map(photos.map((photo) => [photo.id, photo]));
+  const ordered = [
+    ...savedOrder.map((id) => byId.get(id)).filter((photo): photo is TikTokVideoListingPayload["photos"][number] => Boolean(photo)),
+    ...photos.filter((photo) => !savedOrder.includes(photo.id)),
+  ];
+
+  return ordered.map((photo) => ({
+    ...photo,
+    usable: !savedUnusable.has(photo.id),
+  }));
+}
+
+function serializePhotoState(photos: TikTokPhoto[]) {
+  return JSON.stringify({
+    order: photos.map((photo) => photo.id),
+    unusable: photos.filter((photo) => !photo.usable).map((photo) => photo.id),
+  });
+}
 
 export function TikTokPublisherClient({ backupId }: Props) {
   const [listing, setListing] = useState<TikTokVideoListingPayload | null>(null);
+  const [photos, setPhotos] = useState<TikTokPhoto[]>([]);
   const [caption, setCaption] = useState("");
   const [loading, setLoading] = useState(true);
   const [rendering, setRendering] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [video, setVideo] = useState<RenderedTikTokVideo | null>(null);
+  const [draggedPhotoId, setDraggedPhotoId] = useState<number | null>(null);
+  const [dragOverPhotoId, setDragOverPhotoId] = useState<number | null>(null);
   const autoRenderedRef = useRef(false);
   const renderControllerRef = useRef<AbortController | null>(null);
   const videoUrlRef = useRef<string | null>(null);
 
+  const usablePhotos = useMemo(() => photos.filter((photo) => photo.usable), [photos]);
+  const videoListing = useMemo<TikTokVideoListingPayload | null>(() => {
+    if (!listing) return null;
+    return {
+      ...listing,
+      photos: usablePhotos,
+    };
+  }, [listing, usablePhotos]);
+
   const canRender = useMemo(
-    () => Boolean(listing && listing.photos.length > 0 && !rendering),
-    [listing, rendering],
+    () => Boolean(videoListing && videoListing.photos.length > 0 && !rendering),
+    [rendering, videoListing],
   );
 
   const replaceVideo = useCallback((nextVideo: RenderedTikTokVideo | null) => {
@@ -58,6 +125,12 @@ export function TikTokPublisherClient({ backupId }: Props) {
         if (cancelled) return;
         setListing(data);
         autoRenderedRef.current = false;
+        setPhotos(
+          applySavedPhotoState(
+            data.photos,
+            window.localStorage.getItem(`${PHOTO_STATE_STORAGE_PREFIX}${data.backupId}`),
+          ),
+        );
         const savedCaption = window.localStorage.getItem(`${CAPTION_STORAGE_PREFIX}${data.backupId}`);
         setCaption(savedCaption || buildDefaultTikTokCaption(data));
       })
@@ -78,8 +151,72 @@ export function TikTokPublisherClient({ backupId }: Props) {
     };
   }, []);
 
+  function updatePhotos(nextPhotos: TikTokPhoto[]) {
+    if (!listing) return;
+    setPhotos(nextPhotos);
+    window.localStorage.setItem(`${PHOTO_STATE_STORAGE_PREFIX}${listing.backupId}`, serializePhotoState(nextPhotos));
+    renderControllerRef.current?.abort();
+    replaceVideo(null);
+    setPreviewUrl("");
+    autoRenderedRef.current = true;
+  }
+
+  function reorderPhotos(sourceId: number, targetId: number) {
+    if (sourceId === targetId || rendering) return;
+    const sourceIndex = photos.findIndex((photo) => photo.id === sourceId);
+    const targetIndex = photos.findIndex((photo) => photo.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const next = [...photos];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    updatePhotos(next);
+  }
+
+  function togglePhotoUsable(photoId: number) {
+    updatePhotos(
+      photos.map((photo) =>
+        photo.id === photoId
+          ? {
+              ...photo,
+              usable: !photo.usable,
+            }
+          : photo,
+      ),
+    );
+  }
+
+  function handleDragStart(event: React.DragEvent<HTMLDivElement>, photoId: number) {
+    setDraggedPhotoId(photoId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(photoId));
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>, photoId: number) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverPhotoId(photoId);
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>, targetPhotoId: number) {
+    event.preventDefault();
+    const sourcePhotoId = Number(event.dataTransfer.getData("text/plain")) || draggedPhotoId;
+    setDraggedPhotoId(null);
+    setDragOverPhotoId(null);
+    if (sourcePhotoId) reorderPhotos(sourcePhotoId, targetPhotoId);
+  }
+
+  function handleDragEnd() {
+    setDraggedPhotoId(null);
+    setDragOverPhotoId(null);
+  }
+
   const generateVideo = useCallback(async () => {
-    if (!listing || rendering) return;
+    if (!listing || !videoListing || rendering) return;
+    if (videoListing.photos.length === 0) {
+      toast.error("Mark at least one image as usable before generating the video.");
+      return;
+    }
     window.localStorage.setItem(`${CAPTION_STORAGE_PREFIX}${listing.backupId}`, caption);
     renderControllerRef.current?.abort();
     const controller = new AbortController();
@@ -89,7 +226,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
 
     try {
       const nextVideo = await renderTikTokVideo({
-        listing,
+        listing: videoListing,
         caption,
         signal: controller.signal,
         onPreview: setPreviewUrl,
@@ -108,13 +245,13 @@ export function TikTokPublisherClient({ backupId }: Props) {
         setRendering(false);
       }
     }
-  }, [caption, listing, rendering, replaceVideo]);
+  }, [caption, listing, rendering, replaceVideo, videoListing]);
 
   useEffect(() => {
-    if (!listing || !caption || autoRenderedRef.current) return;
+    if (!videoListing || !caption || autoRenderedRef.current) return;
     autoRenderedRef.current = true;
     void generateVideo();
-  }, [caption, generateVideo, listing]);
+  }, [caption, generateVideo, videoListing]);
 
   async function copyCaption() {
     await navigator.clipboard.writeText(caption);
@@ -235,19 +372,51 @@ export function TikTokPublisherClient({ backupId }: Props) {
 
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Source photos</h2>
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-4">
-              {listing.photos.slice(0, 8).map((photo, index) => (
-                <a
+            <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
+              {photos.map((photo, index) => (
+                <div
                   key={photo.id}
-                  href={photo.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="overflow-hidden rounded-lg border border-gray-800 bg-gray-900 hover:border-gray-600"
+                  data-photo-id={photo.id}
+                  draggable={!rendering}
+                  onDragStart={(event) => handleDragStart(event, photo.id)}
+                  onDragOver={(event) => handleDragOver(event, photo.id)}
+                  onDragLeave={() => setDragOverPhotoId(null)}
+                  onDrop={(event) => handleDrop(event, photo.id)}
+                  onDragEnd={handleDragEnd}
+                  className={`group overflow-hidden rounded-lg border bg-gray-900 transition ${
+                    dragOverPhotoId === photo.id && draggedPhotoId !== photo.id
+                      ? "border-cyan-300 ring-2 ring-cyan-400/30"
+                      : photo.usable
+                        ? "border-gray-800 hover:border-gray-600"
+                        : "border-red-500/40 opacity-55"
+                  } ${draggedPhotoId === photo.id ? "cursor-grabbing opacity-60" : "cursor-grab"}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt={`Source photo ${index + 1}`} className="aspect-[9/12] w-full object-cover" />
-                  <div className="px-2 py-1 text-center text-xs tabular-nums text-gray-300">{index + 1}</div>
-                </a>
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={`Source photo ${index + 1}`}
+                      className={`aspect-[9/12] w-full object-cover ${photo.usable ? "" : "grayscale"}`}
+                    />
+                    <div className="absolute left-1 top-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-950/75 px-1.5 text-xs tabular-nums text-white">
+                      {index + 1}
+                    </div>
+                    <GripVerticalIcon className="absolute right-1 top-1 h-5 w-5 rounded-full bg-gray-950/70 p-0.5 text-gray-300" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => togglePhotoUsable(photo.id)}
+                    disabled={rendering}
+                    className={`flex h-8 w-full items-center justify-center gap-1.5 px-2 text-xs transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      photo.usable
+                        ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                        : "bg-red-950/40 text-red-200 hover:bg-red-900/50"
+                    }`}
+                  >
+                    {photo.usable ? <EyeIcon className="h-3.5 w-3.5" /> : <EyeOffIcon className="h-3.5 w-3.5" />}
+                    {photo.usable ? "Use" : "Skip"}
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -270,7 +439,9 @@ export function TikTokPublisherClient({ backupId }: Props) {
               </div>
               <div className="rounded-md bg-gray-800 px-3 py-2">
                 <div className="text-xs text-gray-500">Photos</div>
-                <div className="text-gray-100">{listing.photos.length}</div>
+                <div data-testid="tiktok-usable-photo-count" className="text-gray-100">
+                  {usablePhotos.length}/{photos.length}
+                </div>
               </div>
               <div className="rounded-md bg-gray-800 px-3 py-2">
                 <div className="text-xs text-gray-500">Price</div>

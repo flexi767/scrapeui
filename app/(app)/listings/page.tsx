@@ -7,58 +7,22 @@ import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYear
 import {
   buildListingParams,
   LISTING_EXTRA_OPTIONS,
-  parseOptionalNum,
-  toParamArray,
+  ListingSearchParams,
+  parseListingSearchParams,
 } from '@/lib/listing-url';
-
-interface SearchParams {
-  make?: string;
-  model?: string;
-  dealer?: string | string[];
-  year?: string | string[];
-  category?: string | string[];
-  status?: string | string[];
-  vat?: string | string[];
-  fuel?: string | string[];
-  extra?: string | string[];
-  kaparo?: string;
-  p_min?: string;
-  p_max?: string;
-  pc_min?: string;
-  pc_max?: string;
-  sort?: string;
-  order?: string;
-  search?: string;
-  page?: string;
-}
 
 const BASE_PATH = '/listings';
 
 export default async function ListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<ListingSearchParams>;
 }) {
   const sp = await searchParams;
-
-  const make = sp.make ?? '';
-  const model = sp.model ?? '';
-  const dealerSlugs = toParamArray(sp.dealer);
-  const years = toParamArray(sp.year);
-  const categories = toParamArray(sp.category);
-  const statuses = toParamArray(sp.status);
-  const vatValues = toParamArray(sp.vat);
-  const fuels = toParamArray(sp.fuel);
-  const extras = toParamArray(sp.extra);
-  const priceMin = parseOptionalNum(sp.p_min);
-  const priceMax = parseOptionalNum(sp.p_max);
-  const priceChangeMin = parseOptionalNum(sp.pc_min);
-  const priceChangeMax = parseOptionalNum(sp.pc_max);
-  const kaparo = sp.kaparo ?? '';
-  const sort = sp.sort ?? 'price';
-  const order = sp.order ?? 'desc';
-  const search = sp.search ?? '';
-  const page = parseInt(sp.page ?? '1', 10);
+  const {
+    make, model, dealerSlugs, years, categories, statuses, vatValues, fuels, extras,
+    priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page,
+  } = parseListingSearchParams(sp, 'price');
 
   const { data: rows, total } = getListings({
     make, model, dealerSlugs, years, categories, statuses, vatValues, fuels, extras,

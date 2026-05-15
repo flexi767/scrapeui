@@ -74,9 +74,9 @@ export function InstagramPublisherClient({ backupId }: Props) {
       const loaded = await Promise.all(listing.photos.slice(0, 5).map((photo) => loadImage(photo.url)));
       if (canvasSeedRef.current !== seed) return;
       setVariants([
-        { id: "hero", name: "Hero poster", dataUrl: makePoster(listing, loaded, "hero", prompt) },
-        { id: "grid", name: "Triple shot", dataUrl: makePoster(listing, loaded, "grid", prompt) },
-        { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt) },
+        { id: "hero", name: "Hero poster", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
+        { id: "grid", name: "Triple shot", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
+        { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
       ]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not generate posters");
