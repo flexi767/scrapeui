@@ -3,6 +3,7 @@ import { raw } from '@/db/client';
 import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { updateBackupOnMobileBg } from '@/lib/mobile-bg/update';
 import { getDealerBySlug } from '@/lib/queries';
+import { errorMessage } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +24,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Sync failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error, 'Sync failed') }, { status: 500 });
   }
 }

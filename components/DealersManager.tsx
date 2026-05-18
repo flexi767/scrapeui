@@ -7,6 +7,7 @@ import { DealersTable } from '@/components/dealers/DealersTable';
 import { createDealer, deleteDealer, patchDealer, testDealerLogins } from '@/components/dealers/api';
 import { createEmptyDealerEditForm, createEmptyDealerForm, dealerToEditForm, validateDealerUrls } from '@/components/dealers/formUtils';
 import { type Dealer, type DealerCreateForm, type DealerEditForm, type DealerLoginResult } from '@/components/dealers/types';
+import { errorMessage } from '@/lib/utils';
 
 export default function DealersManager({ initialDealers, onDealersChange }: { initialDealers: Dealer[]; onDealersChange?: (dealers: Dealer[]) => void }) {
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
@@ -37,7 +38,7 @@ export default function DealersManager({ initialDealers, onDealersChange }: { in
       const data = await testDealerLogins(id);
       setLoginResults(prev => ({ ...prev, ...data }));
     } catch (err) {
-      setLoginResults(prev => ({ ...prev, [id]: { error: (err as Error).message } }));
+      setLoginResults(prev => ({ ...prev, [id]: { error: errorMessage(err, 'Login test failed') } }));
     } finally {
       setLoginRunning(prev => { const next = new Set(prev); next.delete(id); return next; });
     }

@@ -4,6 +4,7 @@ import path from 'path';
 import { raw } from '@/db/client';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { DB_PATH } from '@/lib/storage-paths';
+import { errorMessage } from '@/lib/utils';
 
 interface TestResult {
   ok: boolean;
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       try {
         results[d.id] = await runTest(d.slug);
       } catch (err) {
-        results[d.id] = { error: (err as Error).message };
+        results[d.id] = { error: errorMessage(err, 'Login test failed') };
       }
     }),
   );
