@@ -6,7 +6,7 @@
  */
 
 import { openDb } from "@/scraper/lib/runner";
-import { buildMarketplaceListingPayload } from "@/lib/facebook-marketplace/listing-payload";
+import { buildMarketplaceListingPayloads } from "@/lib/facebook-marketplace/listing-payload";
 import { postToFacebookMarketplace } from "../../facebook-marketplace";
 
 const args = process.argv.slice(2);
@@ -25,7 +25,7 @@ if (isNaN(backupId)) {
 async function main() {
   const db = openDb();
 
-  const listing = buildMarketplaceListingPayload(db, backupId, { skipPhotos });
+  const listing = buildMarketplaceListingPayloads(db, [backupId], { skipPhotos })[0] ?? null;
   if (!listing) {
     console.error(`No backup found with id ${backupId}`);
     db.close();

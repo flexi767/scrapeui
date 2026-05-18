@@ -114,20 +114,6 @@ function parseLocation(fieldsJson: string | null | undefined): string | undefine
   }
 }
 
-function getLocationFieldsJson(db: Database.Database, backupId: number): string | undefined {
-  const snapshot = db
-    .prepare(
-      `SELECT fields_json
-       FROM mobilebg_edit_form_snapshots
-       WHERE backup_id = ?
-       ORDER BY id DESC
-       LIMIT 1`,
-    )
-    .get(backupId) as { fields_json: string } | undefined;
-
-  return snapshot?.fields_json;
-}
-
 function buildPayloadFromRows({
   backupId,
   backup,
@@ -171,50 +157,6 @@ function buildPayloadFromRows({
     photos: options.skipPhotos ? [] : images.map((image) => image.local_path).filter(Boolean),
     photoUrls,
   };
-}
-
-export function buildMarketplaceListingPayload(
-  db: Database.Database,
-  backupId: number,
-  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean } = {},
-): MarketplaceListingPayload | null {
-  const backup = db
-    .prepare(
-      `SELECT
-         b.title,
-         b.price_amount,
-         b.description,
-         b.make,
-         b.model,
-         b.year,
-         b.mileage,
-         b.fuel,
-         b.color,
-         b.transmission,
-         b.category
-       FROM mobilebg_backups b
-       WHERE b.id = ?`,
-    )
-    .get(backupId) as BackupRow | undefined;
-
-  if (!backup) return null;
-
-  const images = db
-    .prepare(
-      `SELECT id, local_path
-       FROM mobilebg_backup_images
-       WHERE backup_id = ?
-       ORDER BY sort_order ASC, id ASC`,
-    )
-    .all(backupId) as BackupImageRow[];
-
-  return buildPayloadFromRows({
-    backupId,
-    backup,
-    images,
-    fieldsJson: getLocationFieldsJson(db, backupId),
-    options,
-  });
 }
 
 export function buildMarketplaceListingPayloads(
