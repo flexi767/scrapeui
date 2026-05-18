@@ -1,7 +1,9 @@
+import { formatMileage, formatPrice } from "@/lib/utils";
+
 export function formatListingPrice(price?: number) {
-  return price == null ? "-" : `€${price.toLocaleString("en-US")}`;
+  return price == null ? "-" : formatPrice(price);
 }
 
 export function formatListingMileage(mileage?: number) {
-  return mileage == null ? "-" : `${mileage.toLocaleString("en-US")} km`;
+  return mileage == null ? "-" : formatMileage(mileage);
 }

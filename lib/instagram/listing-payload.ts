@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { appendSignedAssetToken } from "@/lib/signed-asset-token";
-import { parseJson } from "@/lib/utils";
+import { formatMileage, formatPrice, parseJson } from "@/lib/utils";
 
 export interface InstagramListingPhoto {
   id: number;
@@ -75,25 +75,17 @@ function parseExtras(raw: string | null): string[] {
   return [];
 }
 
-function formatPrice(price: number | null | undefined): string | null {
-  if (price == null) return null;
-  return `€${price.toLocaleString("en-US")}`;
-}
-
-function formatMileage(mileage: number | null | undefined): string | null {
-  if (mileage == null) return null;
-  return `${mileage.toLocaleString("en-US")} km`;
-}
-
 function buildCaption(backup: BackupRow, extras: string[]): string {
   const name = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
+  const mileage = backup.mileage == null ? null : formatMileage(backup.mileage);
+  const price = backup.price_amount == null ? null : formatPrice(backup.price_amount);
   const facts = [
     backup.year ? `Year: ${backup.year}` : null,
-    formatMileage(backup.mileage) ? `Mileage: ${formatMileage(backup.mileage)}` : null,
+    mileage ? `Mileage: ${mileage}` : null,
     backup.fuel ? `Fuel: ${backup.fuel}` : null,
     backup.transmission ? `Transmission: ${backup.transmission}` : null,
     backup.power ? `Power: ${backup.power} hp` : null,
-    formatPrice(backup.price_amount) ? `Price: ${formatPrice(backup.price_amount)}` : null,
+    price ? `Price: ${price}` : null,
   ].filter(Boolean);
   const highlights = extras.slice(0, 8);
 
