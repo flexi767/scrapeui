@@ -14,14 +14,14 @@ export async function fetchCities(regionValue: string) {
   const response = await fetch(
     `/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`,
   );
-  return (await response.json()) as City[];
+  return parseApiResponse<City[]>(response, "Грешка при зареждане на градовете.");
 }
 
 export async function fetchMakes(pubtype: string) {
   const response = await fetch(
     `/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`,
   );
-  return (await response.json()) as MakeEntry[];
+  return parseApiResponse<MakeEntry[]>(response, "Грешка при зареждане на марките.");
 }
 
 export async function createDraft(form: FormState) {
