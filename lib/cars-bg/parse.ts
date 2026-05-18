@@ -1,13 +1,10 @@
+import { parseJson } from '@/lib/utils';
+
 export function extractThumbFromListing(listing: { full_keys: string | null }): string | null {
-  if (!listing.full_keys) return null;
-  try {
-    const images = JSON.parse(listing.full_keys) as unknown;
-    if (!Array.isArray(images)) return null;
-    const first = images.find((value) => typeof value === 'string' && value.trim());
-    return typeof first === 'string' ? first : null;
-  } catch {
-    return null;
-  }
+  const images = parseJson<unknown>(listing.full_keys, []);
+  if (!Array.isArray(images)) return null;
+  const first = images.find((value) => typeof value === 'string' && value.trim());
+  return typeof first === 'string' ? first : null;
 }
 
 export function normalizeModelCompare(value: string | null | undefined): string {

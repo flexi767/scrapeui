@@ -9,6 +9,7 @@ import {
   MOBILE_BG_TRANSMISSION_SET,
   MOBILE_BG_CATEGORY_SET,
 } from '@/lib/mobile-bg/search-field-config';
+import { parseJson } from '@/lib/utils';
 
 const execFileAsync = promisify(execFile);
 
@@ -258,12 +259,10 @@ async function resolveMobileBgSearchAction(
     },
   );
 
-  try {
-    const parsed = JSON.parse(stdout) as { result?: unknown };
-    if (typeof parsed.result === 'string' && parsed.result.trim()) {
-      return absoluteMobileBgUrl(parsed.result.trim());
-    }
-  } catch {}
+  const parsed = parseJson<{ result?: unknown }>(stdout, {});
+  if (typeof parsed.result === 'string' && parsed.result.trim()) {
+    return absoluteMobileBgUrl(parsed.result.trim());
+  }
 
   return action;
 }

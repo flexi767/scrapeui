@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { getDealerBySlug, type DealerRowFull } from '@/lib/queries';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
+import { parseJson } from '@/lib/utils';
 import { emit, formatError } from '@/scraper/lib/runner';
 
 
@@ -113,12 +114,8 @@ async function processDealer(
 
         let resetOk = false;
         if (resetResult.ok) {
-          try {
-            const parsed = JSON.parse(resetResult.text);
-            resetOk = parsed.msg === 'Успешно зануляване.';
-          } catch {
-            resetOk = resetResult.text.includes('Успешно');
-          }
+          const parsed = parseJson<{ msg?: unknown }>(resetResult.text, {});
+          resetOk = parsed.msg === 'Успешно зануляване.' || resetResult.text.includes('Успешно');
         }
 
         if (!resetOk) {
