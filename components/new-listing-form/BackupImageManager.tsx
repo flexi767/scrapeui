@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import { readJsonError } from "@/lib/streaming-job";
+import { errorMessage, parseApiResponse } from "@/lib/utils";
 import { IMAGE_UPLOAD_BATCH_SIZE, type BackupImage } from "./constants";
+
+interface BackupImagesResponse {
+  images?: BackupImage[];
+}
 
 export function BackupImageManager({ backupId }: { backupId: number }) {
   const [images, setImages] = useState<BackupImage[]>([]);
@@ -23,17 +27,10 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
     setError("");
     try {
       const response = await fetch(`/api/editown/backups/${backupId}/images`);
-      const data = (await response.json()) as {
-        images?: BackupImage[];
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(data.error || "Грешка при зареждане на снимките.");
-        return;
-      }
+      const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при зареждане на снимките.");
       setImages(data.images ?? []);
     } catch (loadError) {
-      setError((loadError as Error).message);
+      setError(errorMessage(loadError, "Грешка при зареждане на снимките."));
     } finally {
       setLoading(false);
     }
@@ -61,18 +58,11 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
           method: "POST",
           body: formData,
         });
-        const data = (await response.json().catch(() => ({}))) as {
-          images?: BackupImage[];
-          error?: string;
-        };
-        if (!response.ok) {
-          setError(data.error || "Грешка при качване на снимките.");
-          return;
-        }
+        const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при качване на снимките.");
         setImages(data.images ?? []);
       }
     } catch (uploadError) {
-      setError((uploadError as Error).message);
+      setError(errorMessage(uploadError, "Грешка при качване на снимките."));
     } finally {
       setUploading(false);
     }
@@ -89,19 +79,11 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageIds: nextImages.map((image) => image.id) }),
       });
-      const data = (await response.json()) as {
-        images?: BackupImage[];
-        error?: string;
-      };
-      if (!response.ok) {
-        setImages(previous);
-        setError(data.error || "Грешка при пренареждане на снимките.");
-        return;
-      }
+      const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при пренареждане на снимките.");
       setImages(data.images ?? nextImages);
     } catch (orderError) {
       setImages(previous);
-      setError((orderError as Error).message);
+      setError(errorMessage(orderError, "Грешка при пренареждане на снимките."));
     } finally {
       setSavingOrder(false);
     }
@@ -166,14 +148,11 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
         `/api/editown/backups/${backupId}/images/${imageId}`,
         { method: "DELETE" },
       );
-      if (!response.ok) {
-        setError(await readJsonError(response, "Грешка при изтриване на снимката."));
-        return;
-      }
+      await parseApiResponse<unknown>(response, "Грешка при изтриване на снимката.");
       setImages((current) => current.filter((image) => image.id !== imageId));
       setConfirmingDeleteId(null);
     } catch (deleteError) {
-      setError((deleteError as Error).message);
+      setError(errorMessage(deleteError, "Грешка при изтриване на снимката."));
     } finally {
       setDeletingId(null);
     }
