@@ -9,9 +9,14 @@ export interface CarsBgDealerSource {
   slug: string;
 }
 
+export type AuthenticatedCarsBgDealerAccount = CarsBgDealerAccount & {
+  carsPassword: string;
+  carsUser: string;
+};
+
 export function getCarsBgDealerAccount(
   dealer: CarsBgDealerSource | null | undefined,
-): CarsBgDealerAccount | null {
+): AuthenticatedCarsBgDealerAccount | null {
   if (!dealer?.cars_user || !dealer.cars_password) return null;
 
   return {
