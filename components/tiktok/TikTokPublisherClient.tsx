@@ -22,7 +22,7 @@ import {
   type RenderedTikTokVideo,
   type TikTokVideoListingPayload,
 } from "@/components/tiktok/video-renderer";
-import { errorMessage, isAbortError } from "@/lib/utils";
+import { errorMessage, isAbortError, parseJson } from "@/lib/utils";
 
 interface Props {
   backupId: number;
@@ -42,19 +42,12 @@ function applySavedPhotoState(
   let savedOrder: number[] = [];
   let savedUnusable = new Set<number>();
 
-  if (rawState) {
-    try {
-      const parsed = JSON.parse(rawState) as { order?: unknown; unusable?: unknown };
-      if (Array.isArray(parsed.order)) {
-        savedOrder = parsed.order.filter((id): id is number => Number.isFinite(id));
-      }
-      if (Array.isArray(parsed.unusable)) {
-        savedUnusable = new Set(parsed.unusable.filter((id): id is number => Number.isFinite(id)));
-      }
-    } catch {
-      savedOrder = [];
-      savedUnusable = new Set<number>();
-    }
+  const parsed = parseJson<{ order?: unknown; unusable?: unknown }>(rawState, {});
+  if (Array.isArray(parsed.order)) {
+    savedOrder = parsed.order.filter((id): id is number => Number.isFinite(id));
+  }
+  if (Array.isArray(parsed.unusable)) {
+    savedUnusable = new Set(parsed.unusable.filter((id): id is number => Number.isFinite(id)));
   }
 
   const byId = new Map(photos.map((photo) => [photo.id, photo]));

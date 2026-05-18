@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { appendSignedAssetToken } from "@/lib/signed-asset-token";
+import { parseJson } from "@/lib/utils";
 
 export interface MarketplaceListingPayload {
   backupId: number;
@@ -104,14 +105,9 @@ function mapTransmission(transmission: string | null): string | undefined {
 }
 
 function parseLocation(fieldsJson: string | null | undefined): string | undefined {
-  if (!fieldsJson) return undefined;
-  try {
-    const fields = JSON.parse(fieldsJson) as Array<{ name?: string; value?: string }>;
-    const city = fields.find((field) => field.name === "f19")?.value?.trim();
-    return city ? city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() : undefined;
-  } catch {
-    return undefined;
-  }
+  const fields = parseJson<Array<{ name?: string; value?: string }>>(fieldsJson, []);
+  const city = fields.find((field) => field.name === "f19")?.value?.trim();
+  return city ? city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() : undefined;
 }
 
 function buildPayloadFromRows({
