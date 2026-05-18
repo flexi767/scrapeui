@@ -22,8 +22,9 @@ export function cleanDescription(text: string | null): string {
     const normalized = line.trim().toLowerCase();
     if (!normalized) return true;
     if (normalized.includes("виж всички обяви в")) return false;
-    if (normalized.includes(".mobile.bg") || normalized.includes(".bazar.bg"))
+    if (normalized.includes(".mobile.bg") || normalized.includes(".bazar.bg")) {
       return false;
+    }
     return true;
   });
   return cleaned.join("\n").trim();
