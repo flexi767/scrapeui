@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { streamJsonEvents } from '@/lib/streaming-job';
+import { errorMessage, isAbortError } from '@/lib/utils';
 import { startRenewReset, stopRenewResetJob } from './api';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
 import { statsFromStreamEvent, streamEventMessageKind } from './helpers';
@@ -41,13 +42,13 @@ export function useRenewReset(ownDealers: OwnDealer[]) {
     try {
       res = await startRenewReset({ dealerSlugs: renewDealers, onlyReset: renewOnlyReset, signal: abortController.signal });
     } catch (error) {
-      if ((error as Error).name === 'AbortError') {
+      if (isAbortError(error)) {
         setRenewRunning(false);
         setRenewStopping(false);
         renewAbortRef.current = null;
         return;
       }
-      toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
+      toast.error(errorMessage(error, 'Renew & reset failed'));
       setRenewRunning(false);
       setRenewStopping(false);
       renewAbortRef.current = null;
@@ -75,8 +76,8 @@ export function useRenewReset(ownDealers: OwnDealer[]) {
         }
       });
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        toast.error(error instanceof Error ? error.message : 'Renew & reset failed');
+      if (!isAbortError(error)) {
+        toast.error(errorMessage(error, 'Renew & reset failed'));
       }
     } finally {
       setRenewRunning(false);
@@ -92,7 +93,7 @@ export function useRenewReset(ownDealers: OwnDealer[]) {
       await stopRenewResetJob();
       appendRenewLog({ kind: 'log', message: 'Stopping…' });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to stop');
+      toast.error(errorMessage(error, 'Failed to stop'));
       setRenewStopping(false);
       return;
     }

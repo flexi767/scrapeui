@@ -184,3 +184,12 @@ export async function parseApiResponse<T>(response: Response, fallbackError: str
 export function errorMessage(error: unknown, fallback?: string): string {
   return error instanceof Error ? error.message : fallback ?? String(error);
 }
+
+export function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object'
+    && error !== null
+    && 'name' in error
+    && error.name === 'AbortError'
+  );
+}

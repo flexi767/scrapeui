@@ -4,6 +4,7 @@ import {
   type MobileBgSearchFieldInput,
 } from '@/lib/mobile-bg/search-results';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
+import { errorMessage } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch mobile.bg search results' },
+      { error: errorMessage(error, 'Failed to fetch mobile.bg search results') },
       { status: 500 },
     );
   }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { errorMessage } from '@/lib/utils';
 
 interface SyncLogEntry {
   type: 'status' | 'make' | 'complete' | 'error' | 'log' | 'exit';
@@ -75,7 +76,7 @@ export default function MobileBgMakeModelSyncRunner() {
         }
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Sync failed');
+      toast.error(errorMessage(error, 'Sync failed'));
     } finally {
       setRunning(false);
     }
