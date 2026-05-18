@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
+import {
+  DEALER_ADMIN_CREDENTIAL_FIELD_MAP,
+  DEALER_SELF_SERVICE_CREDENTIAL_FIELD_MAP,
+} from '@/lib/dealers/fieldMaps';
+import { PLATFORM_ACCOUNT_COLUMNS } from '@/lib/dealers/platformCredentials';
+import { SOCIAL_ACCOUNT_COLUMNS } from '@/lib/dealers/socialCredentials';
 
 // GET own dealer credentials (dealer user or admin)
 export async function GET(
@@ -24,11 +30,9 @@ export async function GET(
   }
 
   const row = raw.prepare(`
-    SELECT id, slug, name, mobile_url, mobile_user, mobile_password,
-           cars_url, cars_user, cars_password,
-           facebook_user, facebook_password,
-           instagram_user, instagram_password,
-           tiktok_user, tiktok_password,
+    SELECT id, slug, name,
+           ${PLATFORM_ACCOUNT_COLUMNS},
+           ${SOCIAL_ACCOUNT_COLUMNS},
            public_enabled, template, public_domain
     FROM dealers WHERE id = ?
   `).get(dealerId) as Record<string, unknown> | undefined;
@@ -58,19 +62,7 @@ export async function PATCH(
 
   const body = await req.json() as Record<string, unknown>;
 
-  const credentialFields: Record<string, string> = {
-    mobile_user: 'mobile_user', mobile_password: 'mobile_password',
-    cars_url: 'cars_url', cars_user: 'cars_user', cars_password: 'cars_password',
-    facebook_user: 'facebook_user', facebook_password: 'facebook_password',
-    instagram_user: 'instagram_user', instagram_password: 'instagram_password',
-    tiktok_user: 'tiktok_user', tiktok_password: 'tiktok_password',
-  };
-  const adminOnlyFields: Record<string, string> = {
-    public_enabled: 'public_enabled', template: 'template',
-    public_domain: 'public_domain', mobile_url: 'mobile_url',
-  };
-
-  const map = isAdmin ? { ...credentialFields, ...adminOnlyFields } : credentialFields;
+  const map = isAdmin ? DEALER_ADMIN_CREDENTIAL_FIELD_MAP : DEALER_SELF_SERVICE_CREDENTIAL_FIELD_MAP;
 
   if ('template' in body && !ALLOWED_TEMPLATES.has(body.template as string)) {
     return NextResponse.json({ error: `template must be one of: ${[...ALLOWED_TEMPLATES].join(', ')}` }, { status: 400 });

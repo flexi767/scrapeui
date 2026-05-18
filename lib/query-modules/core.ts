@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { PLATFORM_ACCOUNT_COLUMNS, PLATFORM_URL_COLUMNS } from '@/lib/dealers/platformCredentials';
 import { notDuplicateExpr, notDuplicateLExpr } from './types';
 
 export interface MakeModel {
@@ -29,7 +30,8 @@ export interface DealerRow {
   own: number;
   active: number;
   priority: number;
-  mobile_url?: string;
+  cars_url?: string | null;
+  mobile_url?: string | null;
 }
 
 export interface DealerRowFull extends DealerRow {
@@ -40,10 +42,10 @@ export interface DealerRowFull extends DealerRow {
 }
 
 export function getAllDealers(): DealerRow[] {
-  // Credentials are excluded here — use getDealerById for the config UI where they're needed
+  // Credentials are excluded here; config and auth-sensitive routes use narrower queries.
   return raw
     .prepare(
-      "SELECT id, slug, name, own, active, priority, mobile_url FROM dealers ORDER BY priority DESC, name",
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS} FROM dealers ORDER BY priority DESC, name`,
     )
     .all() as DealerRow[];
 }
@@ -51,7 +53,7 @@ export function getAllDealers(): DealerRow[] {
 export function getDealerBySlug(slug: string): DealerRowFull | undefined {
   return raw
     .prepare(
-      "SELECT id, slug, name, own, active, priority, mobile_url, mobile_user, mobile_password, cars_user, cars_password FROM dealers WHERE slug = ?",
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_ACCOUNT_COLUMNS} FROM dealers WHERE slug = ?`,
     )
     .get(slug) as DealerRowFull | undefined;
 }

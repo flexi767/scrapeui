@@ -1,3 +1,5 @@
+import { createEmptyPlatformAccountFields, pickPlatformAccountFields } from '@/lib/dealers/platformCredentials';
+import { createEmptySocialAccountFields, pickSocialAccountFields } from '@/lib/dealers/socialCredentials';
 import type { Dealer, DealerCreateForm, DealerEditForm } from './types';
 import { hasHttpProtocol } from './utils';
 
@@ -5,14 +7,10 @@ export function createEmptyDealerForm(): DealerCreateForm {
   return {
     name: '',
     slug: '',
-    mobile_url: '',
+    ...createEmptyPlatformAccountFields(),
     own: false,
     priority: 0,
-    mobile_user: '',
-    mobile_password: '',
-    cars_url: '',
-    cars_user: '',
-    cars_password: '',
+    ...createEmptySocialAccountFields(),
   };
 }
 
@@ -29,14 +27,10 @@ export function dealerToEditForm(dealer: Dealer): DealerEditForm {
   return {
     name: dealer.name,
     slug: dealer.slug,
-    mobile_url: dealer.mobile_url || '',
     own: Boolean(dealer.own),
     priority: dealer.priority || 0,
-    mobile_user: dealer.mobile_user || '',
-    mobile_password: dealer.mobile_password || '',
-    cars_url: dealer.cars_url || '',
-    cars_user: dealer.cars_user || '',
-    cars_password: dealer.cars_password || '',
+    ...pickPlatformAccountFields(dealer),
+    ...pickSocialAccountFields(dealer),
     public_enabled: dealer.public_enabled === 1,
     template: dealer.template,
     public_domain: dealer.public_domain || '',

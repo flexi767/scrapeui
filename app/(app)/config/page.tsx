@@ -2,13 +2,25 @@ import Link from 'next/link';
 import ConfigShell from '@/components/ConfigShell';
 import type { Dealer } from '@/components/dealers/types';
 import { raw } from '@/db/client';
+import { PLATFORM_ACCOUNT_COLUMNS } from '@/lib/dealers/platformCredentials';
+import { SOCIAL_ACCOUNT_COLUMNS } from '@/lib/dealers/socialCredentials';
 
 interface DealerRow extends Dealer {
   created_at: string | null;
 }
 
+export const dynamic = 'force-dynamic';
+
 function getDealers(): DealerRow[] {
-  return raw.prepare('SELECT id, slug, name, mobile_url, own, active, priority, cars_url, mobile_user, mobile_password, cars_user, cars_password, public_enabled, template, public_domain, created_at FROM dealers ORDER BY priority DESC, name').all() as DealerRow[];
+  return raw.prepare(`
+    SELECT
+      id, slug, name, own, active, priority,
+      ${PLATFORM_ACCOUNT_COLUMNS},
+      ${SOCIAL_ACCOUNT_COLUMNS},
+      public_enabled, template, public_domain, active_template_config_id, created_at
+    FROM dealers
+    ORDER BY priority DESC, name
+  `).all() as DealerRow[];
 }
 
 export default function ConfigPage() {

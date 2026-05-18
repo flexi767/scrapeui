@@ -1,61 +1,40 @@
+import type { PlatformAccountFields, PlatformCredentialSection } from '@/lib/dealers/platformCredentials';
 import { DealerTextInput } from './DealerTextInput';
 
-interface DealerPlatformFieldsProps {
+interface DealerPlatformFieldsProps<TForm extends PlatformAccountFields> {
   className?: string;
-  password: string;
-  passwordPlaceholder: string;
+  form: TForm;
   showCredentials: boolean;
   showUrl?: boolean;
-  url: string;
-  urlPlaceholder: string;
-  user: string;
-  userPlaceholder: string;
-  onPasswordChange: (value: string) => void;
-  onUrlChange: (value: string) => void;
-  onUserChange: (value: string) => void;
+  section: PlatformCredentialSection;
+  onChange: (updater: (current: TForm) => TForm) => void;
 }
 
-export function DealerPlatformFields({
+export function DealerPlatformFields<TForm extends PlatformAccountFields>({
   className,
-  password,
-  passwordPlaceholder,
+  form,
   showCredentials,
   showUrl = true,
-  url,
-  urlPlaceholder,
-  user,
-  userPlaceholder,
-  onPasswordChange,
-  onUrlChange,
-  onUserChange,
-}: DealerPlatformFieldsProps) {
+  section,
+  onChange,
+}: DealerPlatformFieldsProps<TForm>) {
+  const fields = section.fields.filter((field) => showUrl || field.type !== 'url');
+  const visibleFields = showCredentials ? fields : fields.filter((field) => field.type === 'url');
+
   return (
     <>
-      {showUrl && (
+      {visibleFields.map((field) => (
         <DealerTextInput
-          value={url}
-          onValueChange={onUrlChange}
-          placeholder={urlPlaceholder}
+          key={field.key}
+          value={form[field.key]}
+          onValueChange={(value) =>
+            onChange((current) => ({ ...current, [field.key]: value }))
+          }
+          placeholder={field.placeholder ?? field.label}
           className={className}
-          type="url"
+          type={field.type}
         />
-      )}
-      {showCredentials && (
-        <>
-          <DealerTextInput
-            value={user}
-            onValueChange={onUserChange}
-            placeholder={userPlaceholder}
-            className={className}
-          />
-          <DealerTextInput
-            value={password}
-            onValueChange={onPasswordChange}
-            placeholder={passwordPlaceholder}
-            className={className}
-          />
-        </>
-      )}
+      ))}
     </>
   );
 }

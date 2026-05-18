@@ -1,5 +1,11 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import {
+  CARS_BG_CREDENTIAL_SECTION,
+  MOBILE_BG_CREDENTIAL_SECTION,
+  getPlatformUrlField,
+} from '@/lib/dealers/platformCredentials';
 import { DealerPlatformFields } from './DealerPlatformFields';
+import { DealerSocialFields } from './DealerSocialFields';
 import { DealerTextInput } from './DealerTextInput';
 import type { DealerCreateForm } from './types';
 import { slugifyDealerName } from './utils';
@@ -11,6 +17,9 @@ interface AddDealerFormProps {
   setForm: Dispatch<SetStateAction<DealerCreateForm>>;
   onSubmit: (event: FormEvent) => void;
 }
+
+const MOBILE_URL_FIELD = getPlatformUrlField(MOBILE_BG_CREDENTIAL_SECTION);
+const CARS_URL_FIELD = getPlatformUrlField(CARS_BG_CREDENTIAL_SECTION);
 
 export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDealerFormProps) {
   return (
@@ -39,7 +48,7 @@ export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDea
           className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono"
         />
         <DealerTextInput
-          placeholder="https://dealer.mobile.bg"
+          placeholder={MOBILE_URL_FIELD?.placeholder}
           value={form.mobile_url}
           onValueChange={(value) =>
             setForm((current) => ({ ...current, mobile_url: value }))
@@ -48,7 +57,7 @@ export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDea
           type="url"
         />
         <DealerTextInput
-          placeholder="https://www.cars.bg/company/dealer"
+          placeholder={CARS_URL_FIELD?.placeholder}
           value={form.cars_url}
           onValueChange={(value) =>
             setForm((current) => ({ ...current, cars_url: value }))
@@ -67,45 +76,24 @@ export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDea
           <>
             <div className="flex flex-col gap-2">
               <DealerPlatformFields
-                url={form.mobile_url}
-                urlPlaceholder="https://dealer.mobile.bg"
-                user={form.mobile_user}
-                userPlaceholder="mobile user"
-                password={form.mobile_password}
-                passwordPlaceholder="mobile password"
+                form={form}
                 showCredentials
                 showUrl={false}
-                onUrlChange={(value) =>
-                  setForm((current) => ({ ...current, mobile_url: value }))
-                }
-                onUserChange={(value) =>
-                  setForm((current) => ({ ...current, mobile_user: value }))
-                }
-                onPasswordChange={(value) =>
-                  setForm((current) => ({ ...current, mobile_password: value }))
-                }
+                section={MOBILE_BG_CREDENTIAL_SECTION}
+                onChange={setForm}
               />
             </div>
             <div className="flex flex-col gap-2">
               <DealerPlatformFields
-                url={form.cars_url}
-                urlPlaceholder="https://www.cars.bg/company/dealer"
-                user={form.cars_user}
-                userPlaceholder="cars user"
-                password={form.cars_password}
-                passwordPlaceholder="cars password"
+                form={form}
                 showCredentials
                 showUrl={false}
-                onUrlChange={(value) =>
-                  setForm((current) => ({ ...current, cars_url: value }))
-                }
-                onUserChange={(value) =>
-                  setForm((current) => ({ ...current, cars_user: value }))
-                }
-                onPasswordChange={(value) =>
-                  setForm((current) => ({ ...current, cars_password: value }))
-                }
+                section={CARS_BG_CREDENTIAL_SECTION}
+                onChange={setForm}
               />
+            </div>
+            <div className="col-span-2 grid grid-cols-2 gap-2">
+              <DealerSocialFields form={form} onChange={setForm} />
             </div>
           </>
         )}

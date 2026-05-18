@@ -51,13 +51,14 @@ export function DealersTable({
             <th className="px-4 py-2 text-center">Own</th>
             <th className="px-4 py-2 text-center">Priority</th>
             <th className="px-4 py-2 text-center">Active</th>
+            <th className="px-4 py-2 text-left">Social</th>
             <th className="px-4 py-2 text-center">Public</th>
             <th className="px-4 py-2 text-center w-16"></th>
             <th className="px-4 py-2 text-center w-8"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-700/50">
-          {dealers.length === 0 && <tr><td colSpan={10} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
+          {dealers.length === 0 && <tr><td colSpan={11} className="px-4 py-6 text-center text-gray-500">No dealers yet</td></tr>}
           {dealers.map((dealer) => (
             <DealerTableRow
               key={dealer.id}

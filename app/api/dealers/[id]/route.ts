@@ -3,17 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES, isValidDealerSlug } from '@/lib/dealer-config';
-
-const DEALER_FIELD_MAP: Record<string, string> = {
-  name: 'name', slug: 'slug', mobile_url: 'mobile_url',
-  own: 'own', active: 'active', priority: 'priority',
-  mobile_user: 'mobile_user', mobile_password: 'mobile_password',
-  cars_url: 'cars_url', cars_user: 'cars_user', cars_password: 'cars_password',
-  public_enabled: 'public_enabled', template: 'template', public_domain: 'public_domain',
-  facebook_user: 'facebook_user', facebook_password: 'facebook_password',
-  instagram_user: 'instagram_user', instagram_password: 'instagram_password',
-  tiktok_user: 'tiktok_user', tiktok_password: 'tiktok_password',
-};
+import { DEALER_ADMIN_FIELD_MAP } from '@/lib/dealers/fieldMaps';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const check = await requireAdmin();
@@ -36,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('priority' in processed) processed.priority = Number(processed.priority);
 
   try {
-    const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, DEALER_FIELD_MAP);
+    const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, DEALER_ADMIN_FIELD_MAP);
     if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
     return NextResponse.json({ ok: true });
   } catch {

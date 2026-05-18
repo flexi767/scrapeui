@@ -1,5 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { CARS_BG_CREDENTIAL_SECTION, MOBILE_BG_CREDENTIAL_SECTION } from '@/lib/dealers/platformCredentials';
+import { SOCIAL_CREDENTIAL_SECTIONS, type SocialCredentialSection } from '@/lib/dealers/socialCredentials';
 import { DealerPlatformFields } from './DealerPlatformFields';
+import { DealerSocialFields } from './DealerSocialFields';
 import { DealerTextInput } from './DealerTextInput';
 import { LoginBadge } from './LoginBadge';
 import { DEALER_TEMPLATES, type Dealer, type DealerEditForm, type DealerLoginResult, type TemplateName } from './types';
@@ -7,6 +10,26 @@ import { slugifyDealerName } from './utils';
 
 const EDIT_INPUT_CLASS_NAME =
   'w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none';
+
+function socialLabel(section: SocialCredentialSection, dealer: Dealer) {
+  const userField = section.fields.find((field) => field.type !== 'password');
+  const passwordField = section.fields.find((field) => field.type === 'password');
+  const user = userField ? dealer[userField.key] : null;
+  const password = passwordField ? dealer[passwordField.key] : null;
+
+  if (!user && !password) return null;
+  return (
+    <div key={section.title} className="truncate text-[11px] text-gray-300">
+      <span className="text-gray-500">{section.shortLabel}:</span> {user || 'saved'}
+    </div>
+  );
+}
+
+function hasSocialCredentials(dealer: Dealer) {
+  return SOCIAL_CREDENTIAL_SECTIONS.some((section) =>
+    section.fields.some((field) => dealer[field.key]),
+  );
+}
 
 interface DealerTableRowProps {
   dealer: Dealer;
@@ -80,25 +103,10 @@ export function DealerTableRow({
         {editing ? (
           <div className="space-y-2">
             <DealerPlatformFields
-              url={editForm.mobile_url}
-              urlPlaceholder="https://dealer.mobile.bg"
-              user={editForm.mobile_user}
-              userPlaceholder="mobile user"
-              password={editForm.mobile_password}
-              passwordPlaceholder="mobile password"
+              form={editForm}
               showCredentials={editForm.own}
-              onUrlChange={(value) =>
-                setEditForm((current) => ({ ...current, mobile_url: value }))
-              }
-              onUserChange={(value) =>
-                setEditForm((current) => ({ ...current, mobile_user: value }))
-              }
-              onPasswordChange={(value) =>
-                setEditForm((current) => ({
-                  ...current,
-                  mobile_password: value,
-                }))
-              }
+              section={MOBILE_BG_CREDENTIAL_SECTION}
+              onChange={setEditForm}
               className={EDIT_INPUT_CLASS_NAME}
             />
           </div>
@@ -112,25 +120,10 @@ export function DealerTableRow({
         {editing ? (
           <div className="space-y-2">
             <DealerPlatformFields
-              url={editForm.cars_url}
-              urlPlaceholder="https://www.cars.bg/company/dealer"
-              user={editForm.cars_user}
-              userPlaceholder="cars user"
-              password={editForm.cars_password}
-              passwordPlaceholder="cars password"
+              form={editForm}
               showCredentials={editForm.own}
-              onUrlChange={(value) =>
-                setEditForm((current) => ({ ...current, cars_url: value }))
-              }
-              onUserChange={(value) =>
-                setEditForm((current) => ({ ...current, cars_user: value }))
-              }
-              onPasswordChange={(value) =>
-                setEditForm((current) => ({
-                  ...current,
-                  cars_password: value,
-                }))
-              }
+              section={CARS_BG_CREDENTIAL_SECTION}
+              onChange={setEditForm}
               className={EDIT_INPUT_CLASS_NAME}
             />
           </div>
@@ -168,6 +161,26 @@ export function DealerTableRow({
             ) : (
               <LoginBadge result={loginResult?.['cars.bg']} label="cars" />
             )}
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-2 align-top">
+        {editing ? (
+          editForm.own ? (
+            <div className="grid min-w-[260px] grid-cols-2 gap-1.5">
+              <DealerSocialFields
+                form={editForm}
+                onChange={setEditForm}
+                className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          ) : (
+            <span className="text-xs text-gray-500">own dealer only</span>
+          )
+        ) : (
+          <div className="max-w-[180px] space-y-0.5">
+            {SOCIAL_CREDENTIAL_SECTIONS.map((section) => socialLabel(section, dealer))}
+            {!hasSocialCredentials(dealer) && <span className="text-xs text-gray-600">-</span>}
           </div>
         )}
       </td>
