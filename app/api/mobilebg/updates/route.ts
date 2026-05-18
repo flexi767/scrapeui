@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { updateBackupOnMobileBg } from '@/lib/mobile-bg/update';
 import { getDealerBySlug } from '@/lib/queries';
 
@@ -13,18 +14,12 @@ export async function POST(req: NextRequest) {
     }
 
     const dealer = getDealerBySlug(dealerSlug);
-    if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
+    const mobileBgDealer = getMobileBgDealerConfig(dealer);
+    if (!mobileBgDealer) {
       return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
     }
 
-    const result = await updateBackupOnMobileBg(raw, {
-      id: dealer.id,
-      slug: dealer.slug,
-      name: dealer.name,
-      mobileUrl: '',
-      mobileUser: dealer.mobile_user,
-      mobilePassword: dealer.mobile_password,
-    }, backupId);
+    const result = await updateBackupOnMobileBg(raw, mobileBgDealer, backupId);
 
     return NextResponse.json(result);
   } catch (error) {

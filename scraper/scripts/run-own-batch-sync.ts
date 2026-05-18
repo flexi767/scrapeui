@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { getDealerBySlug, getEditOwnSyncRows } from '@/lib/queries';
 import {
   closeMobileBgUpdateSession,
@@ -66,8 +67,9 @@ async function main() {
       });
 
       const dealer = row.dealer_slug ? getDealerBySlug(row.dealer_slug) : undefined;
+      const mobileBgDealer = getMobileBgDealerConfig(dealer);
 
-      if (!dealer || !dealer.mobile_user || !dealer.mobile_password) {
+      if (!dealer || !mobileBgDealer) {
         completed += 1;
         failed += 1;
         emit({
@@ -98,28 +100,14 @@ async function main() {
 
           activeDealerSlug = dealer.slug;
           activeSession = await createMobileBgUpdateSession(
-            {
-              id: dealer.id,
-              slug: dealer.slug,
-              name: dealer.name,
-              mobileUrl: '',
-              mobileUser: dealer.mobile_user,
-              mobilePassword: dealer.mobile_password,
-            },
+            mobileBgDealer,
             (message) => emit({ type: 'log', level: 'info', dealer_slug: dealer.slug, message }),
           );
         }
 
         await updateBackupOnMobileBg(
           raw,
-          {
-            id: dealer.id,
-            slug: dealer.slug,
-            name: dealer.name,
-            mobileUrl: '',
-            mobileUser: dealer.mobile_user,
-            mobilePassword: dealer.mobile_password,
-          },
+          mobileBgDealer,
           row.backup_id,
           {
             log: (message) => emit({ type: 'log', level: 'info', backup_id: row.backup_id, message }),
