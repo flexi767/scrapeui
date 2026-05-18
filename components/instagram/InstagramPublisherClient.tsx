@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadImage } from "@/lib/canvas-utils";
-import { errorMessage } from "@/lib/utils";
+import { errorMessage, parseApiResponse } from "@/lib/utils";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, InstagramIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -42,11 +42,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
     let cancelled = false;
     setLoading(true);
     fetch(`/api/instagram/listings/${backupId}`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Could not load listing");
-        return data as InstagramListingPayload;
-      })
+      .then((res) => parseApiResponse<InstagramListingPayload>(res, "Could not load listing"))
       .then((data) => {
         if (!cancelled) {
           setListing(data);

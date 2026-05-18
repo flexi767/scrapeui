@@ -22,7 +22,7 @@ import {
   type RenderedTikTokVideo,
   type TikTokVideoListingPayload,
 } from "@/components/tiktok/video-renderer";
-import { errorMessage, isAbortError, parseJson } from "@/lib/utils";
+import { errorMessage, isAbortError, parseApiResponse, parseJson } from "@/lib/utils";
 
 interface Props {
   backupId: number;
@@ -110,11 +110,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
     let cancelled = false;
     setLoading(true);
     fetch(`/api/tiktok/listings/${backupId}`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Could not load listing");
-        return data as TikTokVideoListingPayload;
-      })
+      .then((res) => parseApiResponse<TikTokVideoListingPayload>(res, "Could not load listing"))
       .then((data) => {
         if (cancelled) return;
         setListing(data);
