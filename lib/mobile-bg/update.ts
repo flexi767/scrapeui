@@ -8,7 +8,7 @@ import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDe
 import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, parseJson } from '@/lib/utils';
 
 interface BackupRow {
   id: number;
@@ -285,7 +285,8 @@ export async function updateBackupOnMobileBg(
   }
 
   const fields = JSON.parse(editSnapshot.fields_json) as Array<Record<string, unknown>>;
-  const checkedBoxes = JSON.parse(editSnapshot.checked_boxes_json || '[]').map((x: { name: string; value: string }) => `${x.name}::${x.value}`);
+  const checkedBoxes = parseJson<Array<{ name: string; value: string }>>(editSnapshot.checked_boxes_json, [])
+    .map((x) => `${x.name}::${x.value}`);
   const fieldOverrides = buildBackupFieldOverrides(backup);
   const ownedSession = sharedSession ?? await createMobileBgUpdateSession(dealer, log);
   const page = ownedSession.page;

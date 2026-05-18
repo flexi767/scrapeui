@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import { getMobileBgVatLabel } from '@/lib/vat';
+import { parseJson } from '@/lib/utils';
 
 export interface MobileBgDraftBackupRow {
   title: string | null;
@@ -92,12 +93,7 @@ function inferBatteryCapacityKwh(
 
 export function buildBackupFieldOverrides(backup: MobileBgDraftBackupRow): Record<string, string | number | null> {
   const engineMatch = backup.engine?.match(/(\d{3,5})/);
-  let techData: Record<string, string> = {};
-  try {
-    techData = backup.tech_data_json ? JSON.parse(backup.tech_data_json) as Record<string, string> : {};
-  } catch {
-    techData = {};
-  }
+  const techData = parseJson<Record<string, string>>(backup.tech_data_json, {});
 
   return {
     f7: backup.title || backup.source_title || null,

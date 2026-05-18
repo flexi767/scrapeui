@@ -9,7 +9,7 @@ import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, parseJson } from '@/lib/utils';
 
 interface BackupRow {
   id: number;
@@ -61,27 +61,17 @@ function createRepostJob(db: Database.Database, dealerId: number, backupId: numb
 }
 
 function getPrimaryPubtype(techDataJson: string | null): string {
-  if (!techDataJson) return '1';
-  try {
-    const parsed = JSON.parse(techDataJson) as Record<string, string>;
-    const raw = parsed.pubtype || '1';
-    return raw.split(',').map((part) => part.trim()).find(Boolean) || '1';
-  } catch {
-    return '1';
-  }
+  const parsed = parseJson<Record<string, string>>(techDataJson, {});
+  const raw = parsed.pubtype || '1';
+  return raw.split(',').map((part) => part.trim()).find(Boolean) || '1';
 }
 
 function getRegionCityValues(techDataJson: string | null): { region: string | null; city: string | null } {
-  if (!techDataJson) return { region: null, city: null };
-  try {
-    const parsed = JSON.parse(techDataJson) as Record<string, string>;
-    return {
-      region: parsed.region || null,
-      city: parsed.city || null,
-    };
-  } catch {
-    return { region: null, city: null };
-  }
+  const parsed = parseJson<Record<string, string>>(techDataJson, {});
+  return {
+    region: parsed.region || null,
+    city: parsed.city || null,
+  };
 }
 
 async function applyBlankDraftExtras(page: import('playwright').Page, labels: string[]): Promise<void> {
@@ -398,7 +388,7 @@ export async function repostBackupFromDb(
 
   const fields = JSON.parse(editSnapshot.fields_json) as Array<Record<string, unknown>>;
   const checkedBoxes = new Set(
-    (JSON.parse(editSnapshot.checked_boxes_json || '[]') as Array<{ name: string; value: string }>).map(
+    parseJson<Array<{ name: string; value: string }>>(editSnapshot.checked_boxes_json, []).map(
       (x) => `${x.name}::${x.value}`,
     ),
   );
