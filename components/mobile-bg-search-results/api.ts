@@ -1,4 +1,4 @@
-import { readJsonError } from "@/lib/streaming-job";
+import { parseApiResponse } from "@/lib/utils";
 
 export async function setIgnoredSearchResult({
   sourceListingId,
@@ -14,7 +14,7 @@ export async function setIgnoredSearchResult({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ignoredMobileId: mobileId }),
   });
-  if (!res.ok) throw new Error(await readJsonError(res, "Failed to update ignored search result"));
+  await parseApiResponse<unknown>(res, "Failed to update ignored search result");
 }
 
 export async function saveAdAsCarbrosDraft(url: string) {
@@ -23,13 +23,10 @@ export async function saveAdAsCarbrosDraft(url: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, dealerSlug: "carbros" }),
   });
-  const payload = await res.json().catch(() => ({})) as {
-    backupId?: number;
-    error?: string;
-  };
+  const payload = await parseApiResponse<{ backupId?: number }>(res, "Failed to save ad as draft");
 
-  if (!res.ok || typeof payload.backupId !== "number") {
-    throw new Error(payload.error || "Failed to save ad as draft");
+  if (typeof payload.backupId !== "number") {
+    throw new Error("Failed to save ad as draft");
   }
 
   return payload.backupId;

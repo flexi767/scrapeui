@@ -1,12 +1,13 @@
 import type { EditOwnSyncRow } from '@/lib/queries';
 import { readJsonError } from '@/lib/streaming-job';
+import { parseApiResponse } from '@/lib/utils';
 import { isEditOwnSyncRow } from './helpers';
 
 export async function revertDraftToSource(backupId: number) {
   const res = await fetch(`/api/editown/sync-drafts/${backupId}`, { method: 'POST' });
-  const data = await res.json().catch(() => null) as EditOwnSyncRow | { error?: string } | null;
-  if (!res.ok || !isEditOwnSyncRow(data)) {
-    throw new Error((data && 'error' in data ? data.error : null) || 'Failed to revert draft');
+  const data = await parseApiResponse<EditOwnSyncRow | null>(res, 'Failed to revert draft');
+  if (!isEditOwnSyncRow(data)) {
+    throw new Error('Failed to revert draft');
   }
 
   return data;
@@ -27,7 +28,7 @@ export async function startBatchSync(signal: AbortSignal) {
 
 export async function stopBatchSync() {
   const res = await fetch('/api/editown/batch-sync', { method: 'DELETE' });
-  if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop batch sync'));
+  await parseApiResponse<unknown>(res, 'Failed to stop batch sync');
 }
 
 export async function startRenewReset({
@@ -55,5 +56,5 @@ export async function startRenewReset({
 
 export async function stopRenewResetJob() {
   const res = await fetch('/api/editown/renew-reset', { method: 'DELETE' });
-  if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop'));
+  await parseApiResponse<unknown>(res, 'Failed to stop');
 }

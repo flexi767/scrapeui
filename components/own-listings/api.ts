@@ -1,5 +1,5 @@
 import { OwnListingRow } from '@/lib/queries';
-import { readJsonError } from '@/lib/streaming-job';
+import { parseApiResponse } from '@/lib/utils';
 import {
   buildOwnListingPatchBody,
   getOwnListingSaveEndpoint,
@@ -12,13 +12,7 @@ export async function saveOwnListingEdit(row: OwnListingRow, form: OwnListingEdi
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(buildOwnListingPatchBody(form)),
   });
-  const data = await res.json().catch(() => null);
-
-  if (!res.ok) {
-    throw new Error((data as { error?: string } | null)?.error ?? 'Save failed');
-  }
-
-  return data;
+  return parseApiResponse<unknown>(res, 'Save failed');
 }
 
 export async function syncOwnListingToMobileBg(row: OwnListingRow) {
@@ -30,7 +24,7 @@ export async function syncOwnListingToMobileBg(row: OwnListingRow) {
       backupId: row.backup_id,
     }),
   });
-  if (!res.ok) throw new Error(await readJsonError(res, 'Sync failed'));
+  await parseApiResponse<unknown>(res, 'Sync failed');
 }
 
 export async function launchFacebookMarketplaceDraft(row: OwnListingRow) {
@@ -39,11 +33,7 @@ export async function launchFacebookMarketplaceDraft(row: OwnListingRow) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ backupId: row.backup_id }),
   });
-  const data = await res.json().catch(() => ({})) as { error?: string; message?: string };
-
-  if (!res.ok) {
-    throw new Error(data.error ?? 'Failed to launch Facebook Marketplace');
-  }
+  const data = await parseApiResponse<{ message?: string }>(res, 'Failed to launch Facebook Marketplace');
 
   return data.message ?? 'Facebook Marketplace browser launched';
 }
