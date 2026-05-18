@@ -4,6 +4,7 @@ import {
   getListingSearchPrefill,
   type SearchPrefillData,
 } from "@/lib/mobile-bg/search-prefill";
+import { parseJson } from "@/lib/utils";
 
 export interface SavedSearchRecord {
   id: number;
@@ -35,41 +36,35 @@ export interface SavedSearchDetail {
 let savedSearchTableEnsured = false;
 
 function parseSavedFields(json: string | null | undefined): SearchField[] {
-  if (!json) return [];
+  const parsed = parseJson<unknown>(json, []);
+  if (!Array.isArray(parsed)) return [];
 
-  try {
-    const parsed = JSON.parse(json) as unknown;
-    if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const candidate = entry as Record<string, unknown>;
+    if (
+      typeof candidate.name !== "string" ||
+      typeof candidate.label !== "string" ||
+      typeof candidate.value !== "string"
+    ) {
+      return [];
+    }
 
-    return parsed.flatMap((entry) => {
-      if (!entry || typeof entry !== "object") return [];
-      const candidate = entry as Record<string, unknown>;
-      if (
-        typeof candidate.name !== "string" ||
-        typeof candidate.label !== "string" ||
-        typeof candidate.value !== "string"
-      ) {
-        return [];
-      }
-
-      return [
-        {
-          name: candidate.name,
-          label: candidate.label,
-          value: candidate.value,
-          source:
-            candidate.source === "default" ||
-            candidate.source === "listing" ||
-            candidate.source === "derived" ||
-            candidate.source === "saved"
-              ? candidate.source
-              : "saved",
-        },
-      ];
-    });
-  } catch {
-    return [];
-  }
+    return [
+      {
+        name: candidate.name,
+        label: candidate.label,
+        value: candidate.value,
+        source:
+          candidate.source === "default" ||
+          candidate.source === "listing" ||
+          candidate.source === "derived" ||
+          candidate.source === "saved"
+            ? candidate.source
+            : "saved",
+      },
+    ];
+  });
 }
 
 function ensureSavedSearchTables() {

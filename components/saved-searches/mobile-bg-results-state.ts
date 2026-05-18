@@ -1,5 +1,6 @@
 import type { MobileBgSearchFieldInput } from "@/lib/mobile-bg/search-results";
 import type { MobileBgSearchResultsResponse } from "@/components/saved-searches/api";
+import { parseJson } from "@/lib/utils";
 
 export const MOBILE_BG_BROWSER_RESULTS_MESSAGE =
   "scrapeui:mobile-bg-search-results";
@@ -82,7 +83,7 @@ export function readMobileBgBrowserResults(searchId: number) {
     const raw = window.localStorage.getItem(
       getMobileBgBrowserResultsStorageKey(searchId),
     );
-    return raw ? (JSON.parse(raw) as MobileBgSearchResultsResponse) : null;
+    return parseJson<MobileBgSearchResultsResponse | null>(raw, null);
   } catch {
     return null;
   }

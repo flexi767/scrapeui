@@ -1,3 +1,5 @@
+import { parseJson } from '@/lib/utils';
+
 export const EXTRA_SECTIONS = [
   {
     category: "Безопасност",
@@ -134,20 +136,15 @@ const EXTRAS_CATEGORY_MAP: Record<string, string> = Object.fromEntries(
 );
 
 export function getExtraLabels(extrasJson: string | null): string[] {
-  if (!extrasJson) return [];
-  try {
-    const parsed = JSON.parse(extrasJson) as Record<string, unknown>;
-    return Object.values(parsed).flatMap((entry) => {
-      if (!Array.isArray(entry)) return [];
-      return entry.flatMap((item) => {
-        if (typeof item === 'string') return [item];
-        if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
-        return [];
-      });
+  const parsed = parseJson<Record<string, unknown>>(extrasJson, {});
+  return Object.values(parsed).flatMap((entry) => {
+    if (!Array.isArray(entry)) return [];
+    return entry.flatMap((item) => {
+      if (typeof item === 'string') return [item];
+      if (item && typeof item === 'object' && 'label' in item && typeof item.label === 'string') return [item.label];
+      return [];
     });
-  } catch {
-    return [];
-  }
+  });
 }
 
 export function normalizeExtras(raw: unknown): Record<string, string[]> {

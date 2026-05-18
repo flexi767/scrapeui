@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { appendSignedAssetToken } from "@/lib/signed-asset-token";
+import { parseJson } from "@/lib/utils";
 
 export interface InstagramListingPhoto {
   id: number;
@@ -48,33 +49,28 @@ interface BackupImageRow {
 }
 
 function parseExtras(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((item) => {
-          if (typeof item === "string") return item;
-          if (item && typeof item === "object" && "label" in item) {
-            return String((item as { label?: unknown }).label ?? "");
-          }
-          if (item && typeof item === "object" && "name" in item) {
-            return String((item as { name?: unknown }).name ?? "");
-          }
-          return "";
-        })
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    if (parsed && typeof parsed === "object") {
-      return Object.entries(parsed as Record<string, unknown>)
-        .filter(([, value]) => Boolean(value))
-        .map(([key, value]) => (typeof value === "string" ? value : key))
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-  } catch {
-    return [];
+  const parsed = parseJson<unknown>(raw, []);
+  if (Array.isArray(parsed)) {
+    return parsed
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "label" in item) {
+          return String((item as { label?: unknown }).label ?? "");
+        }
+        if (item && typeof item === "object" && "name" in item) {
+          return String((item as { name?: unknown }).name ?? "");
+        }
+        return "";
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  if (parsed && typeof parsed === "object") {
+    return Object.entries(parsed as Record<string, unknown>)
+      .filter(([, value]) => Boolean(value))
+      .map(([key, value]) => (typeof value === "string" ? value : key))
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
   return [];
 }
