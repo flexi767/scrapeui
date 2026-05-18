@@ -2,15 +2,15 @@
 import {
   planCarsBgDealerSync,
   syncCarsBgDealer,
-  type CarsBgDealerAccount,
 } from '@/lib/cars-bg/sync';
+import { getCarsBgDealerAccount, type CarsBgDealerSource } from '@/lib/dealers/carsBgDealer';
 import type Database from 'better-sqlite3';
 import { emit, formatError, openDb, parseRunnerArgs } from '@/scraper/lib/runner';
 
 const { requestedSlugs } = parseRunnerArgs();
 const dryRun = !process.argv.includes('--live');
 
-function loadDealers(db: Database.Database): CarsBgDealerAccount[] {
+function loadDealers(db: Database.Database) {
   const rows = db.prepare(`
     SELECT id, slug, name, cars_url, cars_user, cars_password
     FROM dealers
@@ -22,23 +22,12 @@ function loadDealers(db: Database.Database): CarsBgDealerAccount[] {
       AND TRIM(COALESCE(cars_password, '')) != ''
       ${requestedSlugs.length ? `AND slug IN (${requestedSlugs.map(() => '?').join(', ')})` : ''}
     ORDER BY priority DESC, slug
-  `).all(...requestedSlugs) as {
-    id: number;
-    slug: string;
-    name: string | null;
-    cars_url: string | null;
-    cars_user: string | null;
-    cars_password: string | null;
-  }[];
+  `).all(...requestedSlugs) as CarsBgDealerSource[];
 
-  return rows.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    carsUrl: row.cars_url,
-    carsUser: row.cars_user,
-    carsPassword: row.cars_password,
-  }));
+  return rows.flatMap((row) => {
+    const account = getCarsBgDealerAccount(row);
+    return account ? [account] : [];
+  });
 }
 
 async function main() {
