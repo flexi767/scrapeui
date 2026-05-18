@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import bcrypt from 'bcryptjs';
 import { isValidDealerSlug } from '@/lib/dealer-config';
+import { errorMessage } from '@/lib/utils';
 
 // POST /api/dealers/register
 // Admin creates a dealer + an associated user account in one step.
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     const dealerId = insert();
     return NextResponse.json({ id: dealerId, slug, name }, { status: 201 });
   } catch (err) {
-    const msg = (err as Error).message ?? '';
+    const msg = errorMessage(err, '');
     if (msg.includes('UNIQUE')) {
       return NextResponse.json({ error: 'slug or username already exists' }, { status: 409 });
     }

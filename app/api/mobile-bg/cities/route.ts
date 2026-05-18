@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchCitiesForRegion } from '@/lib/mobile-bg/regions';
+import { errorMessage } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   const region = req.nextUrl.searchParams.get('region');
@@ -10,6 +11,6 @@ export async function GET(req: NextRequest) {
       headers: { 'Cache-Control': 'public, max-age=3600' },
     });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(err, 'Failed to load cities') }, { status: 500 });
   }
 }
