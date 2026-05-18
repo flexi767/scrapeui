@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import {
   CarFront,
   ArchiveIcon,
@@ -70,11 +71,16 @@ function formatDate(dateString: string | null): string {
 }
 
 export function Dashboard() {
+  const { data: session, status: sessionStatus } = useSession();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = session?.user?.role === 'admin';
+
   useEffect(() => {
+    if (sessionStatus === 'loading') return;
+
     let cancelled = false;
     let inFlight: AbortController | null = null;
     let lastFetchAt = 0;
@@ -96,14 +102,16 @@ export function Dashboard() {
       try {
         const [statsRes, dealersRes] = await Promise.all([
           fetch('/api/dashboard/stats', { signal: controller.signal }),
-          fetch('/api/dealers', { signal: controller.signal }),
+          isAdmin ? fetch('/api/dealers', { signal: controller.signal }) : Promise.resolve(null),
         ]);
+        if (!statsRes.ok) throw new Error(`Stats request failed: ${statsRes.status}`);
+        if (dealersRes && !dealersRes.ok) throw new Error(`Dealers request failed: ${dealersRes.status}`);
         const statsData = await statsRes.json();
-        const dealersData = await dealersRes.json();
+        const dealersData = dealersRes ? await dealersRes.json() : [];
         if (cancelled) return;
         lastFetchAt = Date.now();
         setStats(statsData);
-        setDealers(dealersData);
+        setDealers(Array.isArray(dealersData) ? dealersData : []);
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error('Failed to fetch dashboard data:', error);
@@ -132,7 +140,7 @@ export function Dashboard() {
       window.clearInterval(intervalId);
       window.removeEventListener('focus', onFocus);
     };
-  }, []);
+  }, [isAdmin, sessionStatus]);
 
   const activeDealers = dealers.filter(d => d.active);
   const ownDealers = activeDealers.filter(d => d.own);
