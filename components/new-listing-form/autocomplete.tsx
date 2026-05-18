@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatCount } from "@/lib/utils";
 
 export interface AutocompleteOption {
   value: string;
@@ -223,7 +224,7 @@ export function AutocompleteInput({
                 <span>{option.value}</span>
                 {option.count != null && (
                   <span className="text-xs text-gray-500">
-                    {option.count.toLocaleString("en-US")}
+                    {formatCount(option.count)}
                   </span>
                 )}
               </button>

@@ -16,6 +16,7 @@ import {
   MAIN_CATEGORIES,
   type FormState,
 } from "@/components/new-listing-form/constants";
+import { formatCount } from "@/lib/utils";
 
 type SetFormField = <K extends keyof FormState>(
   key: K,
@@ -75,11 +76,7 @@ export function VehicleDetailsSection({
             hideLowCountOnEmpty
             open={openAutocomplete === "make"}
             focusWhenOpen
-            trailingText={
-              selectedMakeCount != null
-                ? selectedMakeCount.toLocaleString("en-US")
-                : null
-            }
+            trailingText={selectedMakeCount != null ? formatCount(selectedMakeCount) : null}
             onOpenChange={(open) => {
               if (open) {
                 onOpenAutocompleteChange("make");
@@ -102,11 +99,7 @@ export function VehicleDetailsSection({
             open={openAutocomplete === "model"}
             focusWhenOpen
             onArrowLeft={() => onOpenAutocompleteChange("make")}
-            trailingText={
-              selectedModelCount != null
-                ? selectedModelCount.toLocaleString("en-US")
-                : null
-            }
+            trailingText={selectedModelCount != null ? formatCount(selectedModelCount) : null}
             onOpenChange={(open) => {
               if (open) {
                 onOpenAutocompleteChange("model");

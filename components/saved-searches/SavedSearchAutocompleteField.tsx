@@ -3,6 +3,7 @@ import {
   type AutocompleteOption,
 } from "@/components/new-listing-form/autocomplete";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+import { formatCount } from "@/lib/utils";
 
 export function SavedSearchAutocompleteField({
   field,
@@ -44,9 +45,7 @@ export function SavedSearchAutocompleteField({
       focusWhenOpen
       open={openAutocomplete === kind}
       onArrowLeft={isMake ? undefined : () => onOpenAutocompleteChange("marka")}
-      trailingText={
-        selectedCount != null ? selectedCount.toLocaleString("en-US") : null
-      }
+      trailingText={selectedCount != null ? formatCount(selectedCount) : null}
       onOpenChange={(open) => {
         if (open) {
           onOpenAutocompleteChange(kind);
