@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { readJsonError } from '@/lib/streaming-job';
+import { errorMessage, parseApiResponse } from '@/lib/utils';
 import Link from 'next/link';
 
 interface Config {
@@ -55,12 +55,11 @@ function ForkModal({
           ...(requiresDealer ? { dealerId: Number(dealerId) } : {}),
         }),
       });
-      if (!res.ok) {
-        setError(await readJsonError(res, 'Fork failed'));
-        return;
-      }
+      await parseApiResponse<unknown>(res, 'Fork failed');
       router.refresh();
       onClose();
+    } catch (error) {
+      setError(errorMessage(error, 'Fork failed'));
     } finally {
       setBusy(false);
     }
@@ -114,9 +113,13 @@ function ActivateButton({ configId }: { configId: number }) {
   const [busy, setBusy] = useState(false);
   const activate = async () => {
     setBusy(true);
-    await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
-    router.refresh();
-    setBusy(false);
+    try {
+      const res = await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
+      await parseApiResponse<unknown>(res, 'Activate failed');
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <button onClick={activate} disabled={busy} className="text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 px-3 py-1.5 rounded-md">
@@ -131,9 +134,13 @@ function DeleteButton({ configId }: { configId: number }) {
   const del = async () => {
     if (!confirm('Delete this config?')) return;
     setBusy(true);
-    await fetch(`/api/dealer-templates/${configId}/delete`, { method: 'POST' });
-    router.refresh();
-    setBusy(false);
+    try {
+      const res = await fetch(`/api/dealer-templates/${configId}/delete`, { method: 'POST' });
+      await parseApiResponse<unknown>(res, 'Delete failed');
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <button onClick={del} disabled={busy} className="text-sm bg-red-900/60 hover:bg-red-800 disabled:opacity-50 text-red-300 px-3 py-1.5 rounded-md">

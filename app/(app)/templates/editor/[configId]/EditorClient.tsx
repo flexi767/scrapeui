@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Editor, Frame, useEditor } from '@craftjs/core';
 import { BLOCK_RESOLVER, BLOCK_PALETTE } from '@/components/editor-blocks';
 import type { DealerTemplateConfig } from '@/lib/queries';
+import { parseApiResponse } from '@/lib/utils';
 
 // ── Toolbar ──────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ function EditorToolbar({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageType, craftState: serialized, name: configName }),
       });
-      if (!res.ok) throw new Error('Save failed');
+      await parseApiResponse<unknown>(res, 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -53,7 +54,8 @@ function EditorToolbar({
     setActivating(true);
     try {
       const res = await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
-      if (res.ok) setActivated(true);
+      await parseApiResponse<unknown>(res, 'Activate failed');
+      setActivated(true);
     } finally {
       setActivating(false);
     }

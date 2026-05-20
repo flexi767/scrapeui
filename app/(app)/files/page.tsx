@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { readJsonError } from '@/lib/streaming-job';
+import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 interface UploadRow {
   id: number;
@@ -24,7 +24,7 @@ export default function FilesPage() {
   function loadFiles() {
     setLoading(true);
     return fetch('/api/uploads')
-      .then((r) => r.json())
+      .then((r) => parseApiResponse<UploadRow[]>(r, 'Failed to load files'))
       .then(setFiles)
       .finally(() => setLoading(false));
   }
@@ -50,12 +50,10 @@ export default function FilesPage() {
         method: 'POST',
         body: formData,
       });
-      if (!response.ok) {
-        throw new Error(await readJsonError(response, 'Failed to upload files'));
-      }
+      await parseApiResponse<unknown>(response, 'Failed to upload files');
       await loadFiles();
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload files');
+      setError(errorMessage(uploadError, 'Failed to upload files'));
     } finally {
       setUploading(false);
     }
