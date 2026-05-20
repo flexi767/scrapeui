@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
+import { parseApiResponse } from '@/lib/utils';
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -27,18 +28,17 @@ export default function NewArticlePage() {
     e.preventDefault();
     setSaving(true);
 
-    const res = await fetch('/api/articles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title, content, labelIds: selectedLabels, listingIds: selectedListings,
-      }),
-    });
-
-    if (res.ok) {
-      const { slug } = await res.json();
+    try {
+      const res = await fetch('/api/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title, content, labelIds: selectedLabels, listingIds: selectedListings,
+        }),
+      });
+      const { slug } = await parseApiResponse<{ slug: string }>(res, 'Failed to create article');
       router.push(`/kb/${slug}`);
-    } else {
+    } catch {
       setSaving(false);
     }
   }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
+import { parseApiResponse } from '@/lib/utils';
 
 export default function NewExpensePage() {
   const router = useRouter();
@@ -34,19 +35,18 @@ export default function NewExpensePage() {
 
     const amountCents = Math.round(parseFloat(amount) * 100);
 
-    const res = await fetch('/api/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title, amount: amountCents, currency, date, category,
-        notes: notes || null,
-        listingIds: selectedListings,
-        labelIds: selectedLabels,
-      }),
-    });
-
-    if (res.ok) {
-      const { id: expenseId } = await res.json();
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title, amount: amountCents, currency, date, category,
+          notes: notes || null,
+          listingIds: selectedListings,
+          labelIds: selectedLabels,
+        }),
+      });
+      const { id: expenseId } = await parseApiResponse<{ id: number }>(res, 'Failed to create expense');
 
       // Upload invoice/receipt files if provided
       if (invoiceFiles.length > 0) {
@@ -60,7 +60,7 @@ export default function NewExpensePage() {
       }
 
       router.push(`/expenses/${expenseId}`);
-    } else {
+    } catch {
       setSaving(false);
     }
   }

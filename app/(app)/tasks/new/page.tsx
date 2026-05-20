@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow, UserRow } from '@/lib/queries';
+import { parseApiResponse } from '@/lib/utils';
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -33,22 +34,21 @@ export default function NewTaskPage() {
     e.preventDefault();
     setSaving(true);
 
-    const res = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title, description: description || null, status, priority,
-        assigneeId: assigneeId ? Number(assigneeId) : null,
-        deadline: deadline || null,
-        listingIds: selectedListings,
-        labelIds: selectedLabels,
-      }),
-    });
-
-    if (res.ok) {
-      const { id } = await res.json();
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title, description: description || null, status, priority,
+          assigneeId: assigneeId ? Number(assigneeId) : null,
+          deadline: deadline || null,
+          listingIds: selectedListings,
+          labelIds: selectedLabels,
+        }),
+      });
+      const { id } = await parseApiResponse<{ id: number }>(res, 'Failed to create task');
       router.push(`/tasks/${id}`);
-    } else {
+    } catch {
       setSaving(false);
     }
   }
