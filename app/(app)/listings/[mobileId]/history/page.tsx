@@ -1,20 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
+import { formatDateOnly } from '@/lib/date-format';
 import { formatCount, formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
-}
-
-function formatDateAxis(dateStr: string) {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yy = String(d.getFullYear()).slice(2);
-  return `${dd}.${mm}.${yy}`;
 }
 
 export default async function PriceHistoryPage({ params }: Props) {
@@ -196,7 +188,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                             style={{ height: h }}
                           />
                           <div className="mt-1 text-center text-[10px] leading-tight text-gray-500">
-                            <div>{formatDateAxis(snap.recorded_at)}</div>
+                            <div>{formatDateOnly(snap.recorded_at)}</div>
                             <div>{formatDate(snap.recorded_at).split(' ')[1] ?? ''}</div>
                           </div>
                           {/* Tooltip */}
