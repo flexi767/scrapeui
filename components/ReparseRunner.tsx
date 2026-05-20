@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 interface Dealer { id: number; slug: string; name: string; }
 
@@ -37,11 +38,10 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealer: dealer || undefined, missingOnly, dryRun }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Error'); return; }
+      const data = await parseApiResponse<Result>(res, 'Reparse failed');
       setResult(data);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorMessage(e, 'Reparse failed'));
     } finally {
       setRunning(false);
     }

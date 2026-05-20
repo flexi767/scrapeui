@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { errorMessage } from "@/lib/utils";
+import { errorMessage, parseApiResponse } from "@/lib/utils";
 
 interface MarketplaceListing {
   backupId: number;
@@ -12,6 +12,10 @@ interface MarketplaceListing {
   price?: string | number | null;
   mileage?: string | number | null;
   photoUrls?: string[];
+}
+
+interface MarketplaceListingsResponse {
+  listings?: MarketplaceListing[];
 }
 
 export function MarketplacePickerClient() {
@@ -38,8 +42,7 @@ export function MarketplacePickerClient() {
           credentials: "same-origin",
           signal: controller.signal,
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
+        const data = await parseApiResponse<MarketplaceListingsResponse>(response, "Could not load listings");
         setListings(data.listings || []);
         setStatus(`Loaded ${(data.listings || []).length} listings`);
       } catch (error) {

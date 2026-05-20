@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { parseApiResponse } from '@/lib/utils';
 
 interface SearchResult {
   type: 'task' | 'listing' | 'expense' | 'article';
@@ -26,11 +27,14 @@ export default function SearchPage() {
     setLoading(true);
     setSearched(true);
 
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    if (res.ok) {
-      setResults(await res.json());
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      setResults(await parseApiResponse<SearchResult[]>(res, 'Search failed'));
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   const typeColors: Record<string, string> = {
