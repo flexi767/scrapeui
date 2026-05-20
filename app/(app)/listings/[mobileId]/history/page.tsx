@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { formatCount, formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
@@ -117,7 +117,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                         {snap.last_edit ? formatDate(snap.last_edit) : <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right text-xs text-gray-300">
-                        {snap.views != null ? snap.views.toLocaleString('en-US') : <span className="text-gray-600">—</span>}
+                        {formatCount(snap.views)}
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-300">
                         {snap.ad_status != null ? snap.ad_status : <span className="text-gray-600">—</span>}

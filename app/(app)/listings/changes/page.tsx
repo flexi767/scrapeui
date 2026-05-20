@@ -11,7 +11,7 @@ import {
   type TrackedChangeRow,
 } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { formatCount, formatDate, formatPrice } from '@/lib/utils';
 
 interface SearchParams {
   make?: string;
@@ -232,7 +232,7 @@ export default async function ListingsChangesPage({
                         {row.snapshot_price != null && row.snapshot_price !== row.target_price ? <div>Price: {formatPrice(row.snapshot_price)} → {formatPrice(row.target_price)}</div> : null}
                         {row.snapshot_vat != null && row.snapshot_vat !== row.target_vat ? <div>VAT: {row.snapshot_vat || '—'} → {row.target_vat || '—'}</div> : null}
                         {row.snapshot_last_edit != null && row.snapshot_last_edit !== row.target_last_edit ? <div>Last Edit: {formatDate(row.snapshot_last_edit)} → {formatDate(row.target_last_edit)}</div> : null}
-                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{getViewsLabel(row)}: {row.snapshot_views.toLocaleString('en-US')} → {(row.target_views ?? 0).toLocaleString('en-US')}</div> : null}
+                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{getViewsLabel(row)}: {formatCount(row.snapshot_views)} → {formatCount(row.target_views ?? 0)}</div> : null}
                         {row.snapshot_ad_status != null && row.snapshot_ad_status !== row.target_ad_status ? <div>Paid: {row.snapshot_ad_status} → {row.target_ad_status || 'none'}</div> : null}
                         {row.snapshot_kaparo != null && row.snapshot_kaparo !== row.target_kaparo ? <div>К: {row.snapshot_kaparo ? 'yes' : 'no'} → {row.target_kaparo ? 'yes' : 'no'}</div> : null}
                         {row.snapshot_title && row.snapshot_title !== row.target_title ? <div className="line-clamp-2">Title: {row.snapshot_title} → {row.target_title || '—'}</div> : null}

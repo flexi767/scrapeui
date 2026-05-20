@@ -4,7 +4,7 @@ import EmblaCarousel from '@/components/EmblaCarousel';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { buildImageList, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
+import { buildImageList, formatCount, formatDate, formatMileage, formatPrice, parseJson } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface Props {
@@ -188,7 +188,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <SpecRow label="Mileage" value={formatMileage(listing.mileage)} />
               <SpecRow
                 label="Views"
-                value={listing.views != null ? listing.views.toLocaleString('en-US') : null}
+                value={formatCount(listing.views)}
               />
               <SpecRow label="Last Edit" value={formatDate(listing.last_edit)} />
             </div>
