@@ -1,5 +1,7 @@
 import type { MobileBgSearchResultRow } from "@/lib/mobile-bg/search-results";
 
+import { formatCount } from "@/lib/utils";
+
 const MONTH_NUMBER_BY_NAME: Record<string, string> = {
   януари: "01",
   февруари: "02",
@@ -49,5 +51,5 @@ export function formatRegMonthNumber(value: string | null) {
 
 export function formatMileageValue(value: number | null) {
   if (value == null || !Number.isFinite(value)) return "—";
-  return value.toLocaleString("en-US");
+  return formatCount(value);
 }

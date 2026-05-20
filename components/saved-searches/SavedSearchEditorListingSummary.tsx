@@ -1,7 +1,7 @@
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
-import { formatMileage, formatPrice } from "@/lib/utils";
+import { formatCount, formatMileage, formatPrice } from "@/lib/utils";
 
 type SavedSearchListing = SearchPrefillData["listing"];
 
@@ -63,7 +63,7 @@ export function SavedSearchEditorListingSummary({
           <div className="mt-1 text-xs text-gray-500">
             {formatPrice(listing.currentPrice)}
             {listing.power != null
-              ? ` • ${listing.power.toLocaleString("en-US")} PS`
+              ? ` • ${formatCount(listing.power)} PS`
               : ""}{" "}
             • {listing.fuel || "—"} • {formatMileage(listing.mileage)}
           </div>

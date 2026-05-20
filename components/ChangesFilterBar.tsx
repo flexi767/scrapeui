@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
+import { formatCount } from '@/lib/utils';
 
 interface Props {
   makes: string[];
@@ -189,7 +190,7 @@ export default function ChangesFilterBar({
       )}
 
       <span className="ml-auto text-sm text-gray-400">
-        {total.toLocaleString('en-US')} changes
+        {formatCount(total)} changes
       </span>
     </div>
   );
