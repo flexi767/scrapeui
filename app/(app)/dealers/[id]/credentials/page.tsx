@@ -20,7 +20,7 @@ import {
   type PlatformTestService,
 } from '@/lib/dealers/platformCredentials';
 import { DEALER_TEMPLATES as TEMPLATES } from '@/lib/dealer-config';
-import { readJsonError } from '@/lib/streaming-job';
+import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 interface DealerCreds extends PlatformAccountFields<string | null>, SocialAccountFields<string | null> {
   id: number;
@@ -171,20 +171,24 @@ export default function DealerCredentialsPage() {
   const isAdmin = session?.user.role === 'admin';
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/dealers/${dealerId}/credentials`);
-    if (!res.ok) { toast.error('Could not load dealer'); return; }
-    const data = await res.json() as DealerCreds;
-    setDealer(data);
-    setForm({
-      ...pickPlatformAccountFields(data),
-      ...pickSocialAccountFields(data),
-    });
-    setPublicForm({
-      public_enabled: data.public_enabled === 1,
-      template: data.template ?? 'bold',
-      public_domain: data.public_domain ?? '',
-    });
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/dealers/${dealerId}/credentials`);
+      const data = await parseApiResponse<DealerCreds>(res, 'Could not load dealer');
+      setDealer(data);
+      setForm({
+        ...pickPlatformAccountFields(data),
+        ...pickSocialAccountFields(data),
+      });
+      setPublicForm({
+        public_enabled: data.public_enabled === 1,
+        template: data.template ?? 'bold',
+        public_domain: data.public_domain ?? '',
+      });
+    } catch (error) {
+      toast.error(errorMessage(error, 'Could not load dealer'));
+    } finally {
+      setLoading(false);
+    }
   }, [dealerId]);
 
   useEffect(() => { if (sessionStatus !== 'loading') load(); }, [load, sessionStatus]);
@@ -216,8 +220,10 @@ export default function DealerCredentialsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) { toast.error(await readJsonError(res, 'Save failed')); return; }
+      await parseApiResponse<unknown>(res, 'Save failed');
       toast.success(`${sectionName} saved`);
+    } catch (error) {
+      toast.error(errorMessage(error, 'Save failed'));
     } finally {
       setSaving(null);
     }
@@ -235,9 +241,11 @@ export default function DealerCredentialsPage() {
           public_domain: publicForm.public_domain || null,
         }),
       });
-      if (!res.ok) { toast.error(await readJsonError(res, 'Save failed')); return; }
+      await parseApiResponse<unknown>(res, 'Save failed');
       toast.success('Public page settings saved');
       await load();
+    } catch (error) {
+      toast.error(errorMessage(error, 'Save failed'));
     } finally {
       setSaving(null);
     }
@@ -251,7 +259,7 @@ export default function DealerCredentialsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [dealerId] }),
       });
-      const data = await res.json() as Record<number, Record<string, PlatformTestResult>>;
+      const data = await parseApiResponse<Record<number, Record<string, PlatformTestResult>>>(res, 'Test failed');
       const result = data[dealerId];
       const key = PLATFORM_CREDENTIAL_SECTIONS.find((section) => section.testService === service)?.loginResultKey;
       if (!key) return;
@@ -264,9 +272,9 @@ export default function DealerCredentialsPage() {
         setTestReason((s) => ({ ...s, [service]: r?.reason ?? 'Login failed' }));
         toast.error(`${key} login failed: ${r?.reason ?? 'unknown'}`);
       }
-    } catch {
+    } catch (error) {
       setTestStatus((s) => ({ ...s, [service]: 'fail' }));
-      toast.error('Test failed');
+      toast.error(errorMessage(error, 'Test failed'));
     }
   }
 
