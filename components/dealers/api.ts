@@ -1,4 +1,4 @@
-import { readJsonResponse } from '@/lib/utils';
+import { errorMessage, parseApiResponse } from '@/lib/utils';
 import type { Dealer, DealerCreateForm, DealerEditForm, DealerLoginResult } from './types';
 
 type ApiResult<T> =
@@ -11,10 +11,12 @@ export async function createDealer(form: DealerCreateForm): Promise<ApiResult<De
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(form),
   });
-  const data = await readJsonResponse(response);
-
-  if (!response.ok) return { ok: false, error: (data.error as string | undefined) || 'Failed to add' };
-  return { ok: true, data: data as unknown as Dealer };
+  try {
+    const data = await parseApiResponse<Dealer>(response, 'Failed to add');
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, 'Failed to add') };
+  }
 }
 
 export async function patchDealer(id: number, body: Partial<DealerEditForm> | Partial<Dealer>): Promise<ApiResult<unknown>> {
@@ -23,14 +25,17 @@ export async function patchDealer(id: number, body: Partial<DealerEditForm> | Pa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await readJsonResponse(response);
-
-  if (!response.ok) return { ok: false, error: (data.error as string | undefined) || 'Failed to save' };
-  return { ok: true, data };
+  try {
+    const data = await parseApiResponse<unknown>(response, 'Failed to save');
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error, 'Failed to save') };
+  }
 }
 
 export async function deleteDealer(id: number) {
-  await fetch(`/api/dealers/${id}`, { method: 'DELETE' });
+  const response = await fetch(`/api/dealers/${id}`, { method: 'DELETE' });
+  await parseApiResponse<unknown>(response, 'Failed to delete dealer');
 }
 
 export async function testDealerLogins(id: number) {
@@ -39,5 +44,5 @@ export async function testDealerLogins(id: number) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids: [id] }),
   });
-  return response.json() as Promise<Record<number, DealerLoginResult>>;
+  return parseApiResponse<Record<number, DealerLoginResult>>(response, 'Login test failed');
 }
