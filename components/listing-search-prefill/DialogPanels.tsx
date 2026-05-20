@@ -1,4 +1,5 @@
 import type { SearchPrefillResponse } from './types';
+import { formatCount } from '@/lib/utils';
 
 export function LoadingPanel({ label }: { label: string }) {
   return (
@@ -40,8 +41,8 @@ export function ListingSummaryPanel({ data }: { data: SearchPrefillResponse }) {
         )}
       </div>
       <div className="mt-1 text-xs text-slate-100/75">
-        {data.reference.makeCount != null ? `${data.reference.makeCount.toLocaleString('en-US')} listings for make` : 'No make count in reference data'}
-        {data.reference.modelCount != null ? ` • ${data.reference.modelCount.toLocaleString('en-US')} for model` : ''}
+        {data.reference.makeCount != null ? `${formatCount(data.reference.makeCount)} listings for make` : 'No make count in reference data'}
+        {data.reference.modelCount != null ? ` • ${formatCount(data.reference.modelCount)} for model` : ''}
       </div>
       <div className="mt-1 text-xs text-slate-100/65">
         {data.savedSearch.enabled

@@ -10,6 +10,7 @@ import {
 import {
   getSelectedOptionCount,
 } from "@/components/new-listing-form/autocomplete";
+import { formatCount } from "@/lib/utils";
 
 interface SearchPrefillFieldsProps {
   fields: SearchField[];
@@ -84,14 +85,14 @@ export function SearchPrefillFields({
                         <option key={option.value} value={option.value}>
                           {option.value}
                           {option.count != null
-                            ? ` (${option.count.toLocaleString("en-US")})`
+                            ? ` (${formatCount(option.count)})`
                             : ""}
                         </option>
                       ))}
                     </select>
                     {selectedReferenceCount != null && (
                       <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                        {selectedReferenceCount.toLocaleString("en-US")}
+                        {formatCount(selectedReferenceCount)}
                       </div>
                     )}
                   </div>
@@ -192,14 +193,14 @@ export function SearchPrefillFields({
                         <option key={option.value} value={option.value}>
                           {option.value}
                           {option.count != null
-                            ? ` (${option.count.toLocaleString("en-US")})`
+                            ? ` (${formatCount(option.count)})`
                             : ""}
                         </option>
                       ))}
                     </select>
                     {selectedReferenceCount != null && (
                       <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                        {selectedReferenceCount.toLocaleString("en-US")}
+                        {formatCount(selectedReferenceCount)}
                       </div>
                     )}
                   </div>
