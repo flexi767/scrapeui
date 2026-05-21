@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { readJsonBody } from '@/lib/api/json-body';
 import { errorMessage } from '@/lib/utils';
 import {
   buildBackupForm,
@@ -55,7 +56,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
     }
 
-    const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const payload = await readJsonBody<Record<string, unknown>>(request);
     if (!payload) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }

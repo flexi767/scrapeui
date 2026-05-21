@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 import path from "path";
+import { readJsonBody } from "@/lib/api/json-body";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-  const { backupId } = body as { backupId?: unknown };
+  const body = await readJsonBody<{ backupId?: unknown }>(req, {});
+  const { backupId } = body ?? {};
 
   if (typeof backupId !== "number" || isNaN(backupId)) {
     return new Response(JSON.stringify({ error: "backupId is required" }), {

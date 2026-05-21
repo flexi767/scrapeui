@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import path from 'path';
 import { ChildStreamState, createSseStreamResponse, createStopResponse } from '@/lib/api/child-stream';
+import { readJsonBody } from '@/lib/api/json-body';
 
 export const runtime = 'nodejs';
 
@@ -18,16 +19,12 @@ export async function POST(req: NextRequest) {
 
   let dealerSlugs: string[] = [];
   let onlyReset = false;
-  try {
-    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-    if (Array.isArray(body.dealerSlugs)) {
-      dealerSlugs = (body.dealerSlugs as unknown[]).filter((s): s is string => typeof s === 'string' && s.length > 0);
-    }
-    if (body.onlyReset === true) {
-      onlyReset = true;
-    }
-  } catch {
-    // ignore
+  const body = await readJsonBody<Record<string, unknown>>(req, {});
+  if (Array.isArray(body?.dealerSlugs)) {
+    dealerSlugs = (body.dealerSlugs as unknown[]).filter((s): s is string => typeof s === 'string' && s.length > 0);
+  }
+  if (body?.onlyReset === true) {
+    onlyReset = true;
   }
 
   if (dealerSlugs.length === 0) {

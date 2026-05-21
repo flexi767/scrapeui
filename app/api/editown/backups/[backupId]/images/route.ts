@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { readJsonBody } from '@/lib/api/json-body';
 import { MobileBgBackupImageRow } from '@/lib/queries';
 import { refreshImageCount, STORAGE_IMAGE_ROOT } from './image-helpers';
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -148,7 +149,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
 
-  const payload = (await request.json().catch(() => null)) as { imageIds?: unknown } | null;
+  const payload = await readJsonBody<{ imageIds?: unknown }>(request);
   const imageIds = payload?.imageIds;
   if (!Array.isArray(imageIds) || imageIds.some((id) => !Number.isInteger(id))) {
     return NextResponse.json({ error: 'imageIds must be an array of image IDs' }, { status: 400 });

@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server';
 import path from 'path';
 import { ChildStreamState, createSseStreamResponse, createStopResponse } from '@/lib/api/child-stream';
+import { readJsonBody } from '@/lib/api/json-body';
 
 export const runtime = 'nodejs';
 
 const state = new ChildStreamState();
 
 export async function POST(req: NextRequest) {
-  const payload = await req.json().catch(() => null) as { live?: boolean; dealers?: string[] } | null;
+  const payload = await readJsonBody<{ live?: boolean; dealers?: string[] }>(req);
 
   state.clearStale();
 

@@ -3,6 +3,7 @@ import {
   fetchMobileBgSearchResultsWithFallback,
   type MobileBgSearchFieldInput,
 } from '@/lib/mobile-bg/search-results';
+import { readJsonBody } from '@/lib/api/json-body';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { errorMessage } from '@/lib/utils';
 
@@ -10,13 +11,13 @@ export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json().catch(() => null) as {
+    const payload = await readJsonBody<{
       action?: string;
       method?: string;
       fields?: MobileBgSearchFieldInput[];
       sourceMobileId?: string | null;
       sourceListingId?: number | null;
-    } | null;
+    }>(request);
 
     if (!payload?.action || !payload?.method || !Array.isArray(payload.fields)) {
       return NextResponse.json({ error: 'action, method, and fields are required' }, { status: 400 });
