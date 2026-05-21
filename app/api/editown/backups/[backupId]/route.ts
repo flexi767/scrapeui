@@ -3,6 +3,7 @@ import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { readJsonBody } from '@/lib/api/json-body';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { errorMessage } from '@/lib/utils';
 import {
   buildBackupForm,
@@ -88,7 +89,7 @@ export async function PATCH(
 
       const bodyType = payload.body_type ?? payload.bodyType ?? '';
       const productionYear = payload.productionYear ?? '';
-      const now = new Date().toISOString();
+      const now = currentIsoTimestamp();
 
       raw.prepare(`
         UPDATE mobilebg_backups
@@ -159,7 +160,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
     }
 
-    const now = new Date().toISOString();
+    const now = currentIsoTimestamp();
     raw.prepare(`
       UPDATE mobilebg_backups
       SET

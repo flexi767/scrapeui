@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { readJsonBody } from '@/lib/api/json-body';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { MobileBgBackupImageRow } from '@/lib/queries';
 import { refreshImageCount, STORAGE_IMAGE_ROOT } from './image-helpers';
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -110,7 +111,7 @@ export async function POST(
     .prepare('SELECT MAX(sort_order) as max_sort FROM mobilebg_backup_images WHERE backup_id = ?')
     .get(backupId) as { max_sort: number | null } | undefined;
   let nextSort = (maxSort?.max_sort ?? -1) + 1;
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   const insertImage = raw.prepare(`
     INSERT INTO mobilebg_backup_images (backup_id, sort_order, filename, source_url, local_path, created_at)

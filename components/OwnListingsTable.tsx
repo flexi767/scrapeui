@@ -17,6 +17,7 @@ import {
   type OwnListingEditForm,
 } from "@/components/own-listings/editing";
 import { OwnListingRow } from "@/lib/queries";
+import { currentIsoTimestamp } from "@/lib/date-format";
 import { errorMessage } from "@/lib/utils";
 
 interface Props {
@@ -145,7 +146,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 needs_sync: 0,
                 last_mobile_sync_status: "success",
                 last_mobile_sync_error: null,
-                last_mobile_sync_at: new Date().toISOString(),
+                last_mobile_sync_at: currentIsoTimestamp(),
               }
             : item,
         ),

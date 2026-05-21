@@ -1,5 +1,6 @@
 import { raw } from '@/db/client';
 import { getOwnListingByMobileId } from '@/lib/queries';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(
@@ -209,7 +210,7 @@ export async function PATCH(
         vatForDb,
         kaparo,
         effectiveAdStatus,
-        new Date().toISOString(),
+        currentIsoTimestamp(),
         backup.id,
       );
 

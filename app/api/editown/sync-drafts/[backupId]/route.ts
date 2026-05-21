@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { getEditOwnSyncRows } from '@/lib/queries';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { errorMessage } from '@/lib/utils';
 
 export async function POST(
@@ -38,7 +39,7 @@ export async function POST(
       row.source_vat,
       row.source_ad_status,
       row.source_kaparo,
-      new Date().toISOString(),
+      currentIsoTimestamp(),
       backupId,
     );
 
