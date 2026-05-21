@@ -1,4 +1,5 @@
 import { raw } from "@/db/client";
+import { currentIsoTimestamp } from "@/lib/date-format";
 
 export interface DealerTemplateConfig {
   id: number;
@@ -65,7 +66,7 @@ export function createDealerTemplateConfig(params: {
   name: string;
   configJson: string;
 }): number {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw
     .prepare(
       `INSERT INTO dealer_template_configs (dealer_id, base_template_id, name, config_json, created_at, updated_at)
@@ -79,7 +80,7 @@ export function updateDealerTemplateConfig(
   id: number,
   fields: { name?: string; configJson?: string },
 ): void {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   if (fields.name !== undefined && fields.configJson !== undefined) {
     raw
       .prepare(

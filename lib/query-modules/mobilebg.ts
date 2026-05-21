@@ -1,4 +1,5 @@
 import { raw } from "@/db/client";
+import { currentIsoTimestamp } from "@/lib/date-format";
 import type {
   EditOwnSyncRow,
   MakeModelMappingRow,
@@ -103,7 +104,7 @@ export function getMobileBgCrawlRuns(limit = 20): MobileBgCrawlRunRow[] {
 }
 
 export function createCrawlRun(dealerId: number, sourceUrl: string): number {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw
     .prepare(
       `
@@ -124,7 +125,7 @@ export function updateCrawlRun(
     imagesFailed: number;
   },
 ): void {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   raw
     .prepare(
       `

@@ -1,4 +1,5 @@
 import { raw } from "@/db/client";
+import { currentIsoTimestamp } from "@/lib/date-format";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
   getListingSearchPrefill,
@@ -257,7 +258,7 @@ export function createSavedSearch(
   fields: SearchField[],
 ) {
   ensureSavedSearchTables();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw
     .prepare(
       `
@@ -272,7 +273,7 @@ export function createSavedSearch(
 
 export function updateSavedSearch(id: number, fields: SearchField[]) {
   ensureSavedSearchTables();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   raw
     .prepare(
       `
@@ -290,7 +291,7 @@ export function upsertSavedSearchProfile(
   fields: SearchField[],
 ) {
   ensureSavedSearchTables();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const fieldsJson = JSON.stringify(fields);
   const saveProfile = raw.transaction(() => {
     const update = raw

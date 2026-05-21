@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { errorMessage } from '@/lib/utils';
 
 export function markSyncRunning(db: Database.Database, backupId: number): void {
@@ -6,7 +7,7 @@ export function markSyncRunning(db: Database.Database, backupId: number): void {
     UPDATE mobilebg_backups
     SET last_mobile_sync_status = 'running', last_mobile_sync_error = NULL, updated_at = ?
     WHERE id = ?
-  `).run(new Date().toISOString(), backupId);
+  `).run(currentIsoTimestamp(), backupId);
 }
 
 export function markSyncFailed(db: Database.Database, backupId: number, error: unknown): void {
@@ -14,5 +15,5 @@ export function markSyncFailed(db: Database.Database, backupId: number, error: u
     UPDATE mobilebg_backups
     SET last_mobile_sync_status = 'failed', last_mobile_sync_error = ?, updated_at = ?
     WHERE id = ?
-  `).run(errorMessage(error), new Date().toISOString(), backupId);
+  `).run(errorMessage(error), currentIsoTimestamp(), backupId);
 }

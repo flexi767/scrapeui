@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export interface IgnoredSearchResultRow {
   id: number;
@@ -53,7 +54,7 @@ export function listIgnoredSearchResults(listingId: number): IgnoredSearchResult
 
 export function addIgnoredSearchResult(listingId: number, ignoredMobileId: string) {
   ensureSearchIgnoreTable();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   raw.prepare(`
     INSERT OR IGNORE INTO listing_search_result_ignores (listing_id, ignored_mobile_id, created_at)
     VALUES (?, ?, ?)
