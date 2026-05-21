@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getExpenseById } from '@/lib/queries';
 import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(
   _request: NextRequest,
@@ -30,7 +31,7 @@ export async function PATCH(
   const expenseId = parsePositiveIntParam(id);
   if (!expenseId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await request.json();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   const fieldMap: Record<string, string> = {
     title: 'title', amount: 'amount', currency: 'currency',

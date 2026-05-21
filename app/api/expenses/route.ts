@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getExpenses } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Title, amount, date, and category are required' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw.prepare(`
     INSERT INTO expenses (title, amount, currency, date, category, notes, created_by_id, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

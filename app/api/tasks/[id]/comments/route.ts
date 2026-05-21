@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskComments } from '@/lib/queries';
 import { logActivity, parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(
   _request: NextRequest,
@@ -30,7 +31,7 @@ export async function POST(
   const taskId = parsePositiveIntParam(id);
   if (!taskId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const { body } = await request.json();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   if (!body?.trim()) {
     return NextResponse.json({ error: 'Body is required' }, { status: 400 });

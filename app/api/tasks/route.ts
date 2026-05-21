@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTasks } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw.prepare(`
     INSERT INTO tasks (title, description, status, priority, assignee_id, created_by_id, parent_id, deadline, is_recurring, recur_rule, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

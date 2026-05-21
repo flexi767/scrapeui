@@ -17,3 +17,7 @@ export function formatDateOnly(value: string | null | undefined): string {
 export function formatDateInputValue(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
+
+export function currentIsoTimestamp(): string {
+  return new Date().toISOString();
+}

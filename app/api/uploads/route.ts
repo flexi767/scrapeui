@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { UPLOADS_DIR } from '@/lib/storage-paths';
 
 const UPLOAD_DIR = UPLOADS_DIR;
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const entityType = formData.get('entityType') as string | null;
   const entityId = formData.get('entityId') as string | null;
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
   const insertUpload = raw

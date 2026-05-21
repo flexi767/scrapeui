@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getTaskTimeEntries } from '@/lib/queries';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(
   _request: NextRequest,
@@ -35,7 +36,7 @@ export async function POST(
     return NextResponse.json({ error: 'Duration and date are required' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = raw.prepare(`
     INSERT INTO time_entries (task_id, user_id, description, duration_minutes, date, created_at)
     VALUES (?, ?, ?, ?, ?, ?)

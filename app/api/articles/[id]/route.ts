@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function PATCH(
   request: NextRequest,
@@ -14,7 +15,7 @@ export async function PATCH(
   const articleId = parsePositiveIntParam(id);
   if (!articleId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await request.json() as Record<string, unknown>;
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   const toUpdate: Record<string, unknown> = {};
   if (body.title) toUpdate.title = (body.title as string).trim();

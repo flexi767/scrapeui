@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
-import { formatDateInputValue } from '@/lib/date-format';
+import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
 import { getTaskById } from '@/lib/queries';
 import { logActivity, parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
@@ -33,7 +33,7 @@ export async function PATCH(
   const taskId = parsePositiveIntParam(id);
   if (!taskId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   const body = await request.json();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   // Get current task for activity log
   const current = raw.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as Record<string, unknown> | undefined;
@@ -88,7 +88,7 @@ export async function DELETE(
 }
 
 function createNextRecurring(parentTaskId: number, parentTask: Record<string, unknown>) {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   let nextDeadline: string | null = null;
 
   if (parentTask.deadline && parentTask.recur_rule) {

@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getArticles } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   let slug = slugify(title);
 
   // Ensure unique slug

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import bcrypt from 'bcryptjs';
 import { isValidDealerSlug } from '@/lib/dealer-config';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { errorMessage } from '@/lib/utils';
 
 // POST /api/dealers/register
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'password must be at least 6 characters' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const passwordHash = await bcrypt.hash(password as string, 10);
 
   const insert = raw.transaction(() => {
