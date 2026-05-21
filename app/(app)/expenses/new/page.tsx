@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
+import { formatDateInputValue } from '@/lib/date-format';
 import { parseApiResponse } from '@/lib/utils';
 
 export default function NewExpensePage() {
@@ -15,7 +16,7 @@ export default function NewExpensePage() {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [currency] = useState('EUR');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(formatDateInputValue());
   const [category, setCategory] = useState('other');
   const [notes, setNotes] = useState('');
   const [selectedListings, setSelectedListings] = useState<number[]>([]);

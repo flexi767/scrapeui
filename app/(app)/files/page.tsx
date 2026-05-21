@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDateOnly } from '@/lib/date-format';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 interface UploadRow {
@@ -100,7 +101,7 @@ export default function FilesPage() {
                 </p>
               </div>
               <span className="text-xs text-gray-500">
-                {new Date(f.created_at).toLocaleDateString()}
+                {formatDateOnly(f.created_at)}
               </span>
             </a>
           ))}

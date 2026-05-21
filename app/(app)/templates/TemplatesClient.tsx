@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDateOnly } from '@/lib/date-format';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -185,7 +186,7 @@ export function TemplatesClient({
                   {c.isActive === 1 && (
                     <span className="ml-2 text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-0.5">Active</span>
                   )}
-                  <div className="text-xs text-gray-500 mt-0.5">Updated {new Date(c.updatedAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Updated {formatDateOnly(c.updatedAt)}</div>
                 </div>
                 <div className="flex gap-2">
                   {c.isActive === 0 && <ActivateButton configId={c.id} />}

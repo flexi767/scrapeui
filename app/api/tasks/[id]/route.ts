@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
+import { formatDateInputValue } from '@/lib/date-format';
 import { getTaskById } from '@/lib/queries';
 import { logActivity, parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
@@ -100,7 +101,7 @@ function createNextRecurring(parentTaskId: number, parentTask: Record<string, un
       else if (rule.interval === 'weekly') current.setDate(current.getDate() + 7 * every);
       else if (rule.interval === 'monthly') current.setMonth(current.getMonth() + every);
 
-      nextDeadline = current.toISOString().split('T')[0];
+      nextDeadline = formatDateInputValue(current);
     } catch { /* ignore parse errors */ }
   }
 

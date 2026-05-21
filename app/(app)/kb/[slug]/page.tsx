@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { TiptapViewer } from '@/components/editor/TiptapViewer';
+import { formatDateOnly } from '@/lib/date-format';
 
 interface ArticleDetail {
   id: number;
@@ -54,7 +55,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{article.title}</h1>
         <p className="mt-1 text-sm text-gray-400">
-          By {article.author_name} — Updated {new Date(article.updated_at).toLocaleDateString()}
+          By {article.author_name} — Updated {formatDateOnly(article.updated_at)}
         </p>
       </div>
 

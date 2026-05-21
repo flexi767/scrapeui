@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { formatDateOnly } from '@/lib/date-format';
 
 const NOTIFICATIONS_API_ENABLED = false;
 
@@ -109,7 +110,7 @@ export function NotificationBell() {
                     {n.title}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    {new Date(n.created_at).toLocaleDateString()}
+                    {formatDateOnly(n.created_at)}
                   </p>
                 </Link>
               ))

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDateOnly } from '@/lib/date-format';
 
 interface ArticleRow {
   id: number;
@@ -70,7 +71,7 @@ export default function KBPage() {
             >
               <p className="font-medium text-gray-100">{article.title}</p>
               <p className="mt-0.5 text-xs text-gray-400">
-                By {article.author_name} — Updated {new Date(article.updated_at).toLocaleDateString()}
+                By {article.author_name} — Updated {formatDateOnly(article.updated_at)}
               </p>
             </Link>
           ))}

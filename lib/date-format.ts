@@ -13,3 +13,7 @@ export function formatDateOnly(value: string | null | undefined): string {
 
   return value;
 }
+
+export function formatDateInputValue(date = new Date()): string {
+  return date.toISOString().slice(0, 10);
+}

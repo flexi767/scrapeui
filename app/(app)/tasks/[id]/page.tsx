@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { TiptapViewer } from '@/components/editor/TiptapViewer';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { formatDateInputValue, formatDateOnly } from '@/lib/date-format';
 
 interface TaskDetail {
   id: number;
@@ -56,7 +57,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [commentBody, setCommentBody] = useState('');
   const [timeDuration, setTimeDuration] = useState('');
   const [timeDesc, setTimeDesc] = useState('');
-  const [timeDate, setTimeDate] = useState(new Date().toISOString().split('T')[0]);
+  const [timeDate, setTimeDate] = useState(formatDateInputValue());
 
   const loadTask = useCallback(() => {
     fetch(`/api/tasks/${id}`).then(r => r.json()).then(setTask);
@@ -245,7 +246,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             <div key={c.id} className="rounded-lg border border-gray-700 bg-gray-800 p-4">
               <div className="mb-2 flex items-center gap-2 text-sm text-gray-400">
                 <span className="font-medium text-gray-200">{c.author_name}</span>
-                <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                <span>{formatDateOnly(c.created_at)}</span>
               </div>
               <TiptapViewer content={c.body} />
             </div>
