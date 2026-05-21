@@ -1,5 +1,6 @@
 import { raw } from "@/db/client";
 import {
+  DEFAULT_SUB_LOCATION_OPTIONS,
   fetchSubLocationOptions,
   type SubLocationOptions,
 } from "@/lib/mobile-bg/location-options";
@@ -49,11 +50,6 @@ interface LabeledOption {
   value: string;
   label: string;
 }
-
-const DEFAULT_SUB_LOCATION_OPTIONS: SubLocationOptions = {
-  label: "Населено място",
-  options: [{ value: "", label: "всички" }],
-};
 
 export interface SearchPrefillData {
   listing: {

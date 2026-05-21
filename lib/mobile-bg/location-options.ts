@@ -6,6 +6,11 @@ export interface SubLocationOptions {
   options: Array<{ value: string; label: string }>;
 }
 
+export const DEFAULT_SUB_LOCATION_OPTIONS: SubLocationOptions = {
+  label: 'Населено място',
+  options: [{ value: '', label: 'всички' }],
+};
+
 const SEARCH_PAGE_URL = 'https://www.mobile.bg/search/avtomobili-dzhipove';
 
 function encodeSearchParamWin1251(value: string) {
