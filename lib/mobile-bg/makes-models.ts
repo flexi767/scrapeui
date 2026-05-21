@@ -148,9 +148,3 @@ export function parseMakeModelSync(title: string, map: MakesMap | null): ParsedM
   const fallbackModel = parts[1] || '';
   return { make: fallbackMake, model: fallbackModel, mobileMakeId: null, mobileModelId: null, titleRemainder: stripParsedPrefix(title, fallbackMake, fallbackModel) };
 }
-
-export async function parseMakeModel(title: string): Promise<ParsedMakeModel> {
-  if (!title) return { make: '', model: '', mobileMakeId: null, mobileModelId: null, titleRemainder: '' };
-  const map = await fetchMakesModels();
-  return parseMakeModelSync(title, map);
-}
