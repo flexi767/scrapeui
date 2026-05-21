@@ -43,10 +43,12 @@ export const MONTH_OPTIONS = [
   "ноември",
   "декември",
 ];
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const PRODUCTION_YEAR_OPTIONS = [
   "",
-  ...Array.from({ length: new Date().getFullYear() - 1929 }, (_, index) =>
-    String(new Date().getFullYear() - index),
+  ...Array.from({ length: CURRENT_YEAR - 1929 }, (_, index) =>
+    String(CURRENT_YEAR - index),
   ),
 ];
 export const BODY_TYPE_OPTIONS = [
