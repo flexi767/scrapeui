@@ -4,6 +4,7 @@ import {
   getSavedSearchDetail,
   listSavedSearchSummaries,
 } from "@/lib/mobile-bg/saved-searches";
+import { readJsonBody } from "@/lib/api/json-body";
 import { parseSearchFields } from "@/lib/mobile-bg/search-form-shared";
 
 export async function GET() {
@@ -13,9 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json().catch(() => null)) as {
-    fields?: unknown;
-  } | null;
+  const payload = await readJsonBody<{ fields?: unknown }>(request);
 
   const fields = parseSearchFields(payload?.fields);
   if (!fields) {

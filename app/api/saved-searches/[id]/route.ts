@@ -8,6 +8,7 @@ import {
 } from '@/lib/mobile-bg/saved-searches';
 import { parseSearchFields } from '@/lib/mobile-bg/search-form-shared';
 import { parseIntParam } from '@/lib/api/db-helpers';
+import { readJsonBody } from '@/lib/api/json-body';
 
 export async function GET(
   _request: Request,
@@ -39,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Saved search not found' }, { status: 404 });
   }
 
-  const payload = await request.json().catch(() => null) as { fields?: unknown } | null;
+  const payload = await readJsonBody<{ fields?: unknown }>(request);
   const fields = parseSearchFields(payload?.fields);
   if (!fields) {
     return NextResponse.json({ error: 'fields must be an array of search fields' }, { status: 400 });

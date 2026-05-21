@@ -5,6 +5,7 @@ import {
   removeIgnoredSearchResult,
 } from '@/lib/mobile-bg/search-ignores';
 import { parseIntParam } from '@/lib/api/db-helpers';
+import { readJsonBody } from '@/lib/api/json-body';
 
 export async function GET(
   _request: Request,
@@ -29,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
 
-  const payload = await request.json().catch(() => null) as { ignoredMobileId?: string } | null;
+  const payload = await readJsonBody<{ ignoredMobileId?: string }>(request);
   const ignoredMobileId = payload?.ignoredMobileId?.trim();
   if (!ignoredMobileId) {
     return NextResponse.json({ error: 'ignoredMobileId is required' }, { status: 400 });
@@ -48,7 +49,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
   }
 
-  const payload = await request.json().catch(() => null) as { ignoredMobileId?: string } | null;
+  const payload = await readJsonBody<{ ignoredMobileId?: string }>(request);
   const ignoredMobileId = payload?.ignoredMobileId?.trim();
   if (!ignoredMobileId) {
     return NextResponse.json({ error: 'ignoredMobileId is required' }, { status: 400 });
