@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { formatDateOnly } from '@/lib/date-format';
+import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
 
 const NOTIFICATIONS_API_ENABLED = false;
 
@@ -48,9 +48,10 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
+    const readAt = currentIsoTimestamp();
     if (!NOTIFICATIONS_API_ENABLED) {
       setUnread(0);
-      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: readAt })));
       return;
     }
 
@@ -60,7 +61,7 @@ export function NotificationBell() {
       body: JSON.stringify({}),
     });
     setUnread(0);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: readAt })));
   }
 
   function getUrl(n: NotificationItem): string {

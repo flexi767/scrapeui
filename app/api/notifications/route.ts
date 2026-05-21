@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
-import { formatDateInputValue } from '@/lib/date-format';
+import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
 
 export async function GET() {
   const check = await requireAuth();
@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest) {
   const session = check.session;
 
   const { ids } = await request.json();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   if (ids && Array.isArray(ids)) {
     const ph = ids.map(() => '?').join(',');
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
 
 function generateOverdueNotifications(userId: number) {
   const today = formatDateInputValue();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   // Find overdue tasks assigned to this user (or unassigned)
   const overdue = raw.prepare(`
