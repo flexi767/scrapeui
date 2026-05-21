@@ -291,17 +291,31 @@ export function upsertSavedSearchProfile(
 ) {
   ensureSavedSearchTables();
   const now = new Date().toISOString();
-  raw
-    .prepare(
-      `
-    INSERT INTO saved_searches (listing_id, fields_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(listing_id) DO UPDATE SET
-      fields_json = excluded.fields_json,
-      updated_at = excluded.updated_at
-  `,
-    )
-    .run(listingId, JSON.stringify(fields), now, now);
+  const fieldsJson = JSON.stringify(fields);
+  const saveProfile = raw.transaction(() => {
+    const update = raw
+      .prepare(
+        `
+      UPDATE saved_searches
+      SET fields_json = ?, updated_at = ?
+      WHERE listing_id = ?
+    `,
+      )
+      .run(fieldsJson, now, listingId);
+
+    if (update.changes > 0) return;
+
+    raw
+      .prepare(
+        `
+      INSERT INTO saved_searches (listing_id, fields_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
+    `,
+      )
+      .run(listingId, fieldsJson, now, now);
+  });
+
+  saveProfile();
 
   return now;
 }

@@ -1,5 +1,8 @@
 import { raw } from "@/db/client";
-import { fetchSubLocationOptions } from "@/lib/mobile-bg/location-options";
+import {
+  fetchSubLocationOptions,
+  type SubLocationOptions,
+} from "@/lib/mobile-bg/location-options";
 import { getSavedSearchProfile } from "@/lib/mobile-bg/search-profiles";
 import {
   MOBILE_BG_FUEL_SET,
@@ -46,6 +49,11 @@ interface LabeledOption {
   value: string;
   label: string;
 }
+
+const DEFAULT_SUB_LOCATION_OPTIONS: SubLocationOptions = {
+  label: "Населено място",
+  options: [{ value: "", label: "всички" }],
+};
 
 export interface SearchPrefillData {
   listing: {
@@ -130,6 +138,23 @@ const LOCATION_OPTIONS: LabeledOption[] = [
   { value: "Шумен", label: "обл. Шумен" },
   { value: "Ямбол", label: "обл. Ямбол" },
 ];
+
+async function loadSubLocationOptions(
+  location: string,
+  includeLocationOptions: boolean,
+): Promise<SubLocationOptions> {
+  if (!includeLocationOptions) return DEFAULT_SUB_LOCATION_OPTIONS;
+
+  try {
+    return await fetchSubLocationOptions(location);
+  } catch (error) {
+    console.warn(
+      `Falling back to default sub-location options for "${location}":`,
+      error,
+    );
+    return DEFAULT_SUB_LOCATION_OPTIONS;
+  }
+}
 
 function toMileageBucket(value: number | null): string | null {
   if (!value || value <= 0) return null;
@@ -220,9 +245,10 @@ export async function getListingSearchPrefill(
         (option) => option.value === savedModel,
       )?.count ?? null;
     const preferredLocation = savedFieldMap.get("f17")?.value || "България";
-    const subLocations = includeLocationOptions
-      ? await fetchSubLocationOptions(preferredLocation)
-      : { label: "Населено място", options: [{ value: "", label: "всички" }] };
+    const subLocations = await loadSubLocationOptions(
+      preferredLocation,
+      includeLocationOptions,
+    );
 
     return {
       listing: null,
@@ -313,9 +339,10 @@ export async function getListingSearchPrefill(
   );
   const preferredLocation = savedFieldMap.get("f17")?.value || "България";
 
-  const subLocations = includeLocationOptions
-    ? await fetchSubLocationOptions(preferredLocation)
-    : { label: "Населено място", options: [{ value: "", label: "всички" }] };
+  const subLocations = await loadSubLocationOptions(
+    preferredLocation,
+    includeLocationOptions,
+  );
 
   const fields: SearchField[] = [
     { name: "topmenu", label: "Top menu", value: "1", source: "default" },
