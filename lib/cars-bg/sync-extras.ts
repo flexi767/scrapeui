@@ -17,46 +17,6 @@ export interface CarsBgExtrasListing {
   carsBgExtras: CarsBgExtrasPayload | null;
 }
 
-export async function extractCarsBgExtras(page: Page, extrasUrl?: string | null): Promise<CarsBgExtrasPayload> {
-  const href = extrasUrl || await page.evaluate(() => {
-    const link = document.querySelector<HTMLAnchorElement>('a[sync-data="extrasSelectPage"]');
-    return link?.href || link?.getAttribute('href') || null;
-  }).catch(() => null);
-
-  if (!href) return { url: null, summaryText: '', selected: [] };
-
-  const originalUrl = page.url();
-  await page.goto(href, { waitUntil: 'domcontentloaded' });
-  await prepareCarsBgPage(page);
-
-  const extras = await page.evaluate(() => {
-    const normalize = (value = '') => value.replace(/\s+/g, ' ').trim();
-    const nodes = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
-    const all = nodes.map((node) => {
-      const label = node.id
-        ? (document.querySelector(`label[for="${node.id}"]`)?.textContent || '')
-        : (node.closest('label')?.textContent || '');
-      return {
-        name: node.name || '',
-        value: node.value || '',
-        id: node.id || '',
-        checked: !!node.checked,
-        label: normalize(label),
-      };
-    }).filter((entry) => entry.name || entry.value || entry.label);
-
-    return {
-      url: location.href,
-      summaryText: normalize(document.body.innerText || ''),
-      selected: all.filter((entry) => entry.checked),
-    };
-  });
-
-  await page.goto(originalUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
-  await prepareCarsBgPage(page);
-  return extras;
-}
-
 export async function applyCarsBgExtras(
   page: Page,
   extrasData: CarsBgExtrasPayload | null | undefined,
