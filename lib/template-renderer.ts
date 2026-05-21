@@ -1,5 +1,6 @@
 import React from "react";
 import type { PublicDealer, PublicListing, PublicListingDetail, PublicListingFilters } from "./query-modules/public";
+import { formatListingMileage, formatListingPrice } from "./listing-format";
 import { getListingThumbSrc } from "./listing-thumb";
 import { buildImageList, parseJson, type ImageMeta } from "./utils";
 
@@ -133,9 +134,9 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
           React.createElement('div', { style: { padding: '8px 12px' } },
             React.createElement('div', { style: { fontWeight: 600, fontSize: 14, marginBottom: 4 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
             React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#64748b' } },
-              showPrice !== false && l.currentPrice ? React.createElement('span', { key: 'price' }, `€${l.currentPrice.toLocaleString()}`) : null,
+              showPrice !== false && l.currentPrice ? React.createElement('span', { key: 'price' }, formatListingPrice(l.currentPrice)) : null,
               showYear !== false && l.regYear ? React.createElement('span', { key: 'year' }, l.regYear) : null,
-              showMileage !== false && l.mileage ? React.createElement('span', { key: 'km' }, `${l.mileage.toLocaleString()} km`) : null,
+              showMileage !== false && l.mileage ? React.createElement('span', { key: 'km' }, formatListingMileage(l.mileage)) : null,
               showFuel !== false && l.fuel ? React.createElement('span', { key: 'fuel' }, l.fuel) : null,
             ),
           ),
@@ -257,7 +258,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     const price = data.listing?.currentPrice;
     if (!price) return React.createElement('div', null);
     return React.createElement('div', { style: { padding: '12px 0' } },
-      React.createElement('div', { style: { fontSize: fontSize ?? 32, fontWeight: 700, color: color ?? '#1e293b' } }, `€${price.toLocaleString()}`),
+      React.createElement('div', { style: { fontSize: fontSize ?? 32, fontWeight: 700, color: color ?? '#1e293b' } }, formatListingPrice(price)),
       showVat !== false ? React.createElement('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, 'incl. VAT') : null,
     );
   },
@@ -266,7 +267,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     const l = data.listing;
     if (!l) return React.createElement('div', null);
     const specs = [
-      showMileage !== false && l.mileage ? { label: 'Mileage', value: `${l.mileage.toLocaleString()} km` } : null,
+      showMileage !== false && l.mileage ? { label: 'Mileage', value: formatListingMileage(l.mileage) } : null,
       showFuel !== false && l.fuel ? { label: 'Fuel', value: l.fuel } : null,
       showPower !== false && l.power ? { label: 'Power', value: `${l.power} kW` } : null,
       showTransmission !== false && l.transmission ? { label: 'Transmission', value: l.transmission } : null,
@@ -351,7 +352,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
                 React.createElement('div', { style: { padding: '8px 10px' } },
                   React.createElement('div', { style: { fontWeight: 600, fontSize: 13 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
                   l.currentPrice
-                    ? React.createElement('div', { style: { color: '#2563eb', fontSize: 13, marginTop: 2 } }, `€${l.currentPrice.toLocaleString()}`)
+                    ? React.createElement('div', { style: { color: '#2563eb', fontSize: 13, marginTop: 2 } }, formatListingPrice(l.currentPrice))
                     : null,
                 ),
               );
