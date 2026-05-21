@@ -22,6 +22,35 @@ interface Props {
   backupId: number;
 }
 
+async function loadPosterImages(photos: InstagramListingPayload["photos"]) {
+  const results = await Promise.allSettled(
+    photos.slice(0, 5).map((photo) => loadImage(photo.url)),
+  );
+
+  return {
+    images: results
+      .filter((result): result is PromiseFulfilledResult<HTMLImageElement> => result.status === "fulfilled")
+      .map((result) => result.value),
+    failedCount: results.filter((result) => result.status === "rejected").length,
+  };
+}
+
+async function generateAiPosters(backupId: number, prompt: string) {
+  const response = await fetch("/api/instagram/posters", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ backupId, prompt }),
+  });
+
+  const data = await parseApiResponse<{ variants: PosterVariant[]; error?: string }>(
+    response,
+    "Could not generate AI posters",
+  );
+  if (data.error) throw new Error(data.error);
+  if (data.variants.length === 0) throw new Error("Image API returned no poster images");
+  return data.variants;
+}
+
 export function InstagramPublisherClient({ backupId }: Props) {
   const [listing, setListing] = useState<InstagramListingPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,15 +97,33 @@ export function InstagramPublisherClient({ backupId }: Props) {
     canvasSeedRef.current = seed;
     setGenerating(true);
     try {
-      const loaded = await Promise.all(listing.photos.slice(0, 5).map((photo) => loadImage(photo.url)));
+      const aiVariants = await generateAiPosters(listing.backupId, prompt);
       if (canvasSeedRef.current !== seed) return;
-      setVariants([
-        { id: "hero", name: "Hero poster", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
-        { id: "grid", name: "Triple shot", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
-        { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
-      ]);
+      setVariants(aiVariants);
+      setSelectedVariantId(aiVariants[0]?.id ?? "ai-hero");
+      toast.success("AI posters generated");
     } catch (error) {
-      toast.error(errorMessage(error, "Could not generate posters"));
+      const aiError = errorMessage(error, "Could not generate AI posters");
+      toast.warning(`${aiError}. Using quick local posters instead.`);
+      try {
+        const { images: loaded, failedCount } = await loadPosterImages(listing.photos);
+        if (canvasSeedRef.current !== seed) return;
+        setVariants([
+          { id: "hero", name: "Hero poster", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
+          { id: "grid", name: "Triple shot", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
+          { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
+        ]);
+        setSelectedVariantId("hero");
+        if (failedCount > 0) {
+          toast.warning(
+            failedCount === listing.photos.slice(0, 5).length
+              ? "Generated text-only posters because photos could not be loaded."
+              : `Generated posters, skipping ${failedCount} photo${failedCount === 1 ? "" : "s"} that could not be loaded.`,
+          );
+        }
+      } catch (fallbackError) {
+        toast.error(errorMessage(fallbackError, "Could not generate posters"));
+      }
     } finally {
       if (canvasSeedRef.current === seed) setGenerating(false);
     }

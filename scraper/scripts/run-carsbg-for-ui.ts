@@ -330,7 +330,7 @@ function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: R
 
   const rawTitle = listing.title || '';
   const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
-  const normalizedTitle = (titleRemainder || '').trim();
+  const normalizedTitle = (titleRemainder || rawTitle).trim();
 
   // Normalize fuel/body/transmission through our mappings
   const fuelRaw = normCarsBgFuel(listing.fuel);

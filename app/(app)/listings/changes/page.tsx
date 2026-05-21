@@ -49,6 +49,13 @@ function appendMultiParams(params: URLSearchParams, key: string, values: string[
   });
 }
 
+function isRealTitleChange(change: TrackedChangeRow) {
+  const snapshotTitle = change.snapshot_title?.trim();
+  const targetTitle = change.target_title?.trim();
+  if (!snapshotTitle || !targetTitle || snapshotTitle === targetTitle) return false;
+  return !targetTitle.endsWith(snapshotTitle);
+}
+
 function changedFields(change: TrackedChangeRow) {
   const result: string[] = [];
   if (change.snapshot_price != null && change.snapshot_price !== change.target_price) result.push('Price');
@@ -59,7 +66,7 @@ function changedFields(change: TrackedChangeRow) {
   }
   if (change.snapshot_ad_status != null && change.snapshot_ad_status !== change.target_ad_status) result.push('Paid');
   if (change.snapshot_kaparo != null && change.snapshot_kaparo !== change.target_kaparo) result.push('К');
-  if (change.snapshot_title && change.snapshot_title !== change.target_title) result.push('Title');
+  if (isRealTitleChange(change)) result.push('Title');
   if (change.snapshot_description && change.snapshot_description !== change.target_description) result.push('Description');
   return result;
 }
@@ -235,7 +242,7 @@ export default async function ListingsChangesPage({
                         {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{getViewsLabel(row)}: {formatCount(row.snapshot_views)} → {formatCount(row.target_views ?? 0)}</div> : null}
                         {row.snapshot_ad_status != null && row.snapshot_ad_status !== row.target_ad_status ? <div>Paid: {row.snapshot_ad_status} → {row.target_ad_status || 'none'}</div> : null}
                         {row.snapshot_kaparo != null && row.snapshot_kaparo !== row.target_kaparo ? <div>К: {row.snapshot_kaparo ? 'yes' : 'no'} → {row.target_kaparo ? 'yes' : 'no'}</div> : null}
-                        {row.snapshot_title && row.snapshot_title !== row.target_title ? <div className="line-clamp-2">Title: {row.snapshot_title} → {row.target_title || '—'}</div> : null}
+                        {isRealTitleChange(row) ? <div className="line-clamp-2">Title: {row.snapshot_title} → {row.target_title || '—'}</div> : null}
                         {row.snapshot_description && row.snapshot_description !== row.target_description ? <div className="line-clamp-3 whitespace-pre-wrap text-gray-400">Description: {row.snapshot_description}</div> : null}
                       </div>
                     </td>

@@ -200,7 +200,7 @@ async function upsertListing(
   const rawTitle = listing.title || "";
   const { make, model, mobileMakeId, mobileModelId, titleRemainder } =
     parseMakeModelSync(rawTitle, makesMap);
-  const normalizedTitle = (titleRemainder || "").trim();
+  const normalizedTitle = (titleRemainder || rawTitle).trim();
   const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({
     title: rawTitle,
     make,

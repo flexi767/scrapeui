@@ -64,6 +64,13 @@ export interface TrackedChangeWindow {
   count: number;
 }
 
+const titleChangePredicate = `
+  snapshot_title IS NOT NULL
+  AND TRIM(snapshot_title) != ''
+  AND snapshot_title != target_title
+  AND target_title NOT LIKE '%' || snapshot_title
+`;
+
 function buildTrackedChangesWhere(filters: TrackedChangesFilters): {
   where: string;
   params: unknown[];
@@ -202,7 +209,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
       (snapshot_views IS NOT NULL AND snapshot_views != target_views) OR
       (snapshot_ad_status IS NOT NULL AND snapshot_ad_status != target_ad_status) OR
       (snapshot_kaparo IS NOT NULL AND snapshot_kaparo != target_kaparo) OR
-      (snapshot_title IS NOT NULL AND TRIM(snapshot_title) != '' AND snapshot_title != target_title) OR
+      (${titleChangePredicate}) OR
       (snapshot_description IS NOT NULL AND TRIM(snapshot_description) != '' AND snapshot_description != target_description)
     )
   `;
