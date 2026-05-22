@@ -70,7 +70,7 @@ export function MobileBgSearchResultsTable({
         nextIgnored ? [...new Set([...prev, mobileId])] : prev.filter((id) => id !== mobileId)
       ));
     } catch (error) {
-      console.error(error);
+      toast.error(errorMessage(error, 'Failed to update ignored result'));
     } finally {
       setSavingIds((prev) => ({ ...prev, [mobileId]: false }));
     }
