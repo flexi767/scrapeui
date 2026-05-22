@@ -35,6 +35,7 @@ import {
 import fs from "fs";
 import path from "path";
 import { createCrawlRun, updateCrawlRun } from "@/lib/query-modules/mobilebg";
+import { currentIsoTimestamp, formatDateInputValue } from "@/lib/date-format";
 import { SCRAPED_ROOT } from "@/lib/storage-paths";
 
 const { deepCrawl, downloadImages, requestedSlugs } = parseRunnerArgs();
@@ -192,7 +193,7 @@ async function upsertListing(
   fuelMap: Map<string, string> | null,
   transmissionMap: Map<string, string> | null,
 ) {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const mobileId = extractMobileId(listing.url);
   if (!mobileId)
     return { action: "skip", title: listing.title || "", make: "", model: "" };
@@ -474,7 +475,7 @@ function seedDraft(
 ): number | null {
   const mobileId = extractMobileId(listing.url ?? "");
   if (!mobileId) return null;
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const { regYear } = parseReg(listing.year ?? null);
   const result = db
     .prepare(
@@ -556,7 +557,7 @@ async function downloadListingImages(
       const buf = Buffer.from(await res.arrayBuffer());
       fs.writeFileSync(localPath, buf);
 
-      const now = new Date().toISOString();
+      const now = currentIsoTimestamp();
       db.prepare(
         `
       INSERT OR IGNORE INTO mobilebg_backup_images
@@ -585,7 +586,7 @@ async function scrapeCompetitorForUI(
   let totalImagesDownloaded = 0;
   let totalImagesFailed = 0;
   const maxPages = 20;
-  const snapshotDate = new Date().toISOString().slice(0, 10);
+  const snapshotDate = formatDateInputValue();
   const seenMobileIds = new Set<string>();
 
   const crawler = new PlaywrightCrawler({
@@ -807,7 +808,7 @@ async function scrapeCompetitorForUI(
               isNew: false,
               imageCount: card.imageCount || 0,
               images: { meta: null, thumbKeys: [], fullKeys: [] },
-              scrapedAt: new Date().toISOString(),
+              scrapedAt: currentIsoTimestamp(),
               source: "mobile.bg",
               dealer: dealer.slug,
               snapshotDate,
@@ -1044,7 +1045,7 @@ async function scrapeCompetitorForUI(
               thumbKeys: raw.thumbKeys,
               fullKeys: raw.fullKeys,
             },
-            scrapedAt: new Date().toISOString(),
+            scrapedAt: currentIsoTimestamp(),
             source: "mobile.bg",
             dealer: dealer.slug,
             snapshotDate,
