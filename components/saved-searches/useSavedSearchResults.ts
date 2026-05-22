@@ -11,6 +11,7 @@ import {
 } from "@/components/saved-searches/mobile-bg-results-state";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
+import { errorMessage } from "@/lib/utils";
 
 type SavedSearchDetail = SavedSearchDetailResponse["detail"];
 
@@ -53,11 +54,7 @@ export function useSavedSearchResults({
         setResults(payload);
         persistMobileBgBrowserResults(detail.search.id, payload);
       } catch (error) {
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load mobile.bg results",
-        );
+        setError(errorMessage(error, "Failed to load mobile.bg results"));
         setResults(null);
         persistMobileBgBrowserResults(detail.search.id, null);
       } finally {

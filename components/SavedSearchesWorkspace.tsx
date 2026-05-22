@@ -23,6 +23,7 @@ import {
   buildFirstSevenSearchFields,
 } from "@/lib/mobile-bg/search-form-shared";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
+import { errorMessage } from "@/lib/utils";
 
 export default function SavedSearchesWorkspace({
   initialSearches,
@@ -120,11 +121,7 @@ export default function SavedSearchesWorkspace({
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to load saved search",
-        );
+        toast.error(errorMessage(error, "Failed to load saved search"));
       })
       .finally(() => {
         if (!cancelled) setLoadingDetail(false);
