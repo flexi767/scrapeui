@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { buildFirstSevenSearchFields } from '@/lib/mobile-bg/search-form-shared';
 import { getListingSearchPrefill } from '@/lib/mobile-bg/search-prefill';
 import { fetchMobileBgSearchResultsUntilFound } from '@/lib/mobile-bg/search-results';
@@ -207,7 +208,7 @@ export async function runOwnSearchRankChecks(options: RunOwnSearchRankChecksOpti
   });
 
   for (const target of targets) {
-    const checkedAt = new Date().toISOString();
+    const checkedAt = currentIsoTimestamp();
 
     onProgress?.({
       type: 'checking',

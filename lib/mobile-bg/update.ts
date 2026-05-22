@@ -2,6 +2,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
@@ -362,7 +363,7 @@ export async function updateBackupOnMobileBg(
       ? await promoteListingStatusOnMyAds(page, backup.mobile_id, normalizePromoStatus(backup.ad_status), log)
       : normalizePromoStatus(backup.ad_status);
 
-    const now = new Date().toISOString();
+    const now = currentIsoTimestamp();
     db.prepare(`
       UPDATE mobilebg_backups
       SET

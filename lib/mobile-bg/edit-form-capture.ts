@@ -2,6 +2,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { errorMessage } from '@/lib/utils';
@@ -190,7 +191,7 @@ export async function captureEditFormSnapshotWithPage(
   await acceptMobileBgCookies(page);
   await page.screenshot({ path: screenshotPath, fullPage: true });
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const paidStatus = normalizePaidStatus(row.paidStatusText);
   const views = row.viewsText ? parseInt(row.viewsText, 10) || null : null;
   const viewedSinceDate = normalizeMobileBgDateTime(row.viewedAtText);

@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { fetchWin1251 } from './fetch-html';
 import { fetchMakesModels, normalizeMakeModelLabel, type MakeEntry, type MakesMap, type ModelEntry } from './makes-models';
 
@@ -162,7 +163,7 @@ function replaceReferenceRows(
   rows: MobileBgMakeModelReferenceRow[],
   { searchPath = DEFAULT_MOBILEBG_SEARCH_PATH, pubtype = DEFAULT_MOBILEBG_PUBTYPE, onlyMake = null }: MobileBgMakeModelSyncOptions = {},
 ) {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const upsert = db.prepare(`
     INSERT INTO mobilebg_make_models (
       search_path, pubtype, make, model, make_id, model_id, make_count, model_count, updated_at

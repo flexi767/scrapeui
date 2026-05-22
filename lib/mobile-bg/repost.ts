@@ -2,6 +2,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
@@ -52,7 +53,7 @@ function getRepostDir(dealerSlug: string, backupId: number): string {
 }
 
 function createRepostJob(db: Database.Database, dealerId: number, backupId: number, listingId: number | null, sourceMobileId: string | null): number {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const result = db.prepare(`
     INSERT INTO mobilebg_repost_jobs (dealer_id, backup_id, listing_id, source_mobile_id, status, started_at, created_at)
     VALUES (?, ?, ?, ?, 'running', ?, ?)
@@ -271,7 +272,7 @@ async function publishDraftBackupFromDb(
       throw new Error('Publish completed but no new listing ID was found');
     }
 
-    const now = new Date().toISOString();
+    const now = currentIsoTimestamp();
     let listingId = backup.listing_id ?? null;
     if (!listingId) {
       const insertListing = db.prepare(`
@@ -330,7 +331,7 @@ async function publishDraftBackupFromDb(
 
     return { jobId, targetMobileId };
   } catch (error) {
-    const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
     db.prepare(`
       UPDATE mobilebg_repost_jobs
       SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
@@ -512,7 +513,7 @@ export async function repostBackupFromDb(
       throw new Error('Repost completed but no new listing ID was found');
     }
 
-    const now = new Date().toISOString();
+    const now = currentIsoTimestamp();
     db.prepare(`
       UPDATE mobilebg_repost_jobs
       SET status = 'completed', target_mobile_id = ?, preview_screenshot_path = ?, debug_dir = ?, message = ?, finished_at = ?
@@ -521,7 +522,7 @@ export async function repostBackupFromDb(
 
     return { jobId, targetMobileId };
   } catch (error) {
-    const now = new Date().toISOString();
+    const now = currentIsoTimestamp();
     db.prepare(`
       UPDATE mobilebg_repost_jobs
       SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
