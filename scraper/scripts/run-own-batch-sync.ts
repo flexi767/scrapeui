@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { getDealerBySlug, getEditOwnSyncRows } from '@/lib/queries';
 import {
@@ -82,7 +83,7 @@ async function main() {
             backup_id: row.backup_id,
             mobile_id: row.mobile_id,
             status: 'failed',
-            completed_at: new Date().toISOString(),
+            completed_at: currentIsoTimestamp(),
             error: 'Dealer not found or missing mobile.bg credentials',
           },
           message: 'Dealer not found or missing mobile.bg credentials',
@@ -127,7 +128,7 @@ async function main() {
             backup_id: row.backup_id,
             mobile_id: row.mobile_id,
             status: 'success',
-            completed_at: new Date().toISOString(),
+            completed_at: currentIsoTimestamp(),
             error: null,
           },
           message: `Finished syncing mobile.bg #${row.mobile_id}`,
@@ -150,7 +151,7 @@ async function main() {
             backup_id: row.backup_id,
             mobile_id: row.mobile_id,
             status: 'failed',
-            completed_at: new Date().toISOString(),
+            completed_at: currentIsoTimestamp(),
             error: formatError(error),
           },
           message: formatError(error),
