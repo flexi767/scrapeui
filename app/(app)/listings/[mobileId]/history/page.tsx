@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
-import { formatDateOnly } from '@/lib/date-format';
+import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
 import { formatCount, formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
@@ -22,7 +22,7 @@ export default async function PriceHistoryPage({ params }: Props) {
       .filter((s): s is typeof s & { price: number } => s.price != null)
       .map((s) => ({ price: s.price, vat: s.vat, recorded_at: s.recorded_at })),
     ...(listing.current_price != null
-      ? [{ price: listing.current_price, vat: listing.vat, recorded_at: new Date().toISOString() }]
+      ? [{ price: listing.current_price, vat: listing.vat, recorded_at: currentIsoTimestamp() }]
       : []),
   ];
 

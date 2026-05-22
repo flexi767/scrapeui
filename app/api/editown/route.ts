@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { getVatFromMobileBgLabel } from '@/lib/vat';
 
 interface NewListingBody {
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'price required unless priceOnRequest is true' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
 
   // Save as a mobilebg_backup record (own dealer draft — no mobileId yet)
   const techDataPayload: Record<string, string> = {};

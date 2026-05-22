@@ -2,6 +2,7 @@ import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { isValidDealerSlug } from '@/lib/dealer-config';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import {
   PLATFORM_ACCOUNT_COLUMNS,
   getPlatformAccountValues,
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
       own ? 1 : 0,
       priority,
       ...accountValues,
-      new Date().toISOString(),
+      currentIsoTimestamp(),
     );
     return NextResponse.json({
       id: result.lastInsertRowid,

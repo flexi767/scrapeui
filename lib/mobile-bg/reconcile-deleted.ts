@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 interface ReconcileDeletedResult {
   reactivatedCount: number;
@@ -9,7 +10,7 @@ export function reconcileDeletedMobileBgListings(
   db: Database.Database,
   dealerId: number,
   seenMobileIds: Iterable<string>,
-  now = new Date().toISOString(),
+  now = currentIsoTimestamp(),
 ): ReconcileDeletedResult {
   const uniqueSeen = Array.from(new Set(Array.from(seenMobileIds).filter(Boolean)));
   const reactivatedCount = uniqueSeen.length > 0

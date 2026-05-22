@@ -1,5 +1,6 @@
 import path from 'path';
 import { raw } from '@/db/client';
+import { currentIsoTimestamp } from '@/lib/date-format';
 
 export const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 
@@ -18,7 +19,7 @@ export function refreshImageCount(backupId: number): void {
       WHERE id = ?
     `,
     )
-    .run(backupId, new Date().toISOString(), backupId);
+    .run(backupId, currentIsoTimestamp(), backupId);
 }
 
 export function normalizeImageOrder(backupId: number): void {
