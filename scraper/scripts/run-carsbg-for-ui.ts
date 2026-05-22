@@ -27,6 +27,7 @@ import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
 import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
 import { loadMobileBgMakesMapFromDb } from '@/lib/mobile-bg/reference';
+import { currentIsoTimestamp } from '@/lib/date-format';
 import { loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
 import {
   extractCarsId,
@@ -238,7 +239,7 @@ function applyCarsBgOwnerDetails(
     };
   }
 
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const oldViews = existingCars.cars_total_views ?? null;
   const newViews = details.carsTotalViews ?? null;
   const viewsChanged = oldViews != null && newViews != null && oldViews !== newViews;
@@ -365,7 +366,7 @@ function applyCarsBgOwnerDetails(
 }
 
 function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: CarsBgScrapedListing, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   const carsId = extractCarsId(listing.url);
   if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '', duplicate: false, trackedChange: false, syncNeeded: false };
 
@@ -941,7 +942,7 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
         'cars.bg',
         request.retryCount,
         errorMsg,
-        new Date().toISOString(),
+        currentIsoTimestamp(),
       );
     },
   });
