@@ -5,6 +5,7 @@ import { useRef } from 'react';
 import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 import PriceChangeFilter from './PriceChangeFilter';
 import RangeFilter from './RangeFilter';
+import { formatCount } from '@/lib/utils';
 
 interface Props {
   makes: string[];
@@ -285,7 +286,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       </button>
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
-        <span>{total.toLocaleString()} ad{total !== 1 ? 's' : ''}</span>
+        <span>{formatCount(total)} ad{total !== 1 ? 's' : ''}</span>
         {syncHref && (
           <a
             href={syncHref}
