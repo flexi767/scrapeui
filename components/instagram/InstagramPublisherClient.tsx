@@ -1,71 +1,101 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { loadImage } from "@/lib/canvas-utils";
 import { errorMessage, parseApiResponse } from "@/lib/utils";
 import Link from "next/link";
-import { CopyIcon, DownloadIcon, InstagramIcon, RefreshCwIcon, SendIcon } from "lucide-react";
+import { CopyIcon, DownloadIcon, SendIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
+  CarouselOrderStrip,
+  CollageImageSelector,
+  GeneratedImageSections,
+  InstagramPostDataAside,
+  PosterPromptPanel,
+  VariantPromptPanel,
+} from "./InstagramPublisherSections";
+import {
+  applyFootersToVariants,
+  buildDefaultCollageSelections,
+  generateAiPosters,
+  loadPosterImages,
+  normalizeCollageSelections,
+  normalizeVariantPrompts,
+} from "./publisher-workflow";
+import {
   buildDefaultPosterPrompt,
+  COLLAGE_SELECTION_STORAGE_PREFIX,
   dataUrlToFile,
-  formatPosterMileage,
-  formatPosterPrice,
+  DEFAULT_POSTER_VARIANT_PROMPTS,
   imageUrlToFile,
   makePoster,
   PROMPT_STORAGE_PREFIX,
+  VARIANT_PROMPT_STORAGE_PREFIX,
+  type CollageSelections,
   type InstagramListingPayload,
   type PosterVariant,
+  type PosterVariantPrompt,
 } from "./poster";
 
 interface Props {
   backupId: number;
 }
 
-async function loadPosterImages(photos: InstagramListingPayload["photos"]) {
-  const results = await Promise.allSettled(
-    photos.slice(0, 5).map((photo) => loadImage(photo.url)),
-  );
-
-  return {
-    images: results
-      .filter((result): result is PromiseFulfilledResult<HTMLImageElement> => result.status === "fulfilled")
-      .map((result) => result.value),
-    failedCount: results.filter((result) => result.status === "rejected").length,
-  };
-}
-
-async function generateAiPosters(backupId: number, prompt: string) {
-  const response = await fetch("/api/instagram/posters", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ backupId, prompt }),
-  });
-
-  const data = await parseApiResponse<{ variants: PosterVariant[]; error?: string }>(
-    response,
-    "Could not generate AI posters",
-  );
-  if (data.error) throw new Error(data.error);
-  if (data.variants.length === 0) throw new Error("Image API returned no poster images");
-  return data.variants;
-}
-
 export function InstagramPublisherClient({ backupId }: Props) {
   const [listing, setListing] = useState<InstagramListingPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingVariantIds, setGeneratingVariantIds] = useState<string[]>([]);
   const [variants, setVariants] = useState<PosterVariant[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState("hero");
   const [posterPrompt, setPosterPrompt] = useState("");
+  const [variantPrompts, setVariantPrompts] = useState<PosterVariantPrompt[]>(DEFAULT_POSTER_VARIANT_PROMPTS);
+  const [collageSelections, setCollageSelections] = useState<CollageSelections>({
+    exteriorPhotoIds: [],
+    interiorPhotoIds: [],
+  });
   const [sharing, setSharing] = useState(false);
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string; label: string } | null>(null);
   const canvasSeedRef = useRef(0);
   const initialPosterGeneratedRef = useRef(false);
 
-  const selectedVariant = useMemo(
-    () => variants.find((variant) => variant.id === selectedVariantId) ?? variants[0],
-    [selectedVariantId, variants],
+  const coverVariants = useMemo(
+    () => variants.filter((variant) => variant.role !== "collage"),
+    [variants],
   );
+  const selectedVariant = useMemo(
+    () => coverVariants.find((variant) => variant.id === selectedVariantId) ?? coverVariants[0],
+    [coverVariants, selectedVariantId],
+  );
+  const collageVariants = useMemo(
+    () => variants.filter((variant) => variant.role === "collage"),
+    [variants],
+  );
+  const orderedPhotos = useMemo(() => listing?.photos ?? [], [listing]);
+  const generatedVariantOrder = useMemo(
+    () => new Map(DEFAULT_POSTER_VARIANT_PROMPTS.map((variant, index) => [variant.id, index])),
+    [],
+  );
+  const zoomItems = useMemo(() => {
+    const items: { src: string; alt: string; label: string }[] = [];
+    if (selectedVariant) {
+      items.push({ src: selectedVariant.dataUrl, alt: "Selected cover", label: "1. Cover" });
+    }
+    collageVariants.forEach((variant, index) => {
+      items.push({
+        src: variant.dataUrl,
+        alt: variant.name,
+        label: `${index + 2}. ${variant.name}`,
+      });
+    });
+    orderedPhotos.forEach((photo, index) => {
+      items.push({
+        src: photo.url,
+        alt: `Listing photo ${index + 1}`,
+        label: `${index + collageVariants.length + 2}. Listing ${index + 1}`,
+      });
+    });
+    return items;
+  }, [collageVariants, orderedPhotos, selectedVariant]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +107,27 @@ export function InstagramPublisherClient({ backupId }: Props) {
           setListing(data);
           initialPosterGeneratedRef.current = false;
           const savedPrompt = window.localStorage.getItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`);
+          const savedVariantPrompts = window.localStorage.getItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`);
+          const savedCollageSelections = window.localStorage.getItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${data.backupId}`);
           setPosterPrompt(savedPrompt || buildDefaultPosterPrompt(data));
+          try {
+            setVariantPrompts(
+              savedVariantPrompts
+                ? normalizeVariantPrompts(JSON.parse(savedVariantPrompts) as PosterVariantPrompt[])
+                : DEFAULT_POSTER_VARIANT_PROMPTS,
+            );
+          } catch {
+            setVariantPrompts(DEFAULT_POSTER_VARIANT_PROMPTS);
+          }
+          try {
+            setCollageSelections(
+              savedCollageSelections
+                ? normalizeCollageSelections(JSON.parse(savedCollageSelections) as CollageSelections, data.photos)
+                : buildDefaultCollageSelections(data.photos),
+            );
+          } catch {
+            setCollageSelections(buildDefaultCollageSelections(data.photos));
+          }
         }
       })
       .catch((error) => toast.error(errorMessage(error, "Could not load listing")))
@@ -89,30 +139,75 @@ export function InstagramPublisherClient({ backupId }: Props) {
     };
   }, [backupId]);
 
-  const generatePosters = useCallback(async () => {
+  const mergeGeneratedVariants = useCallback(
+    (current: PosterVariant[], next: PosterVariant[]) =>
+      [...current.filter((variant) => !next.some((item) => item.id === variant.id)), ...next].sort(
+        (a, b) => (generatedVariantOrder.get(a.id) ?? 999) - (generatedVariantOrder.get(b.id) ?? 999),
+      ),
+    [generatedVariantOrder],
+  );
+
+  const generatePosters = useCallback(async (force = false, variantId?: string) => {
     if (!listing) return;
     const prompt = posterPrompt.trim() || buildDefaultPosterPrompt(listing);
+    const prompts = normalizeVariantPrompts(variantPrompts);
+    const targetVariant = variantId ? prompts.find((variant) => variant.id === variantId) : null;
+    const selections = normalizeCollageSelections(collageSelections, listing.photos);
+    const needsExterior = !variantId || targetVariant?.id === "ai-exterior-collage";
+    const needsInterior = !variantId || targetVariant?.id === "ai-interior-collage";
+    if (needsExterior && selections.exteriorPhotoIds.length === 0) {
+      toast.warning("Select at least one exterior photo for the exterior collage.");
+      return;
+    }
+    if (needsInterior && selections.interiorPhotoIds.length === 0) {
+      toast.warning("Select at least one interior photo for the interior collage.");
+      return;
+    }
+    if (!targetVariant && variantId) {
+      toast.error("Unknown poster type.");
+      return;
+    }
+    if (!variantId && (selections.exteriorPhotoIds.length === 0 || selections.interiorPhotoIds.length === 0)) {
+      toast.warning("Select at least one exterior and one interior photo for the collage pages.");
+      return;
+    }
     window.localStorage.setItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
+    window.localStorage.setItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(prompts));
+    window.localStorage.setItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(selections));
     const seed = canvasSeedRef.current + 1;
     canvasSeedRef.current = seed;
+    const targetIds = variantId ? [variantId] : prompts.map((variant) => variant.id);
     setGenerating(true);
+    setGeneratingVariantIds(targetIds);
     try {
-      const aiVariants = await generateAiPosters(listing.backupId, prompt);
+      const { variants: aiVariants, cached } = await generateAiPosters(listing.backupId, prompt, prompts, selections, {
+        force,
+        variantId,
+      });
       if (canvasSeedRef.current !== seed) return;
-      setVariants(aiVariants);
-      setSelectedVariantId(aiVariants[0]?.id ?? "ai-hero");
-      toast.success("AI posters generated");
+      const footeredVariants = await applyFootersToVariants(listing, aiVariants);
+      if (canvasSeedRef.current !== seed) return;
+      setVariants((current) => (variantId ? mergeGeneratedVariants(current, footeredVariants) : footeredVariants));
+      const nextSelectedCover = footeredVariants.find((variant) => variant.role !== "collage")?.id;
+      if (nextSelectedCover) setSelectedVariantId(nextSelectedCover);
+      toast.success(cached ? "Loaded saved AI posters" : variantId ? "AI poster generated" : "AI posters generated");
     } catch (error) {
       const aiError = errorMessage(error, "Could not generate AI posters");
+      if (variantId) {
+        toast.error(aiError);
+        return;
+      }
       toast.warning(`${aiError}. Using quick local posters instead.`);
       try {
         const { images: loaded, failedCount } = await loadPosterImages(listing.photos);
         if (canvasSeedRef.current !== seed) return;
-        setVariants([
-          { id: "hero", name: "Hero poster", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
-          { id: "grid", name: "Triple shot", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
-          { id: "editorial", name: "Clean gallery", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
+        const fallbackVariants = await applyFootersToVariants(listing, [
+          { id: "hero", name: "Hero poster", role: "cover", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
+          { id: "grid", name: "Triple shot", role: "cover", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
+          { id: "editorial", name: "Clean gallery", role: "cover", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
         ]);
+        if (canvasSeedRef.current !== seed) return;
+        setVariants(fallbackVariants);
         setSelectedVariantId("hero");
         if (failedCount > 0) {
           toast.warning(
@@ -125,21 +220,110 @@ export function InstagramPublisherClient({ backupId }: Props) {
         toast.error(errorMessage(fallbackError, "Could not generate posters"));
       }
     } finally {
-      if (canvasSeedRef.current === seed) setGenerating(false);
+      if (canvasSeedRef.current === seed) {
+        setGenerating(false);
+        setGeneratingVariantIds([]);
+      }
     }
-  }, [listing, posterPrompt]);
+  }, [collageSelections, listing, mergeGeneratedVariants, posterPrompt, variantPrompts]);
+
+  const loadCachedPosters = useCallback(async () => {
+    if (!listing) return;
+    const prompt = posterPrompt.trim() || buildDefaultPosterPrompt(listing);
+    const prompts = normalizeVariantPrompts(variantPrompts);
+    const selections = normalizeCollageSelections(collageSelections, listing.photos);
+    if (selections.exteriorPhotoIds.length === 0 || selections.interiorPhotoIds.length === 0) return;
+    try {
+      const { variants: cachedVariants } = await generateAiPosters(listing.backupId, prompt, prompts, selections, {
+        cacheOnly: true,
+      });
+      if (cachedVariants.length > 0) {
+        const footeredVariants = await applyFootersToVariants(listing, cachedVariants);
+        setVariants(footeredVariants);
+        setSelectedVariantId(footeredVariants.find((variant) => variant.role !== "collage")?.id ?? "ai-hero");
+      }
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not load saved posters"));
+    }
+  }, [collageSelections, listing, posterPrompt, variantPrompts]);
 
   useEffect(() => {
     if (!listing || !posterPrompt || initialPosterGeneratedRef.current) return;
     initialPosterGeneratedRef.current = true;
-    void generatePosters();
-  }, [generatePosters, listing, posterPrompt]);
+    void loadCachedPosters();
+  }, [loadCachedPosters, listing, posterPrompt]);
+
+  useEffect(() => {
+    if (!zoomImage) return;
+
+    function moveZoom(step: number) {
+      setZoomImage((current) => {
+        if (!current || zoomItems.length === 0) return current;
+        const currentIndex = zoomItems.findIndex((item) => item.src === current.src);
+        const nextIndex =
+          currentIndex === -1
+            ? 0
+            : (currentIndex + step + zoomItems.length) % zoomItems.length;
+        return zoomItems[nextIndex];
+      });
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setZoomImage(null);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveZoom(-1);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveZoom(1);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomImage, zoomItems]);
 
   function resetPosterPrompt() {
     if (!listing) return;
     const nextPrompt = buildDefaultPosterPrompt(listing);
+    const nextSelections = buildDefaultCollageSelections(listing.photos);
     setPosterPrompt(nextPrompt);
+    setVariantPrompts(DEFAULT_POSTER_VARIANT_PROMPTS);
+    setCollageSelections(nextSelections);
     window.localStorage.removeItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`);
+    window.localStorage.removeItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`);
+    window.localStorage.removeItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`);
+  }
+
+  function toggleCollagePhoto(kind: keyof CollageSelections, photoId: number) {
+    setCollageSelections((current) => {
+      const selected = new Set(current[kind]);
+      if (selected.has(photoId)) {
+        selected.delete(photoId);
+      } else {
+        selected.add(photoId);
+      }
+      const next = {
+        ...current,
+        [kind]: Array.from(selected),
+      };
+      if (listing) {
+        window.localStorage.setItem(
+          `${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`,
+          JSON.stringify(normalizeCollageSelections(next, listing.photos)),
+        );
+      }
+      return next;
+    });
+  }
+
+  function applyDefaultCollageSelections() {
+    if (!listing) return;
+    const next = buildDefaultCollageSelections(listing.photos);
+    setCollageSelections(next);
+    window.localStorage.setItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(next));
   }
 
   async function copyCaption() {
@@ -162,9 +346,12 @@ export function InstagramPublisherClient({ backupId }: Props) {
     try {
       const files = [
         dataUrlToFile(selectedVariant.dataUrl, `cover-${backupId}.jpg`),
+        ...collageVariants.map((variant, index) =>
+          dataUrlToFile(variant.dataUrl, `${String(index + 2).padStart(2, "0")}-${variant.id}.jpg`),
+        ),
         ...(await Promise.all(
-          listing.photos.map((photo, index) =>
-            imageUrlToFile(photo.url, `${String(index + 2).padStart(2, "0")}-${photo.filename}`),
+          orderedPhotos.map((photo, index) =>
+            imageUrlToFile(photo.url, `${String(index + collageVariants.length + 2).padStart(2, "0")}-${photo.filename}`),
           ),
         )),
       ];
@@ -198,8 +385,33 @@ export function InstagramPublisherClient({ backupId }: Props) {
     return <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-6 text-red-100">Listing could not be loaded.</div>;
   }
 
+  const zoomOverlay = zoomImage ? (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={zoomImage.label}
+      onClick={() => setZoomImage(null)}
+    >
+      <button
+        type="button"
+        onClick={() => setZoomImage(null)}
+        className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-white/10"
+        aria-label="Close preview"
+      >
+        <XIcon className="h-5 w-5" />
+      </button>
+      <div className="flex max-h-full max-w-full flex-col gap-3" onClick={(event) => event.stopPropagation()}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={zoomImage.src} alt={zoomImage.alt} className="max-h-[82vh] max-w-[92vw] object-contain" />
+        <div className="text-center text-sm font-medium text-white">{zoomImage.label}</div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="space-y-6">
+      {zoomOverlay}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/editown" className="text-sm text-gray-400 hover:text-white">
@@ -240,140 +452,50 @@ export function InstagramPublisherClient({ backupId }: Props) {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
         <section className="space-y-4">
-          <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-white">Poster prompt</h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  The prompt steers the poster layout, palette, shot count, and visible highlights.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={resetPosterPrompt}
-                  className="inline-flex h-8 items-center rounded-md border border-gray-700 px-3 text-xs text-gray-200 hover:bg-gray-800"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void generatePosters()}
-                  disabled={generating}
-                  className="inline-flex h-8 items-center gap-2 rounded-md bg-pink-600 px-3 text-xs font-medium text-white hover:bg-pink-500 disabled:opacity-50"
-                >
-                  <RefreshCwIcon className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
-                  Generate posters
-                </button>
-              </div>
-            </div>
-            <textarea
-              value={posterPrompt}
-              onChange={(event) => setPosterPrompt(event.target.value)}
-              rows={6}
-              className="w-full resize-y rounded-md border border-gray-700 bg-gray-950 p-3 text-sm leading-6 text-gray-200 outline-none focus:border-pink-400"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">Choose cover</h2>
-            <button
-              type="button"
-              onClick={() => void generatePosters()}
-              disabled={generating}
-              className="inline-flex h-8 items-center gap-2 rounded-md border border-gray-700 px-3 text-xs text-gray-200 hover:bg-gray-800 disabled:opacity-50"
-            >
-              <RefreshCwIcon className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
-              Regenerate
-            </button>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {variants.map((variant) => (
-              <button
-                type="button"
-                key={variant.id}
-                onClick={() => setSelectedVariantId(variant.id)}
-                className={`overflow-hidden rounded-lg border bg-gray-900 text-left transition ${
-                  selectedVariantId === variant.id
-                    ? "border-pink-400 ring-2 ring-pink-400/30"
-                    : "border-gray-800 hover:border-gray-600"
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={variant.dataUrl} alt={variant.name} className="aspect-square w-full object-cover" />
-                <div className="px-3 py-2 text-sm font-medium text-white">{variant.name}</div>
-              </button>
-            ))}
-            {variants.length === 0 && (
-              <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-sm text-gray-400">
-                {generating ? "Generating poster options..." : "No poster options yet."}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Carousel order</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {selectedVariant && (
-                <div className="w-36 shrink-0 overflow-hidden rounded-lg border border-pink-400 bg-gray-900">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedVariant.dataUrl} alt="Selected cover" className="aspect-square w-full object-cover" />
-                  <div className="px-2 py-1 text-xs text-pink-100">1. Cover</div>
-                </div>
-              )}
-              {listing.photos.map((photo, index) => (
-                <a
-                  key={photo.id}
-                  href={photo.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-36 shrink-0 overflow-hidden rounded-lg border border-gray-800 bg-gray-900 hover:border-gray-600"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt={`Photo ${index + 1}`} className="aspect-square w-full object-cover" />
-                  <div className="px-2 py-1 text-xs text-gray-300">{index + 2}. Photo</div>
-                </a>
-              ))}
-            </div>
-          </div>
+          <PosterPromptPanel
+            prompt={posterPrompt}
+            onPromptChange={setPosterPrompt}
+            onReset={resetPosterPrompt}
+          />
+          <VariantPromptPanel
+            prompts={variantPrompts}
+            onPromptChange={(id, prompt) =>
+              setVariantPrompts((current) =>
+                current.map((item) => (item.id === id ? { ...item, prompt } : item)),
+              )
+            }
+          />
+          <CollageImageSelector
+            photos={orderedPhotos}
+            selections={collageSelections}
+            generating={generating}
+            onToggle={toggleCollagePhoto}
+            onDefaults={applyDefaultCollageSelections}
+            onGenerate={() => void generatePosters(false)}
+            onZoom={setZoomImage}
+          />
+          <GeneratedImageSections
+            expectedVariants={variantPrompts}
+            coverVariants={coverVariants}
+            collageVariants={collageVariants}
+            selectedVariantId={selectedVariantId}
+            generating={generating}
+            generatingVariantIds={generatingVariantIds}
+            hasVariants={variants.length > 0}
+            onSelectCover={setSelectedVariantId}
+            onRegenerate={() => void generatePosters(true)}
+            onGenerateVariant={(variantId, force) => void generatePosters(force, variantId)}
+            onZoom={setZoomImage}
+          />
+          <CarouselOrderStrip
+            selectedVariant={selectedVariant}
+            collageVariants={collageVariants}
+            photos={orderedPhotos}
+            zoomItems={zoomItems}
+            onZoom={setZoomImage}
+          />
         </section>
-
-        <aside className="space-y-4">
-          <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-              <InstagramIcon className="h-4 w-4 text-pink-300" />
-              Post data
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Make</div>
-                <div className="text-gray-100">{listing.make ?? "-"}</div>
-              </div>
-              <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Model</div>
-                <div className="text-gray-100">{listing.model ?? "-"}</div>
-              </div>
-              <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Mileage</div>
-                <div className="text-gray-100">{formatPosterMileage(listing.mileage)}</div>
-              </div>
-              <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Price</div>
-                <div className="text-gray-100">{formatPosterPrice(listing.price)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-white">Caption</h2>
-            <textarea
-              value={listing.caption}
-              readOnly
-              rows={16}
-              className="w-full resize-y rounded-md border border-gray-700 bg-gray-950 p-3 text-sm leading-6 text-gray-200"
-            />
-          </div>
-        </aside>
+        <InstagramPostDataAside listing={listing} />
       </div>
     </div>
   );

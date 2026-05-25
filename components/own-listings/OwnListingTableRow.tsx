@@ -53,7 +53,7 @@ export function OwnListingTableRow({
   onPublishToFacebook,
   onEditorKeyDown,
 }: OwnListingTableRowProps) {
-  const thumbSrc = getListingThumbSrc(row);
+  const thumbSrc = getListingThumbSrc(row, { preferListingImage: true });
   const thumbAlt = getListingThumbAlt(row);
   const kmFormatted = formatCount(row.mileage);
 

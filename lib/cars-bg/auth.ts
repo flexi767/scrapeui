@@ -73,6 +73,15 @@ export async function prepareCarsBgPage(page: Page): Promise<void> {
   await hideCarsBgErrorOverlay(page);
 }
 
+async function hasCarsBgLoginSession(page: Page): Promise<boolean> {
+  const bodyText = (await page.textContent('body').catch(() => '')) || '';
+  return (
+    bodyText.includes('Моите обяви') ||
+    bodyText.includes('Добави обява') ||
+    bodyText.includes('Здравейте,')
+  );
+}
+
 export async function loginToCarsBg(page: Page, username: string, password: string): Promise<boolean> {
   await page.goto(CARS_BG_BASE_URL, { waitUntil: 'domcontentloaded' });
   await prepareCarsBgPage(page);
@@ -159,8 +168,10 @@ export async function loginToCarsBg(page: Page, username: string, password: stri
   }
 
   await page.waitForTimeout(2000);
-  await page.goto(`${CARS_BG_BASE_URL}/my-offers.php`, { waitUntil: 'domcontentloaded' }).catch(() => {});
   await prepareCarsBgPage(page);
-  const bodyText = (await page.textContent('body').catch(() => '')) || '';
-  return bodyText.includes('Моите обяви') || bodyText.includes('Добави обява');
+  if (await hasCarsBgLoginSession(page)) return true;
+
+  await page.goto(`${CARS_BG_BASE_URL}/my_carlist.php?status_typeId=2`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  await prepareCarsBgPage(page);
+  return hasCarsBgLoginSession(page);
 }

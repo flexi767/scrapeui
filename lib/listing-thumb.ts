@@ -15,7 +15,14 @@ interface ListingThumbSource {
   first_backup_image_id?: number | null;
 }
 
-export function getListingThumbSrc(row: ListingThumbSource) {
+interface ListingThumbOptions {
+  preferListingImage?: boolean;
+}
+
+export function getListingThumbSrc(
+  row: ListingThumbSource,
+  options: ListingThumbOptions = {},
+) {
   if (row.first_backup_image_id) {
     return `/api/mobilebg-backup-images/${row.first_backup_image_id}`;
   }
@@ -30,6 +37,10 @@ export function getListingThumbSrc(row: ListingThumbSource) {
     imageMeta,
     row.images_downloaded === 1,
   );
+
+  if (options.preferListingImage && images[0]?.thumb) {
+    return images[0].thumb;
+  }
 
   return getPreferredListingThumbUrl(
     row.mobile_id,

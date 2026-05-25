@@ -2,55 +2,28 @@ import { NextRequest } from "next/server";
 import { raw } from "@/db/client";
 import { requireAuth } from "@/lib/api/auth-helpers";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
-import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
+import {
+  generatePosterVariants,
+  getPosterCacheDir,
+  mergePosterVariants,
+  parseCollageSelections,
+  parseVariantId,
+  parseVariantPrompts,
+  readCachedPosters,
+  selectPosterVariants,
+  type PosterRequestBody,
+  writeCachedPosters,
+} from "./service";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
-
-interface PosterRequestBody {
-  backupId?: unknown;
-  prompt?: unknown;
-}
-
-interface OpenAIImageResponse {
-  data?: Array<{ b64_json?: string }>;
-  error?: { message?: string };
-}
-
-function buildImagePrompt(
-  listing: NonNullable<ReturnType<typeof buildInstagramListingPayload>>,
-  prompt: string,
-) {
-  const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
-  const specs = [
-    listing.year ? `year ${listing.year}` : null,
-    listing.color ? `color ${listing.color}` : null,
-    listing.fuel ? `fuel ${listing.fuel}` : null,
-    listing.transmission ? `transmission ${listing.transmission}` : null,
-    listing.power ? `${listing.power} hp` : null,
-    `mileage ${formatListingMileage(listing.mileage)}`,
-    `price ${formatListingPrice(listing.price)}`,
-  ].filter(Boolean);
-
-  return [
-    "Use case: product-mockup",
-    "Asset type: Instagram square vehicle cover poster",
-    `Primary request: ${prompt}`,
-    `Subject: ${title}. ${specs.join(", ")}.`,
-    "Style/medium: premium hyperrealistic automotive advertising poster, cinematic studio render, editorial car photography.",
-    "Composition/framing: square 1:1 Instagram cover, dramatic vehicle hero angle, strong poster hierarchy, room for headline and offer details.",
-    "Lighting/mood: cinematic reflections, polished surfaces, high-end dealership campaign.",
-    "Text: include the vehicle make/model as a bold poster headline only if it can be rendered cleanly.",
-    "Constraints: create a fully generated poster image, not a flat UI mockup or simple photo collage; no watermarks; no app chrome; no browser UI.",
-    "Avoid: cheap flyer style, clutter, distorted car geometry, unreadable dense text, fake badges, extra logos.",
-  ].join("\n");
-}
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if ("error" in auth) return auth.error;
 
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
     return Response.json(
       { error: "OPENAI_API_KEY is not configured", variants: [] },
       { headers: { "Cache-Control": "no-store" } },
@@ -75,53 +48,97 @@ export async function POST(request: NextRequest) {
     typeof body.prompt === "string" && body.prompt.trim()
       ? body.prompt.trim()
       : `Create a premium Instagram poster for ${listing.title}.`;
-
-  const upstream = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "chatgpt-image-latest",
-      prompt: buildImagePrompt(listing, prompt),
-      n: 3,
-      size: "1024x1024",
-      quality: "medium",
-      output_format: "jpeg",
-    }),
+  const force = body.force === true;
+  const cacheOnly = body.cacheOnly === true;
+  const model = process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2";
+  const variantPrompts = parseVariantPrompts(body.variantPrompts);
+  const variantId = parseVariantId(body.variantId);
+  let targetVariantPrompts = variantId
+    ? variantPrompts.filter((variant) => variant.id === variantId)
+    : variantPrompts;
+  if (variantId && targetVariantPrompts.length === 0) {
+    return Response.json({ error: "Invalid variantId", variants: [] }, { status: 400 });
+  }
+  const collageSelections = parseCollageSelections(body.collageSelections);
+  let targetVariantIds = targetVariantPrompts.map((variant) => variant.id);
+  const cacheDir = getPosterCacheDir({
+    backupId,
+    prompt,
+    model,
+    photoIds: listing.photos.map((photo) => photo.id),
+    variantPrompts,
+    collageSelections,
   });
 
-  const json = (await upstream.json().catch(() => null)) as OpenAIImageResponse | null;
-  if (!upstream.ok) {
+  if (!force) {
+    const cached = await readCachedPosters(cacheDir);
+    if (cached) {
+      const targetCachedVariants = selectPosterVariants(cached.variants, targetVariantIds);
+      if (targetCachedVariants.length === targetVariantIds.length) {
+        return Response.json(
+          { variants: targetCachedVariants, cached: true },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      if (cacheOnly && cached.variants.length > 0) {
+        return Response.json(
+          { variants: cached.variants, cached: true },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      const missingIds = targetVariantIds.filter(
+        (id) => !targetCachedVariants.some((variant) => variant.id === id),
+      );
+      targetVariantPrompts = targetVariantPrompts.filter((variant) => missingIds.includes(variant.id));
+      targetVariantIds = missingIds;
+    }
+  }
+
+  if (cacheOnly) {
+    const cached = await readCachedPosters(cacheDir);
+    if (cached && cached.variants.length > 0) {
+      return Response.json(
+        { variants: cached.variants, cached: true },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return Response.json(
-      { error: json?.error?.message ?? "Could not generate AI posters", variants: [] },
+      { variants: [], cached: false },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  const images =
-    json?.data
-      ?.map((item, index) =>
-        item.b64_json
-          ? {
-              id: index === 0 ? "ai-hero" : index === 1 ? "ai-cinematic" : "ai-editorial",
-              name: index === 0 ? "AI hero" : index === 1 ? "AI cinematic" : "AI editorial",
-              dataUrl: `data:image/jpeg;base64,${item.b64_json}`,
-            }
-          : null,
-      )
-      .filter((item): item is { id: string; name: string; dataUrl: string } => Boolean(item)) ?? [];
+  try {
+    const imageResults = await generatePosterVariants({
+      listing,
+      prompt,
+      model,
+      apiKey,
+      variantPrompts: targetVariantPrompts,
+      collageSelections,
+    });
 
-  if (images.length === 0) {
+    if (imageResults.length === 0) {
+      return Response.json(
+        { error: "Image API returned no poster images", variants: [] },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const existing = await readCachedPosters(cacheDir);
+    const variantsToCache = existing ? mergePosterVariants(existing.variants, imageResults) : imageResults;
+    await writeCachedPosters(cacheDir, variantsToCache).catch((cacheError) => {
+      console.error("Could not cache Instagram posters", cacheError);
+    });
+
     return Response.json(
-      { error: "Image API returned no poster images", variants: [] },
+      { variants: variantId ? imageResults : variantsToCache, cached: false },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Could not generate AI posters", variants: [] },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
-
-  return Response.json(
-    { variants: images },
-    { headers: { "Cache-Control": "no-store" } },
-  );
 }
