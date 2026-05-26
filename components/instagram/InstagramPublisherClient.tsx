@@ -14,7 +14,6 @@ import {
   VariantPromptPanel,
 } from "./InstagramPublisherSections";
 import {
-  applyFootersToVariants,
   buildDefaultCollageSelections,
   generateAiPosters,
   loadPosterImages,
@@ -185,10 +184,8 @@ export function InstagramPublisherClient({ backupId }: Props) {
         variantId,
       });
       if (canvasSeedRef.current !== seed) return;
-      const footeredVariants = await applyFootersToVariants(listing, aiVariants);
-      if (canvasSeedRef.current !== seed) return;
-      setVariants((current) => (variantId ? mergeGeneratedVariants(current, footeredVariants) : footeredVariants));
-      const nextSelectedCover = footeredVariants.find((variant) => variant.role !== "collage")?.id;
+      setVariants((current) => (variantId ? mergeGeneratedVariants(current, aiVariants) : aiVariants));
+      const nextSelectedCover = aiVariants.find((variant) => variant.role !== "collage")?.id;
       if (nextSelectedCover) setSelectedVariantId(nextSelectedCover);
       toast.success(cached ? "Loaded saved AI posters" : variantId ? "AI poster generated" : "AI posters generated");
     } catch (error) {
@@ -201,11 +198,11 @@ export function InstagramPublisherClient({ backupId }: Props) {
       try {
         const { images: loaded, failedCount } = await loadPosterImages(listing.photos);
         if (canvasSeedRef.current !== seed) return;
-        const fallbackVariants = await applyFootersToVariants(listing, [
+        const fallbackVariants: PosterVariant[] = [
           { id: "hero", name: "Hero poster", role: "cover", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
           { id: "grid", name: "Triple shot", role: "cover", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
           { id: "editorial", name: "Clean gallery", role: "cover", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
-        ]);
+        ];
         if (canvasSeedRef.current !== seed) return;
         setVariants(fallbackVariants);
         setSelectedVariantId("hero");
@@ -238,9 +235,8 @@ export function InstagramPublisherClient({ backupId }: Props) {
         cacheOnly: true,
       });
       if (cachedVariants.length > 0) {
-        const footeredVariants = await applyFootersToVariants(listing, cachedVariants);
-        setVariants(footeredVariants);
-        setSelectedVariantId(footeredVariants.find((variant) => variant.role !== "collage")?.id ?? "ai-hero");
+        setVariants(cachedVariants);
+        setSelectedVariantId(cachedVariants.find((variant) => variant.role !== "collage")?.id ?? "ai-hero");
       }
     } catch (error) {
       toast.error(errorMessage(error, "Could not load saved posters"));
