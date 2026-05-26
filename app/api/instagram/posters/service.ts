@@ -3,6 +3,14 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { raw } from "@/db/client";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
+import {
+  DEFAULT_POSTER_VARIANT_BY_ID,
+  DEFAULT_POSTER_VARIANT_PROMPTS,
+  parsePosterCollageSelections,
+  parsePosterVariantPrompts,
+  type CollageSelections,
+  type PosterVariantPrompt,
+} from "@/lib/instagram/poster-variants";
 import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
 
 export interface PosterRequestBody {
@@ -46,76 +54,17 @@ interface CachedPosterManifest {
 
 const POSTER_CACHE_ROOT = path.join(process.cwd(), "storage", "instagram-posters");
 const POSTER_CACHE_VERSION = 4;
-const DEFAULT_VARIANT_PROMPTS = [
-  {
-    id: "ai-hero",
-    name: "AI hero",
-    role: "cover" as const,
-    prompt:
-      "single dramatic front three-quarter hero render, large cinematic headline, minimal premium background, strong showroom reflection.",
-  },
-  {
-    id: "ai-motion",
-    name: "AI motion",
-    role: "cover" as const,
-    prompt:
-      "dynamic top-down and side-profile motion poster, layered speed streaks, split composition, energetic performance ad feel.",
-  },
-  {
-    id: "ai-editorial",
-    name: "AI editorial",
-    role: "cover" as const,
-    prompt:
-      "clean magazine-style editorial layout, elegant negative space, refined spec blocks, calm luxury dealership campaign.",
-  },
-  {
-    id: "ai-exterior-collage",
-    name: "Exterior collage",
-    role: "collage" as const,
-    prompt:
-      "premium exterior collage page using the first seven outside photos as reference, same visual language as the selected poster, clean image-led layout, minimal text space.",
-  },
-  {
-    id: "ai-interior-collage",
-    name: "Interior collage",
-    role: "collage" as const,
-    prompt:
-      "premium interior collage page using the cabin and detail photos as reference, same visual language as the selected poster, clean image-led layout, minimal text space.",
-  },
-];
-const DEFAULT_VARIANT_BY_ID = new Map(DEFAULT_VARIANT_PROMPTS.map((variant) => [variant.id, variant]));
 
 export function parseVariantPrompts(raw: unknown) {
-  if (!Array.isArray(raw)) return DEFAULT_VARIANT_PROMPTS;
-  const byId = new Map(
-    raw
-      .filter((item): item is { id?: unknown; prompt?: unknown } => Boolean(item && typeof item === "object"))
-      .map((item) => [String(item.id ?? ""), String(item.prompt ?? "").trim()]),
-  );
-  return DEFAULT_VARIANT_PROMPTS.map((variant) => ({
-    ...variant,
-    prompt: byId.get(variant.id) || variant.prompt,
-  }));
+  return parsePosterVariantPrompts(raw);
 }
 
 export function parseVariantId(raw: unknown) {
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
-function parsePhotoIdArray(raw: unknown) {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0);
-}
-
 export function parseCollageSelections(raw: unknown) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { exteriorPhotoIds: [] as number[], interiorPhotoIds: [] as number[] };
-  }
-  const selections = raw as { exteriorPhotoIds?: unknown; interiorPhotoIds?: unknown };
-  return {
-    exteriorPhotoIds: parsePhotoIdArray(selections.exteriorPhotoIds),
-    interiorPhotoIds: parsePhotoIdArray(selections.interiorPhotoIds),
-  };
+  return parsePosterCollageSelections(raw);
 }
 
 export function getPosterCacheDir({
@@ -130,8 +79,8 @@ export function getPosterCacheDir({
   prompt: string;
   model: string;
   photoIds: number[];
-  variantPrompts: ReturnType<typeof parseVariantPrompts>;
-  collageSelections: { exteriorPhotoIds: number[]; interiorPhotoIds: number[] };
+  variantPrompts: PosterVariantPrompt[];
+  collageSelections: CollageSelections;
 }) {
   const cacheKey = createHash("sha256")
     .update(
@@ -166,7 +115,7 @@ export async function readCachedPosters(cacheDir: string): Promise<{ variants: P
         return {
           id: variant.id,
           name: variant.name,
-          role: variant.role ?? DEFAULT_VARIANT_BY_ID.get(variant.id)?.role,
+          role: variant.role ?? DEFAULT_POSTER_VARIANT_BY_ID.get(variant.id)?.role,
           dataUrl: `data:image/jpeg;base64,${image.toString("base64")}`,
         };
       }),
@@ -204,7 +153,7 @@ export async function writeCachedPosters(cacheDir: string, variants: PosterVaria
 export function mergePosterVariants(current: PosterVariantResult[], next: PosterVariantResult[]) {
   const byId = new Map(current.map((variant) => [variant.id, variant]));
   next.forEach((variant) => byId.set(variant.id, variant));
-  return DEFAULT_VARIANT_PROMPTS.map((variant) => byId.get(variant.id)).filter(
+  return DEFAULT_POSTER_VARIANT_PROMPTS.map((variant) => byId.get(variant.id)).filter(
     (variant): variant is PosterVariantResult => Boolean(variant),
   );
 }
@@ -217,7 +166,7 @@ export function selectPosterVariants(variants: PosterVariantResult[], ids: strin
 function buildImagePrompt(
   listing: NonNullable<ReturnType<typeof buildInstagramListingPayload>>,
   prompt: string,
-  variant: (typeof DEFAULT_VARIANT_PROMPTS)[number],
+  variant: PosterVariantPrompt,
 ) {
   const title = [listing.make, listing.model].filter(Boolean).join(" ") || listing.title;
   const specs = [
@@ -317,8 +266,8 @@ export async function generatePosterVariants({
   prompt: string;
   model: string;
   apiKey: string;
-  variantPrompts: ReturnType<typeof parseVariantPrompts>;
-  collageSelections: { exteriorPhotoIds: number[]; interiorPhotoIds: number[] };
+  variantPrompts: PosterVariantPrompt[];
+  collageSelections: CollageSelections;
 }) {
   return Promise.all(
     variantPrompts.map(async (variant) => {
