@@ -22,26 +22,28 @@ import { PlaywrightCrawler } from 'crawlee';
 
 import { chromium } from 'playwright';
 import type Database from 'better-sqlite3';
-import { parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
-import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
-import { normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
-import { getBodyTypeMap, normalizeBodyTypeSync } from '@/lib/mobile-bg/body-types';
+import type { MakesMap } from '@/lib/mobile-bg/makes-models';
 import { loadMobileBgMakesMapFromDb } from '@/lib/mobile-bg/reference';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
 import {
-  extractCarsId,
-  extractThumbFromListing,
-  modelsLookEquivalent,
-  normCarsBgBody,
-  normCarsBgFuel,
-  normCarsBgTrans,
+  extractCarsBgDetailFromDocument,
+  extractCarsBgListCardsFromDocument,
+  extractCarsBgOwnOfferIdsFromDocument,
+  extractCarsBgOwnerDetailFromDocument,
+} from '@/lib/cars-bg/dom-extractors';
+import {
+  applyCarsBgOwnerDetails,
+  upsertCarsBgListing,
+  type CarsBgScrapedListing,
+  type CarsBgOwnerDetails,
+} from '@/lib/cars-bg/listing-persistence';
+import {
   normalizeCarsBgImages,
   parseCarsBgCreatedDateFromImageUrl,
   parseCarsBgEditedDate,
   parseCarsBgPriceToEur,
   parseSpecsString,
-  titleOverlapScore,
 } from '@/lib/cars-bg/parse';
 import { emit, formatError, parseRunnerArgs, openDb, fetchRunnerRefData } from '@/scraper/lib/runner';
 
@@ -58,80 +60,6 @@ interface CarsBgRunStats {
   syncNeeded: number;
 }
 
-interface MobileDuplicateCandidate {
-  id: number;
-  mobile_id: string | null;
-  title: string | null;
-  model: string | null;
-  reg_year: string | null;
-  mileage: number | null;
-  fuel: string | null;
-  body_type: string | null;
-  current_price: number | null;
-  cars_total_views?: number | null;
-}
-
-interface CarsBgDuplicateProbe {
-  title?: string | null;
-  year?: string | null;
-  mileage?: number | null;
-  fuel?: string | null;
-  bodyType?: string | null;
-}
-
-interface CarsBgOwnerDetails {
-  carsTotalViews: number | null;
-  carsImages: string[];
-  description: string | null;
-}
-
-interface CarsBgScrapedListing {
-  url: string;
-  title: string;
-  adStatus: string;
-  kaparo: boolean;
-  thumb?: string | null;
-  carsbgEditedDate?: string | null;
-  carsbgCreatedDate?: string | null;
-  price?: { amount: number | null; currency: string };
-  year?: string | null;
-  mileage?: number | null;
-  power?: number | null;
-  fuel?: string | null;
-  transmission?: string | null;
-  bodyType?: string | null;
-  color?: string | null;
-  description?: string | null;
-  images?: string[] | null;
-  dealer?: string | null;
-}
-
-interface ExistingCarsListing {
-  id: number;
-  url: string | null;
-  title: string | null;
-  make: string | null;
-  model: string | null;
-  reg_year: string | null;
-  mileage: number | null;
-  fuel: string | null;
-  body_type: string | null;
-  transmission: string | null;
-  color: string | null;
-  power: number | null;
-  current_price: number | null;
-  price_change: number | null;
-  ad_status: string | null;
-  kaparo: number | null;
-  carsbg_title: string | null;
-  carsbg_created_date: string | null;
-  carsbg_edited_date: string | null;
-  cars_total_views?: number | null;
-  image_count: number | null;
-  full_keys: string | null;
-  last_edit: string | null;
-}
-
 interface CarsBgDealerRow {
   id: number;
   slug: string;
@@ -143,396 +71,52 @@ interface CarsBgDealerRow {
   cars_password: string | null;
 }
 
-
-function findMatchingMobileListing(
-  db: Database.Database,
-  dealerId: number,
-  listing: CarsBgDuplicateProbe,
-  make: string | null,
-  model: string | null,
-) {
-  if (!make || !model) return null;
-  const candidates = db.prepare(`
-    SELECT id, mobile_id, title, model, reg_year, mileage, fuel, body_type, current_price
-    FROM listings
-    WHERE source = 'm' AND dealer_id = ? AND make = ? AND is_active = 1
-  `).all(dealerId, make) as MobileDuplicateCandidate[];
-
-  let best: { row: MobileDuplicateCandidate; score: number } | null = null;
-
-  for (const row of candidates) {
-    let score = 0;
-    if (!modelsLookEquivalent(model, row.model)) continue;
-    score += 3;
-
-    if (listing.year && row.reg_year) {
-      if (String(listing.year) !== String(row.reg_year)) continue;
-      score += 4;
-    }
-
-    if (listing.mileage != null && row.mileage != null) {
-      const diff = Math.abs(Number(listing.mileage) - Number(row.mileage));
-      if (diff === 0) {
-        score += 5;
-      } else if (diff <= 1000) {
-        score += 4;
-      } else if (diff <= 5000) score += 2;
-      else continue;
-    }
-
-    if (listing.fuel && row.fuel) {
-      if (String(listing.fuel) === String(row.fuel)) score += 2;
-    }
-
-    if (listing.bodyType && row.body_type) {
-      if (String(listing.bodyType) === String(row.body_type)) score += 1;
-    }
-
-    if (listing.title && row.title) {
-      score += Math.min(2, titleOverlapScore(listing.title, row.title));
-    }
-
-    if (best == null || score > best.score) {
-      best = { row, score };
-    }
-  }
-
-  if (!best) return null;
-  return best.score >= 5 ? best.row : null;
-}
-
-function applyCarsBgOwnerDetails(
-  db: Database.Database,
-  dealerId: number,
-  carsId: string,
-  details: CarsBgOwnerDetails,
-): {
-  viewsChanged: boolean;
-  oldViews: number | null;
-  newViews: number | null;
-  title: string | null;
-  make: string | null;
-  model: string | null;
-  url: string | null;
-  thumb: string | null;
+interface CarsBgListingEmitData {
   price: number | null;
-  mobilePrice: number | null;
-} {
-  const existingCars = db.prepare(`
-    SELECT *
-    FROM listings
-    WHERE cars_id = ? AND source = 'c'
-  `).get(carsId) as ExistingCarsListing | undefined;
-
-  if (!existingCars) {
-    return {
-      viewsChanged: false,
-      oldViews: null,
-      newViews: details.carsTotalViews ?? null,
-      title: null,
-      make: null,
-      model: null,
-      url: null,
-      thumb: null,
-      price: null,
-      mobilePrice: null,
-    };
-  }
-
-  const now = currentIsoTimestamp();
-  const oldViews = existingCars.cars_total_views ?? null;
-  const newViews = details.carsTotalViews ?? null;
-  const viewsChanged = oldViews != null && newViews != null && oldViews !== newViews;
-  const imageCount = details.carsImages.length > 0 ? details.carsImages.length : (existingCars.image_count ?? 0);
-  const fullKeys = details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : existingCars.full_keys ?? null;
-
-  if (viewsChanged) {
-    db.prepare(`
-      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      existingCars.id,
-      null,
-      null,
-      null,
-      oldViews,
-      null,
-      null,
-      null,
-      null,
-      now,
-    );
-  }
-
-  const descriptionProvided = typeof details.description === 'string';
-  const descriptionField = descriptionProvided ? 'description = ?,' : '';
-  const descriptionValues: unknown[] = descriptionProvided ? [details.description!.trim() || null] : [];
-
-  db.prepare(`
-    UPDATE listings
-    SET
-      cars_total_views = ?,
-      cars_images = ?,
-      image_count = ?,
-      full_keys = ?,
-      ${descriptionField}
-      last_seen_at = ?,
-      is_active = 1
-    WHERE id = ?
-  `).run(
-    details.carsTotalViews,
-    details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
-    imageCount,
-    fullKeys,
-    ...descriptionValues,
-    now,
-    existingCars.id,
-  );
-
-  const matchingMobile = findMatchingMobileListing(
-    db,
-    dealerId,
-    {
-      title: existingCars.title,
-      year: existingCars.reg_year,
-      mileage: existingCars.mileage,
-      fuel: existingCars.fuel,
-      bodyType: existingCars.body_type,
-    },
-    existingCars.make,
-    existingCars.model,
-  );
-
-  if (!matchingMobile) {
-    return {
-      viewsChanged,
-      oldViews,
-      newViews,
-      title: existingCars.title ?? null,
-      make: existingCars.make ?? null,
-      model: existingCars.model ?? null,
-      url: existingCars.url ?? null,
-      thumb: extractThumbFromListing(existingCars),
-      price: existingCars.current_price ?? null,
-      mobilePrice: null,
-    };
-  }
-
-  const oldMobileViews = matchingMobile.cars_total_views ?? null;
-  const mobileViewsChanged = oldMobileViews != null && newViews != null && oldMobileViews !== newViews;
-
-  if (mobileViewsChanged) {
-    db.prepare(`
-      INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, views, ad_status, kaparo, title, description, recorded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      matchingMobile.id,
-      null,
-      null,
-      null,
-      oldMobileViews,
-      null,
-      null,
-      null,
-      null,
-      now,
-    );
-  }
-
-  db.prepare(`
-    UPDATE listings
-    SET
-      cars_total_views = ?,
-      cars_images = ?
-    WHERE id = ?
-  `).run(
-    details.carsTotalViews,
-    details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
-    matchingMobile.id,
-  );
-
-  return {
-    viewsChanged,
-    oldViews,
-    newViews,
-    title: existingCars.title ?? null,
-    make: existingCars.make ?? null,
-    model: existingCars.model ?? null,
-    url: existingCars.url ?? null,
-    thumb: extractThumbFromListing(existingCars),
-    price: existingCars.current_price ?? null,
-    mobilePrice: matchingMobile.current_price ?? null,
-  };
+  url: string;
+  thumb: string;
+  imageCount: number;
 }
 
-function upsertCarsBgListing(db: Database.Database, dealerId: number, listing: CarsBgScrapedListing, makesMap: MakesMap | null, fuelMap: Map<string, string> | null, transmissionMap: Map<string, string> | null) {
-  const now = currentIsoTimestamp();
-  const carsId = extractCarsId(listing.url);
-  if (!carsId) return { action: 'skip' as const, title: listing.title || '', make: '', model: '', duplicate: false, trackedChange: false, syncNeeded: false };
+function processCarsBgListing(
+  db: Database.Database,
+  dealer: CarsBgDealerRow,
+  stats: CarsBgRunStats,
+  listing: CarsBgScrapedListing,
+  emitData: CarsBgListingEmitData,
+  makesMap: MakesMap | null,
+  fuelMap: Map<string, string> | null,
+  transmissionMap: Map<string, string> | null,
+) {
+  const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
+  if (result.changeEvent) emit(result.changeEvent);
 
-  const rawTitle = listing.title || '';
-  const { make, model, mobileMakeId, mobileModelId, titleRemainder } = parseMakeModelSync(rawTitle, makesMap);
-  const normalizedTitle = (titleRemainder || rawTitle).trim();
-
-  // Normalize fuel/body/transmission through our mappings
-  const fuelRaw = normCarsBgFuel(listing.fuel ?? null);
-  const fuel = normalizeFuelSync(fuelRaw, fuelMap);
-  const bodyRaw = normCarsBgBody(listing.bodyType ?? null);
-  const bodyType = normalizeBodyTypeSync(bodyRaw, getBodyTypeMap());
-  const transRaw = normCarsBgTrans(listing.transmission ?? null);
-  const transmission = normalizeTransmissionSync(transRaw, transmissionMap);
-
-  const price: number | null = listing.price?.amount ?? null;
-  const carsbgTitle: string | null = normalizedTitle || null;
-  const carsbgCreatedDate: string | null = listing.carsbgCreatedDate ?? null;
-  const carsbgEditedDate: string | null = listing.carsbgEditedDate ?? null;
-  // Only deep-crawl scrapes pass a description. Shallow-card scrapes leave it
-  // undefined so we preserve whatever we already stored instead of wiping it.
-  const rawDescription: string | null | undefined = listing.description;
-  const descriptionProvided = typeof rawDescription === 'string';
-  const descriptionValue: string | null = descriptionProvided
-    ? (rawDescription!.trim() || null)
-    : null;
-  const matchingMobile = findMatchingMobileListing(db, dealerId, listing, make, model);
-  const isDuplicate = matchingMobile ? 1 : 0;
-  const mobileCarsPrice = matchingMobile
-    && price != null
-    && matchingMobile.current_price != null
-    && Number(price) === Number(matchingMobile.current_price)
-    ? null
-    : price;
-  const syncNeeded = Boolean(
-    matchingMobile &&
-    price != null &&
-    matchingMobile.current_price != null &&
-    Number(price) !== Number(matchingMobile.current_price),
-  );
-
-  if (matchingMobile && (carsbgTitle || carsbgCreatedDate || carsbgEditedDate || price != null)) {
-    db.prepare(`
-      UPDATE listings
-      SET
-        carsbg_title = ?,
-        carsbg_created_date = ?,
-        carsbg_edited_date = ?,
-        cars_price = ?
-      WHERE id = ?
-    `).run(
-      carsbgTitle,
-      carsbgCreatedDate,
-      carsbgEditedDate,
-      mobileCarsPrice,
-      matchingMobile.id,
-    );
+  stats.processed++;
+  if (result.action === 'inserted') {
+    if (result.duplicate) stats.insertedDuplicate++;
+    else stats.insertedUnique++;
+  } else if (result.action === 'updated') {
+    if (result.duplicate) stats.refreshedDuplicate++;
+    else stats.refreshedUnique++;
+    if (result.trackedChange) stats.changed++;
   }
+  if (result.syncNeeded) stats.syncNeeded++;
 
-  const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as ExistingCarsListing | undefined;
-
-  if (existing) {
-    const priceChanged = price !== null && price !== existing.current_price;
-    const titleChanged = normalizedTitle !== (existing.title || '');
-    const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
-    const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
-    const trackedChange = priceChanged || titleChanged || adStatusChanged || kaparoChanged;
-
-    const snapshotPrice = priceChanged ? existing.current_price : null;
-    const snapshotAdStatus = adStatusChanged ? (existing.ad_status || 'none') : null;
-    const snapshotKaparo = kaparoChanged ? (existing.kaparo ? 1 : 0) : null;
-    const snapshotTitle = titleChanged ? (existing.title || null) : null;
-    const hasSnapshotPayload =
-      snapshotPrice != null ||
-      snapshotAdStatus != null ||
-      snapshotKaparo != null ||
-      (snapshotTitle != null && snapshotTitle.trim() !== '');
-
-    if (trackedChange && hasSnapshotPayload) {
-      db.prepare(`
-        INSERT INTO listing_snapshots (listing_id, price, vat, last_edit, ad_status, kaparo, title, description, recorded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        existing.id,
-        snapshotPrice,
-        null, null,
-        snapshotAdStatus,
-        snapshotKaparo,
-        snapshotTitle,
-        null, now,
-      );
-      emit({
-        type: 'change', carsId, make, model,
-        title: existing.title || normalizedTitle,
-        url: listing.url || existing.url,
-        dealer: listing.dealer || null, thumb: listing.thumb || null, price,
-        mobilePrice: matchingMobile?.current_price ?? null,
-        priceChanged, oldPrice: priceChanged ? existing.current_price : null, newPrice: priceChanged ? price : null,
-        adStatusChanged, oldStatus: adStatusChanged ? existing.ad_status : null, newStatus: adStatusChanged ? (listing.adStatus || 'none') : null,
-        kaparoChanged, titleChanged,
-      });
-    }
-
-    const priceChangeDelta = priceChanged && existing.current_price != null
-      ? price - existing.current_price
-      : existing.price_change ?? null;
-
-    // For deep crawl, update images too
-    const listingImages = listing.images ?? [];
-    const hasImages = listingImages.length > 0;
-    const imageFields = hasImages ? 'image_count = ?, full_keys = ?,' : '';
-    const imageValues = hasImages
-      ? [listingImages.length, JSON.stringify(listingImages)]
-      : [];
-
-    const descriptionField = descriptionProvided ? 'description = ?,' : '';
-    const descriptionValues: unknown[] = descriptionProvided ? [descriptionValue] : [];
-
-    db.prepare(`
-      UPDATE listings SET
-        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?,
-        fuel = ?, body_type = ?, transmission = ?, color = ?, power = ?, mileage = ?,
-        ad_status = ?, kaparo = ?, current_price = ?, price_change = ?,
-        reg_year = ?, last_edit = ?, carsbg_title = ?, carsbg_created_date = ?, carsbg_edited_date = ?, cars_price = ?, ${descriptionField} ${imageFields}
-        last_seen_at = ?, is_active = 1, duplicate = ?
-      WHERE id = ?
-    `).run(
-      dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
-      fuel || existing.fuel, bodyType || existing.body_type, transmission || existing.transmission,
-      listing.color || existing.color, listing.power || existing.power, listing.mileage || existing.mileage,
-      listing.adStatus || existing.ad_status || 'none', listing.kaparo ? 1 : 0,
-      price, priceChangeDelta,
-      listing.year || existing.reg_year,
-      carsbgEditedDate || existing.last_edit || existing.carsbg_edited_date || null,
-      carsbgTitle || existing.carsbg_title || null,
-      carsbgCreatedDate || existing.carsbg_created_date || null,
-      carsbgEditedDate || existing.carsbg_edited_date || null,
-      null,
-      ...descriptionValues,
-      ...imageValues,
-      now, isDuplicate, existing.id
-    );
-    return { action: 'updated' as const, snapshot: priceChanged, title: normalizedTitle, make, model, duplicate: isDuplicate === 1, trackedChange, syncNeeded, mobilePrice: matchingMobile?.current_price ?? null };
-  }
-
-  // Insert new
-  db.prepare(`
-    INSERT INTO listings (
-      cars_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id,
-      fuel, body_type, transmission, color, power, mileage,
-      ad_status, kaparo, current_price, reg_year, last_edit, carsbg_title, carsbg_created_date, carsbg_edited_date, cars_price,
-      description,
-      image_count, full_keys,
-      first_seen_at, last_seen_at, is_active, source, duplicate
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'c', ?)
-  `).run(
-    carsId, dealerId, listing.url, normalizedTitle, make, model, mobileMakeId, mobileModelId,
-    fuel || null, bodyType || null, transmission || null, listing.color || null, listing.power || null, listing.mileage || null,
-    listing.adStatus || 'none', listing.kaparo ? 1 : 0,
-    price, listing.year || null, carsbgEditedDate, carsbgTitle, carsbgCreatedDate, carsbgEditedDate, null,
-    descriptionValue,
-    listing.images?.length || 0,
-    listing.images ? JSON.stringify(listing.images) : null,
-    now, now, isDuplicate
-  );
-  return { action: 'inserted' as const, snapshot: false, title: normalizedTitle, make, model, duplicate: isDuplicate === 1, trackedChange: false, syncNeeded, mobilePrice: matchingMobile?.current_price ?? null };
+  emit({
+    type: 'listing',
+    dealer: dealer.slug,
+    make: result.make,
+    model: result.model,
+    title: result.title,
+    price: emitData.price,
+    url: emitData.url,
+    thumb: emitData.thumb,
+    mobilePrice: result.mobilePrice ?? null,
+    newListing: result.action === 'inserted' && !result.duplicate,
+    uniqueMatch: !result.duplicate,
+    syncNeeded: result.syncNeeded,
+    imageCount: emitData.imageCount,
+  });
 }
 
 async function deepCrawlCarsBgOwnListings(dealer: CarsBgDealerRow, db: Database.Database) {
@@ -555,11 +139,7 @@ async function deepCrawlCarsBgOwnListings(dealer: CarsBgDealerRow, db: Database.
     await prepareCarsBgPage(page);
     await page.waitForTimeout(1500);
 
-    const offerIds = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('[data-reference]'))
-        .map(el => (el.getAttribute('data-reference') || '').trim())
-        .filter(Boolean)
-    );
+    const offerIds = await page.evaluate(extractCarsBgOwnOfferIdsFromDocument);
 
     emit({ type: 'log', message: `Cars.bg own deep crawl for ${dealer.slug}: found ${offerIds.length} own offers` });
 
@@ -570,38 +150,7 @@ async function deepCrawlCarsBgOwnListings(dealer: CarsBgDealerRow, db: Database.
       await prepareCarsBgPage(page);
       await page.waitForTimeout(800);
 
-      const details = await page.evaluate(() => {
-        const bodyText = document.body.innerText || '';
-        const viewsMatch = bodyText.match(/Общо разглеждания:\s*([\d\s]+)/i);
-        const carsTotalViews = viewsMatch
-          ? Number.parseInt((viewsMatch[1] || '').replace(/[^\d]/g, ''), 10) || null
-          : null;
-
-        const imageUrls = Array.from(document.querySelectorAll('img'))
-          .map(img => (img.getAttribute('src') || '').trim())
-          .filter(Boolean);
-
-        let description: string | null = null;
-        const notesNode = document.querySelector('div.offer-notes');
-        if (notesNode) {
-          const clone = notesNode.cloneNode(true) as HTMLElement;
-          clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
-          description = (clone.textContent || '')
-            .replace(/\r/g, '')
-            .replace(/Възможност за бартер/g, '')
-            .replace(/Възможност за лизинг/g, '')
-            .replace(/Възможност за данъчен кредит/g, '')
-            .replace(/[ \t]+\n/g, '\n')
-            .replace(/\n{2,}/g, '\n')
-            .trim() || null;
-        }
-
-        return {
-          carsTotalViews,
-          carsImages: imageUrls,
-          description,
-        };
-      });
+      const details = await page.evaluate(extractCarsBgOwnerDetailFromDocument);
 
       const normalized: CarsBgOwnerDetails = {
         carsTotalViews: details.carsTotalViews,
@@ -699,90 +248,7 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
           // Each card is an outer .offer cell with:
           // - overline date line above the link
           // - <a href="/offer/..."> containing media + price + make/model + specs/description divs
-          const cards = await page.evaluate(() => {
-            const results: {
-              url: string; title: string; dateText: string; priceText: string; specsText: string; thumb: string;
-            }[] = [];
-
-            const offerCards = document.querySelectorAll('#listContainer .offer');
-            const seen = new Set<string>();
-
-            for (const card of offerCards) {
-              const a = card.querySelector('a[href*="/offer/"]');
-              if (!a) continue;
-              const href = (a as HTMLAnchorElement).href;
-              if (seen.has(href) || !href.includes('/offer/')) continue;
-              seen.add(href);
-
-              // Title from <h5> inside the link
-              const h5 = a.querySelector('h5');
-              const title = h5?.textContent?.trim() || '';
-              if (!title) continue;
-
-              const dateNode = card.querySelector('.card__subtitle');
-              const dateText = dateNode?.textContent?.replace(/\s+/g, ' ').trim() || '';
-
-              // Price block contains both EUR and BGN; take the whole text and parse EUR later.
-              const priceNode = a.querySelector('.price');
-              const priceText = priceNode?.textContent?.trim() || '';
-
-              // Specs are in the first body1 secondary block; body2 is the description snippet.
-              const specsNode = a.querySelector('.card__secondary.mdc-typography--body1');
-              const specsText = specsNode?.textContent?.replace(/\s+/g, ' ').trim() || '';
-
-              let thumb = '';
-              const img = a.querySelector('img') as HTMLImageElement | null;
-              const imgCandidates = [
-                img?.currentSrc,
-                img?.src,
-                img?.getAttribute('src'),
-                img?.getAttribute('data-src'),
-                img?.getAttribute('data-lazy'),
-                img?.getAttribute('data-original'),
-              ];
-              for (const candidate of imgCandidates) {
-                if (!candidate) continue;
-                try {
-                  thumb = new URL(candidate, location.href).href;
-                } catch {
-                  thumb = candidate;
-                }
-                if (thumb) break;
-              }
-
-              if (!thumb) {
-                const bgElements = [
-                  a.querySelector('.mdc-card__media') as HTMLElement | null,
-                  a.querySelector('[style*="background-image"]') as HTMLElement | null,
-                  a as HTMLElement,
-                ].filter(Boolean) as HTMLElement[];
-
-                for (const element of bgElements) {
-                  const bgCandidates = [
-                    element.style.backgroundImage,
-                    element.getAttribute('style') || '',
-                    getComputedStyle(element).backgroundImage,
-                  ];
-                  for (const candidate of bgCandidates) {
-                    const match = candidate.match(/url\(["']?(.*?)["']?\)/i);
-                    const raw = match?.[1];
-                    if (!raw) continue;
-                    try {
-                      thumb = new URL(raw, location.href).href;
-                    } catch {
-                      thumb = raw;
-                    }
-                    if (thumb) break;
-                  }
-                  if (thumb) break;
-                }
-              }
-
-              results.push({ url: href, title, dateText, priceText, specsText, thumb });
-            }
-
-            return results;
-          });
+          const cards = await page.evaluate(extractCarsBgListCardsFromDocument);
 
           emit({ type: 'log', message: `Found ${cards.length} listing cards on ${url}` });
 
@@ -804,25 +270,17 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
               color: specs.color, images: card.thumb ? [card.thumb] : null,
               dealer: dealer.slug,
             };
-            const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
+            processCarsBgListing(
+              db,
+              dealer,
+              stats,
+              listing,
+              { price: priceEur, url: card.url, thumb: card.thumb, imageCount: 0 },
+              makesMap,
+              fuelMap,
+              transmissionMap,
+            );
             count++;
-            stats.processed++;
-            if (result.action === 'inserted') {
-              if (result.duplicate) stats.insertedDuplicate++;
-              else stats.insertedUnique++;
-            } else if (result.action === 'updated') {
-              if (result.duplicate) stats.refreshedDuplicate++;
-              else stats.refreshedUnique++;
-              if (result.trackedChange) stats.changed++;
-            }
-            if (result.syncNeeded) stats.syncNeeded++;
-            emit({
-              type: 'listing', dealer: dealer.slug,
-              make: result.make, model: result.model, title: result.title,
-              price: priceEur, url: card.url, thumb: card.thumb,
-              mobilePrice: result.mobilePrice ?? null,
-              newListing: result.action === 'inserted' && !result.duplicate, uniqueMatch: !result.duplicate, syncNeeded: result.syncNeeded, imageCount: 0,
-            });
           }
         }
 
@@ -848,45 +306,7 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
         // Specs: comma-separated string like "Януари 2019, Седан, ..., Дизел, 219 000км, ..."
         // Images: <img src="https://g1-bg.cars.bg/...">
 
-        const data = await page.evaluate(() => {
-          // Title
-          const h2 = document.querySelector('h2');
-          const title = h2 ? h2.textContent?.trim() || '' : '';
-
-          // Price: find text containing EUR and BGN amounts
-          // The price block renders as "38,500\n75,299.46\nEUR\nBGN" in innerText
-          const body = document.body.innerText;
-          const priceNode = document.querySelector('.offer-price');
-          const priceText = priceNode?.textContent?.trim() || '';
-
-          // Specs: comma-separated line with year, fuel, mileage etc.
-          // Look for the line that starts with a Bulgarian month or a 4-digit year and contains "км"
-          const specsMatch = body.match(/((?:Януари|Февруари|Март|Април|Май|Юни|Юли|Август|Септември|Октомври|Ноември|Декември)?\s*\d{4},.+?км\.?.*?)(?:\n|$)/);
-          const specsLine = specsMatch ? specsMatch[1].trim() : '';
-
-          // Description: dealer free-text lives in `div.offer-notes`. Convert <br> to
-          // newlines before reading textContent so the stored copy matches what the
-          // mobile.bg draft would render.
-          let description: string | null = null;
-          const notesNode = document.querySelector('div.offer-notes');
-          if (notesNode) {
-            const clone = notesNode.cloneNode(true) as HTMLElement;
-            clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
-            description = (clone.textContent || '')
-              .replace(/\r/g, '')
-              .replace(/[ \t]+\n/g, '\n')
-              .replace(/\n{3,}/g, '\n\n')
-              .trim() || null;
-          }
-
-          // Images: on g1-bg.cars.bg CDN
-          const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
-          const images = [...document.querySelectorAll('img')]
-            .map(img => img.src)
-            .filter(s => s && s.includes('g1-bg.cars.bg') && s.match(/\/20\d{2}/));
-
-          return { title, priceText, specsLine, description, ogImage, images };
-        });
+        const data = await page.evaluate(extractCarsBgDetailFromDocument);
 
         const priceEur = parseCarsBgPriceToEur(data.priceText);
         const images = [...new Set([data.ogImage, ...data.images].filter(Boolean))];
@@ -905,25 +325,17 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
           images: images.slice(0, CARS_BG_MAX_IMAGES),
           dealer: dealer.slug,
         };
-        const result = upsertCarsBgListing(db, dealer.id, listing, makesMap, fuelMap, transmissionMap);
+        processCarsBgListing(
+          db,
+          dealer,
+          stats,
+          listing,
+          { price: priceEur, url, thumb: images[0] || '', imageCount: images.length },
+          makesMap,
+          fuelMap,
+          transmissionMap,
+        );
         count++;
-        stats.processed++;
-        if (result.action === 'inserted') {
-          if (result.duplicate) stats.insertedDuplicate++;
-          else stats.insertedUnique++;
-        } else if (result.action === 'updated') {
-          if (result.duplicate) stats.refreshedDuplicate++;
-          else stats.refreshedUnique++;
-          if (result.trackedChange) stats.changed++;
-        }
-        if (result.syncNeeded) stats.syncNeeded++;
-        emit({
-          type: 'listing', dealer: dealer.slug,
-          make: result.make, model: result.model, title: result.title,
-          price: priceEur, url, thumb: images[0] || '',
-          mobilePrice: result.mobilePrice ?? null,
-          newListing: result.action === 'inserted' && !result.duplicate, uniqueMatch: !result.duplicate, syncNeeded: result.syncNeeded, imageCount: images.length,
-        });
       }
     },
 

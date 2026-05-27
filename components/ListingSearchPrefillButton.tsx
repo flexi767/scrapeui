@@ -1,19 +1,11 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useState } from 'react';
 import { SearchIcon, SearchCheckIcon } from 'lucide-react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MobileBgSearchResultsTable } from '@/components/MobileBgSearchResultsTable';
 import { SearchPrefillFields } from '@/components/search-prefill/SearchPrefillFields';
-import {
-  loadLocationOptions,
-  loadMobileBgSearchResults,
-  loadSearchPrefill,
-  resetSearchProfileFields,
-  saveSearchProfileFields,
-} from '@/components/listing-search-prefill/api';
 import {
   ErrorPanel,
   FallbackNotePanel,
@@ -22,16 +14,7 @@ import {
   MessagesPanel,
 } from '@/components/listing-search-prefill/DialogPanels';
 import { DialogActions } from '@/components/listing-search-prefill/DialogActions';
-import {
-  mergeEditableFields,
-  takeFirstVisibleFields,
-} from '@/components/listing-search-prefill/field-utils';
-import type {
-  MobileBgSearchResultsResponse,
-  PendingAction,
-  SearchField,
-  SearchPrefillResponse,
-} from '@/components/listing-search-prefill/types';
+import { useListingSearchPrefill } from '@/components/listing-search-prefill/useListingSearchPrefill';
 
 export default function ListingSearchPrefillButton({
   listingId,
@@ -41,220 +24,39 @@ export default function ListingSearchPrefillButton({
   showQuickResultsButton?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [data, setData] = useState<SearchPrefillResponse | null>(null);
-  const [editableFields, setEditableFields] = useState<SearchField[]>([]);
-  const [subLocationLabel, setSubLocationLabel] = useState('Населено място');
-  const [subLocationOptions, setSubLocationOptions] = useState<Array<{ value: string; label: string }>>([{ value: '', label: 'всички' }]);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(true);
-  const [resultsLoading, setResultsLoading] = useState(false);
-  const [resultsError, setResultsError] = useState('');
-  const [results, setResults] = useState<MobileBgSearchResultsResponse | null>(null);
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [profileSaving, setProfileSaving] = useState(false);
+  const searchPrefill = useListingSearchPrefill(listingId);
+  const {
+    data,
+    editableFields,
+    error,
+    filtersVisible,
+    loading,
+    locationLoading,
+    profileSaving,
+    results,
+    resultsError,
+    resultsLoading,
+    subLocationLabel,
+    subLocationOptions,
+    buildFirstSevenFields,
+    buildSubmissionFields,
+    clearField,
+    getFieldValue,
+    load,
+    nudgeField,
+    resetSearchProfile,
+    saveSearchProfile,
+    showFilters,
+    showResultsHere,
+    submitToMobileBg,
+    updateField,
+    updateLocation,
+    updateMake,
+  } = searchPrefill;
 
-  function syncEditableFields(nextData: SearchPrefillResponse) {
-    setEditableFields(nextData.form.fields.map((field) => ({ ...field })));
-    setSubLocationLabel(nextData.options.subLocations.label);
-    setSubLocationOptions(nextData.options.subLocations.options);
-  }
-
-  async function saveSearchProfile() {
-    setProfileSaving(true);
-    try {
-      const fields = buildSubmissionFields();
-      await saveSearchProfileFields(listingId, fields);
-      const nextData = await loadSearchPrefill(listingId);
-      setData(nextData);
-      syncEditableFields(nextData);
-      toast.success('Saved custom search values');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save search values');
-    } finally {
-      setProfileSaving(false);
-    }
-  }
-
-  async function resetSearchProfile() {
-    setProfileSaving(true);
-    try {
-      await resetSearchProfileFields(listingId);
-      const nextData = await loadSearchPrefill(listingId);
-      setData(nextData);
-      syncEditableFields(nextData);
-      toast.success('Reset to default search values');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset saved search values');
-    } finally {
-      setProfileSaving(false);
-    }
-  }
-
-  async function load(action: PendingAction = 'open') {
-    if (data || loading) {
-      if (action) setPendingAction(action);
-      if (action === 'open') setFiltersVisible(true);
-      setOpen(true);
-      return;
-    }
-    setLoading(true);
-    setError('');
-    if (action) setPendingAction(action);
-    if (action === 'open') setFiltersVisible(true);
+  function openAndLoad(action: 'open' | 'show-first-7') {
     setOpen(true);
-
-    try {
-      const nextData = await loadSearchPrefill(listingId);
-      setData(nextData);
-      syncEditableFields(nextData);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load search fields');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const runPendingAction = useEffectEvent(async (action: PendingAction) => {
-    if (action === 'show-first-7') {
-      await showResultsHere(buildFirstSevenFields());
-    }
-  });
-
-  useEffect(() => {
-    if (!data || loading || resultsLoading || pendingAction == null) return;
-    if (pendingAction === 'show-first-7') void runPendingAction(pendingAction);
-    setPendingAction(null);
-  }, [data, loading, pendingAction, resultsLoading]);
-
-  function updateField(name: string, value: string) {
-    setEditableFields((prev) => prev.map((field) => (
-      field.name === name ? { ...field, value } : field
-    )));
-  }
-
-  function getFieldValue(name: string) {
-    return editableFields.find((field) => field.name === name)?.value ?? '';
-  }
-
-  function updateMake(value: string) {
-    setEditableFields((prev) => {
-      const next = prev.map((field) => (
-        field.name === 'marka' ? { ...field, value } : field
-      ));
-      const validModels = data?.options.modelsByMake[value] ?? [];
-      const currentModel = next.find((field) => field.name === 'model')?.value ?? '';
-      if (currentModel && !validModels.some((option) => option.value === currentModel)) {
-        return next.map((field) => (
-          field.name === 'model' ? { ...field, value: '' } : field
-        ));
-      }
-      return next;
-    });
-  }
-
-  async function updateLocation(value: string) {
-    updateField('f17', value);
-    setLocationLoading(true);
-    setSubLocationLabel('Населено място');
-    setSubLocationOptions([{ value: '', label: 'всички' }]);
-    setEditableFields((prev) => prev.map((field) => {
-      if (field.name === 'f17') return { ...field, value };
-      if (field.name === 'f18') return { ...field, value: '', label: 'Населено място', source: 'default' };
-      return field;
-    }));
-
-    try {
-      const payload = await loadLocationOptions(value);
-      const nextLabel = typeof payload.label === 'string' && payload.label ? payload.label : 'Населено място';
-      const nextOptions = Array.isArray(payload.options) && payload.options.length > 0
-        ? payload.options as Array<{ value: string; label: string }>
-        : [{ value: '', label: 'всички' }];
-
-      setSubLocationLabel(nextLabel);
-      setSubLocationOptions(nextOptions);
-      setEditableFields((prev) => prev.map((field) => (
-        field.name === 'f18' ? { ...field, label: nextLabel, value: '' } : field
-      )));
-    } catch {
-      // Keep the safe default dropdown if the lookup fails.
-    } finally {
-      setLocationLoading(false);
-    }
-  }
-
-  function nudgeField(name: string, delta: number) {
-    setEditableFields((prev) => prev.map((field) => {
-      if (field.name !== name) return field;
-      const parsed = Number.parseInt(field.value || '0', 10);
-      const base = Number.isFinite(parsed) ? parsed : 0;
-      return { ...field, value: String(base + delta) };
-    }));
-  }
-
-  function clearField(name: string) {
-    updateField(name, '');
-  }
-
-  function buildSubmissionFields() {
-    if (!data) return [];
-    return mergeEditableFields(data.form.fields, editableFields);
-  }
-
-  function buildFirstSevenFields() {
-    return takeFirstVisibleFields(buildSubmissionFields(), 7);
-  }
-
-  function submitToMobileBg(fields = buildSubmissionFields()) {
-    if (!data || typeof document === 'undefined') return;
-    const form = document.createElement('form');
-    form.method = data.form.method;
-    form.action = data.form.action;
-    form.target = '_blank';
-    form.acceptCharset = 'windows-1251';
-
-    for (const field of fields) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = field.name;
-      input.value = field.value;
-      form.appendChild(input);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
-  }
-
-  function showFilters() {
-    setFiltersVisible(true);
-    setResults(null);
-    setResultsError('');
-    setResultsLoading(false);
-  }
-
-  async function showResultsHere(fields = buildSubmissionFields()) {
-    if (!data) return;
-    setFiltersVisible(false);
-    setResultsLoading(true);
-    setResultsError('');
-
-    try {
-      const payload = await loadMobileBgSearchResults({
-        action: data.form.action,
-        method: data.form.method,
-        fields,
-        sourceListingId: listingId,
-        sourceMobileId: data.listing.mobile_id,
-      });
-      setResults(payload);
-    } catch (err: unknown) {
-      setResultsError(err instanceof Error ? err.message : 'Failed to load mobile.bg results');
-      setResults(null);
-    } finally {
-      setResultsLoading(false);
-    }
+    void load(action);
   }
 
   return (
@@ -265,7 +67,7 @@ export default function ListingSearchPrefillButton({
           variant="outline"
           size="icon-xs"
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
-          onClick={() => void load('open')}
+          onClick={() => openAndLoad('open')}
           aria-label="Show prefilled mobile.bg search fields"
         >
           <SearchIcon />
@@ -276,7 +78,7 @@ export default function ListingSearchPrefillButton({
             variant="outline"
             size="icon-xs"
             className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
-            onClick={() => void load('show-first-7')}
+            onClick={() => openAndLoad('show-first-7')}
             aria-label="Show mobile.bg results for first 7 filters"
           >
             <SearchCheckIcon />

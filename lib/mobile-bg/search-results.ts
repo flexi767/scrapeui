@@ -1,6 +1,5 @@
-import { getVatFromMobileBgLabel, type VatValue } from '@/lib/vat';
-import { load, type Cheerio } from 'cheerio';
-import type { Element } from 'domhandler';
+import type { VatValue } from '@/lib/vat';
+import { load } from 'cheerio';
 import { execFile } from 'child_process';
 import iconv from 'iconv-lite';
 import { promisify } from 'util';
@@ -10,6 +9,17 @@ import {
   MOBILE_BG_CATEGORY_SET,
 } from '@/lib/mobile-bg/search-field-config';
 import { parseJson } from '@/lib/utils';
+import {
+  absoluteMobileBgUrl,
+  deriveMobileBgSearchMakeModel,
+  extractMobileBgSearchDealerName,
+  normalizeMobileBgSearchSummaryText,
+  parseMobileBgSearchMileage,
+  parseMobileBgSearchPower,
+  parseMobileBgSearchPrice,
+  parseMobileBgSearchVatStatus,
+  parseMobileBgSearchYearAndMonth,
+} from '@/lib/mobile-bg/search-result-parsing';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,23 +72,6 @@ export interface MobileBgSearchResultsUntilFoundPayload extends MobileBgSearchRe
 }
 
 
-const SORT_LABELS: Record<string, string> = {
-  '1': 'Марка/Модел/Цена',
-  '3': 'Цена',
-  '4': 'Дата на производство',
-  '5': 'Пробег',
-  '6': 'Най-новите обяви',
-  '7': 'Най-новите обяви от посл. 2 дни',
-};
-
-function absoluteMobileBgUrl(url: string | undefined | null) {
-  if (!url) return '';
-  if (url.startsWith('//')) return `https:${url}`;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/')) return `https://www.mobile.bg${url}`;
-  return url;
-}
-
 function encodeFormComponentWin1251(value: string) {
   const bytes = iconv.encode(value, 'windows-1251');
   let result = '';
@@ -108,107 +101,6 @@ function buildWindows1251FormBody(fields: MobileBgSearchFieldInput[]) {
 function decodeMobileBgHtml(raw: Buffer | Uint8Array | ArrayBuffer) {
   if (raw instanceof ArrayBuffer) return iconv.decode(Buffer.from(raw), 'windows-1251');
   return iconv.decode(Buffer.from(raw), 'windows-1251');
-}
-
-function parsePrice(priceText: string) {
-  const match = priceText.match(/([\d\s.,]+)€/);
-  if (!match) return null;
-  const normalized = match[1]
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/,(?=\d{2}$)/, '.')
-    .replace(/,/g, '');
-  const value = Number.parseFloat(normalized);
-  return Number.isFinite(value) ? value : null;
-}
-
-function parseVatStatus(priceText: string, dealerName: string | null): VatValue | null {
-  if (priceText.includes('Не се начислява ДДС')) return 'exempt';
-  if (priceText.includes('Цената е без ДДС') || priceText.includes('без ДДС')) return 'excluded';
-  if (priceText.includes('Цената е с включено ДДС')) return 'included';
-  const vat = getVatFromMobileBgLabel(priceText);
-  if (vat) return vat;
-  if (!dealerName) return 'exempt';
-  return null;
-}
-
-function parseYearAndMonth(raw: string) {
-  const match = raw.match(/^([^\d]+?)\s+(\d{4})\s*г\.?$/i);
-  if (!match) return { reg_month: null, reg_year: null };
-  return {
-    reg_month: match[1].trim() || null,
-    reg_year: match[2] || null,
-  };
-}
-
-function parseMileage(raw: string) {
-  const match = raw.match(/([\d\s]+)\s*км/i);
-  if (!match) return null;
-  const value = Number.parseInt(match[1].replace(/\s+/g, ''), 10);
-  return Number.isFinite(value) ? value : null;
-}
-
-function parsePower(raw: string) {
-  const match = raw.match(/(\d[\d\s]*)\s*к\.с\./i);
-  if (!match) return null;
-  const value = Number.parseInt(match[1].replace(/\s+/g, ''), 10);
-  return Number.isFinite(value) ? value : null;
-}
-
-function deriveMakeModel(title: string, submittedMake: string | null, submittedModel: string | null) {
-  const trimmedTitle = title.trim();
-  const loweredTitle = trimmedTitle.toLowerCase();
-  const make = submittedMake?.trim() || null;
-  const model = submittedModel?.trim() || null;
-
-  if (make && model) {
-    const combined = `${make} ${model}`.toLowerCase();
-    if (loweredTitle.startsWith(combined)) return { make, model };
-  }
-
-  if (make && loweredTitle.startsWith(make.toLowerCase())) {
-    const remainder = trimmedTitle.slice(make.length).trim();
-    const derivedModel = remainder.split('/')[0]?.trim() || model || null;
-    return { make, model: derivedModel };
-  }
-
-  return { make, model };
-}
-
-function extractDealerName(item: Cheerio<Element>) {
-  const dealerLink = item.find('.seller .name a').first();
-  const linkedName = dealerLink.text().trim();
-  if (linkedName) {
-    return {
-      dealer_name: linkedName,
-      dealer_url: absoluteMobileBgUrl(dealerLink.attr('href') || '') || null,
-    };
-  }
-
-  const logoAlt = item.find('.seller .logo img').first().attr('alt')?.trim() || '';
-  const normalizedLogoName = logoAlt.replace(/^лого\s+/i, '').trim();
-  if (normalizedLogoName && normalizedLogoName !== 'Регион:') {
-    return {
-      dealer_name: normalizedLogoName,
-      dealer_url: null,
-    };
-  }
-
-  return {
-    dealer_name: null,
-    dealer_url: null,
-  };
-}
-
-function normalizeSummaryText(summaryText: string | null, submittedFields: MobileBgSearchFieldInput[]) {
-  if (!summaryText) return null;
-  const sortValue = submittedFields.find((field) => field.name === 'f20')?.value;
-  const sortLabel = sortValue ? SORT_LABELS[sortValue] : null;
-  const normalizedSummary = summaryText
-    .replace(/Година на производство от:\s*/gu, 'Год.: ')
-    .replace(/Година на производство до:\s*/gu, 'Год. до: ');
-  if (!sortLabel) return normalizedSummary;
-  return normalizedSummary.replace(/Подредени по:\s*[^,]+$/u, `Подредени по: ${sortLabel}`);
 }
 
 function ensureMobileBgSearchDefaults(submittedFields: MobileBgSearchFieldInput[]) {
@@ -365,15 +257,15 @@ async function fetchMobileBgSearchResultsPage(
     const priceText = item.find('.zaglavie .price').first().text();
     const params = item.find('.params span').map((__, span) => $(span).text().trim()).get().filter(Boolean);
     const thumb = absoluteMobileBgUrl(item.find('.photo .big img.pic').attr('src') || item.find('.photo .big img').last().attr('src') || '');
-    const dealer = extractDealerName(item);
+    const dealer = extractMobileBgSearchDealerName(item);
     const status = item.hasClass('TOP') ? 'TOP' : item.hasClass('VIP') ? 'VIP' : 'none';
-    const yearMonth = parseYearAndMonth(params[0] || '');
-    const mileage = params.map(parseMileage).find((value) => value != null) ?? null;
+    const yearMonth = parseMobileBgSearchYearAndMonth(params[0] || '');
+    const mileage = params.map(parseMobileBgSearchMileage).find((value) => value != null) ?? null;
     const fuel = params.find((value) => MOBILE_BG_FUEL_SET.has(value)) || null;
     const transmission = params.find((value) => MOBILE_BG_TRANSMISSION_SET.has(value)) || null;
     const bodyType = params.find((value) => MOBILE_BG_CATEGORY_SET.has(value)) || null;
-    const power = params.map(parsePower).find((value) => value != null) ?? null;
-    const makeModel = deriveMakeModel(title, submittedMake, submittedModel);
+    const power = params.map(parseMobileBgSearchPower).find((value) => value != null) ?? null;
+    const makeModel = deriveMobileBgSearchMakeModel(title, submittedMake, submittedModel);
 
     return {
       mobile_id: mobileId,
@@ -385,8 +277,8 @@ async function fetchMobileBgSearchResultsPage(
       model: makeModel.model,
       dealer_name: dealer.dealer_name,
       dealer_url: dealer.dealer_url,
-      current_price: parsePrice(priceText),
-      vat_status: parseVatStatus(priceText, dealer.dealer_name),
+      current_price: parseMobileBgSearchPrice(priceText),
+      vat_status: parseMobileBgSearchVatStatus(priceText, dealer.dealer_name),
       ad_status: status,
       reg_month: yearMonth.reg_month,
       reg_year: yearMonth.reg_year,
@@ -420,7 +312,7 @@ async function fetchMobileBgSearchResultsPage(
 
   return {
     submitted_fields: normalizedFields,
-    summary_text: normalizeSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, normalizedFields),
+    summary_text: normalizeMobileBgSearchSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, normalizedFields),
     page: currentPage,
     total_pages: totalPages,
     has_next_page: hasNextPage,

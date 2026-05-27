@@ -11,6 +11,11 @@ import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { normalizeVatValue } from '@/lib/vat';
 import { getExtraLabels } from '@/lib/mobile-bg/extras';
 import { errorMessage, parseJson } from '@/lib/utils';
+import {
+  continueMobileBgPublish,
+  resolvePublishedMobileBgListing,
+  uploadMobileBgBackupImages,
+} from '@/lib/mobile-bg/repost-page-flow';
 
 interface BackupRow {
   id: number;
@@ -92,24 +97,6 @@ async function applyBlankDraftExtras(page: import('playwright').Page, labels: st
       }
     }
   }, labels);
-}
-
-async function assertUploadInputAvailable(
-  page: import('playwright').Page,
-  repostDir: string,
-  phase: string,
-): Promise<void> {
-  const selector = 'input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]';
-  const input = page.locator(selector).first();
-  if (await input.count() > 0) return;
-
-  await fsp.mkdir(repostDir, { recursive: true });
-  const screenshotPath = path.join(repostDir, `${phase}-missing-upload-input.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
-
-  const pageText = ((await page.textContent('body').catch(() => '')) || '').replace(/\s+/g, ' ').trim();
-  const message = pageText ? ` Mobile.bg page text: ${pageText.slice(0, 500)}` : '';
-  throw new Error(`Mobile.bg did not show the image upload step after submitting the listing details.${message}`);
 }
 
 async function publishDraftBackupFromDb(
@@ -214,59 +201,13 @@ async function publishDraftBackupFromDb(
     await page.waitForTimeout(2000);
     await acceptMobileBgCookies(page);
 
-    if (images.length > 0) {
-      await assertUploadInputAvailable(page, repostDir, 'draft-publish');
-      const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
-      for (const image of images) {
-        const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
-        await uploadInput.setInputFiles(image.local_path);
-        await responsePromise;
-        await page.waitForTimeout(300);
-      }
-    }
+    await uploadMobileBgBackupImages(page, images, repostDir, 'draft-publish');
 
     const previewScreenshotPath = path.join(repostDir, 'repost-preview.png');
     await page.screenshot({ path: previewScreenshotPath, fullPage: true });
 
-    await acceptMobileBgCookies(page);
-    const continueButton = page.locator('a.pubButton, a:has-text("ПРОДЪЛЖИ"), input[value="ПРОДЪЛЖИ"]').first();
-    if (await continueButton.count() > 0) {
-      await continueButton.click({ force: true });
-    } else {
-      await page.evaluate(() => {
-        document.getElementById('cookiescript_injected_wrapper')?.remove();
-        document.getElementById('cookiescript_injected')?.remove();
-        const steps = (document as Document & { steps?: HTMLFormElement }).steps;
-        if (steps) {
-          const step = steps.querySelector('[name="step"]') as HTMLInputElement | null;
-          const actions = steps.querySelector('[name="actions"]') as HTMLInputElement | null;
-          if (step) step.value = '3';
-          if (actions) actions.value = '22';
-          steps.submit();
-        }
-      });
-    }
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2500);
-
-    let resultUrl = page.url();
-    const resultText = (await page.textContent('body').catch(() => '')) || '';
-    let targetMobileId =
-      resultUrl.match(/obiava-(\d+)/)?.[1]
-      || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
-      || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
-      || null;
-
-    if (!targetMobileId) {
-      const viewButton = page.locator('a:has-text("Преглед на обявата")').first();
-      if (await viewButton.count() > 0) {
-        const href = await viewButton.getAttribute('href');
-        targetMobileId = href?.match(/obiava-(\d+)/)?.[1] || targetMobileId;
-        if (href) {
-          resultUrl = href;
-        }
-      }
-    }
+    await continueMobileBgPublish(page);
+    const { resultUrl, targetMobileId } = await resolvePublishedMobileBgListing(page);
 
     if (!targetMobileId) {
       throw new Error('Publish completed but no new listing ID was found');
@@ -441,73 +382,13 @@ export async function repostBackupFromDb(
     await page.waitForTimeout(2000);
     await acceptMobileBgCookies(page);
 
-    if (images.length > 0) {
-      await assertUploadInputAvailable(page, repostDir, 'repost');
-      const uploadInput = page.locator('input[type="file"].plupload_html5, .plupload.html5 input[type="file"], input[type="file"]').first();
-      for (const image of images) {
-        const responsePromise = page.waitForResponse((response) => response.url().includes('upload.cgi'), { timeout: 30000 });
-        await uploadInput.setInputFiles(image.local_path);
-        await responsePromise;
-        await page.waitForTimeout(300);
-      }
-    }
+    await uploadMobileBgBackupImages(page, images, repostDir, 'repost');
 
     const previewScreenshotPath = path.join(repostDir, 'repost-preview.png');
     await page.screenshot({ path: previewScreenshotPath, fullPage: true });
 
-    await acceptMobileBgCookies(page);
-    const continueButton = page.locator('a.pubButton, a:has-text("ПРОДЪЛЖИ"), input[value="ПРОДЪЛЖИ"]').first();
-    if (await continueButton.count() > 0) {
-      await continueButton.click({ force: true });
-    } else {
-      await page.evaluate(() => {
-        document.getElementById('cookiescript_injected_wrapper')?.remove();
-        document.getElementById('cookiescript_injected')?.remove();
-        const steps = (document as Document & { steps?: HTMLFormElement }).steps;
-        if (steps) {
-          const step = steps.querySelector('[name="step"]') as HTMLInputElement | null;
-          const actions = steps.querySelector('[name="actions"]') as HTMLInputElement | null;
-          if (step) step.value = '3';
-          if (actions) actions.value = '22';
-          steps.submit();
-        }
-      });
-    }
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2500);
-
-    let resultUrl = page.url();
-    let resultText = (await page.textContent('body').catch(() => '')) || '';
-    let targetMobileId =
-      resultUrl.match(/obiava-(\d+)/)?.[1]
-      || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
-      || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
-      || null;
-
-    if (!targetMobileId) {
-      const viewButton = page.locator('a:has-text("Преглед на обявата")').first();
-      if (await viewButton.count() > 0) {
-        const href = await viewButton.getAttribute('href');
-        targetMobileId =
-          href?.match(/obiava-(\d+)/)?.[1]
-          || targetMobileId;
-        if (href) {
-          resultUrl = href;
-        } else {
-          await acceptMobileBgCookies(page);
-          await viewButton.click({ force: true });
-          await page.waitForLoadState('domcontentloaded');
-          await page.waitForTimeout(1800);
-          resultUrl = page.url();
-          resultText = (await page.textContent('body').catch(() => '')) || '';
-          targetMobileId =
-            resultUrl.match(/obiava-(\d+)/)?.[1]
-            || resultText.match(/Обява:\s*(\d{15,})/)?.[1]
-            || resultText.match(/showPrintPDF\('?(\d{15,})'?/)?.[1]
-            || null;
-        }
-      }
-    }
+    await continueMobileBgPublish(page);
+    const { resultUrl, targetMobileId } = await resolvePublishedMobileBgListing(page, { clickViewButton: true });
 
     if (!targetMobileId) {
       throw new Error('Repost completed but no new listing ID was found');
