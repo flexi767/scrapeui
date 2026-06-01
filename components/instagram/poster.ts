@@ -3,6 +3,8 @@ import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
 export {
   COLLAGE_SELECTION_STORAGE_PREFIX,
   DEFAULT_POSTER_VARIANT_PROMPTS,
+  GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY,
+  GLOBAL_VARIANT_PROMPTS_STORAGE_KEY,
   PROMPT_STORAGE_PREFIX,
   VARIANT_PROMPT_STORAGE_PREFIX,
   type CollageSelections,

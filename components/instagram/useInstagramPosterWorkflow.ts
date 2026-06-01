@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { errorMessage } from "@/lib/utils";
+import { errorMessage, parseApiResponse } from "@/lib/utils";
 import {
+  applyConsistentTextToVariants,
   buildDefaultCollageSelections,
   generateAiPosters,
   loadPosterImages,
@@ -14,6 +15,8 @@ import {
   buildDefaultPosterPrompt,
   COLLAGE_SELECTION_STORAGE_PREFIX,
   DEFAULT_POSTER_VARIANT_PROMPTS,
+  GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY,
+  GLOBAL_VARIANT_PROMPTS_STORAGE_KEY,
   makePoster,
   PROMPT_STORAGE_PREFIX,
   VARIANT_PROMPT_STORAGE_PREFIX,
@@ -22,6 +25,37 @@ import {
   type PosterVariant,
   type PosterVariantPrompt,
 } from "./poster";
+
+interface ServerPosterDefaults {
+  promptTemplate: string;
+  variantPrompts: PosterVariantPrompt[];
+}
+
+const PROMPT_TEMPLATE_FIELDS = [
+  ["{make}", "make"],
+  ["{model}", "model"],
+  ["{description}", "description"],
+  ["{color}", "color"],
+] as const;
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function resolvePromptTemplate(template: string, listing: InstagramListingPayload) {
+  return PROMPT_TEMPLATE_FIELDS.reduce((current, [token, key]) => {
+    const value = listing[key] || "";
+    return current.replaceAll(token, String(value));
+  }, template);
+}
+
+function buildPromptTemplateFromListing(prompt: string, listing: InstagramListingPayload) {
+  return PROMPT_TEMPLATE_FIELDS.reduce((current, [token, key]) => {
+    const value = String(listing[key] || "").trim();
+    if (!value) return current;
+    return current.replace(new RegExp(escapeRegExp(value), "g"), token);
+  }, prompt);
+}
 
 export function useInstagramPosterWorkflow(listing: InstagramListingPayload | null) {
   const [generating, setGenerating] = useState(false);
@@ -37,16 +71,39 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
   const canvasSeedRef = useRef(0);
   const initialPosterGeneratedRef = useRef(false);
 
+  const loadServerPosterDefaults = useCallback(async (data: InstagramListingPayload) => {
+    try {
+      const serverDefaults = await fetch("/api/instagram/poster-defaults").then((response) =>
+        parseApiResponse<ServerPosterDefaults | null>(response, "Could not load saved poster defaults"),
+      );
+      if (!serverDefaults) return;
+      if (!window.localStorage.getItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
+        setPosterPrompt(resolvePromptTemplate(serverDefaults.promptTemplate, data));
+      }
+      if (!window.localStorage.getItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
+        setVariantPrompts(normalizeVariantPrompts(serverDefaults.variantPrompts));
+      }
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not load saved poster defaults"));
+    }
+  }, []);
+
   const handleListingLoad = useCallback((data: InstagramListingPayload) => {
     initialPosterGeneratedRef.current = false;
     const savedPrompt = window.localStorage.getItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`);
+    const savedGlobalPromptTemplate = window.localStorage.getItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY);
     const savedVariantPrompts = window.localStorage.getItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`);
+    const savedGlobalVariantPrompts = window.localStorage.getItem(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY);
     const savedCollageSelections = window.localStorage.getItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${data.backupId}`);
-    setPosterPrompt(savedPrompt || buildDefaultPosterPrompt(data));
+    setPosterPrompt(
+      savedPrompt || (savedGlobalPromptTemplate ? resolvePromptTemplate(savedGlobalPromptTemplate, data) : buildDefaultPosterPrompt(data)),
+    );
     try {
       setVariantPrompts(
         savedVariantPrompts
           ? normalizeVariantPrompts(JSON.parse(savedVariantPrompts) as PosterVariantPrompt[])
+          : savedGlobalVariantPrompts
+            ? normalizeVariantPrompts(JSON.parse(savedGlobalVariantPrompts) as PosterVariantPrompt[])
           : DEFAULT_POSTER_VARIANT_PROMPTS,
       );
     } catch {
@@ -61,7 +118,8 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     } catch {
       setCollageSelections(buildDefaultCollageSelections(data.photos));
     }
-  }, []);
+    void loadServerPosterDefaults(data);
+  }, [loadServerPosterDefaults]);
 
   const coverVariants = useMemo(
     () => variants.filter((variant) => variant.role !== "collage"),
@@ -126,8 +184,10 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
         variantId,
       });
       if (canvasSeedRef.current !== seed) return;
-      setVariants((current) => (variantId ? mergeGeneratedVariants(current, aiVariants) : aiVariants));
-      const nextSelectedCover = aiVariants.find((variant) => variant.role !== "collage")?.id;
+      const textVariants = await applyConsistentTextToVariants(listing, aiVariants);
+      if (canvasSeedRef.current !== seed) return;
+      setVariants((current) => (variantId ? mergeGeneratedVariants(current, textVariants) : textVariants));
+      const nextSelectedCover = textVariants.find((variant) => variant.role !== "collage")?.id;
       if (nextSelectedCover) setSelectedVariantId(nextSelectedCover);
       toast.success(cached ? "Loaded saved AI posters" : variantId ? "AI poster generated" : "AI posters generated");
     } catch (error) {
@@ -146,7 +206,9 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
           { id: "editorial", name: "Clean gallery", role: "cover", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
         ];
         if (canvasSeedRef.current !== seed) return;
-        setVariants(fallbackVariants);
+        const textFallbackVariants = await applyConsistentTextToVariants(listing, fallbackVariants);
+        if (canvasSeedRef.current !== seed) return;
+        setVariants(textFallbackVariants);
         setSelectedVariantId("hero");
         if (failedCount > 0) {
           toast.warning(
@@ -177,8 +239,9 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
         cacheOnly: true,
       });
       if (cachedVariants.length > 0) {
-        setVariants(cachedVariants);
-        setSelectedVariantId(cachedVariants.find((variant) => variant.role !== "collage")?.id ?? "ai-hero");
+        const textVariants = await applyConsistentTextToVariants(listing, cachedVariants);
+        setVariants(textVariants);
+        setSelectedVariantId(textVariants.find((variant) => variant.role !== "collage")?.id ?? "ai-hero");
       }
     } catch (error) {
       toast.error(errorMessage(error, "Could not load saved posters"));
@@ -201,6 +264,27 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     window.localStorage.removeItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`);
     window.localStorage.removeItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`);
     window.localStorage.removeItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`);
+  }
+
+  async function saveDefaultsForFuture() {
+    if (!listing) return;
+    const prompt = posterPrompt.trim() || buildDefaultPosterPrompt(listing);
+    const prompts = normalizeVariantPrompts(variantPrompts);
+    const promptTemplate = buildPromptTemplateFromListing(prompt, listing);
+    window.localStorage.setItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
+    window.localStorage.setItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(prompts));
+    window.localStorage.setItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY, promptTemplate);
+    window.localStorage.setItem(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+    try {
+      await fetch("/api/instagram/poster-defaults", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ promptTemplate, variantPrompts: prompts }),
+      }).then((response) => parseApiResponse<ServerPosterDefaults>(response, "Could not save poster defaults"));
+      toast.success("Saved as the default Instagram poster style");
+    } catch (error) {
+      toast.error(errorMessage(error, "Saved in this browser, but not on the server"));
+    }
   }
 
   function toggleCollagePhoto(kind: keyof CollageSelections, photoId: number) {
@@ -243,6 +327,7 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     handleListingLoad,
     generatePosters,
     resetPosterPrompt,
+    saveDefaultsForFuture,
     toggleCollagePhoto,
     applyDefaultCollageSelections,
   };

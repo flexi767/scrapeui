@@ -15,6 +15,8 @@ export interface CollageSelections {
 export const PROMPT_STORAGE_PREFIX = "scrapeui:instagram-poster-prompt:";
 export const VARIANT_PROMPT_STORAGE_PREFIX = "scrapeui:instagram-poster-variant-prompts:";
 export const COLLAGE_SELECTION_STORAGE_PREFIX = "scrapeui:instagram-poster-collage-selections:";
+export const GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY = "scrapeui:instagram-poster-global-prompt-template";
+export const GLOBAL_VARIANT_PROMPTS_STORAGE_KEY = "scrapeui:instagram-poster-global-variant-prompts";
 
 export const DEFAULT_POSTER_VARIANT_PROMPTS: PosterVariantPrompt[] = [
   {

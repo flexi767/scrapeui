@@ -34,7 +34,9 @@ export function submitMobileBgSearch(
   targetWindowName?: string,
 ) {
   if (typeof document === "undefined") return;
-  const formTarget = targetWindowName || target;
+  const formTarget =
+    targetWindowName ||
+    (target === "_blank" ? `scrapeui-mobile-bg-search-${Date.now()}` : target);
   if (target && target !== "_self") {
     window.open("", formTarget);
   }

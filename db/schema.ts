@@ -122,6 +122,14 @@ export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const instagramPosterDefaults = sqliteTable("instagram_poster_defaults", {
+  scopeKey: text("scope_key").primaryKey(),
+  promptTemplate: text("prompt_template").notNull(),
+  variantPromptsJson: text("variant_prompts_json").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 // ─── Labels (shared across tasks, articles, expenses) ─────────────
 
 export const labels = sqliteTable("labels", {

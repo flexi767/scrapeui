@@ -11,9 +11,7 @@ import {
   CarouselOrderStrip,
   CollageImageSelector,
   GeneratedImageSections,
-  InstagramPostDataAside,
   PosterPromptPanel,
-  VariantPromptPanel,
 } from "./InstagramPublisherSections";
 import {
   dataUrlToFile,
@@ -47,6 +45,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
     collageVariants,
     generatePosters,
     resetPosterPrompt,
+    saveDefaultsForFuture,
     toggleCollagePhoto,
     applyDefaultCollageSelections,
     handleListingLoad: loadPosterListing,
@@ -181,53 +180,48 @@ export function InstagramPublisherClient({ backupId }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
-        <section className="space-y-4">
-          <PosterPromptPanel
-            prompt={posterPrompt}
-            onPromptChange={setPosterPrompt}
-            onReset={resetPosterPrompt}
-          />
-          <VariantPromptPanel
-            prompts={variantPrompts}
-            onPromptChange={(id, prompt) =>
-              setVariantPrompts((current) =>
-                current.map((item) => (item.id === id ? { ...item, prompt } : item)),
-              )
-            }
-          />
-          <CollageImageSelector
-            photos={orderedPhotos}
-            selections={collageSelections}
-            generating={generating}
-            onToggle={toggleCollagePhoto}
-            onDefaults={applyDefaultCollageSelections}
-            onGenerate={() => void generatePosters(false)}
-            onZoom={setZoomImage}
-          />
-          <GeneratedImageSections
-            expectedVariants={variantPrompts}
-            coverVariants={coverVariants}
-            collageVariants={collageVariants}
-            selectedVariantId={selectedVariantId}
-            generating={generating}
-            generatingVariantIds={generatingVariantIds}
-            hasVariants={hasVariants}
-            onSelectCover={setSelectedVariantId}
-            onRegenerate={() => void generatePosters(true)}
-            onGenerateVariant={(variantId, force) => void generatePosters(force, variantId)}
-            onZoom={setZoomImage}
-          />
-          <CarouselOrderStrip
-            selectedVariant={selectedVariant}
-            collageVariants={collageVariants}
-            photos={orderedPhotos}
-            zoomItems={zoomItems}
-            onZoom={setZoomImage}
-          />
-        </section>
-        <InstagramPostDataAside listing={listing} />
-      </div>
+      <section className="space-y-4">
+        <PosterPromptPanel
+          prompt={posterPrompt}
+          listing={listing}
+          variantPrompts={variantPrompts}
+          onPromptChange={setPosterPrompt}
+          onVariantPromptChange={(id, prompt) =>
+            setVariantPrompts((current) => current.map((item) => (item.id === id ? { ...item, prompt } : item)))
+          }
+          onSaveDefaultsForFuture={saveDefaultsForFuture}
+          onReset={resetPosterPrompt}
+        />
+        <CollageImageSelector
+          photos={orderedPhotos}
+          selections={collageSelections}
+          generating={generating}
+          onToggle={toggleCollagePhoto}
+          onDefaults={applyDefaultCollageSelections}
+          onGenerate={() => void generatePosters(false)}
+          onZoom={setZoomImage}
+        />
+        <GeneratedImageSections
+          expectedVariants={variantPrompts}
+          coverVariants={coverVariants}
+          collageVariants={collageVariants}
+          selectedVariantId={selectedVariantId}
+          generating={generating}
+          generatingVariantIds={generatingVariantIds}
+          hasVariants={hasVariants}
+          onSelectCover={setSelectedVariantId}
+          onRegenerate={() => void generatePosters(true)}
+          onGenerateVariant={(variantId, force) => void generatePosters(force, variantId)}
+          onZoom={setZoomImage}
+        />
+        <CarouselOrderStrip
+          selectedVariant={selectedVariant}
+          collageVariants={collageVariants}
+          photos={orderedPhotos}
+          zoomItems={zoomItems}
+          onZoom={setZoomImage}
+        />
+      </section>
     </div>
   );
 }

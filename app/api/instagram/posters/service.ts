@@ -190,7 +190,7 @@ function buildImagePrompt(
       ? "Composition/framing: square 1:1 Instagram carousel collage page, elegant multi-photo grid, consistent spacing, premium editorial hierarchy, very little text."
       : "Composition/framing: square 1:1 Instagram cover, dramatic vehicle hero angle, strong poster hierarchy, room for headline and offer details.",
     "Lighting/mood: cinematic reflections, polished surfaces, high-end dealership campaign.",
-    "Text: avoid dense text. Any visible text must be Bulgarian only. Do not render contact/footer text; it will be added later.",
+    "Text: do not render any letters, words, captions, contact details, logos, typography, footer text, or UI labels. All text will be added later with a consistent font.",
     "Reference fidelity: use the provided listing photos as visual references for the exact car. Preserve the visible wheel design/rims, tire proportions, and license plate text/number from the reference photos whenever they are visible. Do not invent a different number plate. Do not change the car generation, body kit, headlights, grille, or wheel style.",
     variant.id === "ai-exterior-collage"
       ? "Reference selection: use these as exterior/outside car photos. Build a collage page from the outside views."

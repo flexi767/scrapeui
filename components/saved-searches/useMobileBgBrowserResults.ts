@@ -105,16 +105,23 @@ export function useMobileBgBrowserResults({
   const showInBrowser = useCallback(
     async (fields = currentFields) => {
       if (!fields.length) return;
+      const token =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const browserSearchWindowName = buildMobileBgBrowserSearchWindowName({
+        appOrigin: window.location.origin,
+        token,
+        fields,
+      });
+      window.open("", browserSearchWindowName);
+
       const nextBookmarklet =
         installBookmarklet ||
         (await import("@/components/saved-searches/mobile-bg-results-bookmarklet"))
           .buildMobileBgResultsBookmarklet();
       if (!installBookmarklet) setInstallBookmarklet(nextBookmarklet);
 
-      const token =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       pendingTokenRef.current = token;
       pendingFieldsRef.current = fields;
       setLoading(true);
@@ -125,11 +132,6 @@ export function useMobileBgBrowserResults({
         "Opened mobile.bg in a browser tab. Run the copied scrapeui bookmarklet on that results page to import parsed rows here.",
       );
 
-      const browserSearchWindowName = buildMobileBgBrowserSearchWindowName({
-        appOrigin: window.location.origin,
-        token,
-        fields,
-      });
       setBookmarklet(nextBookmarklet);
 
       if (navigator.clipboard?.writeText) {
