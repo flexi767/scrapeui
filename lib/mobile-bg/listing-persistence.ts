@@ -2,7 +2,11 @@ import type Database from 'better-sqlite3';
 import { resolveCarsBgMakeModelIds } from '@/lib/cars-bg/makes-models';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { saveListingThumb } from '@/lib/listing-thumbs';
-import { insertListingSnapshot } from '@/lib/listings/snapshots';
+import {
+  getPriceChangeDelta,
+  insertListingSnapshot,
+  previousValueIfChanged,
+} from '@/lib/listings/snapshots';
 import { normalizeBodyTypeSync, getBodyTypeMap } from '@/lib/mobile-bg/body-types';
 import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
@@ -229,14 +233,14 @@ export async function upsertMobileBgListing(
     let changeEvent: MobileBgChangeEvent | undefined;
     if (trackedChange) {
       insertListingSnapshot(db, existing.id, {
-        price: priceChanged ? existing.current_price : null,
-        vat: vatChanged ? existing.vat : null,
-        lastEdit: lastEditChanged ? existing.last_edit || null : null,
-        views: viewsChanged ? (existing.views ?? null) : null,
-        adStatus: adStatusChanged ? existing.ad_status || 'none' : null,
-        kaparo: kaparoChanged ? (existing.kaparo ? 1 : 0) : null,
-        title: titleChanged ? existing.title || null : null,
-        description: descriptionChanged ? existing.description || null : null,
+        price: previousValueIfChanged(priceChanged, existing.current_price),
+        vat: previousValueIfChanged(vatChanged, existing.vat),
+        lastEdit: previousValueIfChanged(lastEditChanged, existing.last_edit || null),
+        views: previousValueIfChanged(viewsChanged, existing.views),
+        adStatus: previousValueIfChanged(adStatusChanged, existing.ad_status || 'none'),
+        kaparo: previousValueIfChanged(kaparoChanged, existing.kaparo ? 1 : 0),
+        title: previousValueIfChanged(titleChanged, existing.title || null),
+        description: previousValueIfChanged(descriptionChanged, existing.description || null),
         recordedAt: now,
       });
       changeEvent = {
@@ -250,16 +254,16 @@ export async function upsertMobileBgListing(
         thumb: listing.thumb || null,
         price,
         priceChanged,
-        oldPrice: priceChanged ? existing.current_price : null,
+        oldPrice: previousValueIfChanged(priceChanged, existing.current_price),
         newPrice: priceChanged ? price : null,
         vatChanged,
-        oldVat: vatChanged ? existing.vat : null,
+        oldVat: previousValueIfChanged(vatChanged, existing.vat),
         newVat: vatChanged ? (isDeep ? vat : existing.vat) : null,
         viewsChanged,
-        oldViews: viewsChanged ? (existing.views ?? null) : null,
+        oldViews: previousValueIfChanged(viewsChanged, existing.views),
         newViews: viewsChanged ? views : null,
         adStatusChanged,
-        oldStatus: adStatusChanged ? existing.ad_status : null,
+        oldStatus: previousValueIfChanged(adStatusChanged, existing.ad_status),
         newStatus: adStatusChanged ? listing.adStatus || 'none' : null,
         kaparoChanged,
         titleChanged,
@@ -278,9 +282,13 @@ export async function upsertMobileBgListing(
           JSON.stringify(imageData!.fullKeys || []),
         ]
       : [];
-    const priceChangeDelta = priceChanged
-      ? price! - (existing.current_price ?? 0)
-      : (existing.price_change ?? null);
+    const priceChangeDelta = getPriceChangeDelta({
+      priceChanged,
+      newPrice: price,
+      oldPrice: existing.current_price,
+      existingPriceChange: existing.price_change,
+      missingOldPriceAsZero: true,
+    });
 
     db.prepare(`
       UPDATE listings SET
@@ -374,4 +382,3 @@ export async function upsertMobileBgListing(
   );
   return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }
-

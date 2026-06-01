@@ -12,6 +12,41 @@ export interface ListingSnapshotInput {
   recordedAt: string;
 }
 
+type SnapshotPayload = Omit<ListingSnapshotInput, 'recordedAt'>;
+
+export function previousValueIfChanged<T>(
+  changed: boolean,
+  value: T | null | undefined,
+): T | null {
+  return changed ? value ?? null : null;
+}
+
+export function hasListingSnapshotPayload(snapshot: SnapshotPayload): boolean {
+  return Object.values(snapshot).some((value) => {
+    if (value == null) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    return true;
+  });
+}
+
+export function getPriceChangeDelta({
+  priceChanged,
+  newPrice,
+  oldPrice,
+  existingPriceChange,
+  missingOldPriceAsZero = false,
+}: {
+  priceChanged: boolean;
+  newPrice: number | null;
+  oldPrice: number | null;
+  existingPriceChange: number | null;
+  missingOldPriceAsZero?: boolean;
+}): number | null {
+  if (!priceChanged || newPrice == null) return existingPriceChange ?? null;
+  if (oldPrice == null && !missingOldPriceAsZero) return existingPriceChange ?? null;
+  return newPrice - (oldPrice ?? 0);
+}
+
 export function insertListingSnapshot(
   db: Database.Database,
   listingId: number,
@@ -35,4 +70,3 @@ export function insertListingSnapshot(
     snapshot.recordedAt,
   );
 }
-

@@ -8,7 +8,12 @@ import {
   normCarsBgFuel,
   normCarsBgTrans,
 } from '@/lib/cars-bg/parse';
-import { insertListingSnapshot } from '@/lib/listings/snapshots';
+import {
+  getPriceChangeDelta,
+  hasListingSnapshotPayload,
+  insertListingSnapshot,
+  previousValueIfChanged,
+} from '@/lib/listings/snapshots';
 import { normalizeBodyTypeSync, getBodyTypeMap } from '@/lib/mobile-bg/body-types';
 import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
 import { parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
@@ -285,23 +290,17 @@ export function upsertCarsBgListing(
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
     const trackedChange = priceChanged || titleChanged || adStatusChanged || kaparoChanged;
-    const snapshotPrice = priceChanged ? existing.current_price : null;
-    const snapshotAdStatus = adStatusChanged ? (existing.ad_status || 'none') : null;
-    const snapshotKaparo = kaparoChanged ? (existing.kaparo ? 1 : 0) : null;
-    const snapshotTitle = titleChanged ? (existing.title || null) : null;
-    const hasSnapshotPayload =
-      snapshotPrice != null ||
-      snapshotAdStatus != null ||
-      snapshotKaparo != null ||
-      (snapshotTitle != null && snapshotTitle.trim() !== '');
+    const snapshot = {
+      price: previousValueIfChanged(priceChanged, existing.current_price),
+      adStatus: previousValueIfChanged(adStatusChanged, existing.ad_status || 'none'),
+      kaparo: previousValueIfChanged(kaparoChanged, existing.kaparo ? 1 : 0),
+      title: previousValueIfChanged(titleChanged, existing.title || null),
+    };
 
     let changeEvent: Record<string, unknown> | undefined;
-    if (trackedChange && hasSnapshotPayload) {
+    if (trackedChange && hasListingSnapshotPayload(snapshot)) {
       insertListingSnapshot(db, existing.id, {
-        price: snapshotPrice,
-        adStatus: snapshotAdStatus,
-        kaparo: snapshotKaparo,
-        title: snapshotTitle,
+        ...snapshot,
         recordedAt: now,
       });
       changeEvent = {
@@ -316,19 +315,22 @@ export function upsertCarsBgListing(
         price,
         mobilePrice: matchingMobile?.current_price ?? null,
         priceChanged,
-        oldPrice: priceChanged ? existing.current_price : null,
+        oldPrice: previousValueIfChanged(priceChanged, existing.current_price),
         newPrice: priceChanged ? price : null,
         adStatusChanged,
-        oldStatus: adStatusChanged ? existing.ad_status : null,
+        oldStatus: previousValueIfChanged(adStatusChanged, existing.ad_status),
         newStatus: adStatusChanged ? (listing.adStatus || 'none') : null,
         kaparoChanged,
         titleChanged,
       };
     }
 
-    const priceChangeDelta = priceChanged && existing.current_price != null
-      ? price - existing.current_price
-      : existing.price_change ?? null;
+    const priceChangeDelta = getPriceChangeDelta({
+      priceChanged,
+      newPrice: price,
+      oldPrice: existing.current_price,
+      existingPriceChange: existing.price_change,
+    });
     const listingImages = listing.images ?? [];
     const hasImages = listingImages.length > 0;
     const imageFields = hasImages ? 'image_count = ?, full_keys = ?,' : '';
@@ -405,4 +407,3 @@ export function upsertCarsBgListing(
     mobilePrice: matchingMobile?.current_price ?? null,
   };
 }
-

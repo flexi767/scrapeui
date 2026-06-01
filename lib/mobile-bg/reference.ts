@@ -2,6 +2,11 @@ import type Database from 'better-sqlite3';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { fetchWin1251 } from './fetch-html';
 import { fetchMakesModels, normalizeMakeModelLabel, type MakeEntry, type MakesMap, type ModelEntry } from './makes-models';
+import {
+  buildMobileBgSearchUrl,
+  parseMakeCountsFromHtml,
+  parseModelCountsFromHtml,
+} from './reference-counts';
 
 export const DEFAULT_MOBILEBG_SEARCH_PATH = '/search/avtomobili-dzhipove';
 export const DEFAULT_MOBILEBG_PUBTYPE = '1,2';
@@ -46,51 +51,6 @@ function compareModelEntries(a: ModelEntry, b: ModelEntry): number {
 
 function compareMakeEntries(a: MakeEntry, b: MakeEntry): number {
   return b.make.length - a.make.length || (b.count ?? -1) - (a.count ?? -1) || a.make.localeCompare(b.make, 'bg');
-}
-
-function buildSearchUrl(searchPath: string, params: Record<string, string>): string {
-  const url = new URL(searchPath, 'https://www.mobile.bg');
-  for (const [key, value] of Object.entries(params)) {
-    if (value) url.searchParams.set(key, value);
-  }
-  return url.toString();
-}
-
-function parseCount(value: string): number | null {
-  const digits = value.replace(/[^\d]/g, '');
-  if (!digits) return null;
-  const parsed = Number.parseInt(digits, 10);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseMakeCountsFromHtml(html: string): Map<string, number> {
-  const counts = new Map<string, number>();
-  const sectionMatch = html.match(/id="akSearchMarki"[\s\S]*?<div class="scroll">([\s\S]*?)<\/div>\s*<\/div>/i);
-  const block = sectionMatch?.[1] ?? html;
-  const rowRegex = /<div class="a"[\s\S]*?<span>([^<]+)<\/span>\s*<span>([^<]*)<\/span>[\s\S]*?<\/div>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = rowRegex.exec(block)) !== null) {
-    const make = match[1].trim();
-    const count = parseCount(match[2]);
-    if (!make || count === null) continue;
-    counts.set(normalizeMakeModelLabel(make), count);
-  }
-  return counts;
-}
-
-function parseModelCountsFromHtml(html: string): Map<string, number> {
-  const counts = new Map<string, number>();
-  const sectionMatch = html.match(/id="akSearchModeli"[\s\S]*?<div class="scroll">([\s\S]*?)<\/div>\s*<a class="addButton"/i);
-  const block = sectionMatch?.[1] ?? html;
-  const labelRegex = /<label>[\s\S]*?<input[^>]*data-value="([^"]+)"[\s\S]*?<span[^>]*>(.*?)<\/span>\s*<span>([^<]*)<\/span>[\s\S]*?<\/label>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = labelRegex.exec(block)) !== null) {
-    const label = match[2].replace(/&nbsp;/g, ' ').replace(/<[^>]+>/g, '').trim();
-    const count = parseCount(match[3]);
-    if (!label || count === null) continue;
-    counts.set(normalizeMakeModelLabel(label), count);
-  }
-  return counts;
 }
 
 function buildMakesMapFromRows(rows: MobileBgMakeModelReferenceRow[]): MakesMap {
@@ -218,7 +178,7 @@ export async function syncMobileBgMakeModelReference(
     type: 'status',
     message: `Loading mobile.bg counts for ${normalizedOnlyMake ? onlyMake : 'all makes'}`,
   });
-  const makeCountsHtml = await fetchWin1251(buildSearchUrl(searchPath, {}));
+  const makeCountsHtml = await fetchWin1251(buildMobileBgSearchUrl(searchPath, {}));
   const makeCounts = parseMakeCountsFromHtml(makeCountsHtml);
 
   const selectedMakes = [...makesMap.values()]
@@ -249,7 +209,7 @@ export async function syncMobileBgMakeModelReference(
       modelCount: null,
     });
 
-    const modelCountsHtml = await fetchWin1251(buildSearchUrl(searchPath, { marka: makeEntry.make }));
+    const modelCountsHtml = await fetchWin1251(buildMobileBgSearchUrl(searchPath, { marka: makeEntry.make }));
     const modelCounts = parseModelCountsFromHtml(modelCountsHtml);
     let makeModelCountsFound = 0;
 

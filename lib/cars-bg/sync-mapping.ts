@@ -2,7 +2,24 @@ import fs from 'fs';
 import path from 'path';
 import { CARS_BG_BASE_URL } from '@/lib/cars-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
-import { parseJson } from '@/lib/utils';
+export {
+  normalizeLabel,
+  normalizeCompareText,
+  normalizeCarsBgDescriptionText,
+  sanitizeCarsBgDescription,
+  normalizeCarsBgTitleText,
+  sanitizeCarsBgTitle,
+  titleOverlapScore,
+} from '@/lib/cars-bg/sync-text';
+import { normalizeLabel } from '@/lib/cars-bg/sync-text';
+export {
+  EXTRA_BOOLEAN_FIELD_MAPPINGS,
+  expandCarsBgExtraLabels,
+  hasMappedBooleanExtra,
+  parseCarsBgExtrasPayload,
+  type CarsBgExtrasPayload,
+  type CarsBgSelectedExtra,
+} from '@/lib/cars-bg/sync-extra-mapping';
 
 // ── Internal types ─────────────────────────────────────────────────────────
 
@@ -16,137 +33,6 @@ export interface OptionSet {
   options: OptionEntry[];
   sorted: OptionEntry[];
   map: Map<string, OptionEntry>;
-}
-
-export interface CarsBgSelectedExtra {
-  name?: string;
-  value?: string;
-  id?: string;
-  label?: string;
-  checked?: boolean;
-}
-
-export interface CarsBgExtrasPayload {
-  url?: string | null;
-  summaryText?: string;
-  selected?: CarsBgSelectedExtra[];
-}
-
-// ── Text normalization ──────────────────────────────────────────────────────
-
-export function normalizeLabel(value = ''): string {
-  return String(value)
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/&amp;/g, '&')
-    .replace(/[^a-z0-9а-я\s]/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-export function normalizeCompareText(value: string | null | undefined): string {
-  return String(value || '')
-    .replace(/[💵📞✓]/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9а-я]+/giu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-export function normalizeCarsBgDescriptionText(value: string | null | undefined): string {
-  return String(value || '').replace(/[💵📞✓]/gu, '✓');
-}
-
-export function sanitizeCarsBgDescription(value: string | null | undefined): string {
-  return normalizeCarsBgDescriptionText(value)
-    .replace(/(^|\s|[,.!?:;()\-])Възможност\s+за\s+данъчен\s+кредит(?=$|\s|[,.!?:;()\-])/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-export function normalizeCarsBgTitleText(value: string | null | undefined): string {
-  return String(value || '').replace(/[💵📞✓]/gu, '');
-}
-
-export function sanitizeCarsBgTitle(value: string | null | undefined): string {
-  return normalizeCarsBgTitleText(value).trim();
-}
-
-export function titleOverlapScore(a: string | null | undefined, b: string | null | undefined): number {
-  const aTokens = new Set(normalizeCompareText(a).split(' ').filter((t) => t.length > 2));
-  const bTokens = new Set(normalizeCompareText(b).split(' ').filter((t) => t.length > 2));
-  if (aTokens.size === 0 || bTokens.size === 0) return 0;
-  let overlap = 0;
-  for (const token of aTokens) {
-    if (bTokens.has(token)) overlap++;
-  }
-  return overlap;
-}
-
-// ── Extras mapping ──────────────────────────────────────────────────────────
-
-const EXTRA_LABEL_MAPPINGS: Record<string, string[]> = {
-  [normalizeLabel('Ел. регулиране на седалките')]: ['Ел.седалки'],
-  [normalizeLabel('Подгряване на седалките')]: ['Подгряване на седалки'],
-  [normalizeLabel('Лети джанти')]: ['Алуминиеви джанти'],
-  [normalizeLabel('Антиблокираща система')]: ['ABS'],
-  [normalizeLabel('Електронна програма за стабилизиране')]: ['ESP'],
-  [normalizeLabel('Въздушни възглавници - Предни')]: ['Airbag'],
-  [normalizeLabel('Въздушни възглавници - Задни')]: ['Airbag'],
-  [normalizeLabel('Въздушни възглавници - Странични')]: ['Airbag'],
-  [normalizeLabel('Система за защита от пробуксуване')]: ['ASR/Тракшън контрол'],
-  [normalizeLabel('Аларма')]: ['Имобилайзер'],
-  [normalizeLabel('Централно заключване')]: ['Центр. заключване'],
-  [normalizeLabel('Каско')]: ['Застраховка'],
-  [normalizeLabel('Auto Start Stop function')]: ['Старт-Стоп система'],
-  [normalizeLabel('Steptronic, Tiptronic')]: ['Типтроник/Мултитроник'],
-  [normalizeLabel('Система за контрол на скоростта (автопилот)')]: ['Автопилот'],
-  [normalizeLabel('Серво усилвател на волана')]: ['Серво управление'],
-  [normalizeLabel('Бордкомпютър')]: ['Бордови компютър'],
-  [normalizeLabel('Навигация')]: ['Навигационна система'],
-  [normalizeLabel('Панорамен люк')]: ['Панорамен покрив'],
-  [normalizeLabel('7 места')]: ['7 места (6+1)'],
-};
-
-export const EXTRA_BOOLEAN_FIELD_MAPPINGS: Record<string, string[]> = {
-  usageId: [normalizeLabel('Нов внос')],
-  metallic: [normalizeLabel('Металик')],
-};
-
-const EXTRA_BOOLEAN_FIELD_NEGATIONS: Record<string, string[]> = {
-  usageId: [normalizeLabel('С регистрация')],
-};
-
-export function expandCarsBgExtraLabels(extraLabels: string[] = []): string[] {
-  const expanded = new Set<string>();
-  for (const label of extraLabels) {
-    const normalized = normalizeLabel(label);
-    if (!normalized) continue;
-    expanded.add(normalized);
-    for (const mapped of EXTRA_LABEL_MAPPINGS[normalized] || []) {
-      const mappedNormalized = normalizeLabel(mapped);
-      if (mappedNormalized) expanded.add(mappedNormalized);
-    }
-  }
-  return Array.from(expanded);
-}
-
-export function hasMappedBooleanExtra(
-  extraLabels: string[] = [],
-  fieldName: keyof typeof EXTRA_BOOLEAN_FIELD_MAPPINGS,
-): boolean {
-  const expected = EXTRA_BOOLEAN_FIELD_MAPPINGS[fieldName];
-  if (!expected?.length) return false;
-  const normalized = new Set(extraLabels.map((label) => normalizeLabel(label)).filter(Boolean));
-  const blockedBy = EXTRA_BOOLEAN_FIELD_NEGATIONS[fieldName] || [];
-  if (blockedBy.some((label) => normalized.has(label))) return false;
-  return expected.some((label) => normalized.has(label));
-}
-
-export function parseCarsBgExtrasPayload(extrasJson: string | null): CarsBgExtrasPayload | null {
-  const parsed = parseJson<CarsBgExtrasPayload | null>(extrasJson, null);
-  if (!parsed || !Array.isArray(parsed.selected)) return null;
-  return parsed;
 }
 
 // ── Option sets (from publish form HTML) ───────────────────────────────────

@@ -1,329 +1,108 @@
 import { raw } from '@/db/client';
 import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
 import { firstBackupImageIdExpr, firstBackupImageIdFromBackupExpr, notDuplicateLExpr, ownNeedsSyncExpr, ownVatExpr, rankedBackupsCte } from '../types';
+import {
+  buildListingFilters,
+  buildOwnListingFilters,
+  LISTING_SORT_COLUMNS,
+  OWN_LISTING_SORT_COLUMNS,
+} from './list-filters';
 
-const VALID_SORT: Record<string, string> = {
-  price: "l.current_price",
-  last_edit: "l.last_edit",
-  carsbg_created_date: "l.carsbg_created_date",
-  views: "l.views",
-  mileage: "l.mileage",
-  fuel: "l.fuel",
-  dealer: "d.priority DESC, d.name",
-  ad_status: "l.ad_status",
-  kaparo: "l.kaparo",
-  reg_year: "l.reg_year",
-};
-
-function buildListingFilters(
+function getListingPage(
   filters: ListingFilters,
-  initialWheres: string[],
-): { wheres: string[]; params: (string | number)[] } {
-  const {
-    make = "",
-    model = "",
-    dealerSlugs = [],
-    years = [],
-    categories = [],
-    statuses = [],
-    vatValues = [],
-    fuels = [],
-    extras = [],
-    priceMin = null,
-    priceMax = null,
-    priceChangeMin = null,
-    priceChangeMax = null,
-    kaparo = "",
-    source = "",
-    search = "",
-  } = filters;
+  options: {
+    defaultSort: string;
+    defaultLimit: number;
+    initialWheres: string[];
+    includeDeletedAt?: boolean;
+  },
+) {
+  const { sort = options.defaultSort, order = "desc", page = 1, limit = options.defaultLimit } = filters;
+  const { wheres, params } = buildListingFilters(filters, [
+    ...options.initialWheres,
+  ]);
 
-  const wheres = [...initialWheres];
-  const params: (string | number)[] = [];
+  const where = `WHERE ${wheres.join(" AND ")}`;
+  const sortCol = LISTING_SORT_COLUMNS[sort] ?? "l.last_edit";
+  const sortDir = order === "asc" ? "ASC" : "DESC";
+  const offset = (page - 1) * limit;
+  const deletedAtSelect = options.includeDeletedAt ? ", l.deleted_at" : "";
 
-  if (make) { wheres.push("l.make = ?"); params.push(make); }
-  if (model) { wheres.push("l.model = ?"); params.push(model); }
-  if (categories.length > 0) {
-    wheres.push(`l.body_type IN (${categories.map(() => "?").join(",")})`);
-    params.push(...categories);
-  }
-  if (statuses.length > 0) {
-    wheres.push(`l.ad_status IN (${statuses.map(() => "?").join(",")})`);
-    params.push(...statuses);
-  }
-  if (vatValues.length > 0) {
-    const includeNull = vatValues.includes("null");
-    const nonNull = vatValues.filter((v) => v !== "null");
-    const clauses: string[] = [];
-    if (nonNull.length > 0) {
-      clauses.push(`l.vat IN (${nonNull.map(() => "?").join(",")})`);
-      params.push(...nonNull);
-    }
-    if (includeNull) clauses.push("l.vat IS NULL");
-    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
-  }
-  if (fuels.length > 0) {
-    wheres.push(`l.fuel IN (${fuels.map(() => "?").join(",")})`);
-    params.push(...fuels);
-  }
-  if (extras.length > 0) {
-    wheres.push(`(${extras.map(() => "l.extras_json LIKE ?").join(" OR ")})`);
-    params.push(...extras.map((extra) => `%${extra}%`));
-  }
-  if (priceMin !== null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
-  if (priceMax !== null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
-  if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push("l.price_change IS NOT NULL");
-    if (priceChangeMin !== null) { wheres.push("l.price_change >= ?"); params.push(priceChangeMin); }
-    if (priceChangeMax !== null) { wheres.push("l.price_change <= ?"); params.push(priceChangeMax); }
-  }
-  if (kaparo) { wheres.push("l.kaparo = ?"); params.push(kaparo === "yes" ? 1 : 0); }
-  if (years.length > 0) {
-    wheres.push(`l.reg_year IN (${years.map(() => "?").join(",")})`);
-    params.push(...years);
-  }
-  if (search) {
-    wheres.push("(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)");
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-  }
-  if (dealerSlugs.length > 0) {
-    wheres.push(`d.slug IN (${dealerSlugs.map(() => "?").join(",")})`);
-    params.push(...dealerSlugs);
-  }
-  if (source) { wheres.push("l.source = ?"); params.push(source); }
+  const rows = raw
+    .prepare(
+      `
+    SELECT
+      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
+      l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
+      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active${deletedAtSelect},
+      ${firstBackupImageIdExpr} as first_backup_image_id,
+      COALESCE(l.source, 'm') as source,
+      d.name as dealer_name, d.slug as dealer_slug
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    ${where}
+    ORDER BY ${sortCol} ${sortDir}
+    LIMIT ? OFFSET ?
+  `,
+    )
+    .all(...params, limit, offset) as ListingRow[];
 
-  return { wheres, params };
+  const { count } = raw
+    .prepare(
+      `
+    SELECT COUNT(*) as count
+    FROM listings l
+    LEFT JOIN dealers d ON l.dealer_id = d.id
+    ${where}
+  `,
+    )
+    .get(...params) as { count: number };
+
+  return { data: rows, total: count, page, limit };
 }
 
 export function getListings(filters: ListingFilters = {}) {
-  const { sort = "price", order = "desc", page = 1, limit = 25 } = filters;
-
-  const { wheres, params } = buildListingFilters(filters, [
-    "l.is_active = 1",
-    "d.active = 1",
-    notDuplicateLExpr,
-  ]);
-
-  const where = `WHERE ${wheres.join(" AND ")}`;
-  const sortCol = VALID_SORT[sort] ?? "l.last_edit";
-  const sortDir = order === "asc" ? "ASC" : "DESC";
-  const offset = (page - 1) * limit;
-
-  const rows = raw
-    .prepare(
-      `
-    SELECT
-      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
-      ${firstBackupImageIdExpr} as first_backup_image_id,
-      COALESCE(l.source, 'm') as source,
-      d.name as dealer_name, d.slug as dealer_slug
-    FROM listings l
-    LEFT JOIN dealers d ON l.dealer_id = d.id
-    ${where}
-    ORDER BY ${sortCol} ${sortDir}
-    LIMIT ? OFFSET ?
-  `,
-    )
-    .all(...params, limit, offset) as ListingRow[];
-
-  const { count } = raw
-    .prepare(
-      `
-    SELECT COUNT(*) as count
-    FROM listings l
-    LEFT JOIN dealers d ON l.dealer_id = d.id
-    ${where}
-  `,
-    )
-    .get(...params) as { count: number };
-
-  return { data: rows, total: count, page, limit };
+  return getListingPage(filters, {
+    defaultSort: "price",
+    defaultLimit: 25,
+    initialWheres: [
+      "l.is_active = 1",
+      "d.active = 1",
+      notDuplicateLExpr,
+    ],
+  });
 }
 
 export function getDeletedListings(filters: ListingFilters = {}) {
-  const { sort = "last_edit", order = "desc", page = 1, limit = 50 } = filters;
-
-  const { wheres, params } = buildListingFilters(filters, [
-    "l.is_active = 0",
-    "l.deleted_at IS NOT NULL",
-    "d.active = 1",
-    notDuplicateLExpr,
-  ]);
-
-  const where = `WHERE ${wheres.join(" AND ")}`;
-  const sortCol = VALID_SORT[sort] ?? "l.last_edit";
-  const sortDir = order === "asc" ? "ASC" : "DESC";
-  const offset = (page - 1) * limit;
-
-  const rows = raw
-    .prepare(
-      `
-    SELECT
-      l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
-      l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active, l.deleted_at,
-      ${firstBackupImageIdExpr} as first_backup_image_id,
-      COALESCE(l.source, 'm') as source,
-      d.name as dealer_name, d.slug as dealer_slug
-    FROM listings l
-    LEFT JOIN dealers d ON l.dealer_id = d.id
-    ${where}
-    ORDER BY ${sortCol} ${sortDir}
-    LIMIT ? OFFSET ?
-  `,
-    )
-    .all(...params, limit, offset) as ListingRow[];
-
-  const { count } = raw
-    .prepare(
-      `
-    SELECT COUNT(*) as count
-    FROM listings l
-    LEFT JOIN dealers d ON l.dealer_id = d.id
-    ${where}
-  `,
-    )
-    .get(...params) as { count: number };
-
-  return { data: rows, total: count, page, limit };
+  return getListingPage(filters, {
+    defaultSort: "last_edit",
+    defaultLimit: 50,
+    initialWheres: [
+      "l.is_active = 0",
+      "l.deleted_at IS NOT NULL",
+      "d.active = 1",
+      notDuplicateLExpr,
+    ],
+    includeDeletedAt: true,
+  });
 }
 
 export function getOwnListings(filters: ListingFilters = {}) {
   const {
-    make = "",
-    model = "",
-    dealerSlugs = [],
-    years = [],
-    statuses = [],
-    vatValues = [],
-    fuels = [],
-    extras = [],
-    priceMin = null,
-    priceMax = null,
-    priceChangeMin = null,
-    priceChangeMax = null,
-    kaparo = "",
     sort = "last_edit",
     order = "desc",
-    search = "",
     page = 1,
     limit = 25,
   } = filters;
 
-  const wheres: string[] = [
+  const { wheres, params } = buildOwnListingFilters(filters, [
     "(l.is_active = 1 OR l.id IS NULL)",
     "d.active = 1",
     "d.own = 1",
     notDuplicateLExpr,
-  ];
-  const params: (string | number)[] = [];
+  ]);
 
-  if (make) {
-    wheres.push("COALESCE(b.make, l.make) = ?");
-    params.push(make);
-  }
-  if (model) {
-    wheres.push("COALESCE(b.model, l.model) = ?");
-    params.push(model);
-  }
-
-  if (statuses.length > 0) {
-    const ph = statuses.map(() => "?").join(",");
-    wheres.push(`COALESCE(b.ad_status, l.ad_status) IN (${ph})`);
-    params.push(...statuses);
-  }
-  if (vatValues.length > 0) {
-    const includeNull = vatValues.includes("null");
-    const nonNull = vatValues.filter((v) => v !== "null");
-    const clauses: string[] = [];
-    if (nonNull.length > 0) {
-      const ph = nonNull.map(() => "?").join(",");
-      clauses.push(`(CASE
-        WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
-        WHEN b.vat_included IN (1, '1') THEN 'included'
-        WHEN b.vat_included IN (0, '0') THEN 'exempt'
-        ELSE l.vat
-      END) IN (${ph})`);
-      params.push(...nonNull);
-    }
-    if (includeNull)
-      clauses.push(`(CASE
-      WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
-      WHEN b.vat_included IN (1, '1') THEN 'included'
-      WHEN b.vat_included IN (0, '0') THEN 'exempt'
-      ELSE l.vat
-    END) IS NULL`);
-    if (clauses.length > 0) wheres.push(`(${clauses.join(" OR ")})`);
-  }
-  if (fuels.length > 0) {
-    const ph = fuels.map(() => "?").join(",");
-    wheres.push(`COALESCE(b.fuel, l.fuel) IN (${ph})`);
-    params.push(...fuels);
-  }
-  if (extras.length > 0) {
-    const clauses = extras.map(
-      () => "COALESCE(b.extras_json, l.extras_json) LIKE ?",
-    );
-    wheres.push(`(${clauses.join(" OR ")})`);
-    params.push(...extras.map((extra) => `%${extra}%`));
-  }
-  if (priceMin !== null) {
-    wheres.push("COALESCE(b.price_amount, l.current_price) >= ?");
-    params.push(priceMin);
-  }
-  if (priceMax !== null) {
-    wheres.push("COALESCE(b.price_amount, l.current_price) <= ?");
-    params.push(priceMax);
-  }
-  if (priceChangeMin !== null || priceChangeMax !== null) {
-    wheres.push("l.price_change IS NOT NULL");
-    if (priceChangeMin !== null) {
-      wheres.push("l.price_change >= ?");
-      params.push(priceChangeMin);
-    }
-    if (priceChangeMax !== null) {
-      wheres.push("l.price_change <= ?");
-      params.push(priceChangeMax);
-    }
-  }
-  if (kaparo) {
-    wheres.push("COALESCE(b.kaparo, l.kaparo) = ?");
-    params.push(kaparo === "yes" ? 1 : 0);
-  }
-  if (years.length > 0) {
-    const ph = years.map(() => "?").join(",");
-    wheres.push(`l.reg_year IN (${ph})`);
-    params.push(...years);
-  }
-  if (search) {
-    wheres.push(
-      "(COALESCE(b.title, l.title) LIKE ? OR COALESCE(b.make, l.make) LIKE ? OR COALESCE(b.model, l.model) LIKE ?)",
-    );
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-  }
-  if (dealerSlugs.length > 0) {
-    const ph = dealerSlugs.map(() => "?").join(",");
-    wheres.push(`d.slug IN (${ph})`);
-    params.push(...dealerSlugs);
-  }
-
-  const ownSortCol =
-    (
-      {
-        price: "COALESCE(b.price_amount, l.current_price)",
-        last_edit: "l.last_edit",
-        carsbg_created_date: "l.carsbg_created_date",
-        views: "COALESCE(b.views, l.views)",
-        mileage: "COALESCE(b.mileage, l.mileage)",
-        fuel: "COALESCE(b.fuel, l.fuel)",
-        dealer: "d.priority DESC, d.name",
-        ad_status: "COALESCE(b.ad_status, l.ad_status)",
-        kaparo: "COALESCE(b.kaparo, l.kaparo)",
-        reg_year: "l.reg_year",
-      } as Record<string, string>
-    )[sort] ?? "l.last_edit";
+  const ownSortCol = OWN_LISTING_SORT_COLUMNS[sort] ?? "l.last_edit";
   const sortDir = order === "asc" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 

@@ -1,8 +1,9 @@
 import React from "react";
 import type { PublicDealer, PublicListing, PublicListingDetail, PublicListingFilters } from "./query-modules/public";
 import { formatListingMileage, formatListingPrice } from "./listing-format";
-import { getListingThumbSrc } from "./listing-thumb";
-import { buildImageList, parseJson, type ImageMeta } from "./utils";
+import { renderFilterBar } from "./template-renderers/filter-bar";
+import { renderImageGallery } from "./template-renderers/image-gallery";
+import { renderListingGridCard, renderRelatedListingCard } from "./template-renderers/listing-cards";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -76,72 +77,20 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
       tagline ? React.createElement('div', { style: { fontSize: 14, opacity: 0.8 } }, String(tagline)) : null,
     ),
 
-  FilterBar: ({ backgroundColor, layout, showMake, showFuel, showYear, showPrice }, data) => {
-    const makes = data.makes ?? [];
-    const f = data.filters ?? {};
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
-    const fuelTypes = ['Бензин', 'Дизел', 'Електро', 'Хибрид', 'Газ / Бензин', 'LPG / Бензин'];
-    const inputStyle = { padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', minWidth: 120 };
-    const sel = (name: string, placeholder: string, opts: string[], current?: string) =>
-      React.createElement('select', {
-        key: name, name, defaultValue: current ?? '', style: inputStyle,
-      },
-        React.createElement('option', { value: '' }, placeholder),
-        ...opts.map((o) => React.createElement('option', { key: o, value: o }, o)),
-      );
-    const elements: React.ReactElement[] = [];
-    if (showMake !== false) elements.push(sel('make', 'Any Make', makes, f.make));
-    if (showFuel !== false) elements.push(sel('fuel', 'Any Fuel', fuelTypes, f.fuel));
-    if (showYear !== false) {
-      elements.push(sel('yearFrom', 'Year from', years.map(String), f.yearFrom));
-      elements.push(sel('yearTo', 'Year to', years.map(String), f.yearTo));
-    }
-    if (showPrice !== false) {
-      elements.push(React.createElement('input', { key: 'priceMax', type: 'number', name: 'priceMax', placeholder: 'Max price (лв)', defaultValue: f.priceMax ?? '', style: { ...inputStyle, minWidth: 140 } }));
-    }
-    elements.push(React.createElement('input', { key: 'submit', type: 'submit', value: 'Filter', style: { padding: '6px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 } }));
-    return React.createElement('form', {
-      method: 'GET',
-      style: { backgroundColor: backgroundColor ?? '#f8fafc', padding: '12px 16px', display: 'flex', flexDirection: layout === 'vertical' ? 'column' : 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
-    }, ...elements);
-  },
+  FilterBar: renderFilterBar,
 
   ListingGridBlock: ({ columns, cardStyle, gap, showPrice, showMileage, showYear, showFuel }, data) => {
     const listings = data.listings ?? [];
     return React.createElement('div', {
       style: { display: 'grid', gridTemplateColumns: `repeat(${columns ?? 3}, 1fr)`, gap: gap ?? 16, padding: 16 },
     },
-      listings.map((l: PublicListing) => {
-        const thumbSrc = getListingThumbSrc({
-          mobile_id: l.mobileId,
-          thumb_keys: l.thumbKeys,
-          full_keys: l.fullKeys,
-          image_meta: l.imageMeta,
-          images_downloaded: l.imagesDownloaded,
-          thumb_saved: l.thumbSaved,
-        });
-        return React.createElement('a', {
-          key: l.mobileId,
-          href: `${l.mobileId}`,
-          style: { borderRadius: cardStyle === 'card' ? 8 : 0, border: cardStyle === 'card' ? '1px solid #e2e8f0' : 'none', overflow: 'hidden', background: '#fff', display: 'block', textDecoration: 'none', color: 'inherit' },
-        },
-          React.createElement('div', { style: { height: 160, background: '#e2e8f0', overflow: 'hidden', position: 'relative' } },
-            thumbSrc
-              ? React.createElement('img', { src: thumbSrc, alt: `${l.make ?? ''} ${l.model ?? ''}`.trim(), style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } })
-              : null,
-          ),
-          React.createElement('div', { style: { padding: '8px 12px' } },
-            React.createElement('div', { style: { fontWeight: 600, fontSize: 14, marginBottom: 4 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
-            React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12, color: '#64748b' } },
-              showPrice !== false && l.currentPrice ? React.createElement('span', { key: 'price' }, formatListingPrice(l.currentPrice)) : null,
-              showYear !== false && l.regYear ? React.createElement('span', { key: 'year' }, l.regYear) : null,
-              showMileage !== false && l.mileage ? React.createElement('span', { key: 'km' }, formatListingMileage(l.mileage)) : null,
-              showFuel !== false && l.fuel ? React.createElement('span', { key: 'fuel' }, l.fuel) : null,
-            ),
-          ),
-        );
-      })
+      listings.map((listing: PublicListing) => renderListingGridCard(listing, {
+        cardStyle,
+        showPrice,
+        showMileage,
+        showYear,
+        showFuel,
+      }))
     );
   },
 
@@ -177,82 +126,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
     );
   },
 
-  ImageGallery: ({ maxHeight, layout }, data) => {
-    const listing = data.listing;
-    if (!listing) return React.createElement('div', null);
-    const imageMeta = parseJson<ImageMeta | null>(listing.imageMeta, null);
-    const thumbKeys = parseJson<string[]>(listing.thumbKeys, []);
-    const fullKeys = parseJson<string[]>(listing.fullKeys, []);
-    const images = buildImageList(
-      listing.mobileId,
-      fullKeys.length ? fullKeys : thumbKeys,
-      thumbKeys,
-      imageMeta,
-      listing.imagesDownloaded === 1,
-    );
-    const mainHeight = maxHeight ?? 400;
-    const altBase = `${listing.make ?? ''} ${listing.model ?? ''}`.trim();
-    if (!images.length) {
-      return React.createElement('div', {
-        style: { background: '#e2e8f0', height: mainHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#94a3b8' },
-      }, 'No photos');
-    }
-    if (layout === 'grid') {
-      return React.createElement('div', {
-        style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 },
-      },
-        ...images.slice(0, 9).map((img, i) =>
-          React.createElement('img', {
-            key: i,
-            src: img.full || img.thumb,
-            alt: `${altBase} photo ${i + 1}`,
-            style: { width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' },
-          }),
-        ),
-      );
-    }
-    if (layout === 'slider') {
-      return React.createElement('div', {
-        style: { background: '#000', height: mainHeight, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' },
-      },
-        React.createElement('img', {
-          src: images[0].full || images[0].thumb,
-          alt: altBase,
-          style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' },
-        }),
-        images.length > 1
-          ? React.createElement('div', {
-              style: { position: 'absolute', bottom: 12, right: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 12, padding: '2px 8px', borderRadius: 12 },
-            }, `1 / ${images.length}`)
-          : null,
-      );
-    }
-    return React.createElement('div', null,
-      React.createElement('div', {
-        style: { background: '#000', height: mainHeight, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-      },
-        React.createElement('img', {
-          src: images[0].full || images[0].thumb,
-          alt: altBase,
-          style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' },
-        }),
-      ),
-      images.length > 1
-        ? React.createElement('div', {
-            style: { display: 'flex', gap: 4, padding: '4px 0', overflowX: 'auto' },
-          },
-            ...images.slice(1, 12).map((img, i) =>
-              React.createElement('img', {
-                key: i,
-                src: img.thumb || img.full,
-                alt: `Photo ${i + 2}`,
-                style: { height: 72, width: 96, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', borderRadius: 2 },
-              }),
-            ),
-          )
-        : null,
-    );
-  },
+  ImageGallery: renderImageGallery,
 
   PriceTag: ({ showVat, fontSize, color }, data) => {
     const price = data.listing?.currentPrice;
@@ -330,33 +204,7 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
       related.length === 0
         ? null
         : React.createElement('div', { style: { display: 'grid', gridTemplateColumns: `repeat(${Math.min(related.length, 3)}, 1fr)`, gap: 12 } },
-            ...related.map((l: PublicListing) => {
-              const thumbSrc = getListingThumbSrc({
-                mobile_id: l.mobileId,
-                thumb_keys: l.thumbKeys,
-                full_keys: l.fullKeys,
-                image_meta: l.imageMeta,
-                images_downloaded: l.imagesDownloaded,
-                thumb_saved: l.thumbSaved,
-              });
-              return React.createElement('a', {
-                key: l.mobileId,
-                href: l.mobileId,
-                style: { display: 'block', border: bordered ? '1px solid #e2e8f0' : 'none', borderRadius: bordered ? 8 : 0, overflow: 'hidden', textDecoration: 'none', color: 'inherit', background: '#fff' },
-              },
-                React.createElement('div', { style: { height: 120, background: '#f1f5f9', overflow: 'hidden' } },
-                  thumbSrc
-                    ? React.createElement('img', { src: thumbSrc, alt: `${l.make ?? ''} ${l.model ?? ''}`.trim(), style: { width: '100%', height: '100%', objectFit: 'cover' } })
-                    : null,
-                ),
-                React.createElement('div', { style: { padding: '8px 10px' } },
-                  React.createElement('div', { style: { fontWeight: 600, fontSize: 13 } }, `${l.make ?? ''} ${l.model ?? ''} ${l.regYear ?? ''}`),
-                  l.currentPrice
-                    ? React.createElement('div', { style: { color: '#2563eb', fontSize: 13, marginTop: 2 } }, formatListingPrice(l.currentPrice))
-                    : null,
-                ),
-              );
-            }),
+            ...related.map((listing: PublicListing) => renderRelatedListingCard(listing, bordered)),
           ),
     );
   },

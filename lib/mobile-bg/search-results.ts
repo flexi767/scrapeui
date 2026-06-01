@@ -1,162 +1,62 @@
-import type { VatValue } from '@/lib/vat';
-import { load } from 'cheerio';
-import { execFile } from 'child_process';
-import iconv from 'iconv-lite';
-import { promisify } from 'util';
-import {
-  MOBILE_BG_FUEL_SET,
-  MOBILE_BG_TRANSMISSION_SET,
-  MOBILE_BG_CATEGORY_SET,
-} from '@/lib/mobile-bg/search-field-config';
-import { parseJson } from '@/lib/utils';
-import {
-  absoluteMobileBgUrl,
-  deriveMobileBgSearchMakeModel,
-  extractMobileBgSearchDealerName,
-  normalizeMobileBgSearchSummaryText,
-  parseMobileBgSearchMileage,
-  parseMobileBgSearchPower,
-  parseMobileBgSearchPrice,
-  parseMobileBgSearchVatStatus,
-  parseMobileBgSearchYearAndMonth,
-} from '@/lib/mobile-bg/search-result-parsing';
+import { fetchMobileBgSearchResultsHtml } from '@/lib/mobile-bg/search-results-request';
+import { parseMobileBgSearchResultsPage } from '@/lib/mobile-bg/search-results-page-parser';
+import type {
+  MobileBgSearchFieldInput,
+  MobileBgSearchResultRow,
+  MobileBgSearchResultsPagePayload,
+  MobileBgSearchResultsPayload,
+  MobileBgSearchResultsUntilFoundPayload,
+} from '@/lib/mobile-bg/search-results-types';
 
-const execFileAsync = promisify(execFile);
+export type {
+  MobileBgSearchFieldInput,
+  MobileBgSearchResultRow,
+  MobileBgSearchResultsPagePayload,
+  MobileBgSearchResultsPayload,
+  MobileBgSearchResultsUntilFoundPayload,
+} from '@/lib/mobile-bg/search-results-types';
 
-export interface MobileBgSearchFieldInput {
-  name: string;
-  value: string;
-}
+const RELAXED_PREVIEW_FILTER_NAMES = new Set(['f12', 'f13', 'f14']);
+const RELAXED_PREVIEW_FALLBACK_NOTE =
+  'No results were returned with engine, gearbox, and body type applied, so those three filters were relaxed for the in-app preview.';
 
-export interface MobileBgSearchResultRow {
-  mobile_id: string;
-  original_position: number;
-  url: string;
-  thumb: string | null;
-  title: string;
-  make: string | null;
-  model: string | null;
-  dealer_name: string | null;
-  dealer_url: string | null;
-  current_price: number | null;
-  vat_status: VatValue | null;
-  ad_status: string;
-  reg_month: string | null;
-  reg_year: string | null;
-  body_type: string | null;
-  fuel: string | null;
-  mileage: number | null;
-  transmission: string | null;
-  power: number | null;
-}
-
-export interface MobileBgSearchResultsPayload {
-  submitted_fields: MobileBgSearchFieldInput[];
-  summary_text: string | null;
-  page: number;
-  total_pages: number | null;
-  has_next_page: boolean;
-  count_on_page: number;
-  loaded_until_page: number;
-  ignored_search_result_ids?: string[];
-  rows: MobileBgSearchResultRow[];
-  fallback_note?: string | null;
-}
-
-interface MobileBgSearchResultsPagePayload extends MobileBgSearchResultsPayload {
-  next_page_url: string | null;
-}
-
-export interface MobileBgSearchResultsUntilFoundPayload extends MobileBgSearchResultsPayload {
-  found_on_page: number | null;
-}
-
-
-function encodeFormComponentWin1251(value: string) {
-  const bytes = iconv.encode(value, 'windows-1251');
-  let result = '';
-  for (const byte of bytes) {
-    const isAlphaNum =
-      (byte >= 0x30 && byte <= 0x39) ||
-      (byte >= 0x41 && byte <= 0x5a) ||
-      (byte >= 0x61 && byte <= 0x7a);
-    const isSafe = byte === 0x2d || byte === 0x2e || byte === 0x5f || byte === 0x2a;
-    if (isAlphaNum || isSafe) {
-      result += String.fromCharCode(byte);
-    } else if (byte === 0x20) {
-      result += '+';
-    } else {
-      result += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
-    }
-  }
-  return result;
-}
-
-function buildWindows1251FormBody(fields: MobileBgSearchFieldInput[]) {
-  return fields
-    .map((field) => `${encodeFormComponentWin1251(field.name)}=${encodeFormComponentWin1251(field.value)}`)
-    .join('&');
-}
-
-function decodeMobileBgHtml(raw: Buffer | Uint8Array | ArrayBuffer) {
-  if (raw instanceof ArrayBuffer) return iconv.decode(Buffer.from(raw), 'windows-1251');
-  return iconv.decode(Buffer.from(raw), 'windows-1251');
-}
-
-function ensureMobileBgSearchDefaults(submittedFields: MobileBgSearchFieldInput[]) {
-  const byName = new Map(submittedFields.map((field) => [field.name, field.value]));
-  if (!byName.has('f21')) {
-    byName.set('f21', '013');
-  }
-  return Array.from(byName.entries()).map(([name, value]) => ({ name, value }));
-}
-
-async function resolveMobileBgSearchAction(
-  action: string,
+async function fetchWithRelaxedPreviewFallback<T extends MobileBgSearchResultsPayload>(
   submittedFields: MobileBgSearchFieldInput[],
-) {
-  if (!/mobile\.bg\/pcgi\/mobile\.cgi(?:$|\?)/i.test(action)) {
-    return action;
-  }
+  fetchResults: (fields: MobileBgSearchFieldInput[]) => Promise<T>,
+): Promise<T> {
+  const initial = await fetchResults(submittedFields);
+  if (initial.count_on_page > 0) return initial;
 
-  const normalizedFields = ensureMobileBgSearchDefaults(submittedFields);
-  const actsrc = normalizedFields.find((field) => field.name === 'act')?.value || '3';
-  const rewriteFields = normalizedFields.map((field) =>
-    field.name === 'act' ? { name: field.name, value: '11' } : field,
-  );
-  const requestBody = buildWindows1251FormBody([
-    ...rewriteFields,
-    { name: 'actsrc', value: actsrc },
-  ]);
+  const relaxedFields = submittedFields.filter((field) => !RELAXED_PREVIEW_FILTER_NAMES.has(field.name));
+  if (relaxedFields.length === submittedFields.length) return initial;
 
-  const { stdout } = await execFileAsync(
-    'curl',
-    [
-      '-sS',
-      '-L',
-      '--http1.1',
-      '-X',
-      'POST',
-      'https://www.mobile.bg/pcgi/subscript.cgi',
-      '-H',
-      'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
-      '-H',
-      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-      '--data-binary',
-      requestBody,
-    ],
-    {
-      encoding: 'utf8',
-      maxBuffer: 2 * 1024 * 1024,
-    },
-  );
+  const relaxed = await fetchResults(relaxedFields);
+  if (relaxed.count_on_page === 0) return initial;
 
-  const parsed = parseJson<{ result?: unknown }>(stdout, {});
-  if (typeof parsed.result === 'string' && parsed.result.trim()) {
-    return absoluteMobileBgUrl(parsed.result.trim());
-  }
+  return {
+    ...relaxed,
+    fallback_note: RELAXED_PREVIEW_FALLBACK_NOTE,
+  };
+}
 
-  return action;
+function containsMobileId(rows: MobileBgSearchResultRow[], mobileId: string): boolean {
+  return rows.some((row) => row.mobile_id === mobileId);
+}
+
+function appendDedupedRows(
+  rows: MobileBgSearchResultRow[],
+  incomingRows: MobileBgSearchResultRow[],
+): MobileBgSearchResultRow[] {
+  const existingIds = new Set(rows.map((row) => row.mobile_id));
+  return [
+    ...rows,
+    ...incomingRows
+      .filter((row) => !existingIds.has(row.mobile_id))
+      .map((row) => ({
+        ...row,
+        original_position: rows.length + row.original_position,
+      })),
+  ];
 }
 
 export async function fetchMobileBgSearchResults(
@@ -180,23 +80,18 @@ async function fetchMobileBgSearchResultsOnce(
     sourceMobileId &&
     initial.has_next_page &&
     initial.next_page_url &&
-    !initial.rows.some((row) => row.mobile_id === sourceMobileId)
+    !containsMobileId(initial.rows, sourceMobileId)
   ) {
     const secondPage = await fetchMobileBgSearchResultsPage(initial.next_page_url, 'get', submittedFields);
-    const dedupedSecondRows = secondPage.rows.filter(
-      (row) => !initial.rows.some((existingRow) => existingRow.mobile_id === row.mobile_id),
-    );
+    const rows = appendDedupedRows(initial.rows, secondPage.rows);
 
     return {
       ...initial,
       has_next_page: secondPage.has_next_page,
       total_pages: secondPage.total_pages ?? initial.total_pages,
-      count_on_page: initial.count_on_page + dedupedSecondRows.length,
+      count_on_page: rows.length,
       loaded_until_page: secondPage.page,
-      rows: [...initial.rows, ...dedupedSecondRows.map((row) => ({
-        ...row,
-        original_position: initial.rows.length + row.original_position,
-      }))],
+      rows,
     };
   }
 
@@ -208,119 +103,8 @@ async function fetchMobileBgSearchResultsPage(
   method: string,
   submittedFields: MobileBgSearchFieldInput[],
 ): Promise<MobileBgSearchResultsPagePayload> {
-  const normalizedFields = ensureMobileBgSearchDefaults(submittedFields);
-  const resolvedAction =
-    method.toUpperCase() === 'POST'
-      ? await resolveMobileBgSearchAction(action, normalizedFields)
-      : action;
-  const requestBody = buildWindows1251FormBody(normalizedFields);
-  const curlArgs = ['-sS', '-L', '--http1.1'];
-
-  if (method.toUpperCase() === 'POST') {
-    curlArgs.push(
-      '-X',
-      'POST',
-      resolvedAction,
-      '-H',
-      'Content-Type: application/x-www-form-urlencoded; charset=windows-1251',
-      '-H',
-      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-      '--data-binary',
-      requestBody,
-    );
-  } else {
-    curlArgs.push(
-      resolvedAction,
-      '-H',
-      'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-    );
-  }
-
-  const { stdout } = await execFileAsync('curl', curlArgs, {
-    encoding: 'buffer',
-    maxBuffer: 10 * 1024 * 1024,
-  });
-
-  const html = decodeMobileBgHtml(stdout);
-  const $ = load(html);
-
-  const submittedMake = submittedFields.find((field) => field.name === 'marka')?.value || null;
-  const submittedModel = submittedFields.find((field) => field.name === 'model')?.value || null;
-
-  const rows: MobileBgSearchResultRow[] = $('.ads2023 .item').map((index, element) => {
-    const item = $(element);
-    const titleLink = item.find('.zaglavie a.title').first();
-    const rawUrl = titleLink.attr('href') || item.find('a.image').first().attr('href') || '';
-    const url = absoluteMobileBgUrl(rawUrl);
-    const mobileId = url.match(/obiava-(\d+)/)?.[1] || item.attr('id')?.replace(/^ida/, '') || '';
-    const title = titleLink.text().trim();
-    const priceText = item.find('.zaglavie .price').first().text();
-    const params = item.find('.params span').map((__, span) => $(span).text().trim()).get().filter(Boolean);
-    const thumb = absoluteMobileBgUrl(item.find('.photo .big img.pic').attr('src') || item.find('.photo .big img').last().attr('src') || '');
-    const dealer = extractMobileBgSearchDealerName(item);
-    const status = item.hasClass('TOP') ? 'TOP' : item.hasClass('VIP') ? 'VIP' : 'none';
-    const yearMonth = parseMobileBgSearchYearAndMonth(params[0] || '');
-    const mileage = params.map(parseMobileBgSearchMileage).find((value) => value != null) ?? null;
-    const fuel = params.find((value) => MOBILE_BG_FUEL_SET.has(value)) || null;
-    const transmission = params.find((value) => MOBILE_BG_TRANSMISSION_SET.has(value)) || null;
-    const bodyType = params.find((value) => MOBILE_BG_CATEGORY_SET.has(value)) || null;
-    const power = params.map(parseMobileBgSearchPower).find((value) => value != null) ?? null;
-    const makeModel = deriveMobileBgSearchMakeModel(title, submittedMake, submittedModel);
-
-    return {
-      mobile_id: mobileId,
-      original_position: index + 1,
-      url,
-      thumb: thumb || null,
-      title,
-      make: makeModel.make,
-      model: makeModel.model,
-      dealer_name: dealer.dealer_name,
-      dealer_url: dealer.dealer_url,
-      current_price: parseMobileBgSearchPrice(priceText),
-      vat_status: parseMobileBgSearchVatStatus(priceText, dealer.dealer_name),
-      ad_status: status,
-      reg_month: yearMonth.reg_month,
-      reg_year: yearMonth.reg_year,
-      body_type: bodyType,
-      fuel,
-      mileage,
-      transmission,
-      power,
-    };
-  }).get().filter((row) => {
-    return Boolean(
-      row.mobile_id &&
-      row.url.includes('/obiava-') &&
-      row.title.trim(),
-    );
-  });
-
-  const currentPage = Number.parseInt($('.pagination .selected').first().text().trim(), 10) || 1;
-  const numericPages = $('.pagination a, .pagination div')
-    .map((_, element) => {
-      const text = $(element).text().trim();
-      const parsed = Number.parseInt(text, 10);
-      return Number.isFinite(parsed) ? parsed : null;
-    })
-    .get()
-    .filter((value): value is number => value != null);
-
-  const totalPages = numericPages.length > 0 ? Math.max(...numericPages) : null;
-  const nextPageLink = $('.pagination a.next').first().attr('href') || null;
-  const hasNextPage = Boolean(nextPageLink);
-
-  return {
-    submitted_fields: normalizedFields,
-    summary_text: normalizeMobileBgSearchSummaryText($('.resultsInfoBox #paramsFromSearchText').first().text().trim() || null, normalizedFields),
-    page: currentPage,
-    total_pages: totalPages,
-    has_next_page: hasNextPage,
-    count_on_page: rows.length,
-    loaded_until_page: currentPage,
-    rows,
-    next_page_url: absoluteMobileBgUrl(nextPageLink),
-  };
+  const { html, normalizedFields } = await fetchMobileBgSearchResultsHtml(action, method, submittedFields);
+  return parseMobileBgSearchResultsPage(html, normalizedFields, submittedFields);
 }
 
 export async function fetchMobileBgSearchResultsWithFallback(
@@ -329,19 +113,9 @@ export async function fetchMobileBgSearchResultsWithFallback(
   submittedFields: MobileBgSearchFieldInput[],
   sourceMobileId?: string | null,
 ): Promise<MobileBgSearchResultsPayload> {
-  const initial = await fetchMobileBgSearchResultsOnce(action, method, submittedFields, sourceMobileId);
-  if (initial.count_on_page > 0) return initial;
-
-  const relaxedFields = submittedFields.filter((field) => !['f12', 'f13', 'f14'].includes(field.name));
-  if (relaxedFields.length === submittedFields.length) return initial;
-
-  const relaxed = await fetchMobileBgSearchResultsOnce(action, method, relaxedFields, sourceMobileId);
-  if (relaxed.count_on_page === 0) return initial;
-
-  return {
-    ...relaxed,
-    fallback_note: 'No results were returned with engine, gearbox, and body type applied, so those three filters were relaxed for the in-app preview.',
-  };
+  return fetchWithRelaxedPreviewFallback(submittedFields, (fields) =>
+    fetchMobileBgSearchResultsOnce(action, method, fields, sourceMobileId),
+  );
 }
 
 async function fetchMobileBgSearchResultsUntilFoundOnce(
@@ -355,19 +129,13 @@ async function fetchMobileBgSearchResultsUntilFoundOnce(
   let nextPageUrl = firstPage.next_page_url;
   let hasNextPage = firstPage.has_next_page;
   let totalPages = firstPage.total_pages;
-  let foundOnPage = rows.some((row) => row.mobile_id === sourceMobileId) ? firstPage.page : null;
+  let foundOnPage = containsMobileId(rows, sourceMobileId) ? firstPage.page : null;
 
   while (!foundOnPage && hasNextPage && nextPageUrl) {
     const nextPage = await fetchMobileBgSearchResultsPage(nextPageUrl, 'get', submittedFields);
-    const dedupedRows = nextPage.rows
-      .filter((row) => !rows.some((existingRow) => existingRow.mobile_id === row.mobile_id))
-      .map((row) => ({
-        ...row,
-        original_position: rows.length + row.original_position,
-      }));
-
-    rows.push(...dedupedRows);
-    if (dedupedRows.some((row) => row.mobile_id === sourceMobileId)) {
+    const rowsBeforeAppend = rows.length;
+    rows.push(...appendDedupedRows(rows, nextPage.rows).slice(rowsBeforeAppend));
+    if (containsMobileId(rows.slice(rowsBeforeAppend), sourceMobileId)) {
       foundOnPage = nextPage.page;
     }
 
@@ -395,17 +163,7 @@ export async function fetchMobileBgSearchResultsUntilFound(
   submittedFields: MobileBgSearchFieldInput[],
   sourceMobileId: string,
 ): Promise<MobileBgSearchResultsUntilFoundPayload> {
-  const initial = await fetchMobileBgSearchResultsUntilFoundOnce(action, method, submittedFields, sourceMobileId);
-  if (initial.count_on_page > 0) return initial;
-
-  const relaxedFields = submittedFields.filter((field) => !['f12', 'f13', 'f14'].includes(field.name));
-  if (relaxedFields.length === submittedFields.length) return initial;
-
-  const relaxed = await fetchMobileBgSearchResultsUntilFoundOnce(action, method, relaxedFields, sourceMobileId);
-  if (relaxed.count_on_page === 0) return initial;
-
-  return {
-    ...relaxed,
-    fallback_note: 'No results were returned with engine, gearbox, and body type applied, so those three filters were relaxed for the in-app preview.',
-  };
+  return fetchWithRelaxedPreviewFallback(submittedFields, (fields) =>
+    fetchMobileBgSearchResultsUntilFoundOnce(action, method, fields, sourceMobileId),
+  );
 }

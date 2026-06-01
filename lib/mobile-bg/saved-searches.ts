@@ -1,6 +1,6 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
-import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
+import { parseSearchFields, type SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
   getListingSearchPrefill,
   type SearchPrefillData,
@@ -34,38 +34,19 @@ export interface SavedSearchDetail {
   prefill: SearchPrefillData;
 }
 
+interface SavedSearchRecordRow {
+  id: number;
+  listing_id: number | null;
+  fields_json: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 let savedSearchTableEnsured = false;
 
 function parseSavedFields(json: string | null | undefined): SearchField[] {
   const parsed = parseJson<unknown>(json, []);
-  if (!Array.isArray(parsed)) return [];
-
-  return parsed.flatMap((entry) => {
-    if (!entry || typeof entry !== "object") return [];
-    const candidate = entry as Record<string, unknown>;
-    if (
-      typeof candidate.name !== "string" ||
-      typeof candidate.label !== "string" ||
-      typeof candidate.value !== "string"
-    ) {
-      return [];
-    }
-
-    return [
-      {
-        name: candidate.name,
-        label: candidate.label,
-        value: candidate.value,
-        source:
-          candidate.source === "default" ||
-          candidate.source === "listing" ||
-          candidate.source === "derived" ||
-          candidate.source === "saved"
-            ? candidate.source
-            : "saved",
-      },
-    ];
-  });
+  return parseSearchFields(parsed) ?? [];
 }
 
 function ensureSavedSearchTables() {
@@ -102,6 +83,33 @@ function toSummaryYearRange(fields: SearchField[]) {
     yearFrom: byName.get("f10") || null,
     yearTo: byName.get("f11") || null,
   };
+}
+
+function mapSavedSearchRecord(row: SavedSearchRecordRow): SavedSearchRecord {
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    fields: parseSavedFields(row.fields_json),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function getSavedSearchRecordWhere(column: "id" | "listing_id", value: number): SavedSearchRecord | null {
+  ensureSavedSearchTables();
+
+  const row = raw
+    .prepare(
+      `
+    SELECT id, listing_id, fields_json, created_at, updated_at
+    FROM saved_searches
+    WHERE ${column} = ?
+    LIMIT 1
+  `,
+    )
+    .get(value) as SavedSearchRecordRow | undefined;
+
+  return row ? mapSavedSearchRecord(row) : null;
 }
 
 export function listSavedSearchSummaries(): SavedSearchSummary[] {
@@ -166,71 +174,13 @@ export function listSavedSearchSummaries(): SavedSearchSummary[] {
 }
 
 export function getSavedSearchRecord(id: number): SavedSearchRecord | null {
-  ensureSavedSearchTables();
-
-  const row = raw
-    .prepare(
-      `
-    SELECT id, listing_id, fields_json, created_at, updated_at
-    FROM saved_searches
-    WHERE id = ?
-    LIMIT 1
-  `,
-    )
-    .get(id) as
-    | {
-        id: number;
-        listing_id: number | null;
-        fields_json: string;
-        created_at: string | null;
-        updated_at: string | null;
-      }
-    | undefined;
-
-  if (!row) return null;
-
-  return {
-    id: row.id,
-    listingId: row.listing_id,
-    fields: parseSavedFields(row.fields_json),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return getSavedSearchRecordWhere("id", id);
 }
 
 export function getSavedSearchProfileByListingId(
   listingId: number,
 ): SavedSearchRecord | null {
-  ensureSavedSearchTables();
-
-  const row = raw
-    .prepare(
-      `
-    SELECT id, listing_id, fields_json, created_at, updated_at
-    FROM saved_searches
-    WHERE listing_id = ?
-    LIMIT 1
-  `,
-    )
-    .get(listingId) as
-    | {
-        id: number;
-        listing_id: number | null;
-        fields_json: string;
-        created_at: string | null;
-        updated_at: string | null;
-      }
-    | undefined;
-
-  if (!row) return null;
-
-  return {
-    id: row.id,
-    listingId: row.listing_id,
-    fields: parseSavedFields(row.fields_json),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return getSavedSearchRecordWhere("listing_id", listingId);
 }
 
 export async function getSavedSearchDetail(

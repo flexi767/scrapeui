@@ -1,5 +1,11 @@
 import { raw } from '@/db/client';
 import { firstBackupImageIdExpr } from '../types';
+import {
+  actualTrackedChangePredicate,
+  buildTrackedChangesWhere,
+  type TrackedChangesFilters,
+} from './change-filters';
+import { trackedChangeTargetSelect } from './change-target-select';
 
 export interface TrackedChangeRow {
   id: number;
@@ -45,169 +51,13 @@ export interface TrackedChangeRow {
   current_description: string | null;
 }
 
-export interface TrackedChangesFilters {
-  make?: string;
-  model?: string;
-  dealerSlugs?: string[];
-  fields?: string[];
-  search?: string;
-  whenStart?: string | null;
-  whenEnd?: string | null;
-  page?: number;
-  limit?: number;
-}
+export type { TrackedChangesFilters } from './change-filters';
 
 export interface TrackedChangeWindow {
   value: string;
   start: string;
   end: string;
   count: number;
-}
-
-const titleChangePredicate = `
-  snapshot_title IS NOT NULL
-  AND TRIM(snapshot_title) != ''
-  AND snapshot_title != target_title
-  AND target_title NOT LIKE '%' || snapshot_title
-`;
-
-const trackedChangeTargetSelect = `
-  COALESCE((
-    SELECT s2.price
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.price IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.current_price) as target_price,
-  COALESCE((
-    SELECT s2.vat
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.vat IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.vat) as target_vat,
-  COALESCE((
-    SELECT s2.last_edit
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.last_edit IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.last_edit) as target_last_edit,
-  COALESCE((
-    SELECT s2.views
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.views IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), CASE WHEN l.source = 'c' THEN l.cars_total_views ELSE l.views END) as target_views,
-  COALESCE((
-    SELECT s2.ad_status
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.ad_status IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.ad_status) as target_ad_status,
-  COALESCE((
-    SELECT s2.kaparo
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.kaparo IS NOT NULL
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.kaparo) as target_kaparo,
-  COALESCE((
-    SELECT s2.title
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.title IS NOT NULL
-      AND TRIM(s2.title) != ''
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.title) as target_title,
-  COALESCE((
-    SELECT s2.description
-    FROM listing_snapshots s2
-    WHERE s2.listing_id = s.listing_id
-      AND s2.description IS NOT NULL
-      AND TRIM(s2.description) != ''
-      AND (s2.recorded_at > s.recorded_at OR (s2.recorded_at = s.recorded_at AND s2.id > s.id))
-    ORDER BY s2.recorded_at ASC, s2.id ASC
-    LIMIT 1
-  ), l.description) as target_description
-`;
-
-function buildTrackedChangesWhere(filters: TrackedChangesFilters): {
-  where: string;
-  params: unknown[];
-} {
-  const clauses: string[] = [];
-  const params: unknown[] = [];
-
-  if (filters.make) {
-    clauses.push("l.make = ?");
-    params.push(filters.make);
-  }
-  if (filters.model) {
-    clauses.push("l.model = ?");
-    params.push(filters.model);
-  }
-  if (filters.dealerSlugs && filters.dealerSlugs.length > 0) {
-    clauses.push(
-      `d.slug IN (${filters.dealerSlugs.map(() => "?").join(", ")})`,
-    );
-    params.push(...filters.dealerSlugs);
-  }
-  if (filters.search) {
-    clauses.push(`(
-      l.title LIKE ?
-      OR l.make LIKE ?
-      OR l.model LIKE ?
-      OR l.description LIKE ?
-      OR d.name LIKE ?
-      OR l.mobile_id LIKE ?
-      OR l.cars_id LIKE ?
-    )`);
-    const like = `%${filters.search}%`;
-    params.push(like, like, like, like, like, like, like);
-  }
-  if (filters.whenStart && filters.whenEnd) {
-    clauses.push("s.recorded_at >= ? AND s.recorded_at <= ?");
-    params.push(filters.whenStart, filters.whenEnd);
-  }
-  if (filters.fields && filters.fields.length > 0) {
-    const fieldMap: Record<string, string> = {
-      price: "s.price IS NOT NULL",
-      vat: "s.vat IS NOT NULL",
-      last_edit: "s.last_edit IS NOT NULL",
-      views: "s.views IS NOT NULL",
-      ad_status: "s.ad_status IS NOT NULL",
-      kaparo: "s.kaparo IS NOT NULL",
-      title: `s.title IS NOT NULL AND TRIM(s.title) != ''`,
-      description: `s.description IS NOT NULL AND TRIM(s.description) != ''`,
-    };
-    const selectedClauses = filters.fields
-      .map((field) => fieldMap[field])
-      .filter(Boolean);
-    if (selectedClauses.length > 0)
-      clauses.push(`(${selectedClauses.join(" OR ")})`);
-  }
-
-  return {
-    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
-    params,
-  };
 }
 
 export function getTrackedChangeWindows(): TrackedChangeWindow[] {
@@ -278,18 +128,6 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
   const limit = filters.limit ?? 50;
   const offset = (page - 1) * limit;
   const { where, params } = buildTrackedChangesWhere(filters);
-  const actualChangeWhere = `
-    (
-      (snapshot_price IS NOT NULL AND snapshot_price != target_price) OR
-      (snapshot_vat IS NOT NULL AND snapshot_vat != target_vat) OR
-      (snapshot_last_edit IS NOT NULL AND snapshot_last_edit != target_last_edit) OR
-      (snapshot_views IS NOT NULL AND snapshot_views != target_views) OR
-      (snapshot_ad_status IS NOT NULL AND snapshot_ad_status != target_ad_status) OR
-      (snapshot_kaparo IS NOT NULL AND snapshot_kaparo != target_kaparo) OR
-      (${titleChangePredicate}) OR
-      (snapshot_description IS NOT NULL AND TRIM(snapshot_description) != '' AND snapshot_description != target_description)
-    )
-  `;
 
   const baseFrom = `
     FROM listing_snapshots s
@@ -316,7 +154,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
     )
     SELECT COUNT(*) as count
     FROM change_rows
-    WHERE ${actualChangeWhere}
+    WHERE ${actualTrackedChangePredicate}
   `,
     )
     .get(...params) as { count: number };
@@ -364,7 +202,7 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
     )
     SELECT *
     FROM change_rows
-    WHERE ${actualChangeWhere}
+    WHERE ${actualTrackedChangePredicate}
     ORDER BY recorded_at DESC, id DESC
     LIMIT ? OFFSET ?
   `,
