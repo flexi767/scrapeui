@@ -45,9 +45,12 @@ export interface MarketplaceListing {
 // Config
 // ---------------------------------------------------------------------------
 
+// Anchored to the repo root (this file lives at lib/facebook-marketplace/) so
+// the saved session path stays stable at <repo>/storage/fb-session, matching
+// the original location-independent default.
 const SESSION_DIR =
   process.env.FB_SESSION_DIR ||
-  path.resolve(__dirname, "storage", "fb-session");
+  path.resolve(__dirname, "..", "..", "storage", "fb-session");
 const HEADLESS = process.env.HEADLESS === "true";
 const SLOW_MO = 80;
 

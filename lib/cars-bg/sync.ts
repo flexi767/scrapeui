@@ -1,6 +1,7 @@
 import fs from 'fs';
 import type Database from 'better-sqlite3';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runUpdate } from '@/lib/listings/sql';
 import { chromium, type Page } from 'playwright';
 import { CARS_BG_BASE_URL, loginToCarsBg, prepareCarsBgPage } from '@/lib/cars-bg/auth';
 import {
@@ -82,12 +83,22 @@ export interface CarsBgSyncDealerResult extends CarsBgSyncPlan {
 
 export function saveCarsId(db: Database.Database, mobileId: string, carsId: string): void {
   const now = currentIsoTimestamp();
-  db.prepare('UPDATE listings SET cars_id = ?, cars_synced_at = ? WHERE mobile_id = ?').run(carsId, now, mobileId);
+  runUpdate(
+    db,
+    'listings',
+    { cars_id: carsId, cars_synced_at: now },
+    { sql: 'mobile_id = ?', params: [mobileId] },
+  );
 }
 
 export function clearCarsId(db: Database.Database, carsId: string): void {
   const now = currentIsoTimestamp();
-  db.prepare('UPDATE listings SET cars_id = NULL, cars_synced_at = ? WHERE cars_id = ?').run(now, carsId);
+  runUpdate(
+    db,
+    'listings',
+    { cars_id: null, cars_synced_at: now },
+    { sql: 'cars_id = ?', params: [carsId] },
+  );
 }
 
 export async function deleteCarsBgOffer(page: Page, offerId: string): Promise<boolean> {

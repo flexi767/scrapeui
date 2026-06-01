@@ -41,6 +41,7 @@ import {
   openDb,
   fetchRunnerRefData,
 } from "@/scraper/lib/runner";
+import { enqueueNextListPage } from "@/scraper/lib/list-pagination";
 import { createCrawlRun, updateCrawlRun } from "@/lib/query-modules/mobilebg";
 import { currentIsoTimestamp, formatDateInputValue } from "@/lib/date-format";
 
@@ -198,28 +199,13 @@ async function scrapeCompetitorForUI(
           }
         }
 
-        const currentPage = parseInt(
-          new URL(url).searchParams.get("page") || "1",
-          10,
-        );
-        if (currentPage < maxPages) {
-          const hasNext = await page.evaluate(
-            (cp: number) =>
-              Array.from(document.querySelectorAll("a")).some(
-                (a) =>
-                  a.href.includes(`page=${cp + 1}`) ||
-                  a.textContent?.trim() === String(cp + 1),
-              ),
-            currentPage,
-          );
-          if (hasNext) {
-            const nextUrl = new URL(dealer.mobileBg);
-            nextUrl.searchParams.set("page", String(currentPage + 1));
-            await crawler.addRequests([
-              { url: nextUrl.toString(), label: "LIST" },
-            ]);
-          }
-        }
+        await enqueueNextListPage({
+          crawler,
+          page,
+          currentUrl: url,
+          baseUrl: dealer.mobileBg,
+          maxPages,
+        });
       }
 
       if (request.label === "DETAIL") {

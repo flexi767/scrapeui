@@ -3,6 +3,7 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert, runUpdate } from '@/lib/listings/sql';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
@@ -59,11 +60,106 @@ function getRepostDir(dealerSlug: string, backupId: number): string {
 
 function createRepostJob(db: Database.Database, dealerId: number, backupId: number, listingId: number | null, sourceMobileId: string | null): number {
   const now = currentIsoTimestamp();
-  const result = db.prepare(`
-    INSERT INTO mobilebg_repost_jobs (dealer_id, backup_id, listing_id, source_mobile_id, status, started_at, created_at)
-    VALUES (?, ?, ?, ?, 'running', ?, ?)
-  `).run(dealerId, backupId, listingId, sourceMobileId, now, now);
+  const result = runInsert(db, 'mobilebg_repost_jobs', {
+    dealer_id: dealerId,
+    backup_id: backupId,
+    listing_id: listingId,
+    source_mobile_id: sourceMobileId,
+    status: 'running',
+    started_at: now,
+    created_at: now,
+  });
   return Number(result.lastInsertRowid);
+}
+
+function markRepostJobCompleted(
+  db: Database.Database,
+  jobId: number,
+  {
+    targetMobileId,
+    previewScreenshotPath,
+    repostDir,
+    resultUrl,
+    now = currentIsoTimestamp(),
+  }: {
+    targetMobileId: string;
+    previewScreenshotPath: string;
+    repostDir: string;
+    resultUrl: string;
+    now?: string;
+  },
+): void {
+  runUpdate(
+    db,
+    'mobilebg_repost_jobs',
+    {
+      status: 'completed',
+      target_mobile_id: targetMobileId,
+      preview_screenshot_path: previewScreenshotPath,
+      debug_dir: repostDir,
+      message: resultUrl,
+      finished_at: now,
+    },
+    { sql: 'id = ?', params: [jobId] },
+  );
+}
+
+function markRepostJobFailed(
+  db: Database.Database,
+  jobId: number,
+  {
+    message,
+    repostDir,
+    now = currentIsoTimestamp(),
+  }: {
+    message: string;
+    repostDir: string;
+    now?: string;
+  },
+): void {
+  runUpdate(
+    db,
+    'mobilebg_repost_jobs',
+    {
+      status: 'failed',
+      message,
+      debug_dir: repostDir,
+      finished_at: now,
+    },
+    { sql: 'id = ?', params: [jobId] },
+  );
+}
+
+function markBackupPublished(
+  db: Database.Database,
+  backupId: number,
+  {
+    listingId,
+    targetMobileId,
+    resultUrl,
+    now = currentIsoTimestamp(),
+  }: {
+    listingId: number;
+    targetMobileId: string;
+    resultUrl: string;
+    now?: string;
+  },
+): void {
+  runUpdate(
+    db,
+    'mobilebg_backups',
+    {
+      mobile_id: targetMobileId,
+      source_url: resultUrl,
+      draft_needs_sync: 0,
+      last_mobile_sync_status: 'success',
+      last_mobile_sync_error: null,
+      last_mobile_sync_at: now,
+      updated_at: now,
+    },
+    { sql: 'id = ?', params: [backupId] },
+    [{ sql: 'listing_id = COALESCE(listing_id, ?)', params: [listingId] }],
+  );
 }
 
 function getPrimaryPubtype(techDataJson: string | null): string {
@@ -216,68 +312,50 @@ async function publishDraftBackupFromDb(
     const now = currentIsoTimestamp();
     let listingId = backup.listing_id ?? null;
     if (!listingId) {
-      const insertListing = db.prepare(`
-        INSERT INTO listings (
-          mobile_id, dealer_id, url, title, make, model, reg_year,
-          fuel, color, power, mileage, description, ad_status, kaparo, is_new,
-          last_edit, current_price, vat, image_count, first_seen_at, last_seen_at, is_active, body_type, transmission
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-      `);
-      const listingResult = insertListing.run(
-        targetMobileId,
-        dealer.id,
-        resultUrl,
-        backup.title || backup.source_title || '',
-        backup.make,
-        backup.model,
-        backup.year ? String(backup.year) : null,
-        backup.fuel,
-        backup.color,
-        backup.power,
-        backup.mileage,
-        backup.description,
-        'none',
-        0,
-        now,
-        backup.price_amount,
-        normalizeVatValue(backup.vat_included),
-        images.length,
-        now,
-        now,
-        backup.category,
-        backup.transmission,
-      );
+      const listingResult = runInsert(db, 'listings', {
+        mobile_id: targetMobileId,
+        dealer_id: dealer.id,
+        url: resultUrl,
+        title: backup.title || backup.source_title || '',
+        make: backup.make,
+        model: backup.model,
+        reg_year: backup.year ? String(backup.year) : null,
+        fuel: backup.fuel,
+        color: backup.color,
+        power: backup.power,
+        mileage: backup.mileage,
+        description: backup.description,
+        ad_status: 'none',
+        kaparo: 0,
+        is_new: 1,
+        last_edit: now,
+        current_price: backup.price_amount,
+        vat: normalizeVatValue(backup.vat_included),
+        image_count: images.length,
+        first_seen_at: now,
+        last_seen_at: now,
+        is_active: 1,
+        body_type: backup.category,
+        transmission: backup.transmission,
+      });
       listingId = Number(listingResult.lastInsertRowid);
     }
 
-    db.prepare(`
-      UPDATE mobilebg_backups
-      SET
-        listing_id = COALESCE(listing_id, ?),
-        mobile_id = ?,
-        source_url = ?,
-        draft_needs_sync = 0,
-        last_mobile_sync_status = 'success',
-        last_mobile_sync_error = NULL,
-        last_mobile_sync_at = ?,
-        updated_at = ?
-      WHERE id = ?
-    `).run(listingId, targetMobileId, resultUrl, now, now, backup.id);
-
-    db.prepare(`
-      UPDATE mobilebg_repost_jobs
-      SET status = 'completed', target_mobile_id = ?, preview_screenshot_path = ?, debug_dir = ?, message = ?, finished_at = ?
-      WHERE id = ?
-    `).run(targetMobileId, previewScreenshotPath, repostDir, resultUrl, now, jobId);
+    markBackupPublished(db, backup.id, { listingId, targetMobileId, resultUrl, now });
+    markRepostJobCompleted(db, jobId, {
+      targetMobileId,
+      previewScreenshotPath,
+      repostDir,
+      resultUrl,
+      now,
+    });
 
     return { jobId, targetMobileId };
   } catch (error) {
-  const now = currentIsoTimestamp();
-    db.prepare(`
-      UPDATE mobilebg_repost_jobs
-      SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
-      WHERE id = ?
-    `).run(errorMessage(error), repostDir, now, jobId);
+    markRepostJobFailed(db, jobId, {
+      message: errorMessage(error),
+      repostDir,
+    });
     markSyncFailed(db, backup.id, error);
     throw error;
   } finally {
@@ -395,20 +473,20 @@ export async function repostBackupFromDb(
     }
 
     const now = currentIsoTimestamp();
-    db.prepare(`
-      UPDATE mobilebg_repost_jobs
-      SET status = 'completed', target_mobile_id = ?, preview_screenshot_path = ?, debug_dir = ?, message = ?, finished_at = ?
-      WHERE id = ?
-    `).run(targetMobileId, previewScreenshotPath, repostDir, resultUrl, now, jobId);
+    markRepostJobCompleted(db, jobId, {
+      targetMobileId,
+      previewScreenshotPath,
+      repostDir,
+      resultUrl,
+      now,
+    });
 
     return { jobId, targetMobileId };
   } catch (error) {
-    const now = currentIsoTimestamp();
-    db.prepare(`
-      UPDATE mobilebg_repost_jobs
-      SET status = 'failed', message = ?, debug_dir = ?, finished_at = ?
-      WHERE id = ?
-    `).run(errorMessage(error), repostDir, now, jobId);
+    markRepostJobFailed(db, jobId, {
+      message: errorMessage(error),
+      repostDir,
+    });
     throw error;
   } finally {
     await browser.close();

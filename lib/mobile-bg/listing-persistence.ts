@@ -7,10 +7,9 @@ import {
   insertListingSnapshot,
   previousValueIfChanged,
 } from '@/lib/listings/snapshots';
-import { normalizeBodyTypeSync, getBodyTypeMap } from '@/lib/mobile-bg/body-types';
-import { normalizeFuelSync } from '@/lib/mobile-bg/fuel-types';
-import { parseMakeModelSync, type MakesMap } from '@/lib/mobile-bg/makes-models';
-import { normalizeTransmissionSync } from '@/lib/mobile-bg/transmission-types';
+import { normalizeListingSpecs } from '@/lib/listings/normalize';
+import { runInsert, runUpdate, type ColumnValues } from '@/lib/listings/sql';
+import { type MakesMap } from '@/lib/mobile-bg/makes-models';
 
 export interface ScrapedMobileBgListingInput {
   url: string;
@@ -161,18 +160,22 @@ export async function upsertMobileBgListing(
   }
 
   const rawTitle = listing.title || '';
-  const { make, model, mobileMakeId, mobileModelId, titleRemainder } =
-    parseMakeModelSync(rawTitle, makesMap);
-  const normalizedTitle = (titleRemainder || rawTitle).trim();
+  const { make, model, mobileMakeId, mobileModelId, normalizedTitle, fuel, bodyType, transmission } =
+    normalizeListingSpecs(
+      rawTitle,
+      {
+        fuel: listing.fuel ?? null,
+        bodyType: listing.bodyType ?? null,
+        transmission: listing.transmission ?? null,
+      },
+      { makesMap, fuelMap, transmissionMap },
+    );
   const { carsMakeId, carsModelId } = await resolveCarsBgMakeModelIds({
     title: rawTitle,
     make,
     model,
   }).catch(() => ({ carsMakeId: null, carsModelId: null }));
   const { regMonth, regYear } = parseReg(listing.year ?? null);
-  const fuel = normalizeFuelSync(listing.fuel ?? null, fuelMap);
-  const bodyType = normalizeBodyTypeSync(listing.bodyType ?? null, getBodyTypeMap());
-  const transmission = normalizeTransmissionSync(listing.transmission ?? null, transmissionMap);
   const vin: string | null = listing.vin ?? null;
   const euronorm: number | null = listing.euronorm ?? null;
   const extrasJson: string | null = listing.extras ? JSON.stringify(listing.extras) : null;
@@ -272,16 +275,14 @@ export async function upsertMobileBgListing(
     }
 
     const imageData = listing.images?.meta && listing.images.thumbKeys.length > 0 ? listing.images : null;
-    const hasImages = Boolean(imageData);
-    const imageFields = hasImages ? 'image_count = ?, image_meta = ?, thumb_keys = ?, full_keys = ?,' : '';
-    const imageValues = hasImages
-      ? [
-          listing.imageCount || 0,
-          JSON.stringify(imageData!.meta),
-          JSON.stringify(imageData!.thumbKeys),
-          JSON.stringify(imageData!.fullKeys || []),
-        ]
-      : [];
+    const imageSet: ColumnValues = imageData
+      ? {
+          image_count: listing.imageCount || 0,
+          image_meta: JSON.stringify(imageData.meta),
+          thumb_keys: JSON.stringify(imageData.thumbKeys),
+          full_keys: JSON.stringify(imageData.fullKeys || []),
+        }
+      : {};
     const priceChangeDelta = getPriceChangeDelta({
       priceChanged,
       newPrice: price,
@@ -290,95 +291,89 @@ export async function upsertMobileBgListing(
       missingOldPriceAsZero: true,
     });
 
-    db.prepare(`
-      UPDATE listings SET
-        dealer_id = ?, url = ?, title = ?, make = ?, model = ?, mobile_make_id = ?, mobile_model_id = ?, cars_make_id = ?, cars_model_id = ?, reg_month = ?, reg_year = ?,
-        fuel = ?, body_type = ?, transmission = ?, color = ?, vin = ?, euronorm = ?, power = ?, mileage = ?, description = ?, extras_json = ?, ad_status = ?, kaparo = ?,
-        is_new = ?, last_edit = ?, views = ?, current_price = ?, vat = ?, price_change = ?, ${imageFields}
-        last_seen_at = ?, is_active = 1, deleted_at = NULL, thumb_saved = ?
-      WHERE id = ?
-    `).run(
-      dealerId,
-      listing.url,
-      normalizedTitle,
-      make,
-      model,
-      mobileMakeId,
-      mobileModelId,
-      carsMakeId,
-      carsModelId,
-      (isDeep || hasOverviewSpecs) && regMonth ? regMonth : existing.reg_month,
-      (isDeep || hasOverviewSpecs) && regYear ? regYear : existing.reg_year,
-      (isDeep || hasOverviewSpecs) && fuel ? fuel : existing.fuel,
-      (isDeep || hasOverviewSpecs) && bodyType ? bodyType : existing.body_type || bodyType || null,
-      (isDeep || hasOverviewSpecs) && transmission ? transmission : existing.transmission,
-      (isDeep || hasOverviewSpecs) && listing.color ? listing.color : existing.color,
-      isDeep ? vin : (existing.vin ?? null),
-      (isDeep || hasOverviewSpecs) && euronorm != null ? euronorm : (existing.euronorm ?? null),
-      isDeep ? listing.power || null : existing.power,
-      (isDeep || hasOverviewSpecs) && listing.mileage != null ? listing.mileage : existing.mileage,
-      isDeep ? listing.description || null : existing.description,
-      isDeep ? extrasJson : (existing.extras_json ?? null),
-      listing.adStatus || existing.ad_status || 'none',
-      listing.kaparo ? 1 : 0,
-      isDeep ? (listing.isNew ? 1 : 0) : existing.is_new,
-      isDeep ? listing.lastEdit || null : existing.last_edit,
-      isDeep ? views : (existing.views ?? null),
-      price,
-      vat != null ? vat : (existing.vat ?? null),
-      priceChangeDelta,
-      ...imageValues,
-      now,
-      thumbSaved ? 1 : (existing.thumb_saved ?? 0),
-      existing.id,
+    runUpdate(
+      db,
+      'listings',
+      {
+        dealer_id: dealerId,
+        url: listing.url,
+        title: normalizedTitle,
+        make,
+        model,
+        mobile_make_id: mobileMakeId,
+        mobile_model_id: mobileModelId,
+        cars_make_id: carsMakeId,
+        cars_model_id: carsModelId,
+        reg_month: (isDeep || hasOverviewSpecs) && regMonth ? regMonth : existing.reg_month,
+        reg_year: (isDeep || hasOverviewSpecs) && regYear ? regYear : existing.reg_year,
+        fuel: (isDeep || hasOverviewSpecs) && fuel ? fuel : existing.fuel,
+        body_type: (isDeep || hasOverviewSpecs) && bodyType ? bodyType : existing.body_type || bodyType || null,
+        transmission: (isDeep || hasOverviewSpecs) && transmission ? transmission : existing.transmission,
+        color: (isDeep || hasOverviewSpecs) && listing.color ? listing.color : existing.color,
+        vin: isDeep ? vin : (existing.vin ?? null),
+        euronorm: (isDeep || hasOverviewSpecs) && euronorm != null ? euronorm : (existing.euronorm ?? null),
+        power: isDeep ? listing.power || null : existing.power,
+        mileage: (isDeep || hasOverviewSpecs) && listing.mileage != null ? listing.mileage : existing.mileage,
+        description: isDeep ? listing.description || null : existing.description,
+        extras_json: isDeep ? extrasJson : (existing.extras_json ?? null),
+        ad_status: listing.adStatus || existing.ad_status || 'none',
+        kaparo: listing.kaparo ? 1 : 0,
+        is_new: isDeep ? (listing.isNew ? 1 : 0) : existing.is_new,
+        last_edit: isDeep ? listing.lastEdit || null : existing.last_edit,
+        views: isDeep ? views : (existing.views ?? null),
+        current_price: price,
+        vat: vat != null ? vat : (existing.vat ?? null),
+        price_change: priceChangeDelta,
+        ...imageSet,
+        last_seen_at: now,
+        thumb_saved: thumbSaved ? 1 : (existing.thumb_saved ?? 0),
+      },
+      { sql: 'id = ?', params: [existing.id] },
+      ['is_active = 1', 'deleted_at = NULL'],
     );
     return { action: 'updated', snapshot: trackedChange, title: normalizedTitle, make, model, changeEvent };
   }
 
-  db.prepare(`
-    INSERT INTO listings (
-      mobile_id, dealer_id, url, title, make, model, mobile_make_id, mobile_model_id, cars_make_id, cars_model_id, reg_month, reg_year,
-      fuel, body_type, transmission, color, vin, euronorm, power, mileage, description, extras_json, ad_status, kaparo, is_new,
-      last_edit, views, current_price, vat, image_count, image_meta, thumb_keys, full_keys,
-      images_downloaded, thumb_saved, first_seen_at, last_seen_at, is_active, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, NULL)
-  `).run(
-    mobileId,
-    dealerId,
-    listing.url,
-    normalizedTitle,
+  runInsert(db, 'listings', {
+    mobile_id: mobileId,
+    dealer_id: dealerId,
+    url: listing.url,
+    title: normalizedTitle,
     make,
     model,
-    mobileMakeId,
-    mobileModelId,
-    carsMakeId,
-    carsModelId,
-    regMonth,
-    regYear,
-    fuel || null,
-    bodyType || null,
-    transmission || null,
-    listing.color || null,
+    mobile_make_id: mobileMakeId,
+    mobile_model_id: mobileModelId,
+    cars_make_id: carsMakeId,
+    cars_model_id: carsModelId,
+    reg_month: regMonth,
+    reg_year: regYear,
+    fuel: fuel || null,
+    body_type: bodyType || null,
+    transmission: transmission || null,
+    color: listing.color || null,
     vin,
     euronorm,
-    listing.power || null,
-    listing.mileage || null,
-    listing.description || null,
-    extrasJson,
-    listing.adStatus || 'none',
-    listing.kaparo ? 1 : 0,
-    listing.isNew ? 1 : 0,
-    listing.lastEdit || null,
+    power: listing.power || null,
+    mileage: listing.mileage || null,
+    description: listing.description || null,
+    extras_json: extrasJson,
+    ad_status: listing.adStatus || 'none',
+    kaparo: listing.kaparo ? 1 : 0,
+    is_new: listing.isNew ? 1 : 0,
+    last_edit: listing.lastEdit || null,
     views,
-    price,
+    current_price: price,
     vat,
-    listing.imageCount || 0,
-    listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
-    listing.images?.thumbKeys ? JSON.stringify(listing.images.thumbKeys) : null,
-    listing.images?.fullKeys ? JSON.stringify(listing.images.fullKeys) : null,
-    thumbSaved ? 1 : 0,
-    now,
-    now,
-  );
+    image_count: listing.imageCount || 0,
+    image_meta: listing.images?.meta ? JSON.stringify(listing.images.meta) : null,
+    thumb_keys: listing.images?.thumbKeys ? JSON.stringify(listing.images.thumbKeys) : null,
+    full_keys: listing.images?.fullKeys ? JSON.stringify(listing.images.fullKeys) : null,
+    images_downloaded: 0,
+    thumb_saved: thumbSaved ? 1 : 0,
+    first_seen_at: now,
+    last_seen_at: now,
+    is_active: 1,
+    deleted_at: null,
+  });
   return { action: 'inserted', snapshot: false, title: normalizedTitle, make, model };
 }

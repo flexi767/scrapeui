@@ -46,6 +46,8 @@ import {
   parseSpecsString,
 } from '@/lib/cars-bg/parse';
 import { emit, formatError, parseRunnerArgs, openDb, fetchRunnerRefData } from '@/scraper/lib/runner';
+import { enqueueNextListPage } from '@/scraper/lib/list-pagination';
+import { runInsert } from '@/lib/listings/sql';
 
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const CARS_BG_MAX_IMAGES = 15;
@@ -284,20 +286,13 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
           }
         }
 
-        // Pagination: check for next page link
-        const currentPage = parseInt(new URL(url).searchParams.get('page') || '1', 10);
-        if (currentPage < maxPages) {
-          const hasNext = await page.evaluate((cp: number) =>
-            Array.from(document.querySelectorAll('a')).some(a =>
-              a.href.includes(`page=${cp + 1}`) || a.textContent?.trim() === String(cp + 1)
-            ), currentPage
-          );
-          if (hasNext) {
-            const nextUrl = new URL(dealer.carsUrl as string);
-            nextUrl.searchParams.set('page', String(currentPage + 1));
-            await crawler.addRequests([{ url: nextUrl.toString(), label: 'LIST' }]);
-          }
-        }
+        await enqueueNextListPage({
+          crawler,
+          page,
+          currentUrl: url,
+          baseUrl: dealer.carsUrl,
+          maxPages,
+        });
       }
 
       if (request.label === 'DETAIL') {
@@ -344,18 +339,15 @@ async function scrapeCarsBgForUI(dealer: CarsBgDealerRow, db: Database.Database,
       failedUrls.push(url);
       const errorMsg = formatError(error);
       emit({ type: 'warn', message: `Permanently failed after ${request.retryCount} retries: ${url}` });
-      db.prepare(`
-        INSERT INTO scrape_failures (dealer_id, dealer_slug, url, source, retry_count, error, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        dealer.id,
-        dealer.slug,
+      runInsert(db, 'scrape_failures', {
+        dealer_id: dealer.id,
+        dealer_slug: dealer.slug,
         url,
-        'cars.bg',
-        request.retryCount,
-        errorMsg,
-        currentIsoTimestamp(),
-      );
+        source: 'cars.bg',
+        retry_count: request.retryCount,
+        error: errorMsg,
+        created_at: currentIsoTimestamp(),
+      });
     },
   });
 

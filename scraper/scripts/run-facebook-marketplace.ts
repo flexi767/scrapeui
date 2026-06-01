@@ -7,7 +7,7 @@
 
 import { openDb } from "@/scraper/lib/runner";
 import { buildMarketplaceListingPayloads } from "@/lib/facebook-marketplace/listing-payload";
-import { postToFacebookMarketplace } from "../../facebook-marketplace";
+import { postToFacebookMarketplace } from "@/lib/facebook-marketplace/post";
 
 const args = process.argv.slice(2);
 const backupIdIdx = args.indexOf("--backup-id");
