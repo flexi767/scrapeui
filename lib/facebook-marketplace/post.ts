@@ -13,70 +13,18 @@
  * The session is saved and reused on subsequent runs.
  */
 
-import { chromium, Page } from "playwright";
-import * as path from "path";
 import * as fs from "fs";
-import { execSync } from "child_process";
+import type { Page } from "playwright";
+import { fillByLabel, fillLabelCombobox, fillLocation } from "./field-fillers";
+import { launchMarketplaceContext } from "./session";
+import { delay } from "./timing";
+import type { MarketplaceListing, MarketplacePostResult } from "./types";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface MarketplaceListing {
-  title: string;         // used for display / reference only — FB vehicle form has no title field
-  price: number;
-  description: string;
-  make?: string;
-  model?: string;
-  year?: number;
-  mileage?: number;      // km
-  fuel?: string;
-  color?: string;
-  bodyType?: string;     // "Тип каросерия" — e.g. "Хечбек", "Седан", "Джип"
-  transmission?: string;
-  condition?: string;    // "Състояние" — e.g. "Отлично"
-  noDamage?: boolean;    // "Без повреди" checkbox
-  vehicleType?: string;  // "Тип превозно средство" — e.g. "Автомобил/камион"
-  location?: string;     // overrides the FB account location if provided
-  photos: string[];
-}
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
-// Anchored to the repo root (this file lives at lib/facebook-marketplace/) so
-// the saved session path stays stable at <repo>/storage/fb-session, matching
-// the original location-independent default.
-const SESSION_DIR =
-  process.env.FB_SESSION_DIR ||
-  path.resolve(__dirname, "..", "..", "storage", "fb-session");
-const HEADLESS = process.env.HEADLESS === "true";
-const SLOW_MO = 80;
-
-const delay = (min: number, max: number) =>
-  new Promise((r) =>
-    setTimeout(r, Math.floor(Math.random() * (max - min + 1)) + min)
-  );
-
-// ---------------------------------------------------------------------------
-// Core
-// ---------------------------------------------------------------------------
-
-function clearProfileLock(profileDir: string): void {
-  try { execSync(`pkill -f ${JSON.stringify(profileDir)} 2>/dev/null || true`); } catch { /* ok */ }
-  try { execSync("sleep 0.8"); } catch { /* ok */ }
-  const lockFile = path.join(profileDir, "SingletonLock");
-  try { fs.unlinkSync(lockFile); } catch { /* not present */ }
-}
+export type { MarketplaceListing } from "./types";
 
 export async function postToFacebookMarketplace(
   listing: MarketplaceListing
-): Promise<{ status: "ready_to_publish" | "error"; message: string }> {
-  if (!fs.existsSync(SESSION_DIR)) {
-    fs.mkdirSync(SESSION_DIR, { recursive: true });
-  }
-
+): Promise<MarketplacePostResult> {
   let page: Page | null = null;
 
   async function waitForPageClose() {
@@ -84,23 +32,7 @@ export async function postToFacebookMarketplace(
   }
 
   try {
-    clearProfileLock(SESSION_DIR);
-
-    const context = await chromium.launchPersistentContext(SESSION_DIR, {
-      headless: HEADLESS,
-      slowMo: SLOW_MO,
-      viewport: { width: 1280, height: 900 },
-      locale: "en-US",
-      args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-      ignoreDefaultArgs: ["--enable-automation"],
-    });
-
-    const existingPages = context.pages();
-    page = existingPages.length > 0 ? existingPages[0] : await context.newPage();
-
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
-    });
+    ({ page } = await launchMarketplaceContext());
 
     // -----------------------------------------------------------------------
     // 1. Navigate to Create Vehicle Listing
@@ -311,177 +243,6 @@ export async function postToFacebookMarketplace(
     await waitForPageClose();
     return { status: "error", message: err instanceof Error ? err.message : String(err) };
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Fill a plain text input or textarea found by walking up ≤4 parent levels
- * looking for the label text.
- */
-async function fillByLabel(page: Page, labelText: string, value: string): Promise<void> {
-  const handle = await page.evaluateHandle((label) => {
-    const candidates = Array.from(document.querySelectorAll(
-      "input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=search]), textarea"
-    )) as HTMLElement[];
-    for (const el of candidates) {
-      let node = el.parentElement;
-      for (let depth = 0; depth < 4 && node; depth++) {
-        if (node.textContent?.includes(label)) return el;
-        node = node.parentElement;
-      }
-    }
-    return null;
-  }, labelText);
-
-  const el = handle.asElement();
-  if (!el) {
-    console.warn(`⚠️  Could not find field with label "${labelText}"`);
-    return;
-  }
-  await el.click({ clickCount: 3 }).catch(() => {});
-  await delay(150, 250);
-  await el.fill(value).catch(() => {});
-  await delay(200, 400);
-}
-
-/**
- * Click a LABEL[role=combobox] dropdown (used by FB for Vehicle Type, Year,
- * Transmission, etc.) and select the option matching value.
- *
- * FB renders dropdown options in a [role="listbox"] portal that is separate
- * from the always-present vehicle-type sidebar [role="option"] items. We must
- * wait for that listbox to appear and search exclusively within it.
- */
-async function fillLabelCombobox(page: Page, labelText: string, value: string): Promise<boolean> {
-  // Dismiss any currently open dropdown before starting
-  await page.keyboard.press("Escape").catch(() => {});
-  await delay(300, 400);
-
-  const handle = await page.evaluateHandle((label) => {
-    const els = Array.from(document.querySelectorAll('label[role="combobox"]')) as HTMLElement[];
-    for (const el of els) {
-      if (el.textContent?.includes(label)) return el;
-    }
-    return null;
-  }, labelText);
-
-  const el = handle.asElement();
-  if (!el) return false;
-
-  // Scroll into view before clicking — some fields are below the fold
-  await el.evaluate((node) => node.scrollIntoView({ block: "center" })).catch(() => {});
-  await delay(200, 300);
-  await el.click();
-
-  // Wait for FB's dropdown portal (listbox) to appear
-  const listboxAppeared = await page
-    .waitForSelector('[role="listbox"]', { timeout: 3000 })
-    .then(() => true)
-    .catch(() => false);
-
-  await delay(listboxAppeared ? 400 : 1200, listboxAppeared ? 600 : 1600);
-
-  // Search within the listbox portal first to avoid the always-present
-  // vehicle-type sidebar [role="option"] items polluting results
-  const clicked = await page.evaluate((val) => {
-    const listbox = document.querySelector('[role="listbox"]');
-    const roots: (Element | Document)[] = listbox ? [listbox] : [document];
-
-    for (const root of roots) {
-      for (const sel of ['[role="option"]', 'li', 'div[tabindex="0"]']) {
-        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
-        const visible = items.filter((e) => e.offsetWidth > 0 && e.offsetHeight > 0);
-
-        const exact = visible.find((e) => e.textContent?.trim() === val);
-        if (exact) { exact.click(); return `exact:${sel}`; }
-
-        const partial = visible.find((e) => {
-          const t = e.textContent?.trim() ?? "";
-          return t.length < 80 && t.toLowerCase().includes(val.toLowerCase());
-        });
-        if (partial) { partial.click(); return `partial:${sel}`; }
-      }
-    }
-    return null;
-  }, value);
-
-  if (clicked) {
-    console.log(`  ✓ Selected "${value}" via ${clicked}`);
-    await delay(400, 600);
-    await page.keyboard.press("Escape").catch(() => {});
-    await delay(300, 500);
-    return true;
-  }
-
-  // Fallback: type to filter if the listbox has a search input
-  if (listboxAppeared) {
-    const searchInput = page.locator('[role="listbox"] input').first();
-    if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await searchInput.fill(value);
-      await delay(900, 1300);
-      const clicked2 = await page.evaluate((val) => {
-        const lb = document.querySelector('[role="listbox"]');
-        if (!lb) return false;
-        const items = Array.from(lb.querySelectorAll('[role="option"], li')) as HTMLElement[];
-        const match = items.filter((e) => e.offsetWidth > 0).find((e) => {
-          const t = e.textContent?.trim() ?? "";
-          return t.length < 80 && t.toLowerCase().includes(val.toLowerCase());
-        });
-        if (match) { match.click(); return true; }
-        return false;
-      }, value);
-      if (clicked2) {
-        console.log(`  ✓ Selected "${value}" via search input`);
-        await delay(300, 500);
-        return true;
-      }
-    }
-  }
-
-  // Debug: log what is actually visible in the listbox
-  const visibleOptions = await page.evaluate(() => {
-    const lb = document.querySelector('[role="listbox"]');
-    if (!lb) return "(no listbox)";
-    const items = Array.from(lb.querySelectorAll('[role="option"], li')) as HTMLElement[];
-    return items
-      .filter((e) => e.offsetWidth > 0)
-      .map((e) => e.textContent?.trim().slice(0, 40))
-      .filter(Boolean)
-      .slice(0, 15)
-      .join(" | ");
-  });
-  console.log(`  Listbox options for "${labelText}": ${visibleOptions}`);
-  await page.screenshot({ path: `/tmp/fb-dropdown-${labelText}.png` }).catch(() => {});
-  await page.keyboard.press("Escape").catch(() => {});
-  await delay(300, 400);
-  console.warn(`⚠️  No option matched "${value}" for "${labelText}"`);
-  return false;
-}
-
-/**
- * Fill the location autocomplete using its aria-label.
- */
-async function fillLocation(page: Page, location: string): Promise<void> {
-  const input = page.locator('[aria-label="Местоположение"]').first();
-  if (!await input.isVisible({ timeout: 3000 }).catch(() => false)) {
-    console.warn("⚠️  Location field not visible");
-    return;
-  }
-  await input.click({ clickCount: 3 });
-  await delay(150, 250);
-  await input.fill(location);
-  await delay(1200, 1800);
-
-  const option = page.locator('[role="option"]').first();
-  if (await option.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await option.click();
-  } else {
-    await input.press("Enter");
-  }
-  await delay(300, 500);
 }
 
 // ---------------------------------------------------------------------------
