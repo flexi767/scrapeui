@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  getLocalStorageItem,
+  getLocalStorageJson,
+  removeLocalStorageItem,
+  setLocalStorageItem,
+  setLocalStorageJson,
+} from "@/components/publisher/local-storage";
 import { errorMessage, parseApiResponse } from "@/lib/utils";
 import {
   applyConsistentTextToVariants,
@@ -77,10 +84,10 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
         parseApiResponse<ServerPosterDefaults | null>(response, "Could not load saved poster defaults"),
       );
       if (!serverDefaults) return;
-      if (!window.localStorage.getItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
+      if (!getLocalStorageItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
         setPosterPrompt(resolvePromptTemplate(serverDefaults.promptTemplate, data));
       }
-      if (!window.localStorage.getItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
+      if (!getLocalStorageItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`)) {
         setVariantPrompts(normalizeVariantPrompts(serverDefaults.variantPrompts));
       }
     } catch (error) {
@@ -90,34 +97,32 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
 
   const handleListingLoad = useCallback((data: InstagramListingPayload) => {
     initialPosterGeneratedRef.current = false;
-    const savedPrompt = window.localStorage.getItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`);
-    const savedGlobalPromptTemplate = window.localStorage.getItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY);
-    const savedVariantPrompts = window.localStorage.getItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`);
-    const savedGlobalVariantPrompts = window.localStorage.getItem(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY);
-    const savedCollageSelections = window.localStorage.getItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${data.backupId}`);
+    const savedPrompt = getLocalStorageItem(`${PROMPT_STORAGE_PREFIX}${data.backupId}`);
+    const savedGlobalPromptTemplate = getLocalStorageItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY);
+    const savedVariantPrompts = getLocalStorageJson<PosterVariantPrompt[] | null>(
+      `${VARIANT_PROMPT_STORAGE_PREFIX}${data.backupId}`,
+      null,
+    );
+    const savedGlobalVariantPrompts = getLocalStorageJson<PosterVariantPrompt[] | null>(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY, null);
+    const savedCollageSelections = getLocalStorageJson<CollageSelections | null>(
+      `${COLLAGE_SELECTION_STORAGE_PREFIX}${data.backupId}`,
+      null,
+    );
     setPosterPrompt(
       savedPrompt || (savedGlobalPromptTemplate ? resolvePromptTemplate(savedGlobalPromptTemplate, data) : buildDefaultPosterPrompt(data)),
     );
-    try {
-      setVariantPrompts(
-        savedVariantPrompts
-          ? normalizeVariantPrompts(JSON.parse(savedVariantPrompts) as PosterVariantPrompt[])
-          : savedGlobalVariantPrompts
-            ? normalizeVariantPrompts(JSON.parse(savedGlobalVariantPrompts) as PosterVariantPrompt[])
-          : DEFAULT_POSTER_VARIANT_PROMPTS,
-      );
-    } catch {
-      setVariantPrompts(DEFAULT_POSTER_VARIANT_PROMPTS);
-    }
-    try {
-      setCollageSelections(
-        savedCollageSelections
-          ? normalizeCollageSelections(JSON.parse(savedCollageSelections) as CollageSelections, data.photos)
-          : buildDefaultCollageSelections(data.photos),
-      );
-    } catch {
-      setCollageSelections(buildDefaultCollageSelections(data.photos));
-    }
+    setVariantPrompts(
+      savedVariantPrompts
+        ? normalizeVariantPrompts(savedVariantPrompts)
+        : savedGlobalVariantPrompts
+          ? normalizeVariantPrompts(savedGlobalVariantPrompts)
+        : DEFAULT_POSTER_VARIANT_PROMPTS,
+    );
+    setCollageSelections(
+      savedCollageSelections
+        ? normalizeCollageSelections(savedCollageSelections, data.photos)
+        : buildDefaultCollageSelections(data.photos),
+    );
     void loadServerPosterDefaults(data);
   }, [loadServerPosterDefaults]);
 
@@ -170,9 +175,9 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
       toast.warning("Select at least one exterior and one interior photo for the collage pages.");
       return;
     }
-    window.localStorage.setItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
-    window.localStorage.setItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(prompts));
-    window.localStorage.setItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(selections));
+    setLocalStorageItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
+    setLocalStorageJson(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompts);
+    setLocalStorageJson(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, selections);
     const seed = canvasSeedRef.current + 1;
     canvasSeedRef.current = seed;
     const targetIds = variantId ? [variantId] : prompts.map((variant) => variant.id);
@@ -261,9 +266,9 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     setPosterPrompt(nextPrompt);
     setVariantPrompts(DEFAULT_POSTER_VARIANT_PROMPTS);
     setCollageSelections(nextSelections);
-    window.localStorage.removeItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`);
-    window.localStorage.removeItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`);
-    window.localStorage.removeItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`);
+    removeLocalStorageItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`);
+    removeLocalStorageItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`);
+    removeLocalStorageItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`);
   }
 
   async function saveDefaultsForFuture() {
@@ -271,10 +276,10 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     const prompt = posterPrompt.trim() || buildDefaultPosterPrompt(listing);
     const prompts = normalizeVariantPrompts(variantPrompts);
     const promptTemplate = buildPromptTemplateFromListing(prompt, listing);
-    window.localStorage.setItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
-    window.localStorage.setItem(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(prompts));
-    window.localStorage.setItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY, promptTemplate);
-    window.localStorage.setItem(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+    setLocalStorageItem(`${PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompt);
+    setLocalStorageJson(`${VARIANT_PROMPT_STORAGE_PREFIX}${listing.backupId}`, prompts);
+    setLocalStorageItem(GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY, promptTemplate);
+    setLocalStorageJson(GLOBAL_VARIANT_PROMPTS_STORAGE_KEY, prompts);
     try {
       await fetch("/api/instagram/poster-defaults", {
         method: "PUT",
@@ -294,9 +299,9 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
       else selected.add(photoId);
       const next = { ...current, [kind]: Array.from(selected) };
       if (listing) {
-        window.localStorage.setItem(
+        setLocalStorageJson(
           `${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`,
-          JSON.stringify(normalizeCollageSelections(next, listing.photos)),
+          normalizeCollageSelections(next, listing.photos),
         );
       }
       return next;
@@ -307,7 +312,7 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     if (!listing) return;
     const next = buildDefaultCollageSelections(listing.photos);
     setCollageSelections(next);
-    window.localStorage.setItem(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, JSON.stringify(next));
+    setLocalStorageJson(`${COLLAGE_SELECTION_STORAGE_PREFIX}${listing.backupId}`, next);
   }
 
   return {

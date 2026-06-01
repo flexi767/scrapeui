@@ -3,10 +3,20 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import { chromium } from 'playwright';
 import { currentIsoTimestamp } from '@/lib/date-format';
-import { runInsert, runUpdate } from '@/lib/listings/sql';
+import { runInsert } from '@/lib/listings/sql';
 import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig, USER_AGENT } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
+import {
+  buildDraftPublishFields,
+} from '@/lib/mobile-bg/repost-form-fields';
+import {
+  createRepostJob,
+  markBackupPublished,
+  markRepostJobCompleted,
+  markRepostJobFailed,
+} from '@/lib/mobile-bg/repost-jobs';
+import type { BackupImageRow, BackupRow, EditSnapshotRow } from '@/lib/mobile-bg/repost-types';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { normalizeVatValue } from '@/lib/vat';
@@ -18,162 +28,8 @@ import {
   uploadMobileBgBackupImages,
 } from '@/lib/mobile-bg/repost-page-flow';
 
-interface BackupRow {
-  id: number;
-  dealer_id?: number | null;
-  listing_id?: number | null;
-  mobile_id: string | null;
-  source_url: string | null;
-  title: string | null;
-  source_title: string | null;
-  price_amount: number | null;
-  vat_included: string | null;
-  year: number | null;
-  mileage: number | null;
-  fuel: string | null;
-  power: number | null;
-  engine: string | null;
-  color: string | null;
-  transmission: string | null;
-  category: string | null;
-  description: string | null;
-  make: string | null;
-  model: string | null;
-  extras_json: string | null;
-  tech_data_json: string | null;
-}
-
-interface EditSnapshotRow {
-  id: number;
-  listing_token: string | null;
-  fields_json: string | null;
-  checked_boxes_json: string | null;
-}
-
-interface BackupImageRow {
-  local_path: string;
-}
-
 function getRepostDir(dealerSlug: string, backupId: number): string {
   return path.join(SCRAPED_ROOT, dealerSlug, 'reposts', String(backupId));
-}
-
-function createRepostJob(db: Database.Database, dealerId: number, backupId: number, listingId: number | null, sourceMobileId: string | null): number {
-  const now = currentIsoTimestamp();
-  const result = runInsert(db, 'mobilebg_repost_jobs', {
-    dealer_id: dealerId,
-    backup_id: backupId,
-    listing_id: listingId,
-    source_mobile_id: sourceMobileId,
-    status: 'running',
-    started_at: now,
-    created_at: now,
-  });
-  return Number(result.lastInsertRowid);
-}
-
-function markRepostJobCompleted(
-  db: Database.Database,
-  jobId: number,
-  {
-    targetMobileId,
-    previewScreenshotPath,
-    repostDir,
-    resultUrl,
-    now = currentIsoTimestamp(),
-  }: {
-    targetMobileId: string;
-    previewScreenshotPath: string;
-    repostDir: string;
-    resultUrl: string;
-    now?: string;
-  },
-): void {
-  runUpdate(
-    db,
-    'mobilebg_repost_jobs',
-    {
-      status: 'completed',
-      target_mobile_id: targetMobileId,
-      preview_screenshot_path: previewScreenshotPath,
-      debug_dir: repostDir,
-      message: resultUrl,
-      finished_at: now,
-    },
-    { sql: 'id = ?', params: [jobId] },
-  );
-}
-
-function markRepostJobFailed(
-  db: Database.Database,
-  jobId: number,
-  {
-    message,
-    repostDir,
-    now = currentIsoTimestamp(),
-  }: {
-    message: string;
-    repostDir: string;
-    now?: string;
-  },
-): void {
-  runUpdate(
-    db,
-    'mobilebg_repost_jobs',
-    {
-      status: 'failed',
-      message,
-      debug_dir: repostDir,
-      finished_at: now,
-    },
-    { sql: 'id = ?', params: [jobId] },
-  );
-}
-
-function markBackupPublished(
-  db: Database.Database,
-  backupId: number,
-  {
-    listingId,
-    targetMobileId,
-    resultUrl,
-    now = currentIsoTimestamp(),
-  }: {
-    listingId: number;
-    targetMobileId: string;
-    resultUrl: string;
-    now?: string;
-  },
-): void {
-  runUpdate(
-    db,
-    'mobilebg_backups',
-    {
-      mobile_id: targetMobileId,
-      source_url: resultUrl,
-      draft_needs_sync: 0,
-      last_mobile_sync_status: 'success',
-      last_mobile_sync_error: null,
-      last_mobile_sync_at: now,
-      updated_at: now,
-    },
-    { sql: 'id = ?', params: [backupId] },
-    [{ sql: 'listing_id = COALESCE(listing_id, ?)', params: [listingId] }],
-  );
-}
-
-function getPrimaryPubtype(techDataJson: string | null): string {
-  const parsed = parseJson<Record<string, string>>(techDataJson, {});
-  const raw = parsed.pubtype || '1';
-  return raw.split(',').map((part) => part.trim()).find(Boolean) || '1';
-}
-
-function getRegionCityValues(techDataJson: string | null): { region: string | null; city: string | null } {
-  const parsed = parseJson<Record<string, string>>(techDataJson, {});
-  return {
-    region: parsed.region || null,
-    city: parsed.city || null,
-  };
 }
 
 async function applyBlankDraftExtras(page: import('playwright').Page, labels: string[]): Promise<void> {
@@ -219,41 +75,8 @@ async function publishDraftBackupFromDb(
       throw new Error(`Login failed for ${dealer.slug}`);
     }
 
-    const { region, city } = getRegionCityValues(backup.tech_data_json);
-    const fieldOverrides = buildBackupFieldOverrides(backup);
-    const dependentFields = [
-      { name: 'f5', value: backup.make || '' },
-      { name: 'f6', value: backup.model || '' },
-      { name: 'f18', value: region || '' },
-      { name: 'f19', value: city || '' },
-    ].filter((field) => field.value);
-    const editableFields = [
-      { tag: 'input', type: 'text', name: 'f7', value: fieldOverrides.f7 ? String(fieldOverrides.f7) : '' },
-      { tag: 'select', name: 'f8', value: fieldOverrides.f8 ? String(fieldOverrides.f8) : '' },
-      { tag: 'input', type: 'text', name: 'f9', value: fieldOverrides.f9 != null ? String(fieldOverrides.f9) : '' },
-      { tag: 'select', name: 'f29', value: fieldOverrides.f29 ? String(fieldOverrides.f29) : '' },
-      { tag: 'select', name: 'f10', value: fieldOverrides.f10 ? String(fieldOverrides.f10) : '' },
-      { tag: 'select', name: 'f11', value: fieldOverrides.f11 ? String(fieldOverrides.f11) : '' },
-      { tag: 'input', type: 'text', name: 'f12', value: fieldOverrides.f12 != null ? String(fieldOverrides.f12) : '' },
-      { tag: 'select', name: 'f13', value: fieldOverrides.f13 ? String(fieldOverrides.f13) : '' },
-      { tag: 'select', name: 'f14', value: fieldOverrides.f14 ? String(fieldOverrides.f14) : '' },
-      { tag: 'select', name: 'f15', value: fieldOverrides.f15 ? String(fieldOverrides.f15) : '' },
-      { tag: 'input', type: 'text', name: 'f16', value: fieldOverrides.f16 != null ? String(fieldOverrides.f16) : '' },
-      { tag: 'select', name: 'f17', value: fieldOverrides.f17 ? String(fieldOverrides.f17) : '' },
-      { tag: 'textarea', type: 'textarea', name: 'f21', value: fieldOverrides.f21 ? String(fieldOverrides.f21) : '' },
-      { tag: 'input', type: 'text', name: 'f22', value: fieldOverrides.f22 ? String(fieldOverrides.f22) : '' },
-      { tag: 'input', type: 'text', name: 'f23', value: fieldOverrides.f23 ? String(fieldOverrides.f23) : '' },
-      { tag: 'input', type: 'text', name: 'f24', value: fieldOverrides.f24 ? String(fieldOverrides.f24) : '' },
-      { tag: 'select', name: 'f25', value: fieldOverrides.f25 ? String(fieldOverrides.f25) : '' },
-      { tag: 'input', type: 'text', name: 'f30', value: fieldOverrides.f30 != null ? String(fieldOverrides.f30) : '' },
-      { tag: 'select', name: 'f31', value: fieldOverrides.f31 ? String(fieldOverrides.f31) : '' },
-      { tag: 'input', type: 'text', name: 'f32', value: fieldOverrides.f32 ? String(fieldOverrides.f32) : '' },
-      { tag: 'input', type: 'text', name: 'f33', value: fieldOverrides.f33 ? String(fieldOverrides.f33) : '' },
-      { tag: 'input', type: 'text', name: 'f34', value: fieldOverrides.f34 ? String(fieldOverrides.f34) : '' },
-      { tag: 'input', type: 'checkbox', name: 'priceneg', value: fieldOverrides.priceneg ? String(fieldOverrides.priceneg) : '' },
-    ].filter((field) => field.value);
-
-    const pubtype = getPrimaryPubtype(backup.tech_data_json);
+    const { region, city, fieldOverrides, dependentFields, editableFields, pubtype } =
+      buildDraftPublishFields(backup);
     await page.goto(`https://www.mobile.bg/pcgi/mobile.cgi?pubtype=${encodeURIComponent(pubtype)}&act=6&subact=4&actions=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1800);
     await acceptMobileBgCookies(page);

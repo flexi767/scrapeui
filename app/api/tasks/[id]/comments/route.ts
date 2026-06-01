@@ -4,6 +4,7 @@ import { raw } from '@/db/client';
 import { getTaskComments } from '@/lib/queries';
 import { logActivity, parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(
   _request: NextRequest,
@@ -37,10 +38,13 @@ export async function POST(
     return NextResponse.json({ error: 'Body is required' }, { status: 400 });
   }
 
-  const result = raw.prepare(`
-    INSERT INTO comments (task_id, author_id, body, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(taskId, Number(session.user.id), body, now, now);
+  const result = runInsert(raw, 'comments', {
+    task_id: taskId,
+    author_id: Number(session.user.id),
+    body,
+    created_at: now,
+    updated_at: now,
+  });
 
   logActivity(raw, 'task', taskId, 'comment_added', null, Number(session.user.id), now);
 

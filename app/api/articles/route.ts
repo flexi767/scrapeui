@@ -4,6 +4,7 @@ import { raw } from '@/db/client';
 import { getArticles } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -48,10 +49,14 @@ export async function POST(request: NextRequest) {
   const existing = raw.prepare('SELECT id FROM articles WHERE slug = ?').get(slug);
   if (existing) slug = `${slug}-${Date.now()}`;
 
-  const result = raw.prepare(`
-    INSERT INTO articles (title, slug, body, author_id, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(title.trim(), slug, articleBody, Number(session.user.id), now, now);
+  const result = runInsert(raw, 'articles', {
+    title: title.trim(),
+    slug,
+    body: articleBody,
+    author_id: Number(session.user.id),
+    created_at: now,
+    updated_at: now,
+  });
 
   const articleId = result.lastInsertRowid as number;
 

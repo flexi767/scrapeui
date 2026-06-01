@@ -3,16 +3,18 @@ import { raw } from "@/db/client";
 import { requireAuth } from "@/lib/api/auth-helpers";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
 import {
-  generatePosterVariants,
   getPosterCacheDir,
   mergePosterVariants,
+  readCachedPosters,
+  selectPosterVariants,
+  writeCachedPosters,
+} from "./cache";
+import {
+  generatePosterVariants,
   parseCollageSelections,
   parseVariantId,
   parseVariantPrompts,
-  readCachedPosters,
-  selectPosterVariants,
   type PosterRequestBody,
-  writeCachedPosters,
 } from "./service";
 
 export const runtime = "nodejs";

@@ -9,6 +9,7 @@ import {
   type TikTokVideoListingPayload,
 } from "@/components/tiktok/video-renderer";
 import { errorMessage, isAbortError, parseJson } from "@/lib/utils";
+import { getLocalStorageItem, setLocalStorageItem } from "@/components/publisher/local-storage";
 
 export type TikTokPhoto = TikTokVideoListingPayload["photos"][number] & {
   usable: boolean;
@@ -78,10 +79,10 @@ export function useTikTokVideoPublisher() {
     setPhotos(
       applySavedPhotoState(
         data.photos,
-        window.localStorage.getItem(`${PHOTO_STATE_STORAGE_PREFIX}${data.backupId}`),
+        getLocalStorageItem(`${PHOTO_STATE_STORAGE_PREFIX}${data.backupId}`),
       ),
     );
-    const savedCaption = window.localStorage.getItem(`${CAPTION_STORAGE_PREFIX}${data.backupId}`);
+    const savedCaption = getLocalStorageItem(`${CAPTION_STORAGE_PREFIX}${data.backupId}`);
     setCaption(savedCaption || buildDefaultTikTokCaption(data));
     replaceVideo(null);
     setPreviewUrl("");
@@ -112,7 +113,7 @@ export function useTikTokVideoPublisher() {
   function updatePhotos(nextPhotos: TikTokPhoto[]) {
     if (!listing) return;
     setPhotos(nextPhotos);
-    window.localStorage.setItem(`${PHOTO_STATE_STORAGE_PREFIX}${listing.backupId}`, serializePhotoState(nextPhotos));
+    setLocalStorageItem(`${PHOTO_STATE_STORAGE_PREFIX}${listing.backupId}`, serializePhotoState(nextPhotos));
     renderControllerRef.current?.abort();
     replaceVideo(null);
     setPreviewUrl("");
@@ -175,7 +176,7 @@ export function useTikTokVideoPublisher() {
       toast.error("Mark at least one image as usable before generating the video.");
       return;
     }
-    window.localStorage.setItem(`${CAPTION_STORAGE_PREFIX}${listing.backupId}`, caption);
+    setLocalStorageItem(`${CAPTION_STORAGE_PREFIX}${listing.backupId}`, caption);
     renderControllerRef.current?.abort();
     const controller = new AbortController();
     renderControllerRef.current = controller;

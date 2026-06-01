@@ -4,6 +4,7 @@ import { raw } from '@/db/client';
 import { getTasks } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -39,14 +40,20 @@ export async function POST(request: NextRequest) {
   }
 
   const now = currentIsoTimestamp();
-  const result = raw.prepare(`
-    INSERT INTO tasks (title, description, status, priority, assignee_id, created_by_id, parent_id, deadline, is_recurring, recur_rule, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    title.trim(), description || null, status, priority,
-    assigneeId || null, Number(session.user.id), parentId || null,
-    deadline || null, isRecurring ? 1 : 0, recurRule || null, now, now,
-  );
+  const result = runInsert(raw, 'tasks', {
+    title: title.trim(),
+    description: description || null,
+    status,
+    priority,
+    assignee_id: assigneeId || null,
+    created_by_id: Number(session.user.id),
+    parent_id: parentId || null,
+    deadline: deadline || null,
+    is_recurring: isRecurring ? 1 : 0,
+    recur_rule: recurRule || null,
+    created_at: now,
+    updated_at: now,
+  });
 
   const taskId = result.lastInsertRowid as number;
 

@@ -1,44 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp } from '@/lib/date-format';
-import { getVatFromMobileBgLabel } from '@/lib/vat';
-
-interface NewListingBody {
-  dealerId: string;
-  pubtype: string;
-  make: string;
-  model: string;
-  title: string;
-  condition?: string;
-  body_type?: string;
-  bodyType?: string;
-  fuel: string;
-  transmission: string;
-  productionMonth?: string;
-  productionYear?: string;
-  mileage: string;
-  power: string;
-  engineCc: string;
-  euronorm?: string;
-  batteryRange?: string;
-  batteryCapacity?: string;
-  color: string;
-  region: string;
-  city: string;
-  price: string;
-  priceOnRequest?: boolean;
-  vat: string;
-  currency?: string;
-  vin?: string;
-  description: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  extras: Record<string, string[]>;
-}
+import { runInsert } from '@/lib/listings/sql';
+import {
+  buildExtrasJson,
+  buildTechData,
+  getFullFormVat,
+  type FullFormBody,
+} from '@/app/api/editown/backups/[backupId]/helpers';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as NewListingBody;
+  const body = await req.json() as FullFormBody;
   const bodyType = body.body_type ?? body.bodyType ?? '';
   const productionYear = body.productionYear ?? '';
 
@@ -49,60 +21,28 @@ export async function POST(req: NextRequest) {
   }
 
   const now = currentIsoTimestamp();
-
-  // Save as a mobilebg_backup record (own dealer draft — no mobileId yet)
-  const techDataPayload: Record<string, string> = {};
-  if (body.pubtype) techDataPayload.pubtype = body.pubtype;
-  if (body.region) techDataPayload.region = body.region;
-  if (body.city) techDataPayload.city = body.city;
-  if (body.condition) techDataPayload.f25 = body.condition;
-  if (body.euronorm) techDataPayload.f29 = body.euronorm.replace(/^Евро\s+/, '');
-  if (body.currency) techDataPayload.f13 = body.currency;
-  if (body.productionMonth) techDataPayload.f14 = body.productionMonth;
-  if (productionYear) techDataPayload.f15 = productionYear;
-  if (body.phone) techDataPayload.f22 = body.phone;
-  if (body.email) techDataPayload.f23 = body.email;
-  if (body.website) techDataPayload.f24 = body.website;
-  if (body.vin) techDataPayload.f32 = body.vin;
-  if (body.batteryRange) techDataPayload.f33 = body.batteryRange;
-  if (body.batteryCapacity) techDataPayload.f34 = body.batteryCapacity;
-  if (body.priceOnRequest) techDataPayload.priceneg = '99999999';
-  const techData = Object.keys(techDataPayload).length > 0
-    ? JSON.stringify(techDataPayload)
-    : null;
-  const extrasJson = body.extras && Object.keys(body.extras).length > 0
-    ? JSON.stringify(body.extras)
-    : null;
-
-  const result = raw.prepare(`
-    INSERT INTO mobilebg_backups (
-      dealer_id, source_title, make, model, title,
-      price_amount, year, mileage, fuel, power, engine,
-      color, transmission, category, description,
-      vat_included, extras_json, tech_data_json, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    Number(body.dealerId),
-    body.title || null,
-    body.make || null,
-    body.model || null,
-    body.title || null,
-    body.price ? Number(body.price) : null,
-    productionYear ? Number(productionYear) : null,
-    body.mileage ? Number(body.mileage) : null,
-    body.fuel || null,
-    body.power ? Number(body.power) : null,
-    body.engineCc ? `${body.engineCc} куб.см` : null,
-    body.color || null,
-    body.transmission || null,
-    bodyType || null,
-    body.description || null,
-    getVatFromMobileBgLabel(body.vat),
-    extrasJson,
-    techData,
-    now,
-    now,
-  );
+  const result = runInsert(raw, 'mobilebg_backups', {
+    dealer_id: Number(body.dealerId),
+    source_title: body.title || null,
+    make: body.make || null,
+    model: body.model || null,
+    title: body.title || null,
+    price_amount: body.price ? Number(body.price) : null,
+    year: productionYear ? Number(productionYear) : null,
+    mileage: body.mileage ? Number(body.mileage) : null,
+    fuel: body.fuel || null,
+    power: body.power ? Number(body.power) : null,
+    engine: body.engineCc ? `${body.engineCc} куб.см` : null,
+    color: body.color || null,
+    transmission: body.transmission || null,
+    category: bodyType || null,
+    description: body.description || null,
+    vat_included: getFullFormVat(body),
+    extras_json: buildExtrasJson(body),
+    tech_data_json: buildTechData(body),
+    created_at: now,
+    updated_at: now,
+  });
 
   return NextResponse.json({ id: result.lastInsertRowid });
 }

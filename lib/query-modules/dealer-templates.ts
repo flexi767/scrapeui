@@ -1,5 +1,6 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
+import { runInsert } from "@/lib/listings/sql";
 
 export interface DealerTemplateConfig {
   id: number;
@@ -67,12 +68,14 @@ export function createDealerTemplateConfig(params: {
   configJson: string;
 }): number {
   const now = currentIsoTimestamp();
-  const result = raw
-    .prepare(
-      `INSERT INTO dealer_template_configs (dealer_id, base_template_id, name, config_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .run(params.dealerId, params.baseTemplateId, params.name, params.configJson, now, now);
+  const result = runInsert(raw, "dealer_template_configs", {
+    dealer_id: params.dealerId,
+    base_template_id: params.baseTemplateId,
+    name: params.name,
+    config_json: params.configJson,
+    created_at: now,
+    updated_at: now,
+  });
   return result.lastInsertRowid as number;
 }
 

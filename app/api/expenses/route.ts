@@ -4,6 +4,7 @@ import { raw } from '@/db/client';
 import { getExpenses } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(request: NextRequest) {
   const check = await requireAuth();
@@ -38,10 +39,17 @@ export async function POST(request: NextRequest) {
   }
 
   const now = currentIsoTimestamp();
-  const result = raw.prepare(`
-    INSERT INTO expenses (title, amount, currency, date, category, notes, created_by_id, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(title.trim(), amount, currency, date, category, notes || null, Number(session.user.id), now, now);
+  const result = runInsert(raw, 'expenses', {
+    title: title.trim(),
+    amount,
+    currency,
+    date,
+    category,
+    notes: notes || null,
+    created_by_id: Number(session.user.id),
+    created_at: now,
+    updated_at: now,
+  });
 
   const expenseId = result.lastInsertRowid as number;
 

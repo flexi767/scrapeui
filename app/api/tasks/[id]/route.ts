@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 import { getTaskById } from '@/lib/queries';
 import { logActivity, parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 
@@ -105,14 +106,20 @@ function createNextRecurring(parentTaskId: number, parentTask: Record<string, un
     } catch { /* ignore parse errors */ }
   }
 
-  const result = raw.prepare(`
-    INSERT INTO tasks (title, description, status, priority, assignee_id, created_by_id, parent_id, deadline, is_recurring, recur_rule, created_at, updated_at)
-    VALUES (?, ?, 'backlog', ?, ?, ?, ?, ?, 1, ?, ?, ?)
-  `).run(
-    parentTask.title, parentTask.description, parentTask.priority,
-    parentTask.assignee_id, parentTask.created_by_id, parentTaskId,
-    nextDeadline, parentTask.recur_rule, now, now,
-  );
+  const result = runInsert(raw, 'tasks', {
+    title: parentTask.title,
+    description: parentTask.description,
+    status: 'backlog',
+    priority: parentTask.priority,
+    assignee_id: parentTask.assignee_id,
+    created_by_id: parentTask.created_by_id,
+    parent_id: parentTaskId,
+    deadline: nextDeadline,
+    is_recurring: 1,
+    recur_rule: parentTask.recur_rule,
+    created_at: now,
+    updated_at: now,
+  });
 
   const newTaskId = result.lastInsertRowid as number;
 

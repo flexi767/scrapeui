@@ -1,5 +1,6 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
+import { runInsert } from "@/lib/listings/sql";
 import type {
   EditOwnSyncRow,
   MakeModelMappingRow,
@@ -105,14 +106,14 @@ export function getMobileBgCrawlRuns(limit = 20): MobileBgCrawlRunRow[] {
 
 export function createCrawlRun(dealerId: number, sourceUrl: string): number {
   const now = currentIsoTimestamp();
-  const result = raw
-    .prepare(
-      `
-    INSERT INTO mobilebg_crawl_runs (dealer_id, source_url, status, started_at, created_at, updated_at)
-    VALUES (?, ?, 'running', ?, ?, ?)
-  `,
-    )
-    .run(dealerId, sourceUrl, now, now, now);
+  const result = runInsert(raw, "mobilebg_crawl_runs", {
+    dealer_id: dealerId,
+    source_url: sourceUrl,
+    status: "running",
+    started_at: now,
+    created_at: now,
+    updated_at: now,
+  });
   return result.lastInsertRowid as number;
 }
 

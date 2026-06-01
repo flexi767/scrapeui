@@ -5,16 +5,15 @@ import { isValidDealerSlug } from '@/lib/dealer-config';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import {
   PLATFORM_ACCOUNT_COLUMNS,
-  getPlatformAccountValues,
   pickNullablePlatformAccountFields,
   type PlatformAccountFields,
 } from '@/lib/dealers/platformCredentials';
 import {
   SOCIAL_ACCOUNT_COLUMNS,
-  getSocialAccountValues,
   pickNullableSocialAccountFields,
   type SocialAccountFields,
 } from '@/lib/dealers/socialCredentials';
+import { runInsert } from '@/lib/listings/sql';
 
 interface DealerRow extends PlatformAccountFields<string | null>, SocialAccountFields<string | null> {
   id: number;
@@ -71,25 +70,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
   }
   try {
-    const accountValues = [
-      ...getPlatformAccountValues(platformFields),
-      ...getSocialAccountValues(socialFields),
-    ];
-    const result = raw.prepare(
-      `INSERT INTO dealers (
-        slug, name, own, active, priority,
-        ${PLATFORM_ACCOUNT_COLUMNS},
-        ${SOCIAL_ACCOUNT_COLUMNS},
-        created_at
-      ) VALUES (?, ?, ?, 1, ?, ${accountValues.map(() => '?').join(', ')}, ?)`
-    ).run(
+    const result = runInsert(raw, 'dealers', {
       slug,
       name,
-      own ? 1 : 0,
+      own: own ? 1 : 0,
+      active: 1,
       priority,
-      ...accountValues,
-      currentIsoTimestamp(),
-    );
+      ...platformFields,
+      ...socialFields,
+      created_at: currentIsoTimestamp(),
+    });
     return NextResponse.json({
       id: result.lastInsertRowid,
       slug,

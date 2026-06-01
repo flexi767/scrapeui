@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/api/auth-helpers';
 import bcrypt from 'bcryptjs';
 import { isValidDealerSlug } from '@/lib/dealer-config';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 import { errorMessage } from '@/lib/utils';
 
 // POST /api/dealers/register
@@ -37,17 +38,26 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(password as string, 10);
 
   const insert = raw.transaction(() => {
-    const dealerResult = raw.prepare(
-      `INSERT INTO dealers (slug, name, mobile_url, own, active, priority, created_at)
-       VALUES (?, ?, ?, ?, 1, ?, ?)`,
-    ).run(slug, name.trim(), (mobile_url as string) || null, own ? 1 : 0, priority, now);
+    const dealerResult = runInsert(raw, 'dealers', {
+      slug,
+      name: name.trim(),
+      mobile_url: (mobile_url as string) || null,
+      own: own ? 1 : 0,
+      active: 1,
+      priority,
+      created_at: now,
+    });
 
     const dealerId = dealerResult.lastInsertRowid as number;
 
-    raw.prepare(
-      `INSERT INTO users (username, name, password_hash, role, dealer_id, created_at)
-       VALUES (?, ?, ?, 'user', ?, ?)`,
-    ).run((username as string).trim(), (name as string).trim(), passwordHash, dealerId, now);
+    runInsert(raw, 'users', {
+      username: (username as string).trim(),
+      name: (name as string).trim(),
+      password_hash: passwordHash,
+      role: 'user',
+      dealer_id: dealerId,
+      created_at: now,
+    });
 
     return dealerId;
   });

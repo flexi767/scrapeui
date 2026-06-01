@@ -4,6 +4,7 @@ import { raw } from '@/db/client';
 import { getTaskTimeEntries } from '@/lib/queries';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(
   _request: NextRequest,
@@ -37,10 +38,14 @@ export async function POST(
   }
 
   const now = currentIsoTimestamp();
-  const result = raw.prepare(`
-    INSERT INTO time_entries (task_id, user_id, description, duration_minutes, date, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(taskId, Number(session.user.id), description || null, durationMinutes, date, now);
+  const result = runInsert(raw, 'time_entries', {
+    task_id: taskId,
+    user_id: Number(session.user.id),
+    description: description || null,
+    duration_minutes: durationMinutes,
+    date,
+    created_at: now,
+  });
 
   return NextResponse.json({ id: result.lastInsertRowid }, { status: 201 });
 }
