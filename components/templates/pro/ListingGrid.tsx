@@ -5,6 +5,7 @@ import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
 import { fmtPrice, fmtMileage, filterHref } from "../utils";
 import { MakeSelect, FuelSelect, SortSelect, PriceMaxInput, Pagination } from "../FilterBar";
+import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 function fuelBadgeClass(fuel: string | null): string {
@@ -23,15 +24,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
   const endItem = Math.min(page * limit, total);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div>
-          <span className={s.logoBadge}>PRO</span>
-          <span className={s.logoName}>{dealer.name}</span>
-        </div>
-        <a href="#contact" className={s.headerEnquire}>Enquire</a>
-      </header>
-
+    <Shell dealer={dealer} current="cars">
       <div className={s.toolbar}>
         <MakeSelect base={base} filters={filters} makes={makes} className={s.toolbarSelect} />
         <FuelSelect base={base} filters={filters} className={s.toolbarSelect} allLabel="Any Fuel" />
@@ -104,11 +97,6 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           )}
         </div>
       </div>
-
-      <footer className={s.footer}>
-        <span className={s.footLogo}>{dealer.name}</span>
-        <span>{dealer.publicDomain ?? ""}</span>
-      </footer>
-    </div>
+    </Shell>
   );
 }

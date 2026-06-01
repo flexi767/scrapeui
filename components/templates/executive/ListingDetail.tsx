@@ -3,24 +3,18 @@ import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingDetailProps } from "../types";
 import { fmt } from "../utils";
+import { Shell } from "./Shell";
 import s from "./ListingDetail.module.css";
 
 export function ListingDetail({ dealer, listing }: ListingDetailProps) {
   const base = `/d/${dealer.slug}`;
-  const initial = dealer.name.charAt(0);
   const thumb = getPublicThumbSrc(listing);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.logoWrap}>
-          <div className={s.logoMark}>{initial}</div>
-          <div className={s.logoText}><span className={s.logoAccent}>{initial}</span>{dealer.name.slice(1).toUpperCase()}</div>
-        </div>
-        <Link href={base} className={s.back}>← Back</Link>
-      </header>
+    <Shell dealer={dealer}>
       <div className={s.main}>
         <div>
+          <Link href={base} className={s.back}>← Back</Link>
           {thumb
             ? <div className={s.imageWrap}><ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /></div>
             : <div className={s.imagePlaceholder}>🚗</div>}
@@ -38,10 +32,9 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
             {listing.power != null && <div className={s.specItem}><div className={s.specLbl}>Power</div><div className={s.specVal}>{listing.power} hp</div></div>}
             {listing.color && <div className={s.specItem}><div className={s.specLbl}>Color</div><div className={s.specVal}>{listing.color}</div></div>}
           </div>
-          <a href={dealer.mobileUrl ?? '#'} target="_blank" rel="noopener noreferrer" className={s.cta}>Enquire Now</a>
+          <a href={dealer.mobileUrl ?? undefined} target="_blank" rel="noopener noreferrer" className={s.cta}>Enquire Now</a>
         </div>
       </div>
-      <footer className={s.footer}><span className={s.footAccent}>{initial}</span>{dealer.name.slice(1).toUpperCase()}</footer>
-    </div>
+    </Shell>
   );
 }

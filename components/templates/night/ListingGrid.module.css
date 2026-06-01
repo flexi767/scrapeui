@@ -44,3 +44,12 @@
 .footer { border-top: 1px solid rgba(255,255,255,0.05); padding: 2rem; text-align: center; margin-top: 3rem; font-size: 0.75rem; color: rgba(255,255,255,0.2); }
 .footLogo { color: rgba(255,255,255,0.5); font-weight: 800; font-size: 0.9rem; margin-bottom: 0.4rem; }
 .footLogoAccent { color: #00e5b2; }
+.logoWrap { display: flex; align-items: center; text-decoration: none; }
+.nav { display: flex; align-items: center; gap: 1.4rem; }
+.navLink { color: rgba(255,255,255,0.45); text-decoration: none; font-size: 0.82rem; font-weight: 600; transition: color 0.15s; }
+.navLink:hover { color: #00e5b2; }
+.navLinkActive { color: #00e5b2; text-decoration: none; font-size: 0.82rem; font-weight: 700; }
+.headerCta { background: rgba(0,229,178,0.1); border: 1px solid rgba(0,229,178,0.3); color: #00e5b2; padding: 0.4rem 0.9rem; border-radius: 5px; font-size: 0.78rem; font-weight: 700; text-decoration: none; }
+.footerLinks { display: flex; justify-content: center; gap: 1.2rem; margin-top: 0.6rem; }
+.footerLink { color: rgba(255,255,255,0.25); text-decoration: none; font-size: 0.72rem; }
+.footerLink:hover { color: #00e5b2; }

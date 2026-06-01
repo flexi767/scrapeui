@@ -344,6 +344,18 @@ export const notifications = sqliteTable("notifications", {
   createdAt: text("created_at"),
 });
 
+export const dealerEnquiries = sqliteTable("dealer_enquiries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dealerId: integer("dealer_id")
+    .notNull()
+    .references(() => dealers.id),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  readAt: text("read_at"),
+  createdAt: text("created_at"),
+});
+
 // ─── Activity Log ─────────────────────────────────────────────────
 
 export const activityLog = sqliteTable("activity_log", {

@@ -5,6 +5,7 @@ import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
 import { fmtPrice, fmtMileage } from "../utils";
 import { MakeSelect, FuelSelect, SortSelect, PriceMaxInput, YearRangeInputs, Pagination } from "../FilterBar";
+import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
@@ -12,15 +13,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.logo}>
-          {dealer.name.slice(0, Math.ceil(dealer.name.length / 2))}
-          <span className={s.logoAccent}>{dealer.name.slice(Math.ceil(dealer.name.length / 2))}</span>
-        </div>
-        <a href="#contact" className={s.headerCta}>Contact</a>
-      </header>
-
+    <Shell dealer={dealer} current="cars">
       <div className={s.hero}>
         <div className={s.heroInner}>
           <h1 className={s.heroTitle}>Find Your Perfect <span className={s.heroAccent}>Ride.</span></h1>
@@ -87,11 +80,6 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           />
         </div>
       </div>
-
-      <footer className={s.footer}>
-        <span className={s.footerAccent}>{dealer.name}</span>
-        {dealer.publicDomain && ` · ${dealer.publicDomain}`}
-      </footer>
-    </div>
+    </Shell>
   );
 }

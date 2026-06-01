@@ -1,8 +1,16 @@
 .page { font-family: -apple-system, sans-serif; background: #f0f2f5; color: #1e2533; min-height: 100vh; }
 .header { background: #1e2533; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logo { display: flex; align-items: center; text-decoration: none; }
 .logoBadge { background: #2e6fef; color: #fff; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.78rem; font-weight: 800; margin-right: 0.5rem; }
 .logoName { color: #fff; font-size: 1rem; font-weight: 700; }
+.nav { display: flex; align-items: center; gap: 1.2rem; }
+.navLink { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; font-weight: 500; }
+.navLink:hover { color: #fff; }
+.navLinkActive { color: #fff; text-decoration: none; font-size: 0.82rem; font-weight: 700; }
 .headerEnquire { background: #2e6fef; color: #fff; padding: 0.45rem 1.1rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600; text-decoration: none; }
+.footerLinks { display: flex; gap: 1rem; }
+.footerLink { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.72rem; }
+.footerLink:hover { color: rgba(255,255,255,0.7); }
 .toolbar { background: #fff; border-bottom: 1px solid #dde1e9; padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .toolbarSelect { border: 1px solid #dde1e9; background: #fff; color: #1e2533; padding: 0.45rem 0.85rem; font-size: 0.8rem; border-radius: 5px; }
 .toolbarSpacer { flex: 1; }

@@ -5,23 +5,15 @@ import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
 import { fmtPrice, fmtMileage } from "../utils";
 import { MakeSelect, FuelSelect, SortSelect, PriceMaxInput, Pagination } from "../FilterBar";
+import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
-  const nameFirst = dealer.name.charAt(0);
-  const nameRest = dealer.name.slice(1);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.logoWrap}>
-          <div className={s.logoDot} />
-          <div className={s.logoText}><span className={s.logoAccent}>{nameFirst}</span>{nameRest}</div>
-        </div>
-      </header>
-
+    <Shell dealer={dealer} current="cars">
       <div className={s.ticker}>
         <span><strong>{total}</strong> vehicles available</span>
         <span>Updated today</span>
@@ -89,11 +81,6 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           />
         </div>
       </div>
-
-      <footer className={s.footer}>
-        <div className={s.footLogo}><span className={s.footLogoAccent}>{nameFirst}</span>{nameRest}</div>
-        <div>{dealer.publicDomain ?? ""}</div>
-      </footer>
-    </div>
+    </Shell>
   );
 }
