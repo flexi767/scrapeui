@@ -1,5 +1,6 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
+import { runInsert, runUpdate } from "@/lib/listings/sql";
 import { parseSearchFields, type SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
   getListingSearchPrefill,
@@ -209,14 +210,12 @@ export function createSavedSearch(
 ) {
   ensureSavedSearchTables();
   const now = currentIsoTimestamp();
-  const result = raw
-    .prepare(
-      `
-    INSERT INTO saved_searches (listing_id, fields_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
-  `,
-    )
-    .run(listingId, JSON.stringify(fields), now, now);
+  const result = runInsert(raw, "saved_searches", {
+    listing_id: listingId,
+    fields_json: JSON.stringify(fields),
+    created_at: now,
+    updated_at: now,
+  });
 
   return Number(result.lastInsertRowid);
 }
@@ -224,15 +223,12 @@ export function createSavedSearch(
 export function updateSavedSearch(id: number, fields: SearchField[]) {
   ensureSavedSearchTables();
   const now = currentIsoTimestamp();
-  raw
-    .prepare(
-      `
-    UPDATE saved_searches
-    SET fields_json = ?, updated_at = ?
-    WHERE id = ?
-  `,
-    )
-    .run(JSON.stringify(fields), now, id);
+  runUpdate(
+    raw,
+    "saved_searches",
+    { fields_json: JSON.stringify(fields), updated_at: now },
+    { sql: "id = ?", params: [id] },
+  );
   return now;
 }
 
@@ -244,26 +240,21 @@ export function upsertSavedSearchProfile(
   const now = currentIsoTimestamp();
   const fieldsJson = JSON.stringify(fields);
   const saveProfile = raw.transaction(() => {
-    const update = raw
-      .prepare(
-        `
-      UPDATE saved_searches
-      SET fields_json = ?, updated_at = ?
-      WHERE listing_id = ?
-    `,
-      )
-      .run(fieldsJson, now, listingId);
+    const update = runUpdate(
+      raw,
+      "saved_searches",
+      { fields_json: fieldsJson, updated_at: now },
+      { sql: "listing_id = ?", params: [listingId] },
+    );
 
     if (update.changes > 0) return;
 
-    raw
-      .prepare(
-        `
-      INSERT INTO saved_searches (listing_id, fields_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-    `,
-      )
-      .run(listingId, fieldsJson, now, now);
+    runInsert(raw, "saved_searches", {
+      listing_id: listingId,
+      fields_json: fieldsJson,
+      created_at: now,
+      updated_at: now,
+    });
   });
 
   saveProfile();

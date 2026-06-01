@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { runUpdate, type ColumnValues } from '@/lib/listings/sql';
 import {
   normalizeLabel,
   normalizeCompareText,
@@ -28,23 +29,13 @@ export function applyCarsBgSyncedContent(
   listingId: number,
   content: { title?: string | null; description?: string | null; price?: number | null },
 ): void {
-  const assignments: string[] = [];
-  const values: unknown[] = [];
-  if (content.price !== undefined) {
-    assignments.push('current_price = ?');
-    values.push(content.price ?? null);
-  }
-  if (content.title !== undefined) {
-    assignments.push('carsbg_title = ?');
-    values.push(content.title ?? null);
-  }
-  if (content.description !== undefined) {
-    assignments.push('description = ?');
-    values.push(content.description ?? null);
-  }
-  if (!assignments.length) return;
-  values.push(listingId);
-  db.prepare(`UPDATE listings SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
+  const updates: ColumnValues = {
+    current_price: content.price !== undefined ? content.price ?? null : undefined,
+    carsbg_title: content.title !== undefined ? content.title ?? null : undefined,
+    description: content.description !== undefined ? content.description ?? null : undefined,
+  };
+  if (!Object.values(updates).some((value) => value !== undefined)) return;
+  runUpdate(db, 'listings', updates, { sql: 'id = ?', params: [listingId] });
 }
 
 export function getStaleCarsBgListings(db: Database.Database, dealerSlug: string): string[] {

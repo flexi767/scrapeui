@@ -3,6 +3,7 @@ import path from 'path';
 import type Database from 'better-sqlite3';
 import type { Page } from 'playwright';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { runInsert, runUpdate } from '@/lib/listings/sql';
 import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { errorMessage } from '@/lib/utils';
@@ -196,48 +197,52 @@ export async function captureEditFormSnapshotWithPage(
   const views = row.viewsText ? parseInt(row.viewsText, 10) || null : null;
   const viewedSinceDate = normalizeMobileBgDateTime(row.viewedAtText);
   const watching = row.watchingText ? parseInt(row.watchingText, 10) || null : null;
-  const result = db.prepare(`
-    INSERT INTO mobilebg_edit_form_snapshots (
-      dealer_id, listing_id, backup_id, mobile_id, source_url, listing_token, row_title, row_price_text, row_refresh_text, views, viewed_since_date, watching, form_url,
-      forms_json, fields_json, checked_boxes_json, checked_radios_json, hidden_json, screenshot_path, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    dealer.id,
-    listingRow?.id ?? null,
-    backupRow?.id ?? null,
-    mobileId,
-    row.sourceUrl,
-    row.token,
-    row.title,
-    row.priceText,
-    row.refreshText,
+  const result = runInsert(db, 'mobilebg_edit_form_snapshots', {
+    dealer_id: dealer.id,
+    listing_id: listingRow?.id ?? null,
+    backup_id: backupRow?.id ?? null,
+    mobile_id: mobileId,
+    source_url: row.sourceUrl,
+    listing_token: row.token,
+    row_title: row.title,
+    row_price_text: row.priceText,
+    row_refresh_text: row.refreshText,
     views,
-    viewedSinceDate,
+    viewed_since_date: viewedSinceDate,
     watching,
-    formDump.formUrl,
-    JSON.stringify(formDump.forms),
-    JSON.stringify(formDump.fields),
-    JSON.stringify(formDump.checkedBoxes),
-    JSON.stringify(formDump.checkedRadios),
-    JSON.stringify(formDump.hidden),
-    screenshotPath,
-    now,
-  );
+    form_url: formDump.formUrl,
+    forms_json: JSON.stringify(formDump.forms),
+    fields_json: JSON.stringify(formDump.fields),
+    checked_boxes_json: JSON.stringify(formDump.checkedBoxes),
+    checked_radios_json: JSON.stringify(formDump.checkedRadios),
+    hidden_json: JSON.stringify(formDump.hidden),
+    screenshot_path: screenshotPath,
+    created_at: now,
+  });
 
   if (backupRow?.id) {
-    db.prepare(`
-      UPDATE mobilebg_backups
-      SET row_refresh_text = ?, views = ?, viewed_since_date = ?, watching = ?, ad_status = ?, updated_at = ?
-      WHERE id = ?
-    `).run(row.refreshText, views, viewedSinceDate, watching, paidStatus, now, backupRow.id);
+    runUpdate(
+      db,
+      'mobilebg_backups',
+      {
+        row_refresh_text: row.refreshText,
+        views,
+        viewed_since_date: viewedSinceDate,
+        watching,
+        ad_status: paidStatus,
+        updated_at: now,
+      },
+      { sql: 'id = ?', params: [backupRow.id] },
+    );
   }
 
   if (listingRow?.id) {
-    db.prepare(`
-      UPDATE listings
-      SET ad_status = ?
-      WHERE id = ?
-    `).run(paidStatus, listingRow.id);
+    runUpdate(
+      db,
+      'listings',
+      { ad_status: paidStatus },
+      { sql: 'id = ?', params: [listingRow.id] },
+    );
   }
 
   return { snapshotId: Number(result.lastInsertRowid), screenshotPath, views, watching, adStatus: paidStatus };
