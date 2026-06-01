@@ -1,9 +1,11 @@
-import type { ListingGridProps, ListingDetailProps } from "./types";
+import type { ListingGridProps, ListingDetailProps, ShellProps } from "./types";
 import type React from "react";
 
 export interface TemplateModule {
   ListingGrid: React.ComponentType<ListingGridProps>;
   ListingDetail: React.ComponentType<ListingDetailProps>;
+  /** Optional page chrome used by the static inner pages (about/finance/etc.). */
+  Shell?: React.ComponentType<ShellProps>;
 }
 
 import * as bold from "./bold";

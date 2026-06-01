@@ -1,6 +1,11 @@
 .page { font-family: Georgia, serif; background: #fafaf8; color: #1a1a1a; min-height: 100vh; }
 .header { background: #fff; border-bottom: 1px solid #e8e8e0; padding: 0 3rem; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-.logo { font-size: 1.3rem; letter-spacing: 2px; text-transform: uppercase; }
+.logo { font-size: 1.3rem; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; color: #1a1a1a; }
+.nav { display: flex; align-items: center; gap: 1.6rem; }
+.navLink { font-family: -apple-system, sans-serif; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; color: #888; text-decoration: none; font-weight: 600; }
+.navLink:hover { color: #1a1a1a; }
+.navLinkActive { font-family: -apple-system, sans-serif; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; color: #1a1a1a; text-decoration: none; font-weight: 700; border-bottom: 1.5px solid #1a1a1a; padding-bottom: 2px; }
+.headerCta { font-family: -apple-system, sans-serif; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; text-decoration: none; background: #1a1a1a; color: #fff; padding: 0.45rem 1rem; }
 .filterBar { background: #fff; border-bottom: 1px solid #e8e8e0; padding: 1rem 3rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; font-family: -apple-system, sans-serif; }
 .filterBar select { border: 1px solid #e0e0e0; padding: 0.5rem 1rem; font-size: 0.82rem; background: #fff; color: #333; }
 .filterBar select:focus { outline: none; border-color: #1a1a1a; }
@@ -26,3 +31,7 @@
 .pageBtnActive { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 .footer { background: #1a1a1a; color: rgba(255,255,255,0.4); padding: 2.5rem 3rem; display: flex; justify-content: space-between; align-items: center; font-family: -apple-system, sans-serif; font-size: 0.78rem; }
 .footLogo { color: rgba(255,255,255,0.8); font-family: Georgia, serif; font-size: 1rem; letter-spacing: 2px; text-transform: uppercase; }
+.footerRight { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; font-size: 0.78rem; }
+.footerLinks { display: flex; gap: 1.2rem; }
+.footerLink { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.75rem; letter-spacing: 0.5px; }
+.footerLink:hover { color: rgba(255,255,255,0.75); }

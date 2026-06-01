@@ -1,6 +1,6 @@
 .page { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
 .header { background: rgba(10,10,10,0.95); border-bottom: 1px solid rgba(201,168,76,0.3); padding: 0 2.5rem; height: 70px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-.logoWrap { display: flex; align-items: center; gap: 0.8rem; }
+.logoWrap { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; }
 .logoMark { width: 36px; height: 36px; background: #c9a84c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; color: #000; }
 .logoText { font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #e8e8e8; }
 .logoAccent { color: #c9a84c; }
@@ -39,6 +39,16 @@
 .pagination { display: flex; justify-content: center; gap: 0.4rem; margin: 2rem 0; }
 .pageBtn { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: #c9a84c; padding: 0.45rem 0.9rem; font-size: 0.8rem; cursor: pointer; text-decoration: none; transition: all 0.2s; }
 .pageBtnActive { background: #c9a84c; color: #000; border-color: #c9a84c; }
+.nav { display: flex; align-items: center; gap: 1.5rem; }
+.navLink { color: rgba(255,255,255,0.45); text-decoration: none; font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase; transition: color 0.2s; }
+.navLink:hover { color: #c9a84c; }
+.navLinkActive { color: #c9a84c; text-decoration: none; font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase; }
+.headerCta { border: 1px solid rgba(201,168,76,0.5); color: #c9a84c; padding: 0.45rem 1rem; font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; transition: all 0.2s; }
+.headerCta:hover { background: #c9a84c; color: #000; }
 .footer { border-top: 1px solid rgba(201,168,76,0.2); padding: 2.5rem; text-align: center; margin-top: 4rem; }
-.footLogo { font-size: 0.9rem; letter-spacing: 5px; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+.footLogo { font-size: 0.9rem; letter-spacing: 5px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 0.6rem; }
 .footLogoAccent { color: #c9a84c; }
+.footDomain { font-size: 0.72rem; color: rgba(255,255,255,0.2); letter-spacing: 1px; margin-bottom: 0.8rem; }
+.footerLinks { display: flex; justify-content: center; gap: 1.2rem; margin-top: 0.6rem; }
+.footerLink { color: rgba(255,255,255,0.25); text-decoration: none; font-size: 0.68rem; letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s; }
+.footerLink:hover { color: #c9a84c; }

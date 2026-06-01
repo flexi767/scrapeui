@@ -98,6 +98,24 @@ export function getDealerByDomain(domain: string): PublicDealer | null {
   return row ?? null;
 }
 
+export interface DealerEnquiryInput {
+  dealerId: number;
+  name: string;
+  email: string;
+  message: string;
+}
+
+export function createDealerEnquiry(input: DealerEnquiryInput): number {
+  const now = new Date().toISOString();
+  const result = raw
+    .prepare(
+      `INSERT INTO dealer_enquiries (dealer_id, name, email, message, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(input.dealerId, input.name, input.email, input.message, now);
+  return Number(result.lastInsertRowid);
+}
+
 export function getRelatedListings(
   dealerId: number,
   excludeMobileId: string,

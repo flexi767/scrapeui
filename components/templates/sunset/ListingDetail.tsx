@@ -1,25 +1,15 @@
-import Link from "next/link";
 import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingDetailProps } from "../types";
 import { fmt } from "../utils";
+import { Shell } from "./Shell";
 import s from "./ListingDetail.module.css";
 
 export function ListingDetail({ dealer, listing }: ListingDetailProps) {
-  const base = `/d/${dealer.slug}`;
-  const initial = dealer.name.charAt(0);
-  const rest = dealer.name.slice(1);
   const thumb = getPublicThumbSrc(listing);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.logoWrap}>
-          <div className={s.logoIcon}>{initial}</div>
-          <div className={s.logoName}><span className={s.logoAccent}>{initial}</span>{rest}</div>
-        </div>
-        <Link href={base} className={s.back}>← Back</Link>
-      </header>
+    <Shell dealer={dealer} current="cars">
       <div className={s.main}>
         <div>
           {thumb
@@ -42,7 +32,6 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
           <a href={dealer.mobileUrl ?? '#'} target="_blank" rel="noopener noreferrer" className={s.cta}>Contact Dealer</a>
         </div>
       </div>
-      <footer className={s.footer}><span className={s.footerAccent}>{dealer.name}</span></footer>
-    </div>
+    </Shell>
   );
 }

@@ -5,6 +5,7 @@ import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
 import { fmtPrice, fmtMileage } from "../utils";
 import { MakeSelect, FuelSelect, SortSelect, Pagination } from "../FilterBar";
+import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
@@ -12,11 +13,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.logo}>{dealer.name}</div>
-      </header>
-
+    <Shell dealer={dealer} current="cars">
       <div className={s.filterBar}>
         <MakeSelect base={base} filters={filters} makes={makes} />
         <FuelSelect base={base} filters={filters} allLabel="Any Fuel" />
@@ -56,11 +53,6 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
         page={page} totalPages={totalPages} base={base} filters={filters}
         wrapperClassName={s.pagination} btnClassName={s.pageBtn} btnActiveClassName={s.pageBtnActive}
       />
-
-      <footer className={s.footer}>
-        <span className={s.footLogo}>{dealer.name}</span>
-        <span>{dealer.publicDomain ?? ""}</span>
-      </footer>
-    </div>
+    </Shell>
   );
 }
