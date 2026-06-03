@@ -3,7 +3,9 @@ import { resolveCarsBgMakeModelIds } from '@/lib/cars-bg/makes-models';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { saveListingThumb } from '@/lib/listing-thumbs';
 import {
+  buildListingSnapshotPayload,
   getPriceChangeDelta,
+  hasListingSnapshotChanges,
   insertListingSnapshot,
   previousValueIfChanged,
 } from '@/lib/listings/snapshots';
@@ -223,27 +225,22 @@ export async function upsertMobileBgListing(
     const descriptionChanged = isDeep
       ? hadDescription && (listing.description || '') !== (existing.description || '')
       : false;
-    const trackedChange =
-      priceChanged ||
-      vatChanged ||
-      lastEditChanged ||
-      viewsChanged ||
-      adStatusChanged ||
-      kaparoChanged ||
-      titleChanged ||
-      descriptionChanged;
+    const snapshotChanges = {
+      price: { changed: priceChanged, previous: existing.current_price },
+      vat: { changed: vatChanged, previous: existing.vat },
+      lastEdit: { changed: lastEditChanged, previous: existing.last_edit || null },
+      views: { changed: viewsChanged, previous: existing.views },
+      adStatus: { changed: adStatusChanged, previous: existing.ad_status || 'none' },
+      kaparo: { changed: kaparoChanged, previous: existing.kaparo ? 1 : 0 },
+      title: { changed: titleChanged, previous: existing.title || null },
+      description: { changed: descriptionChanged, previous: existing.description || null },
+    };
+    const trackedChange = hasListingSnapshotChanges(snapshotChanges);
 
     let changeEvent: MobileBgChangeEvent | undefined;
     if (trackedChange) {
       insertListingSnapshot(db, existing.id, {
-        price: previousValueIfChanged(priceChanged, existing.current_price),
-        vat: previousValueIfChanged(vatChanged, existing.vat),
-        lastEdit: previousValueIfChanged(lastEditChanged, existing.last_edit || null),
-        views: previousValueIfChanged(viewsChanged, existing.views),
-        adStatus: previousValueIfChanged(adStatusChanged, existing.ad_status || 'none'),
-        kaparo: previousValueIfChanged(kaparoChanged, existing.kaparo ? 1 : 0),
-        title: previousValueIfChanged(titleChanged, existing.title || null),
-        description: previousValueIfChanged(descriptionChanged, existing.description || null),
+        ...buildListingSnapshotPayload(snapshotChanges),
         recordedAt: now,
       });
       changeEvent = {

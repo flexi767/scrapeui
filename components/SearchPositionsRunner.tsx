@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
-import { errorMessage, isAbortError } from '@/lib/utils';
+import { readJsonError } from '@/lib/streaming-job';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
 import { SearchPositionsDoneBanner } from '@/components/search-positions/SearchPositionsDoneBanner';
 import { SearchPositionsLogPanel } from '@/components/search-positions/SearchPositionsLogPanel';
@@ -12,18 +11,17 @@ import { SearchPositionsRecentResults } from '@/components/search-positions/Sear
 import { SearchPositionsControlPanel } from '@/components/search-positions/SearchPositionsControlPanel';
 import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { useStreamingRun } from '@/components/shared/useStreamingRun';
 
 export default function SearchPositionsRunner() {
   const router = useRouter();
-  const [running, setRunning] = useState(false);
-  const [stopping, setStopping] = useState(false);
   const [activeMode, setActiveMode] = useState<'all' | 'missing' | null>(null);
   const [logs, setLogs] = useState<SearchPositionLogEntry[]>([]);
   const [stats, setStats] = useState<RankStats | null>(null);
   const [currentLabel, setCurrentLabel] = useState<string | null>(null);
   const [currentPreview, setCurrentPreview] = useState<SearchPositionPreview | null>(null);
   const [doneSummary, setDoneSummary] = useState<SearchPositionSummary | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const missingOnlyRef = useRef(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useAutoScroll(logRef, logs);
@@ -35,8 +33,7 @@ export default function SearchPositionsRunner() {
   const appendLog = (entry: SearchPositionLogEntry) => setLogs((prev) => [...prev, entry]);
 
   function resetRunState(missingOnly: boolean) {
-    setRunning(true);
-    setStopping(false);
+    missingOnlyRef.current = missingOnly;
     setActiveMode(missingOnly ? 'missing' : 'all');
     setLogs([]);
     setStats(null);
@@ -45,134 +42,97 @@ export default function SearchPositionsRunner() {
     setDoneSummary(null);
   }
 
-  function finishRun() {
-    setRunning(false);
-    setStopping(false);
-    setActiveMode(null);
-    abortRef.current = null;
-    setCurrentLabel(null);
-    setCurrentPreview(null);
-  }
+  const streamRun = useStreamingRun<SearchPositionStreamEntry>({
+    fallbackStartError: 'Failed to start search-position run',
+    start: (signal) => fetch('/api/editown/search-ranks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ missingOnly: missingOnlyRef.current }),
+      signal,
+    }),
+    stop: async () => {
+      const res = await fetch('/api/editown/search-ranks', { method: 'DELETE' });
+      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop search-position run'));
+    },
+    onEvent: (event) => {
+      if (event.type === 'start') {
+        setStats(event.stats);
+        if (event.message) appendLog({ kind: 'status', message: event.message });
+        return;
+      }
+
+      if (event.type === 'checking') {
+        setStats(event.stats);
+        setCurrentLabel(labelForTarget(event.target));
+        setCurrentPreview({ thumbUrl: event.target.thumb_url, listingUrl: event.target.listing_url });
+        if (event.message) appendLog({ kind: 'status', message: event.message });
+        return;
+      }
+
+      if (event.type === 'result') {
+        setStats(event.stats);
+        setCurrentLabel(labelForRow(event.row));
+        setCurrentPreview({ thumbUrl: event.row.thumb_url, listingUrl: event.row.listing_url });
+        appendLog(logEntryFromResult(event.row));
+        return;
+      }
+
+      if (event.type === 'log') {
+        if (event.message) {
+          appendLog({ kind: 'log', message: event.message });
+        }
+        return;
+      }
+
+      if (event.type === 'error') {
+        const message = event.message || 'Search-position run failed';
+        appendLog({ kind: 'error', message });
+        toast.error(message);
+        return;
+      }
+
+      if (event.type === 'complete') {
+        setDoneSummary(summaryFromCompleteEvent(event));
+        toast.success(`Checked ${event.total} listings • found ${event.found} • missing ${event.notFound}`);
+        router.refresh();
+      }
+    },
+    onFinish: () => {
+      setActiveMode(null);
+      setCurrentLabel(null);
+      setCurrentPreview(null);
+    },
+    onStartError: (message) => {
+      toast.error(message);
+      setLogs([{ kind: 'error', message }]);
+    },
+    onStreamError: (message) => {
+      appendLog({ kind: 'error', message });
+      toast.error(message);
+    },
+    onStopError: (message) => {
+      appendLog({ kind: 'error', message });
+      toast.error(message);
+    },
+    onStopRequested: () => appendLog({ kind: 'log', message: 'Stopping search-position run…' }),
+  });
 
   async function run(missingOnly = false) {
     resetRunState(missingOnly);
-
-    const abortController = new AbortController();
-    abortRef.current = abortController;
-
-    let res: Response;
-    try {
-      res = await fetch('/api/editown/search-ranks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ missingOnly }),
-        signal: abortController.signal,
-      });
-    } catch (error) {
-      if (isAbortError(error)) {
-        finishRun();
-        return;
-      }
-      toast.error(errorMessage(error, 'Search check failed'));
-      finishRun();
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      const message = await readJsonError(res, 'Failed to start search-position run');
-      toast.error(message);
-      setLogs([{ kind: 'error', message }]);
-      finishRun();
-      return;
-    }
-
-    try {
-      await streamJsonEvents<SearchPositionStreamEntry>(res, (event) => {
-            if (event.type === 'start') {
-              setStats(event.stats);
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'checking') {
-              setStats(event.stats);
-              setCurrentLabel(labelForTarget(event.target));
-              setCurrentPreview({ thumbUrl: event.target.thumb_url, listingUrl: event.target.listing_url });
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'result') {
-              setStats(event.stats);
-              setCurrentLabel(labelForRow(event.row));
-              setCurrentPreview({ thumbUrl: event.row.thumb_url, listingUrl: event.row.listing_url });
-              appendLog(logEntryFromResult(event.row));
-              return;
-            }
-
-            if (event.type === 'log') {
-              if (event.message) {
-                appendLog({ kind: 'log', message: event.message });
-              }
-              return;
-            }
-
-            if (event.type === 'error') {
-              const message = event.message || 'Search-position run failed';
-              appendLog({ kind: 'error', message });
-              toast.error(message);
-              return;
-            }
-
-            if (event.type === 'complete') {
-              setDoneSummary(summaryFromCompleteEvent(event));
-              finishRun();
-              toast.success(`Checked ${event.total} listings • found ${event.found} • missing ${event.notFound}`);
-              router.refresh();
-              return;
-            }
-      });
-    } catch (error) {
-      if (!isAbortError(error)) {
-        const message = errorMessage(error, 'Search-position run failed');
-        appendLog({ kind: 'error', message });
-        toast.error(message);
-      }
-    } finally {
-      finishRun();
-    }
-  }
-
-  async function stop() {
-    if (!running || stopping) return;
-    setStopping(true);
-
-    try {
-      const res = await fetch('/api/editown/search-ranks', { method: 'DELETE' });
-      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop search-position run'));
-      appendLog({ kind: 'log', message: 'Stopping search-position run…' });
-    } catch (error) {
-      const message = errorMessage(error, 'Failed to stop search-position run');
-      appendLog({ kind: 'error', message });
-      toast.error(message);
-      setStopping(false);
-      return;
-    }
-
-    abortRef.current?.abort();
+    await streamRun.run();
   }
 
   return (
     <div className="space-y-6">
       <SearchPositionsControlPanel
-        running={running}
-        stopping={stopping}
+        running={streamRun.running}
+        stopping={streamRun.stopping}
         activeMode={activeMode}
         stats={stats}
         doneSummary={doneSummary}
         currentLabel={currentLabel}
         currentPreview={currentPreview}
-        onCheckAll={running ? stop : () => void run(false)}
+        onCheckAll={streamRun.running ? streamRun.stop : () => void run(false)}
         onMissingOnly={() => void run(true)}
       />
 

@@ -53,6 +53,23 @@ export interface SseStreamOptions {
   silentNonJsonStdout?: boolean;
 }
 
+export interface ChildJobRouteDefinition {
+  alreadyRunning: string;
+  disconnectedMessage: string;
+  prepare: (req: Request) => Promise<ChildJobRun | Response> | ChildJobRun | Response;
+  stopMessages: {
+    notRunning: string;
+    stopping: string;
+    forcingShutdown: string;
+  };
+}
+
+export interface ChildJobRun {
+  scriptArgs?: string[];
+  scriptPath: string;
+  options?: SseStreamOptions;
+}
+
 export function createSseStreamResponse(
   req: Request,
   state: ChildStreamState,
@@ -185,4 +202,37 @@ export function createStopResponse(
     status: stopped ? 200 : 500,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+export function createChildJobRoute(definition: ChildJobRouteDefinition) {
+  const state = new ChildStreamState();
+
+  return {
+    async POST(req: Request) {
+      state.clearStale();
+
+      if (state.child) {
+        return new Response(JSON.stringify({ error: definition.alreadyRunning }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const run = await definition.prepare(req);
+      if (run instanceof Response) return run;
+
+      return createSseStreamResponse(
+        req,
+        state,
+        path.isAbsolute(run.scriptPath) ? run.scriptPath : path.join(process.cwd(), run.scriptPath),
+        run.scriptArgs ?? [],
+        definition.disconnectedMessage,
+        run.options,
+      );
+    },
+
+    DELETE() {
+      return createStopResponse(state, definition.stopMessages);
+    },
+  };
 }

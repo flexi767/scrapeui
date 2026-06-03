@@ -1,32 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { ScrapeChangesTable } from '@/components/scrape-runner/ScrapeChangesTable';
 import { ScrapeControls } from '@/components/scrape-runner/ScrapeControls';
 import { ScrapeLogPanel } from '@/components/scrape-runner/ScrapeLogPanel';
 import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/types';
 import { useScrapeDealerSelection } from '@/components/scrape-runner/useScrapeDealerSelection';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { useStreamingRun } from '@/components/shared/useStreamingRun';
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
   const dealerSelection = useScrapeDealerSelection(initialDealers);
 
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [downloadImages, setDownloadImages] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [stopping, setStopping] = useState(false);
   const [log, setLog] = useState<ScrapeLogEntry[]>([]);
   const [done, setDone] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const changesRef = useRef<HTMLDivElement>(null);
-  const runAbortRef = useRef<AbortController | null>(null);
+  const effectiveDownloadImages = deepCrawl && downloadImages;
 
   useAutoScroll(logRef, log);
-
-  useEffect(() => {
-    if (!deepCrawl) setDownloadImages(false);
-  }, [deepCrawl]);
 
   const changes = log.filter((e) => e.type === 'change');
 
@@ -36,103 +30,60 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     }
   }, [changes.length]);
 
+  const streamRun = useStreamingRun<ScrapeLogEntry>({
+    fallbackStartError: 'Failed to start scraper',
+    start: (signal) => fetch('/api/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, downloadImages: effectiveDownloadImages, source: dealerSelection.source }),
+      signal,
+    }),
+    stop: async () => {
+      await fetch('/api/scrape', { method: 'DELETE' });
+    },
+    onEvent: (obj) => {
+      setLog(prev => [...prev, obj]);
+      if (obj.type === 'complete') setDone(true);
+    },
+    onStartError: (message) => setLog([{ type: 'error', message }]),
+    onStreamError: (message) => setLog((prev) => [...prev, { type: 'error', message }]),
+    onStopError: (message) => setLog((prev) => [...prev, { type: 'error', message: `Failed to stop scraper: ${message}` }]),
+  });
+
   const run = async () => {
     if (dealerSelection.effectiveSelected.length === 0) return;
     onRunStart?.();
-    setRunning(true);
-    setStopping(false);
     setDone(false);
     setLog([]);
-
-    const abortController = new AbortController();
-    runAbortRef.current = abortController;
-
-    let res: Response;
-    try {
-      res = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, downloadImages, source: dealerSelection.source }),
-        signal: abortController.signal,
-      });
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        setRunning(false);
-        setStopping(false);
-        runAbortRef.current = null;
-        return;
-      }
-      setLog([{ type: 'error', message: String(err) }]);
-      setRunning(false);
-      setStopping(false);
-      runAbortRef.current = null;
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      const message = await readJsonError(res, 'Failed to start scraper');
-      setLog([{ type: 'error', message }]);
-      setRunning(false);
-      setStopping(false);
-      runAbortRef.current = null;
-      return;
-    }
-
-    try {
-      await streamJsonEvents<ScrapeLogEntry>(res, (obj) => {
-        setLog(prev => [...prev, obj]);
-        if (obj.type === 'complete') {
-          setDone(true);
-          setRunning(false);
-          setStopping(false);
-          runAbortRef.current = null;
-        }
-      });
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        setLog((prev) => [...prev, { type: 'error', message: String(err) }]);
-      }
-    } finally {
-      setRunning(false);
-      setStopping(false);
-      runAbortRef.current = null;
-    }
+    await streamRun.run();
   };
 
-  const stop = async () => {
-    if (!running || stopping) return;
-    setStopping(true);
-    try {
-      await fetch('/api/scrape', { method: 'DELETE' });
-    } catch (err) {
-      setLog((prev) => [...prev, { type: 'error', message: `Failed to stop scraper: ${String(err)}` }]);
-      setStopping(false);
-      return;
-    }
-
-    runAbortRef.current?.abort();
-  };
+  function toggleDeepCrawl() {
+    if (streamRun.running) return;
+    if (deepCrawl) setDownloadImages(false);
+    setDeepCrawl((value) => !value);
+  }
 
   return (
     <div className="space-y-6">
       <ScrapeControls
         source={dealerSelection.source}
-        running={running}
-        stopping={stopping}
+        running={streamRun.running}
+        stopping={streamRun.stopping}
         deepCrawl={deepCrawl}
         activeDealers={dealerSelection.activeDealers}
         availableDealers={dealerSelection.availableDealers}
         effectiveSelected={dealerSelection.effectiveSelected}
         allActiveSelected={dealerSelection.allActiveSelected}
         onSourceChange={(nextSource) => {
-          if (!running) dealerSelection.selectSource(nextSource);
+          if (!streamRun.running) dealerSelection.selectSource(nextSource);
         }}
         onToggleDealer={dealerSelection.toggleDealer}
         onToggleSelectAllDealers={dealerSelection.toggleSelectAllDealers}
-        onToggleDeepCrawl={() => !running && setDeepCrawl((value) => !value)}
-        downloadImages={downloadImages}
-        onToggleDownloadImages={() => !running && deepCrawl && setDownloadImages((v) => !v)}
-        onRunClick={running ? stop : run}
+        onToggleDeepCrawl={toggleDeepCrawl}
+        downloadImages={effectiveDownloadImages}
+        onToggleDownloadImages={() => !streamRun.running && deepCrawl && setDownloadImages((v) => !v)}
+        onRunClick={streamRun.running ? streamRun.stop : run}
       />
 
       {/* Success banner */}

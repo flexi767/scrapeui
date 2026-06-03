@@ -9,8 +9,10 @@ import {
   normCarsBgTrans,
 } from '@/lib/cars-bg/parse';
 import {
+  buildListingSnapshotPayload,
   getPriceChangeDelta,
   hasListingSnapshotPayload,
+  hasListingSnapshotChanges,
   insertListingSnapshot,
   previousValueIfChanged,
 } from '@/lib/listings/snapshots';
@@ -285,13 +287,14 @@ export function upsertCarsBgListing(
     const titleChanged = normalizedTitle !== (existing.title || '');
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
     const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
-    const trackedChange = priceChanged || titleChanged || adStatusChanged || kaparoChanged;
-    const snapshot = {
-      price: previousValueIfChanged(priceChanged, existing.current_price),
-      adStatus: previousValueIfChanged(adStatusChanged, existing.ad_status || 'none'),
-      kaparo: previousValueIfChanged(kaparoChanged, existing.kaparo ? 1 : 0),
-      title: previousValueIfChanged(titleChanged, existing.title || null),
+    const snapshotChanges = {
+      price: { changed: priceChanged, previous: existing.current_price },
+      adStatus: { changed: adStatusChanged, previous: existing.ad_status || 'none' },
+      kaparo: { changed: kaparoChanged, previous: existing.kaparo ? 1 : 0 },
+      title: { changed: titleChanged, previous: existing.title || null },
     };
+    const trackedChange = hasListingSnapshotChanges(snapshotChanges);
+    const snapshot = buildListingSnapshotPayload(snapshotChanges);
 
     let changeEvent: Record<string, unknown> | undefined;
     if (trackedChange && hasListingSnapshotPayload(snapshot)) {

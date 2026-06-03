@@ -13,6 +13,14 @@ export interface ListingSnapshotInput {
 }
 
 type SnapshotPayload = Omit<ListingSnapshotInput, 'recordedAt'>;
+type SnapshotField = keyof SnapshotPayload;
+
+export type ListingSnapshotChangeMap = Partial<{
+  [K in SnapshotField]: {
+    changed: boolean;
+    previous: SnapshotPayload[K] | null | undefined;
+  };
+}>;
 
 export function previousValueIfChanged<T>(
   changed: boolean,
@@ -27,6 +35,21 @@ export function hasListingSnapshotPayload(snapshot: SnapshotPayload): boolean {
     if (typeof value === 'string') return value.trim() !== '';
     return true;
   });
+}
+
+export function hasListingSnapshotChanges(changes: ListingSnapshotChangeMap): boolean {
+  return Object.values(changes).some((change) => change?.changed);
+}
+
+export function buildListingSnapshotPayload(changes: ListingSnapshotChangeMap): SnapshotPayload {
+  const snapshot: SnapshotPayload = {};
+
+  for (const [field, change] of Object.entries(changes) as Array<[SnapshotField, ListingSnapshotChangeMap[SnapshotField]]>) {
+    if (!change) continue;
+    snapshot[field] = previousValueIfChanged(change.changed, change.previous) as never;
+  }
+
+  return snapshot;
 }
 
 export function getPriceChangeDelta({

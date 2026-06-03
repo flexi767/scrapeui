@@ -3,8 +3,7 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { DealerRow } from '@/lib/queries';
-import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
-import { errorMessage, isAbortError } from '@/lib/utils';
+import { readJsonError } from '@/lib/streaming-job';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
 import { CarsBgSyncDoneBanner } from '@/components/cars-bg-sync/CarsBgSyncDoneBanner';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
@@ -25,14 +24,13 @@ import {
 } from '@/components/cars-bg-sync/helpers';
 import type { CarsBgSyncLogEntry, CarsBgSyncStreamEntry, CarsBgSyncTotals, DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { useStreamingRun } from '@/components/shared/useStreamingRun';
 
 interface Props {
   dealers: DealerRow[];
 }
 
 export default function CarsBgSyncRunner({ dealers }: Props) {
-  const [running, setRunning] = useState(false);
-  const [stopping, setStopping] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [currentDealer, setCurrentDealer] = useState<string | null>(null);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(() => dealers.map((dealer) => dealer.slug));
@@ -43,7 +41,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   const [openDescriptionKey, setOpenDescriptionKey] = useState<string | null>(null);
   const [staleCarsIds, setStaleCarsIds] = useState<StaleCarsItem[]>([]);
   const [logs, setLogs] = useState<CarsBgSyncLogEntry[]>([]);
-  const abortRef = useRef<AbortController | null>(null);
+  const liveRunRef = useRef(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useAutoScroll(logRef, logs);
@@ -58,8 +56,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   }
 
   function resetRunState(live: boolean) {
-    setRunning(true);
-    setStopping(false);
+    liveRunRef.current = live;
     setLiveMode(live);
     setCurrentDealer(null);
     setTotals(ZERO_CARS_BG_SYNC_TOTALS);
@@ -71,12 +68,101 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     setLogs([]);
   }
 
-  function finishRun() {
-    setRunning(false);
-    setStopping(false);
-    setCurrentDealer(null);
-    abortRef.current = null;
-  }
+  const streamRun = useStreamingRun<CarsBgSyncStreamEntry>({
+    fallbackStartError: 'Failed to start cars.bg sync',
+    start: (signal) => fetch('/api/editown/carsbg-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ live: liveRunRef.current, dealers: selectedDealers }),
+      signal,
+    }),
+    stop: async () => {
+      const res = await fetch('/api/editown/carsbg-sync', { method: 'DELETE' });
+      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop cars.bg sync'));
+    },
+    onEvent: (event) => {
+      if (event.type === 'start') {
+        if (event.message) appendLog({ kind: 'status', message: event.message });
+        return;
+      }
+
+      if (event.type === 'dealer') {
+        setCurrentDealer(event.dealer);
+        if (event.message) appendLog({ kind: 'status', message: event.message });
+        return;
+      }
+
+      if (event.type === 'summary') {
+        setTotals((prev) => addSummaryTotals(prev, event));
+        appendLog(summaryLogFromEvent(event));
+        return;
+      }
+
+      if (event.type === 'listing') {
+        setMissing((prev) => [...prev, missingItemFromEvent(event)]);
+        return;
+      }
+
+      if (event.type === 'diff') {
+        setDiffs((prev) => [...prev, diffItemFromEvent(event)]);
+        return;
+      }
+
+      if (event.type === 'stale') {
+        setStaleCarsIds((prev) => [...prev, staleItemFromEvent(event)]);
+        return;
+      }
+
+      if (event.type === 'done') {
+        setTotals((prev) => addDoneTotals(prev, event));
+        appendLog(doneLogFromEvent(event));
+        return;
+      }
+
+      if (event.type === 'log') {
+        const logEntry = streamLogFromEvent(event);
+        if (logEntry) appendLog(logEntry);
+        return;
+      }
+
+      if (event.type === 'error') {
+        const message = event.message || 'Cars.bg sync failed';
+        appendLog({ kind: 'error', message });
+        toast.error(message);
+        return;
+      }
+
+      if (event.type === 'end') {
+        const summary = totalsFromEndEvent(event);
+        setDoneSummary(summary);
+        setTotals(summary);
+        if (event.message) appendLog({ kind: 'status', message: event.message });
+        if (liveRunRef.current) {
+          if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
+            toast.success(`Cars.bg sync finished: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`);
+          } else {
+            toast.error(`Cars.bg sync finished with failures`);
+          }
+        } else {
+          toast.success(`Cars.bg plan ready: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`);
+        }
+      }
+    },
+    onFinish: () => setCurrentDealer(null),
+    onStartError: (message) => {
+      setLogs([{ kind: 'error', message }]);
+      toast.error(message);
+    },
+    onStreamError: (message) => {
+      appendLog({ kind: 'error', message });
+      toast.error(message);
+    },
+    onStopError: (message) => {
+      appendLog({ kind: 'error', message });
+      toast.error(message);
+    },
+    onStopRequested: () => appendLog({ kind: 'log', message: 'Stopping cars.bg sync…' }),
+  });
 
   async function run(live: boolean) {
     if (selectedDealers.length === 0) {
@@ -84,156 +170,26 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       return;
     }
     resetRunState(live);
-
-    const abortController = new AbortController();
-    abortRef.current = abortController;
-
-    let res: Response;
-    try {
-      res = await fetch('/api/editown/carsbg-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ live, dealers: selectedDealers }),
-        signal: abortController.signal,
-      });
-    } catch (error) {
-      if (isAbortError(error)) {
-        finishRun();
-        return;
-      }
-      const message = errorMessage(error, 'Cars.bg sync failed');
-      setLogs([{ kind: 'error', message }]);
-      toast.error(message);
-      finishRun();
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      const message = await readJsonError(res, 'Failed to start cars.bg sync');
-      setLogs([{ kind: 'error', message }]);
-      toast.error(message);
-      finishRun();
-      return;
-    }
-
-    try {
-      await streamJsonEvents<CarsBgSyncStreamEntry>(res, (event) => {
-            if (event.type === 'start') {
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'dealer') {
-              setCurrentDealer(event.dealer);
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              return;
-            }
-
-            if (event.type === 'summary') {
-              setTotals((prev) => addSummaryTotals(prev, event));
-              appendLog(summaryLogFromEvent(event));
-              return;
-            }
-
-            if (event.type === 'listing') {
-              setMissing((prev) => [...prev, missingItemFromEvent(event)]);
-              return;
-            }
-
-            if (event.type === 'diff') {
-              setDiffs((prev) => [...prev, diffItemFromEvent(event)]);
-              return;
-            }
-
-            if (event.type === 'stale') {
-              setStaleCarsIds((prev) => [...prev, staleItemFromEvent(event)]);
-              return;
-            }
-
-            if (event.type === 'done') {
-              setTotals((prev) => addDoneTotals(prev, event));
-              appendLog(doneLogFromEvent(event));
-              return;
-            }
-
-            if (event.type === 'log') {
-              const logEntry = streamLogFromEvent(event);
-              if (logEntry) appendLog(logEntry);
-              return;
-            }
-
-            if (event.type === 'error') {
-              const message = event.message || 'Cars.bg sync failed';
-              appendLog({ kind: 'error', message });
-              toast.error(message);
-              return;
-            }
-
-            if (event.type === 'end') {
-              const summary = totalsFromEndEvent(event);
-              setDoneSummary(summary);
-              setTotals(summary);
-              finishRun();
-              if (event.message) appendLog({ kind: 'status', message: event.message });
-              if (live) {
-                if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
-                  toast.success(`Cars.bg sync finished: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`);
-                } else {
-                  toast.error(`Cars.bg sync finished with failures`);
-                }
-              } else {
-                toast.success(`Cars.bg plan ready: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`);
-              }
-              return;
-            }
-      });
-    } catch (error) {
-      if (!isAbortError(error)) {
-        const message = errorMessage(error, 'Cars.bg sync failed');
-        appendLog({ kind: 'error', message });
-        toast.error(message);
-      }
-    } finally {
-      finishRun();
-    }
-  }
-
-  async function stop() {
-    if (!running || stopping) return;
-    setStopping(true);
-
-    try {
-      const res = await fetch('/api/editown/carsbg-sync', { method: 'DELETE' });
-      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop cars.bg sync'));
-      appendLog({ kind: 'log', message: 'Stopping cars.bg sync…' });
-    } catch (error) {
-      const message = errorMessage(error, 'Failed to stop cars.bg sync');
-      appendLog({ kind: 'error', message });
-      toast.error(message);
-      setStopping(false);
-      return;
-    }
-
-    abortRef.current?.abort();
+    await streamRun.run();
   }
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-5">
-        <CarsBgSyncOverview totals={totals} running={running} liveMode={liveMode} doneSummary={doneSummary} />
+        <CarsBgSyncOverview totals={totals} running={streamRun.running} liveMode={liveMode} doneSummary={doneSummary} />
 
         <CarsBgSyncRunControls
-          running={running}
-          stopping={stopping}
+          running={streamRun.running}
+          stopping={streamRun.stopping}
           currentDealer={currentDealer}
-          onPreview={running ? stop : () => void run(false)}
+          onPreview={streamRun.running ? streamRun.stop : () => void run(false)}
           onRunLive={() => void run(true)}
         />
 
         <CarsBgSyncDealerSelector
           dealers={dealers}
           selectedDealers={selectedDealers}
-          running={running}
+          running={streamRun.running}
           allSelected={allSelected}
           onToggleDealer={toggleDealer}
           onToggleAll={() => setSelectedDealers(allSelected ? [] : dealers.map((dealer) => dealer.slug))}
