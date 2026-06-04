@@ -29,7 +29,7 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
             {listing.power != null && <div className={s.specItem}><div className={s.specLbl}>Power</div><div className={s.specVal}>{listing.power} hp</div></div>}
             {listing.color && <div className={s.specItem}><div className={s.specLbl}>Color</div><div className={s.specVal}>{listing.color}</div></div>}
           </div>
-          <a href={dealer.mobileUrl ?? '#'} target="_blank" rel="noopener noreferrer" className={s.cta}>Contact Dealer</a>
+          <a href={dealer.mobileUrl ?? `/d/${dealer.slug}/contact`} target={dealer.mobileUrl ? "_blank" : undefined} rel="noopener noreferrer" className={s.cta}>Contact Dealer</a>
         </div>
       </div>
     </Shell>

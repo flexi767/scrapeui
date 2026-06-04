@@ -26,7 +26,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           const thumb = getPublicThumbSrc(l);
           const isFeatured = idx === 0;
           return (
-            <Link key={l.mobileId} href={`${base}/${l.mobileId}`} className={`${s.card} ${isFeatured ? s.cardFeatured : ""}`}>
+            <Link key={l.mobileId ?? idx} href={`${base}/${l.mobileId}`} className={`${s.card} ${isFeatured ? s.cardFeatured : ""}`}>
               <div className={s.cardImg}>
                 {thumb ? <ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /> : <div className={s.cardImgPlaceholder}>🚗</div>}
                 <div className={s.priceOverlay}>

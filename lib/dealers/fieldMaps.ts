@@ -16,6 +16,7 @@ export const DEALER_PUBLIC_FIELD_MAP: Record<string, string> = {
   public_domain: 'public_domain',
   public_enabled: 'public_enabled',
   template: 'template',
+  public_content: 'public_content',
 };
 
 export const DEALER_ADMIN_FIELD_MAP: Record<string, string> = {
@@ -28,6 +29,8 @@ export const DEALER_ADMIN_FIELD_MAP: Record<string, string> = {
 export const DEALER_SELF_SERVICE_CREDENTIAL_FIELD_MAP: Record<string, string> = {
   ...PLATFORM_SELF_SERVICE_FIELD_MAP,
   ...SOCIAL_ACCOUNT_FIELD_MAP,
+  // Dealer owners may edit their own public-site copy.
+  public_content: 'public_content',
 };
 
 export const DEALER_ADMIN_CREDENTIAL_FIELD_MAP: Record<string, string> = {

@@ -33,7 +33,7 @@ export async function GET(
     SELECT id, slug, name,
            ${PLATFORM_ACCOUNT_COLUMNS},
            ${SOCIAL_ACCOUNT_COLUMNS},
-           public_enabled, template, public_domain
+           public_enabled, template, public_domain, public_content
     FROM dealers WHERE id = ?
   `).get(dealerId) as Record<string, unknown> | undefined;
 

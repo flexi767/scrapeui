@@ -12,8 +12,10 @@ interface InnerPageProps {
  * design's Shell, so it carries the design's header/footer chrome while the
  * body stays a consistent, readable content card across all designs.
  *
- * NOTE: About / Finance / Privacy / Terms copy is templated placeholder text
- * keyed off the dealer name — intended to be edited per dealer later.
+ * About / Finance / Privacy / Terms copy is editable per dealer (stored as
+ * JSON in `dealers.public_content`, managed from the dealer Settings page). When
+ * a dealer has not supplied copy for a page, we fall back to the templated
+ * placeholder text below, keyed off the dealer name.
  */
 export function InnerPage({ kind, dealer }: InnerPageProps) {
   return (
@@ -23,7 +25,35 @@ export function InnerPage({ kind, dealer }: InnerPageProps) {
   );
 }
 
+/** Default page heading used when rendering dealer-supplied copy. */
+const PAGE_TITLES: Record<Exclude<InnerPageKind, "contact">, string> = {
+  about: "About",
+  finance: "Financing",
+  privacy: "Privacy Policy",
+  terms: "Terms & Conditions",
+};
+
+/** Split a freeform copy block into paragraphs on blank lines. */
+function customBody(kind: Exclude<InnerPageKind, "contact">, dealer: PublicDealer, text: string) {
+  const title = kind === "about" ? `About ${dealer.name}` : PAGE_TITLES[kind];
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      <h1 className={s.title}>{title}</h1>
+      {paragraphs.map((p, i) => (
+        <p key={i} className={i === 0 ? s.lead : s.p}>{p}</p>
+      ))}
+    </>
+  );
+}
+
 function renderBody(kind: InnerPageKind, dealer: PublicDealer) {
+  // Dealer-supplied copy takes precedence over the templated placeholders.
+  if (kind !== "contact") {
+    const custom = dealer.publicContent?.[kind]?.trim();
+    if (custom) return customBody(kind, dealer, custom);
+  }
+
   switch (kind) {
     case "about":
       return (

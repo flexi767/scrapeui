@@ -3,6 +3,14 @@ import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+/** Editable per-dealer copy for the static public inner pages. */
+export interface DealerPublicContent {
+  about?: string;
+  finance?: string;
+  privacy?: string;
+  terms?: string;
+}
+
 export interface PublicDealer {
   id: number;
   slug: string;
@@ -12,6 +20,7 @@ export interface PublicDealer {
   publicEnabled: number;
   activeTemplateConfigId: number | null;
   mobileUrl: string | null;
+  publicContent: DealerPublicContent | null;
 }
 
 export interface PublicListing {
@@ -82,20 +91,37 @@ const DEALER_SELECT = `
   public_domain as publicDomain,
   COALESCE(public_enabled, 0) as publicEnabled,
   active_template_config_id as activeTemplateConfigId,
-  mobile_url as mobileUrl`;
+  mobile_url as mobileUrl,
+  public_content as publicContentRaw`;
+
+/** Parse the stored JSON content blob, tolerating null/legacy/invalid values. */
+function hydrateDealer(row: (PublicDealer & { publicContentRaw?: string | null }) | undefined): PublicDealer | null {
+  if (!row) return null;
+  const { publicContentRaw, ...dealer } = row;
+  let publicContent: DealerPublicContent | null = null;
+  if (publicContentRaw) {
+    try {
+      const parsed = JSON.parse(publicContentRaw);
+      if (parsed && typeof parsed === "object") publicContent = parsed as DealerPublicContent;
+    } catch {
+      publicContent = null;
+    }
+  }
+  return { ...dealer, publicContent };
+}
 
 export function getPublicDealer(slug: string): PublicDealer | null {
   const row = raw
     .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
-    .get(slug) as PublicDealer | undefined;
-  return row ?? null;
+    .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+  return hydrateDealer(row);
 }
 
 export function getDealerByDomain(domain: string): PublicDealer | null {
   const row = raw
     .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
-    .get(domain) as PublicDealer | undefined;
-  return row ?? null;
+    .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+  return hydrateDealer(row);
 }
 
 export interface DealerEnquiryInput {

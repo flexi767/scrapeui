@@ -29,7 +29,19 @@ interface DealerCreds extends PlatformAccountFields<string | null>, SocialAccoun
   public_enabled: number;
   template: string;
   public_domain: string | null;
+  public_content: string | null;
 }
+
+const CONTENT_PAGES = [
+  { key: 'about', label: 'About', placeholder: 'Tell visitors about your dealership. Leave blank to use the default text.' },
+  { key: 'finance', label: 'Financing', placeholder: 'Describe your finance options. Leave blank to use the default text.' },
+  { key: 'privacy', label: 'Privacy Policy', placeholder: 'Your privacy policy. Leave blank to use the default text.' },
+  { key: 'terms', label: 'Terms & Conditions', placeholder: 'Your terms. Leave blank to use the default text.' },
+] as const;
+
+type ContentForm = Record<(typeof CONTENT_PAGES)[number]['key'], string>;
+
+const EMPTY_CONTENT: ContentForm = { about: '', finance: '', privacy: '', terms: '' };
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'fail';
 
@@ -163,6 +175,7 @@ export default function DealerCredentialsPage() {
   const [dealer, setDealer] = useState<DealerCreds | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [publicForm, setPublicForm] = useState({ public_enabled: false, template: 'bold', public_domain: '' });
+  const [contentForm, setContentForm] = useState<ContentForm>(EMPTY_CONTENT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({});
@@ -183,6 +196,16 @@ export default function DealerCredentialsPage() {
         public_enabled: data.public_enabled === 1,
         template: data.template ?? 'bold',
         public_domain: data.public_domain ?? '',
+      });
+      let parsedContent: Partial<ContentForm> = {};
+      if (data.public_content) {
+        try { parsedContent = JSON.parse(data.public_content) as Partial<ContentForm>; } catch { parsedContent = {}; }
+      }
+      setContentForm({
+        about: parsedContent.about ?? '',
+        finance: parsedContent.finance ?? '',
+        privacy: parsedContent.privacy ?? '',
+        terms: parsedContent.terms ?? '',
       });
     } catch (error) {
       toast.error(errorMessage(error, 'Could not load dealer'));
@@ -243,6 +266,30 @@ export default function DealerCredentialsPage() {
       });
       await parseApiResponse<unknown>(res, 'Save failed');
       toast.success('Public page settings saved');
+      await load();
+    } catch (error) {
+      toast.error(errorMessage(error, 'Save failed'));
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveContent() {
+    setSaving('content');
+    try {
+      // Only persist non-empty pages so blank fields fall back to the defaults.
+      const payload: Record<string, string> = {};
+      for (const { key } of CONTENT_PAGES) {
+        const value = contentForm[key].trim();
+        if (value) payload[key] = value;
+      }
+      const res = await fetch(`/api/dealers/${dealerId}/credentials`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public_content: Object.keys(payload).length ? JSON.stringify(payload) : null }),
+      });
+      await parseApiResponse<unknown>(res, 'Save failed');
+      toast.success('Page content saved');
       await load();
     } catch (error) {
       toast.error(errorMessage(error, 'Save failed'));
@@ -396,6 +443,55 @@ export default function DealerCredentialsPage() {
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
               >
                 {saving === 'public' ? 'Saving…' : 'Save public settings'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Page content — editable per-dealer copy for the public inner pages */}
+        {publicForm.public_enabled && (
+          <div className="space-y-2">
+            <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-200">
+                  <span className="text-base">📝</span> Page Content
+                </h2>
+                {publicUrl && (
+                  <a
+                    href={`${publicUrl}/about`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    View pages <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                Copy for your About, Financing, Privacy and Terms pages. Separate paragraphs with a blank line.
+                Leave a field empty to use the default text.
+              </p>
+              {CONTENT_PAGES.map((page) => (
+                <div key={page.key}>
+                  <label htmlFor={`dealer-content-${page.key}`} className="block text-xs text-gray-400 mb-1">{page.label}</label>
+                  <textarea
+                    id={`dealer-content-${page.key}`}
+                    rows={5}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500 resize-y"
+                    value={contentForm[page.key]}
+                    onChange={(e) => setContentForm((c) => ({ ...c, [page.key]: e.target.value }))}
+                    placeholder={page.placeholder}
+                  />
+                </div>
+              ))}
+            </section>
+            <div className="flex justify-end">
+              <button
+                onClick={saveContent}
+                disabled={saving === 'content'}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
+              >
+                {saving === 'content' ? 'Saving…' : 'Save page content'}
               </button>
             </div>
           </div>
