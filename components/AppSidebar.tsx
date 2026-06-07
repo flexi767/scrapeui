@@ -6,6 +6,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon, match: ['/dashboard'] },
@@ -93,8 +94,8 @@ export function AppSidebar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-700 bg-gray-950/95 shadow-lg shadow-black/10 backdrop-blur">
-      <div className="flex min-h-14 items-center gap-3 px-4">
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-2">
+      <div className="flex min-h-10 items-center gap-2 px-3">
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1">
           {navItems.map((item) => {
             const active = pathMatchesAny(pathname, item.match);
 
@@ -103,7 +104,7 @@ export function AppSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                  'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors',
                   active
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-400 hover:bg-gray-800/80 hover:text-gray-200',
@@ -116,13 +117,13 @@ export function AppSidebar() {
           })}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <QuickAdd />
           <NotificationBell />
           {dealerId && (
             <Link
               href={`/dealers/${dealerId}/credentials`}
-              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+              className="rounded-md p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
               title="My settings"
               aria-label="My settings"
             >
@@ -139,7 +140,7 @@ export function AppSidebar() {
           </div>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+            className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
             title="Sign out"
             aria-label="Sign out"
           >
@@ -148,8 +149,8 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <div className="flex min-h-10 items-center gap-2 border-t border-gray-800 px-4">
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1.5">
+      <div className="flex min-h-7 items-center gap-1.5 border-t border-gray-800 px-3">
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5">
           {(activeSection?.links ?? utilityLinks).map((item) => {
             const active = pathMatches(pathname, item.href);
 
@@ -158,7 +159,7 @@ export function AppSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'inline-flex h-7 shrink-0 items-center gap-1.5 rounded px-2 text-xs font-medium transition-colors',
+                  'inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-[11px] font-medium transition-colors',
                   active
                     ? 'bg-gray-800 text-gray-100'
                     : 'text-gray-500 hover:bg-gray-800/70 hover:text-gray-300',
@@ -170,6 +171,10 @@ export function AppSidebar() {
             );
           })}
         </nav>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <LanguageSelector />
+        </div>
       </div>
     </header>
   );
