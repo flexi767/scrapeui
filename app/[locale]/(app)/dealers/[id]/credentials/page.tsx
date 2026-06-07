@@ -394,7 +394,7 @@ export default function DealerCredentialsPage() {
             <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-200">
-                  <span className="text-base">🌐</span> Public Page
+                  <span className="text-base">🌐</span> {t('public_page')}
                 </h2>
                 {publicUrl && publicForm.public_enabled && (
                   <a
@@ -403,7 +403,7 @@ export default function DealerCredentialsPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                   >
-                    Preview <ExternalLink className="h-3 w-3" />
+                    {t('preview')} <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
@@ -415,33 +415,33 @@ export default function DealerCredentialsPage() {
                   checked={publicForm.public_enabled}
                   onChange={(e) => setPublicForm((p) => ({ ...p, public_enabled: e.target.checked }))}
                 />
-                Enable public listing page
+                {t('enable_public_listing_page')}
               </label>
 
               {publicForm.public_enabled && (
                 <>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Public URL</label>
+                    <label className="block text-xs text-gray-400 mb-1">{t('public_url')}</label>
                     <div className="text-sm text-blue-400 bg-gray-700/50 rounded px-3 py-2 font-mono">
                       {typeof window !== 'undefined' ? window.location.origin : ''}/d/{dealer?.slug}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Template</label>
+                    <label className="block text-xs text-gray-400 mb-1">{t('template')}</label>
                     <select
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                       value={publicForm.template}
                       onChange={(e) => setPublicForm((p) => ({ ...p, template: e.target.value }))}
                     >
-                      {TEMPLATES.map((t) => (
-                        <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                      {TEMPLATES.map((tmpl) => (
+                        <option key={tmpl} value={tmpl}>{tmpl.charAt(0).toUpperCase() + tmpl.slice(1)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Custom domain <span className="text-gray-500">(optional)</span></label>
+                    <label className="block text-xs text-gray-400 mb-1">{t('custom_domain')} <span className="text-gray-500">({t('optional')})</span></label>
                     <input
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                       value={publicForm.public_domain}
@@ -458,7 +458,7 @@ export default function DealerCredentialsPage() {
                 disabled={saving === 'public'}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
               >
-                {saving === 'public' ? 'Saving…' : 'Save public settings'}
+                {saving === 'public' ? t('saving') : t('save_public_settings')}
               </button>
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function DealerCredentialsPage() {
             <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-200">
-                  <span className="text-base">📝</span> Page Content
+                  <span className="text-base">📝</span> {t('page_content')}
                 </h2>
                 {publicUrl && (
                   <a
@@ -479,13 +479,12 @@ export default function DealerCredentialsPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
                   >
-                    View pages <ExternalLink className="h-3 w-3" />
+                    {t('view_pages')} <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
               <p className="text-xs text-gray-500">
-                Copy for your About, Financing, Privacy and Terms pages. Separate paragraphs with a blank line.
-                Leave a field empty to use the default text.
+                {t('page_content_description')}
               </p>
               {CONTENT_PAGES.map((page) => (
                 <div key={page.key}>
@@ -507,7 +506,7 @@ export default function DealerCredentialsPage() {
                 disabled={saving === 'content'}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
               >
-                {saving === 'content' ? 'Saving…' : 'Save page content'}
+                {saving === 'content' ? t('saving') : t('save_page_content')}
               </button>
             </div>
           </div>

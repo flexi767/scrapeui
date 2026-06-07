@@ -261,10 +261,10 @@ export function DealerTableRow({
           <button
             onClick={() => onTestLogin(dealer.id)}
             disabled={isLoginRunning}
-            title="Test logins"
+            title={t('test_logins')}
             className="mt-1.5 block w-full text-center text-[10px] text-gray-500 hover:text-blue-400 disabled:opacity-40"
           >
-            {isLoginRunning ? '…' : 'test'}
+            {isLoginRunning ? '…' : t('test')}
           </button>
         )}
       </td>
