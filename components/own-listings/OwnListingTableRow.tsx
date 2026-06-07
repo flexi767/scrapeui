@@ -14,6 +14,7 @@ import { OwnListingPublishButtons } from "./OwnListingPublishButtons";
 import { OwnListingPriceCell } from "./OwnListingPriceCell";
 import { SyncStateButton, stopEditorPointerPropagation } from "./TableControls";
 import { getOwnListingRowKey, type OwnListingEditForm } from "./editing";
+import { CARS_BG_TITLE_MAX_LENGTH } from "@/lib/cars-bg/title";
 
 interface OwnListingTableRowProps {
   row: OwnListingRow;
@@ -138,12 +139,12 @@ export function OwnListingTableRow({
             <div>
               <input
                 type="text"
-                maxLength={15}
+                maxLength={CARS_BG_TITLE_MAX_LENGTH}
                 value={editForm.carsbg_title}
                 onChange={(e) =>
                   onEditFormChange({
                     ...editForm,
-                    carsbg_title: e.target.value.slice(0, 15),
+                    carsbg_title: e.target.value.slice(0, CARS_BG_TITLE_MAX_LENGTH),
                   })
                 }
                 onClick={stopEditorPointerPropagation}
@@ -178,7 +179,7 @@ export function OwnListingTableRow({
         <div className="whitespace-nowrap">{row.dealer_name}</div>
         {editing && (
           <div className="text-[10px] text-gray-500">
-            {editForm.carsbg_title.length}/15
+            {editForm.carsbg_title.length}/{CARS_BG_TITLE_MAX_LENGTH}
           </div>
         )}
       </td>

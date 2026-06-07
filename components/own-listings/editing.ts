@@ -1,4 +1,5 @@
 import { OwnListingRow } from "@/lib/queries";
+import { normalizeCarsBgShortTitle } from "@/lib/cars-bg/title";
 
 export interface OwnListingEditForm {
   title: string;
@@ -25,7 +26,7 @@ export function getOwnListingRowKey(row: OwnListingRow): string {
 export function getEditFormFromOwnListing(row: OwnListingRow): OwnListingEditForm {
   return {
     title: row.title ?? "",
-    carsbg_title: row.carsbg_title ?? "",
+    carsbg_title: normalizeCarsBgShortTitle(row.carsbg_title),
     current_price: row.current_price ?? 0,
     vat: row.vat ?? "",
     kaparo: row.kaparo ?? 0,
@@ -42,7 +43,7 @@ export function getOwnListingSaveEndpoint(row: OwnListingRow): string {
 export function buildOwnListingPatchBody(form: OwnListingEditForm) {
   return {
     title: form.title,
-    carsbg_title: form.carsbg_title,
+    carsbg_title: normalizeCarsBgShortTitle(form.carsbg_title),
     current_price: form.current_price,
     vat: form.vat,
     kaparo: form.kaparo,

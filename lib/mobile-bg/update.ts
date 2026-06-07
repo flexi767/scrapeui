@@ -39,7 +39,9 @@ interface BackupRow {
   title: string | null;
   source_title: string | null;
   price_amount: number | null;
+  listing_vat: string | null;
   vat_included: string | null;
+  kaparo: number | null;
   mileage: number | null;
   fuel: string | null;
   power: number | null;
@@ -50,6 +52,12 @@ interface BackupRow {
   description: string | null;
   ad_status: string | null;
   tech_data_json: string | null;
+}
+
+interface ListingSyncStateRow {
+  current_price: number | null;
+  previous_price: number | null;
+  price_change: number | null;
 }
 
 interface EditSnapshotRow {
@@ -99,12 +107,14 @@ export async function updateBackupOnMobileBg(
       ${ownTitleExpr} as title,
       b.source_title,
       ${ownPriceExpr} as price_amount,
+      ${ownEffectiveVatExpr} as listing_vat,
       CASE
         WHEN ${ownEffectiveVatExpr} = 'included' THEN 'yes'
         WHEN ${ownEffectiveVatExpr} = 'excluded' THEN 'no'
         WHEN ${ownEffectiveVatExpr} = 'exempt' THEN 'no'
         ELSE NULL
       END as vat_included,
+      COALESCE(b.kaparo, l.kaparo) as kaparo,
       ${ownMileageExpr} as mileage,
       ${ownFuelExpr} as fuel,
       COALESCE(b.power, l.power) as power,
@@ -170,11 +180,11 @@ export async function updateBackupOnMobileBg(
     await selectMobileBgDependentFields(page, fields);
     await applyCapturedMobileBgDraft(page, fields, checkedBoxes, fieldOverrides);
 
+    await acceptMobileBgCookies(page);
     const beforeSubmitPath = path.join(updateDir, 'before-submit.png');
     log('Captured pre-submit screenshot.');
     await page.screenshot({ path: beforeSubmitPath, fullPage: true });
 
-    await acceptMobileBgCookies(page);
     const submitButton = page.locator('#pubButton, input[type="submit"], a.pubButton').first();
     if (await submitButton.count() === 0) {
       throw new Error('Could not find mobile.bg save button');
@@ -229,17 +239,55 @@ export async function updateBackupOnMobileBg(
     `).run(effectiveAdStatus, now, now, backup.id);
 
     if (backup.listing_id != null) {
+      const listingState = db.prepare(`
+        SELECT
+          l.current_price,
+          l.price_change,
+          (
+            SELECT s.price
+            FROM listing_snapshots s
+            WHERE s.listing_id = l.id
+              AND s.price IS NOT NULL
+            ORDER BY s.recorded_at DESC, s.id DESC
+            LIMIT 1
+          ) as previous_price
+        FROM listings l
+        WHERE l.id = ?
+      `).get(backup.listing_id) as ListingSyncStateRow | undefined;
+      const syncedPrice = backup.price_amount ?? null;
+      const resolvedPriceChange =
+        syncedPrice != null &&
+        listingState?.previous_price != null &&
+        Number(syncedPrice) === Number(listingState.previous_price);
+
       db.prepare(`
         UPDATE listings
-        SET ad_status = ?
+        SET
+          title = ?,
+          current_price = ?,
+          vat = ?,
+          kaparo = ?,
+          ad_status = ?,
+          price_change = ?,
+          last_seen_at = ?
         WHERE id = ?
-      `).run(effectiveAdStatus, backup.listing_id);
+      `).run(
+        backup.title,
+        syncedPrice,
+        backup.listing_vat,
+        backup.kaparo,
+        effectiveAdStatus,
+        resolvedPriceChange ? null : (listingState?.price_change ?? null),
+        now,
+        backup.listing_id,
+      );
     }
 
     log(`Sync finished successfully for mobile.bg #${backup.mobile_id}`);
     return { mobileId: backup.mobile_id };
   } catch (error) {
     const debugPath = path.join(updateDir, 'error.png');
+    await acceptMobileBgCookies(page).catch(() => {});
     await page.screenshot({ path: debugPath, fullPage: true }).catch(() => {});
     log(`Sync failed: ${errorMessage(error)}`);
     markSyncFailed(db, backup.id, error);

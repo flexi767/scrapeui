@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { normalizeCarsBgShortTitle } from '@/lib/cars-bg/title';
 import { getOwnListingByMobileId } from '@/lib/queries';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { NextResponse } from 'next/server';
@@ -40,13 +41,7 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    const trimmedCarsbgTitle = carsbgTitleRaw.trim();
-    if (trimmedCarsbgTitle.length > 15) {
-      return NextResponse.json(
-        { error: 'cars.bg title must be 15 characters or fewer' },
-        { status: 400 }
-      );
-    }
+    const trimmedCarsbgTitle = normalizeCarsBgShortTitle(carsbgTitleRaw);
     const carsbgTitleForDb = trimmedCarsbgTitle || null;
 
     // Validate current_price
