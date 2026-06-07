@@ -6,7 +6,7 @@ export function getPublicThumbSrc(l: { mobileId: string; thumbKeys: string | nul
 }
 
 export function fmtPrice(p: number | null): string {
-  return p ? p.toLocaleString("bg-BG") + " лв" : "—";
+  return p ? p.toLocaleString("bg-BG") + " €" : "—";
 }
 
 export function fmtMileage(m: number | null): string {

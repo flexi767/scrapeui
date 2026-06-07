@@ -24,7 +24,7 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
           <div className={s.carMake}>{listing.make}</div>
           <div className={s.carTitle}>{listing.make} {listing.model}</div>
           <div className={s.carSub}>{listing.regYear} · {listing.fuel ?? ""}</div>
-          <div className={s.price}>{fmt(listing.currentPrice)} лв</div>
+          <div className={s.price}>{fmt(listing.currentPrice)} €</div>
           <div className={s.specs}>
             {listing.mileage != null && <div className={s.specItem}><div className={s.specLbl}>Mileage</div><div className={s.specVal}>{fmt(listing.mileage)} km</div></div>}
             {listing.fuel && <div className={s.specItem}><div className={s.specLbl}>Fuel</div><div className={s.specVal}>{listing.fuel}</div></div>}

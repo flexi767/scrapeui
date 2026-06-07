@@ -32,7 +32,7 @@ export function renderFilterBar(
     elements.push(select('yearTo', 'Year to', years.map(String), filters.yearTo));
   }
   if (showPrice !== false) {
-    elements.push(React.createElement('input', { key: 'priceMax', type: 'number', name: 'priceMax', placeholder: 'Max price (лв)', defaultValue: filters.priceMax ?? '', style: { ...inputStyle, minWidth: 140 } }));
+    elements.push(React.createElement('input', { key: 'priceMax', type: 'number', name: 'priceMax', placeholder: 'Max price (€)', defaultValue: filters.priceMax ?? '', style: { ...inputStyle, minWidth: 140 } }));
   }
   elements.push(React.createElement('input', { key: 'submit', type: 'submit', value: 'Filter', style: { padding: '6px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 } }));
 

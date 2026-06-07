@@ -37,7 +37,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
             <YearRangeInputs base={base} filters={filters} inputClassName={s.filterInput} rowClassName={s.rangeRow} />
           </div>
           <div className={s.filterGroup}>
-            <label className={s.filterLabel}>Max Price (лв)</label>
+            <label className={s.filterLabel}>Max Price (€)</label>
             <PriceMaxInput base={base} filters={filters} className={s.filterInput} />
           </div>
         </aside>
