@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CategoryBadge, EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
@@ -18,6 +19,7 @@ interface ExpenseRow {
 }
 
 export default function ExpensesPage() {
+  const t = useTranslations('ui');
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [total, setTotal] = useState(0);
@@ -48,19 +50,19 @@ export default function ExpensesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Expenses</h1>
+          <h1 className="text-2xl font-bold">{t('expenses')}</h1>
           <p className="text-sm text-gray-400">
-            {total} expenses — Total: {formatAmount(totalAmount)} EUR
+            {total} {t('expenses_count_suffix')} — {t('total')}: {formatAmount(totalAmount)} EUR
           </p>
         </div>
         <Link href="/expenses/new">
-          <Button>New Expense</Button>
+          <Button>{t('new_expense')}</Button>
         </Link>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <Input
-          placeholder="Search..."
+          placeholder={t('search')}
           value={search}
           onChange={(e) => {
             setLoading(true);
@@ -76,7 +78,7 @@ export default function ExpensesPage() {
           }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
-          <option value="">All categories</option>
+          <option value="">{t('all_categories')}</option>
           {EXPENSE_CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
@@ -85,7 +87,7 @@ export default function ExpensesPage() {
           setLoading(true);
           setDateFrom(e.target.value);
         }} className="w-40" />
-        <span className="self-center text-gray-400">to</span>
+        <span className="self-center text-gray-400">{t('to')}</span>
         <Input type="date" value={dateTo} onChange={(e) => {
           setLoading(true);
           setDateTo(e.target.value);
@@ -93,9 +95,9 @@ export default function ExpensesPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       ) : expenses.length === 0 ? (
-        <p className="text-gray-400">No expenses found.</p>
+        <p className="text-gray-400">{t('no_expenses_found')}</p>
       ) : (
         <div className="space-y-2">
           {expenses.map((exp) => (

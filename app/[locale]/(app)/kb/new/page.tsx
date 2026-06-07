@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import type { LabelRow } from '@/lib/queries';
 import { parseApiResponse } from '@/lib/utils';
 
 export default function NewArticlePage() {
+  const t = useTranslations('ui');
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -46,21 +48,21 @@ export default function NewArticlePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">New Article</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('new_article')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Article title" />
+          <Label>{t('title')}</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder={t('article_title_placeholder')} />
         </div>
 
         <div className="space-y-2">
-          <Label>Content</Label>
-          <TiptapEditor content={content} onChange={setContent} placeholder="Write your article..." />
+          <Label>{t('content')}</Label>
+          <TiptapEditor content={content} onChange={setContent} placeholder={t('write_your_article')} />
         </div>
 
         <div className="space-y-2">
-          <Label>Labels</Label>
+          <Label>{t('labels')}</Label>
           <div className="flex flex-wrap gap-2">
             {labels.map((l) => (
               <button key={l.id} type="button"
@@ -81,8 +83,8 @@ export default function NewArticlePage() {
         <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create Article'}</Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? t('creating') : t('create_article')}</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>{t('cancel')}</Button>
         </div>
       </form>
     </div>

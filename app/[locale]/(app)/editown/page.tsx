@@ -5,6 +5,7 @@ import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
 import { parseOptionalNum, toParamArray } from '@/lib/listing-url';
 import OwnListingsTable from '@/components/OwnListingsTable';
+import { getTranslations } from 'next-intl/server';
 
 interface SearchParams {
   make?: string;
@@ -30,6 +31,7 @@ export default async function EditOwnPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const t = await getTranslations('ui');
   const sp = await searchParams;
 
   const make = sp.make ?? '';
@@ -133,7 +135,7 @@ export default async function EditOwnPage({
                 href={`/editown?${prevPageParams.toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
-                ← Prev
+                {t('prev')}
               </Link>
             )}
             <span className="text-gray-400">
@@ -144,7 +146,7 @@ export default async function EditOwnPage({
                 href={`/editown?${nextPageParams.toString()}`}
                 className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
               >
-                Next →
+                {t('next')}
               </Link>
             )}
           </div>

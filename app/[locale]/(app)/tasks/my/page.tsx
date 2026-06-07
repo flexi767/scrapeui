@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 
@@ -17,6 +18,7 @@ interface TaskRow {
 }
 
 export default function MyTasksPage() {
+  const t = useTranslations('ui');
   const { data: session } = useSession();
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,12 +33,12 @@ export default function MyTasksPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">My Tasks</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('my_tasks')}</h1>
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       ) : tasks.length === 0 ? (
-        <p className="text-gray-400">No tasks assigned to you.</p>
+        <p className="text-gray-400">{t('no_tasks_assigned_to_you')}</p>
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => (
@@ -48,7 +50,7 @@ export default function MyTasksPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-100">{task.title}</p>
                 {task.deadline && (
-                  <p className="mt-0.5 text-xs text-gray-400">Due {task.deadline}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">{t('due')} {task.deadline}</p>
                 )}
               </div>
               <StatusBadge status={task.status} />

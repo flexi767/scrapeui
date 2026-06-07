@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getPublicDealer } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";
 import { InnerPage } from "./InnerPage";
@@ -26,16 +27,16 @@ export async function renderInnerPage(slug: string, kind: InnerPageKind) {
   );
 }
 
-const TITLES: Record<InnerPageKind, string> = {
-  about: "About",
-  finance: "Financing",
-  contact: "Contact",
-  privacy: "Privacy Policy",
-  terms: "Terms & Conditions",
-};
-
 export async function innerPageMetadata(slug: string, kind: InnerPageKind) {
+  const t = await getTranslations('ui');
   const dealer = getPublicDealer(slug);
   if (!dealer) return {};
+  const TITLES: Record<InnerPageKind, string> = {
+    about: t('inner_page_about'),
+    finance: t('inner_page_finance'),
+    contact: t('inner_page_contact'),
+    privacy: t('inner_page_privacy'),
+    terms: t('inner_page_terms'),
+  };
   return { title: `${TITLES[kind]} — ${dealer.name}` };
 }

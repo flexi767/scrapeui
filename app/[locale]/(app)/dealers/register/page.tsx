@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { slugifyDealerName } from '@/components/dealers/utils';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 export default function DealerRegisterPage() {
+  const t = useTranslations('ui');
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -29,7 +31,7 @@ export default function DealerRegisterPage() {
   if (session?.user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-[#111827] flex items-center justify-center">
-        <p className="text-gray-400">Admin access required.</p>
+        <p className="text-gray-400">{t('admin_access_required')}</p>
       </div>
     );
   }

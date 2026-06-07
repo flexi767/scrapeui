@@ -3,6 +3,7 @@
 import { type KeyboardEvent, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   launchFacebookMarketplaceDraft,
   saveOwnListingEdit,
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function OwnListingsTable({ initialRows }: Props) {
+  const t = useTranslations('ui');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
@@ -58,7 +60,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
     const formToSave = options?.formSnapshot ?? editForm;
 
     if (formToSave.current_price < 0) {
-      toast.error("Price must be non-negative");
+      toast.error(t('price_must_be_non_negative'));
       return;
     }
 
@@ -66,7 +68,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
     try {
       const editingRow = rows.find((row) => getOwnListingRowKey(row) === editingKey);
       if (!editingRow) {
-        toast.error("No listing is currently being edited.");
+        toast.error(t('no_listing_being_edited'));
         return;
       }
 
@@ -94,7 +96,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
         setEditingKey(null);
       }
     } catch (error) {
-      toast.error(errorMessage(error, "Save failed"));
+      toast.error(errorMessage(error, t('save_failed')));
     } finally {
       setSaving(false);
     }
@@ -151,7 +153,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
             : item,
         ),
       );
-      toast.success("Listing synced to mobile.bg");
+      toast.success(t('listing_synced_to_mobilebg'));
       router.refresh();
     } catch (error) {
       const message = errorMessage(error, "Sync failed");
@@ -178,7 +180,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
       const message = await launchFacebookMarketplaceDraft(row);
       toast.success(message);
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to launch"));
+      toast.error(errorMessage(error, t('failed_to_launch')));
     } finally {
       setPublishingToFbIds((prev) => ({ ...prev, [row.backup_id]: false }));
     }
@@ -196,7 +198,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
           {rows.length === 0 && (
             <tr>
               <td colSpan={19} className="px-4 py-6 text-center text-gray-500">
-                No listings
+                {t('no_listings')}
               </td>
             </tr>
           )}

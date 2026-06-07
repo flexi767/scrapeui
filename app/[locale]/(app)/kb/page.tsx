@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDateOnly } from '@/lib/date-format';
@@ -16,6 +17,7 @@ interface ArticleRow {
 }
 
 export default function KBPage() {
+  const t = useTranslations('ui');
   const [articles, setArticles] = useState<ArticleRow[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -38,17 +40,17 @@ export default function KBPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Knowledge Base</h1>
-          <p className="text-sm text-gray-400">{total} articles</p>
+          <h1 className="text-2xl font-bold">{t('knowledge_base')}</h1>
+          <p className="text-sm text-gray-400">{total} {t('articles')}</p>
         </div>
         <Link href="/kb/new">
-          <Button>New Article</Button>
+          <Button>{t('new_article')}</Button>
         </Link>
       </div>
 
       <div className="mb-4">
         <Input
-          placeholder="Search articles..."
+          placeholder={t('search_articles')}
           value={search}
           onChange={(e) => {
             setLoading(true);
@@ -59,9 +61,9 @@ export default function KBPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       ) : articles.length === 0 ? (
-        <p className="text-gray-400">No articles found.</p>
+        <p className="text-gray-400">{t('no_articles_found')}</p>
       ) : (
         <div className="space-y-2">
           {articles.map((article) => (

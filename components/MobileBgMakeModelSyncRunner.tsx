@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
 import { errorMessage } from '@/lib/utils';
@@ -27,6 +28,7 @@ const DEFAULT_SEARCH_PATH = '/search/avtomobili-dzhipove';
 const DEFAULT_PUBTYPE = '1,2';
 
 export default function MobileBgMakeModelSyncRunner() {
+  const t = useTranslations('ui');
   const [onlyMake, setOnlyMake] = useState('');
   const [searchPath, setSearchPath] = useState(DEFAULT_SEARCH_PATH);
   const [pubtype, setPubtype] = useState(DEFAULT_PUBTYPE);
@@ -86,17 +88,17 @@ export default function MobileBgMakeModelSyncRunner() {
     <div className="space-y-4 rounded-lg border border-gray-700/60 bg-gray-800/30 p-5">
       <div className="grid gap-4 md:grid-cols-[1fr_1fr_160px]">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">Make filter</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">{t('make_filter')}</label>
           <input
             value={onlyMake}
             onChange={(e) => setOnlyMake(e.target.value)}
-            placeholder="All makes"
+            placeholder={t('all_makes')}
             className="rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">Search path</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">{t('search_path')}</label>
           <input
             value={searchPath}
             onChange={(e) => setSearchPath(e.target.value)}
@@ -105,7 +107,7 @@ export default function MobileBgMakeModelSyncRunner() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">Pubtype</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-gray-400">{t('pubtype')}</label>
           <input
             value={pubtype}
             onChange={(e) => setPubtype(e.target.value)}
@@ -120,10 +122,10 @@ export default function MobileBgMakeModelSyncRunner() {
           disabled={running}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
         >
-          {running ? 'Syncing…' : 'Sync make/model reference'}
+          {running ? t('syncing') : t('sync_make_model_reference')}
         </button>
         <p className="text-xs text-gray-500">
-          Pulls mobile.bg make/model counts into the local reference table and streams progress live.
+          {t('sync_make_model_description')}
         </p>
       </div>
 
@@ -137,8 +139,8 @@ export default function MobileBgMakeModelSyncRunner() {
       {(running || log.length > 0) && (
         <div className="rounded border border-gray-700 bg-gray-950/50">
           <div className="border-b border-gray-700 px-4 py-3">
-            <div className="text-sm font-medium text-gray-200">Live sync feedback</div>
-            <p className="mt-1 text-xs text-gray-500">Progress updates from the make/model reference sync.</p>
+            <div className="text-sm font-medium text-gray-200">{t('live_sync_feedback')}</div>
+            <p className="mt-1 text-xs text-gray-500">{t('sync_progress_description')}</p>
           </div>
 
           <div className="max-h-96 space-y-2 overflow-y-auto px-4 py-3">

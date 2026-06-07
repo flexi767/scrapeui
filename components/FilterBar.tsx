@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 import PriceChangeFilter from './PriceChangeFilter';
 import RangeFilter from './RangeFilter';
@@ -28,6 +29,7 @@ interface Props {
 export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], allExtras = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel = 'Sync', syncActive = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations('ui');
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
@@ -123,7 +125,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const STATUS_OPTIONS = [
     { value: 'TOP', label: 'TOP' },
     { value: 'VIP', label: 'VIP' },
-    { value: 'none', label: 'None' },
+    { value: 'none', label: t('status_none') },
   ];
 
   function onVatToggle(v: string) {
@@ -158,7 +160,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <input
         key={currentSearch}
         type="search"
-        placeholder="Search…"
+        placeholder={t('search_placeholder')}
         defaultValue={currentSearch}
         onChange={(e) => onSearchChange(e.target.value)}
         className="h-8 w-28 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
@@ -170,7 +172,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         onChange={(e) => onMakeChange(e.target.value)}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
       >
-        <option value="">Make</option>
+        <option value="">{t('make')}</option>
         {makes.map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
@@ -183,15 +185,15 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         disabled={!currentMake}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-40"
       >
-        <option value="">Model</option>
+        <option value="">{t('model')}</option>
         {availableModels.map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
       </select>
 
       <MultiSelectDropdown
-        buttonText={currentDealers.length === 0 ? 'Dealers' : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} dealers`}
-        clearLabel="Clear dealers"
+        buttonText={currentDealers.length === 0 ? t('dealers') : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} ${t('dealers_count')}`}
+        clearLabel={t('clear_dealers')}
         options={allDealers.map((dealer) => ({
           value: dealer.slug,
           label: dealer.name,
@@ -204,8 +206,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       />
 
       <MultiSelectDropdown
-        buttonText={currentCategories.length === 0 ? 'Body' : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} body types`}
-        clearLabel="Clear body"
+        buttonText={currentCategories.length === 0 ? t('body') : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} ${t('body_types')}`}
+        clearLabel={t('clear_body')}
         options={allCategories.map((category) => ({ value: category, label: category }))}
         selectedValues={currentCategories}
         onToggle={onCategoryToggle}
@@ -214,8 +216,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       />
 
       <MultiSelectDropdown
-        buttonText={currentStatuses.length === 0 ? 'Paid' : currentStatuses.map(s => s.toUpperCase()).join(', ')}
-        clearLabel="Clear paid"
+        buttonText={currentStatuses.length === 0 ? t('paid') : currentStatuses.map(s => s.toUpperCase()).join(', ')}
+        clearLabel={t('clear_paid')}
         options={STATUS_OPTIONS}
         selectedValues={currentStatuses}
         onToggle={onStatusToggle}
@@ -230,8 +232,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       )}
 
       <MultiSelectDropdown
-        buttonText={currentVat.length === 0 ? 'VAT' : currentVat.length === 1 ? 'VAT' : `VAT (${currentVat.length})`}
-        clearLabel="Clear VAT"
+        buttonText={currentVat.length === 0 ? t('vat') : currentVat.length === 1 ? t('vat') : `${t('vat')} (${currentVat.length})`}
+        clearLabel={t('clear_vat')}
         options={VAT_OPTIONS}
         selectedValues={currentVat}
         onToggle={onVatToggle}
@@ -240,8 +242,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       />
 
       <MultiSelectDropdown
-        buttonText={currentFuels.length === 0 ? 'Fuel' : `Fuel (${currentFuels.length})`}
-        clearLabel="Clear Fuel"
+        buttonText={currentFuels.length === 0 ? t('fuel') : `${t('fuel')} (${currentFuels.length})`}
+        clearLabel={t('clear_fuel')}
         options={allFuels.map((fuel) => ({ value: fuel, label: fuel }))}
         selectedValues={currentFuels}
         onToggle={onFuelToggle}
@@ -251,8 +253,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       {/* Extras multi-select dropdown */}
       {allExtras.length > 0 && (
         <MultiSelectDropdown
-          buttonText={currentExtras.length === 0 ? 'Extras' : `Extras (${currentExtras.length})`}
-          clearLabel="Clear extras"
+          buttonText={currentExtras.length === 0 ? t('extras') : `${t('extras')} (${currentExtras.length})`}
+          clearLabel={t('clear_extras')}
           options={allExtras.map((extra) => ({ value: extra, label: extra }))}
           selectedValues={currentExtras}
           onToggle={onExtraToggle}
@@ -262,8 +264,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       )}
 
       <MultiSelectDropdown
-        buttonText={currentYears.length === 0 ? 'Years' : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} years`}
-        clearLabel="Clear years"
+        buttonText={currentYears.length === 0 ? t('years') : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} ${t('years_count')}`}
+        clearLabel={t('clear_years')}
         options={allYears.map((year) => ({ value: year, label: year }))}
         selectedValues={currentYears}
         onToggle={onYearToggle}
@@ -282,11 +284,11 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         disabled={!hasFilters}
         className="h-8 rounded border border-gray-600 px-3 text-xs text-gray-400 hover:border-gray-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
       >
-        ✕ Clear
+        ✕ {t('clear')}
       </button>
 
       <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
-        <span>{formatCount(total)} ad{total !== 1 ? 's' : ''}</span>
+        <span>{formatCount(total)} {total !== 1 ? t('ads') : t('ad')}</span>
         {syncHref && (
           <a
             href={syncHref}
@@ -301,8 +303,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         )}
         {showPageLinks && (
           <>
-            <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Edit Own</a>
-            <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</a>
+            <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">{t('edit_own')}</a>
+            <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ {t('config')}</a>
           </>
         )}
       </div>

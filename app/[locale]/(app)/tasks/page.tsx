@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -22,6 +23,7 @@ const STATUS_OPTIONS = ['', 'backlog', 'in_progress', 'done', 'cancelled'];
 const PRIORITY_OPTIONS = ['', 'urgent', 'high', 'medium', 'low'];
 
 export default function TasksPage() {
+  const t = useTranslations('ui');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('');
@@ -48,17 +50,17 @@ export default function TasksPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-gray-400">{total} tasks</p>
+          <h1 className="text-2xl font-bold">{t('tasks')}</h1>
+          <p className="text-sm text-gray-400">{total} {t('tasks').toLowerCase()}</p>
         </div>
         <Link href="/tasks/new">
-          <Button>New Task</Button>
+          <Button>{t('new_task')}</Button>
         </Link>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <Input
-          placeholder="Search tasks..."
+          placeholder={t('search_tasks')}
           value={search}
           onChange={(e) => {
             setLoading(true);
@@ -74,7 +76,7 @@ export default function TasksPage() {
           }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('all_statuses')}</option>
           {STATUS_OPTIONS.filter(Boolean).map((s) => (
             <option key={s} value={s}>{s.replace('_', ' ')}</option>
           ))}
@@ -87,7 +89,7 @@ export default function TasksPage() {
           }}
           className="rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
         >
-          <option value="">All priorities</option>
+          <option value="">{t('all_priorities')}</option>
           {PRIORITY_OPTIONS.filter(Boolean).map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
@@ -95,9 +97,9 @@ export default function TasksPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       ) : tasks.length === 0 ? (
-        <p className="text-gray-400">No tasks found.</p>
+        <p className="text-gray-400">{t('no_tasks_found')}</p>
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => (
@@ -112,7 +114,7 @@ export default function TasksPage() {
                   {task.assignee_name && <span>{task.assignee_name}</span>}
                   {task.deadline && (
                     <span className={isOverdue(task.deadline, task.status) ? 'text-red-400' : ''}>
-                      Due {task.deadline}
+                      {t('due')} {task.deadline}
                     </span>
                   )}
                 </div>

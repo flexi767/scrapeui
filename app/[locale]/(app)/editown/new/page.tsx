@@ -1,6 +1,7 @@
 
 import Link from "next/link";
 import NewListingForm from "@/components/NewListingForm";
+import { getTranslations } from 'next-intl/server';
 import { fetchMakesModels } from "@/lib/mobile-bg/makes-models";
 import { loadMobileBgMakesMapFromDb } from "@/lib/mobile-bg/reference";
 import { fetchFuelTypes } from "@/lib/mobile-bg/fuel-types";
@@ -132,6 +133,7 @@ function getOwnListingsByDealer(): Record<
 }
 
 export default async function NewListingPage() {
+  const t = await getTranslations('ui');
   const [makesMap, fuelMap, transmissionMap, regions] = await Promise.all([
     Promise.resolve(loadMobileBgMakesMapFromDb(raw) ?? null)
       .then((map) => map ?? fetchMakesModels())
@@ -167,9 +169,9 @@ export default async function NewListingPage() {
             href="/editown"
             className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
           >
-            ← Own Listings
+            {t('back_to_own_listings')}
           </Link>
-          <span className="text-sm font-medium text-gray-300">Нова обява</span>
+          <span className="text-sm font-medium text-gray-300">{t('new_listing')}</span>
         </div>
       </header>
 

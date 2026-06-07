@@ -4,16 +4,18 @@ import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { getMobileBgEditForms } from '@/lib/queries';
 import { getListingThumbSrc } from '@/lib/listing-thumb';
 import { formatDate } from '@/lib/utils';
+import { getTranslations } from 'next-intl/server';
 
-export default function MobileBgEditFormsPage() {
+export default async function MobileBgEditFormsPage() {
+  const t = await getTranslations('ui');
   const rows = getMobileBgEditForms(250);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Mobile.bg Edit Forms</h1>
+        <h1 className="text-2xl font-bold text-white">{t('mobilebg_edit_forms_title')}</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Snapshots of the live dealer edit form, stored in the database for comparison and repost workflows.
+          {t('mobilebg_edit_forms_description')}
         </p>
       </div>
 
@@ -21,16 +23,16 @@ export default function MobileBgEditFormsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-700 bg-gray-800/60 text-xs uppercase tracking-wider text-gray-400">
-              <th className="px-4 py-2 text-left">Listing</th>
-              <th className="px-4 py-2 text-left">Dealer</th>
-              <th className="px-4 py-2 text-left">Token</th>
-              <th className="px-4 py-2 text-right">Captured</th>
+              <th className="px-4 py-2 text-left">{t('col_listing')}</th>
+              <th className="px-4 py-2 text-left">{t('col_dealer')}</th>
+              <th className="px-4 py-2 text-left">{t('col_token')}</th>
+              <th className="px-4 py-2 text-right">{t('col_captured')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-gray-500">No edit form snapshots yet.</td>
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-500">{t('no_edit_form_snapshots_yet')}</td>
               </tr>
             ) : rows.map((row) => (
               (() => {

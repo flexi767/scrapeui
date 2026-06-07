@@ -4,6 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/shared/CategoryBadge';
 
@@ -24,6 +25,7 @@ interface ExpenseDetail {
 }
 
 export default function ExpenseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('ui');
   const { id } = use(params);
   const router = useRouter();
   const [expense, setExpense] = useState<ExpenseDetail | null>(null);
@@ -38,7 +40,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
     router.push('/expenses');
   }
 
-  if (!expense) return <p className="text-gray-400">Loading...</p>;
+  if (!expense) return <p className="text-gray-400">{t('loading')}</p>;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -49,7 +51,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
         <h1 className="text-2xl font-bold">{expense.title}</h1>
         <div className="mt-1 flex items-center gap-4 text-sm text-gray-400">
           <span>{expense.date}</span>
-          <span>By {expense.creator_name}</span>
+          <span>{t('by')} {expense.creator_name}</span>
         </div>
       </div>
 

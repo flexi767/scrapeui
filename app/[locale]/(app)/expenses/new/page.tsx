@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ import { formatDateInputValue } from '@/lib/date-format';
 import { parseApiResponse } from '@/lib/utils';
 
 export default function NewExpensePage() {
+  const t = useTranslations('ui');
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -69,31 +71,31 @@ export default function NewExpensePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">New Expense</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('new_expense')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Expense title" />
+          <Label htmlFor="title">{t('title')}</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder={t('expense_title_placeholder')} />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Amount</Label>
+            <Label>{t('amount')}</Label>
             <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00" />
           </div>
           <div className="space-y-2">
-            <Label>Currency</Label>
+            <Label>{t('currency')}</Label>
             <Input value={currency} readOnly className="bg-gray-900 text-gray-300" />
           </div>
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label>{t('date')}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Category</Label>
+          <Label>{t('category')}</Label>
           <select value={category} onChange={(e) => setCategory(e.target.value)}
             className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200">
             {EXPENSE_CATEGORIES.map((c) => (
@@ -103,14 +105,14 @@ export default function NewExpensePage() {
         </div>
 
         <div className="space-y-2">
-          <Label>Notes</Label>
+          <Label>{t('notes')}</Label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200"
-            rows={3} placeholder="Optional notes..." />
+            rows={3} placeholder={t('optional_notes_placeholder')} />
         </div>
 
         <div className="space-y-2">
-          <Label>Invoice / Receipt</Label>
+          <Label>{t('invoice_receipt')}</Label>
           <input
             type="file"
             multiple
@@ -130,7 +132,7 @@ export default function NewExpensePage() {
         <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
 
         <div className="space-y-2">
-          <Label>Labels</Label>
+          <Label>{t('labels')}</Label>
           <div className="flex flex-wrap gap-2">
             {labels.map((l) => (
               <button key={l.id} type="button"
@@ -149,8 +151,8 @@ export default function NewExpensePage() {
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create Expense'}</Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? t('creating') : t('create_expense')}</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>{t('cancel')}</Button>
         </div>
       </form>
     </div>

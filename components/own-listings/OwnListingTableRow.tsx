@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent } from "react";
 import { SearchIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
@@ -54,6 +55,7 @@ export function OwnListingTableRow({
   onPublishToFacebook,
   onEditorKeyDown,
 }: OwnListingTableRowProps) {
+  const t = useTranslations('ui');
   const thumbSrc = getListingThumbSrc(row, { preferListingImage: true });
   const thumbAlt = getListingThumbAlt(row);
   const kmFormatted = formatCount(row.mileage);
@@ -89,7 +91,7 @@ export function OwnListingTableRow({
                 <button
                   onClick={() => onSave({ closeAfterSave: true })}
                   disabled={saving}
-                  title="Save"
+                  title={t('save')}
                   className="text-green-400 hover:text-green-300 disabled:opacity-50 text-base leading-none"
                 >
                   ✓
@@ -98,7 +100,7 @@ export function OwnListingTableRow({
                 <button
                   onClick={() => onStartEdit(row)}
                   disabled={saving}
-                  title="Edit"
+                  title={t('edit')}
                   className={`text-gray-400 hover:text-white text-base leading-none ${saving ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
                 >
                   ✎
@@ -151,7 +153,7 @@ export function OwnListingTableRow({
                 onMouseDown={stopEditorPointerPropagation}
                 onPointerDown={stopEditorPointerPropagation}
                 onKeyDown={onEditorKeyDown}
-                placeholder="cars.bg title"
+                placeholder={t('carsbg_title_placeholder')}
                 className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white"
               />
             </div>
@@ -229,14 +231,14 @@ export function OwnListingTableRow({
               {row.search_original_position}
             </span>
           ) : row.search_checked_at ? (
-            <span className="text-xs font-medium text-red-300">not found</span>
+            <span className="text-xs font-medium text-red-300">{t('not_found')}</span>
           ) : (
             <span className="text-gray-600">—</span>
           )}
           {row.has_saved_search_profile === 1 && (
             <span
               className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-500/50 bg-amber-950/40 text-amber-200"
-              title="Uses saved custom search values for search-position checks"
+              title={t('uses_saved_search_profile_tooltip')}
             >
               <SearchIcon className="h-3 w-3" />
             </span>

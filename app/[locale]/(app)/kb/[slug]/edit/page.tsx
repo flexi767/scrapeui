@@ -3,6 +3,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { TiptapEditor } from '@/components/editor/TiptapEditor';
 
 export default function EditArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const t = useTranslations('ui');
   const router = useRouter();
   const [articleId, setArticleId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
@@ -52,22 +54,22 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
     router.push(`/kb/${slug}`);
   }
 
-  if (!loaded) return <p className="text-gray-400">Loading...</p>;
+  if (!loaded) return <p className="text-gray-400">{t('loading')}</p>;
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Edit Article</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('edit_article')}</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>{t('title')}</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <Label>Content</Label>
+          <Label>{t('content')}</Label>
           <TiptapEditor content={content} onChange={setContent} />
         </div>
         <div className="space-y-2">
-          <Label>Labels</Label>
+          <Label>{t('labels')}</Label>
           <div className="flex flex-wrap gap-2">
             {labels.map((l) => (
               <button key={l.id} type="button"
@@ -85,8 +87,8 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
           </div>
         </div>
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? t('saving') : t('save_changes')}</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>{t('cancel')}</Button>
         </div>
       </form>
     </div>

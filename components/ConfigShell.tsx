@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import DealersManager from './DealersManager';
 import type { Dealer } from './dealers/types';
 import ScrapeRunner from './ScrapeRunner';
 
 export default function ConfigShell({ initialDealers }: { initialDealers: Dealer[] }) {
+  const t = useTranslations('ui');
   const [dealers, setDealers] = useState<Dealer[]>(initialDealers);
   const [dealersCollapsed, setDealersCollapsed] = useState(false);
 
@@ -17,7 +19,7 @@ export default function ConfigShell({ initialDealers }: { initialDealers: Dealer
           className="mb-4 flex items-center gap-2 text-lg font-semibold text-white"
         >
           <span>{dealersCollapsed ? '▶' : '▼'}</span>
-          <span>Dealers</span>
+          <span>{t('dealers')}</span>
         </button>
         {!dealersCollapsed && (
           <DealersManager initialDealers={dealers} onDealersChange={setDealers} />
@@ -25,7 +27,7 @@ export default function ConfigShell({ initialDealers }: { initialDealers: Dealer
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-white mb-4">Run Scraper</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">{t('run_scraper')}</h2>
         <ScrapeRunner initialDealers={dealers} onRunStart={() => setDealersCollapsed(true)} />
       </section>
     </>

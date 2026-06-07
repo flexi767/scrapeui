@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 import { formatCount } from '@/lib/utils';
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { errorMessage } from "@/lib/utils";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, SendIcon, XIcon } from "lucide-react";
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function InstagramPublisherClient({ backupId }: Props) {
+  const t = useTranslations('ui');
   const [sharing, setSharing] = useState(false);
   const [loadedListing, setLoadedListing] = useState<InstagramListingPayload | null>(null);
   const posterWorkflow = useInstagramPosterWorkflow(loadedListing);
@@ -76,7 +78,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
   async function copyCaption() {
     if (!listing) return;
     await navigator.clipboard.writeText(listing.caption);
-    toast.success("Caption copied");
+    toast.success(t('caption_copied'));
   }
 
   function downloadCover() {
@@ -105,20 +107,20 @@ export function InstagramPublisherClient({ backupId }: Props) {
         text: listing.caption,
         files,
       });
-      toast.success("Share sheet opened");
+      toast.success(t('share_sheet_opened'));
     } catch (error) {
-      toast.error(errorMessage(error, "Could not open share sheet"));
+      toast.error(errorMessage(error, t('could_not_open_share_sheet')));
     } finally {
       setSharing(false);
     }
   }
 
   if (loading) {
-    return <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-gray-300">Loading Instagram publisher...</div>;
+    return <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-gray-300">{t('loading_instagram_publisher')}</div>;
   }
 
   if (!listing) {
-    return <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-6 text-red-100">Listing could not be loaded.</div>;
+    return <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-6 text-red-100">{t('listing_could_not_be_loaded')}</div>;
   }
 
   const zoomOverlay = zoomImage ? (
@@ -133,7 +135,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
         type="button"
         onClick={() => setZoomImage(null)}
         className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-white/10"
-        aria-label="Close preview"
+        aria-label={t('close_preview')}
       >
         <XIcon className="h-5 w-5" />
       </button>
@@ -151,9 +153,9 @@ export function InstagramPublisherClient({ backupId }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/editown" className="text-sm text-gray-400 hover:text-white">
-            Back to own listings
+            {t('back_to_own_listings')}
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-white">Instagram publish</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-white">{t('instagram_publish')}</h1>
           <p className="mt-1 text-sm text-gray-400">{listing.title}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -163,7 +165,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-700 px-3 text-sm text-gray-100 hover:bg-gray-800"
           >
             <CopyIcon className="h-4 w-4" />
-            Copy caption
+            {t('copy_caption')}
           </button>
           <button
             type="button"
@@ -172,7 +174,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-700 px-3 text-sm text-gray-100 hover:bg-gray-800 disabled:opacity-50"
           >
             <DownloadIcon className="h-4 w-4" />
-            Cover
+            {t('cover')}
           </button>
           <button
             type="button"
@@ -181,7 +183,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md bg-pink-600 px-3 text-sm font-medium text-white hover:bg-pink-500 disabled:opacity-50"
           >
             <SendIcon className="h-4 w-4" />
-            {sharing ? "Preparing..." : "Share carousel"}
+            {sharing ? t('preparing') : t('share_carousel')}
           </button>
         </div>
       </div>

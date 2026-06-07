@@ -1,6 +1,7 @@
 
 import EditOwnBatchSync from '@/components/EditOwnBatchSync';
 import { getAllDealers, getEditOwnSyncRows } from '@/lib/queries';
+import { getTranslations } from 'next-intl/server';
 
 interface SearchParams {
   autorun?: string;
@@ -11,6 +12,7 @@ export default async function EditOwnSyncPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const t = await getTranslations('ui');
   const sp = await searchParams;
   const rows = getEditOwnSyncRows().filter((row) => row.needs_sync === 1);
   const ownDealers = getAllDealers()
@@ -22,9 +24,9 @@ export default async function EditOwnSyncPage({
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div>
-            <div className="text-sm font-medium text-gray-200">Batch Sync</div>
+            <div className="text-sm font-medium text-gray-200">{t('batch_sync')}</div>
             <div className="text-xs text-gray-500">
-              Sync changed own listings back to Mobile.bg
+              {t('sync_changed_own_listings_back_to_mobile_bg')}
             </div>
           </div>
         </div>

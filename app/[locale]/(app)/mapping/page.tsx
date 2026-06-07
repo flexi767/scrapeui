@@ -1,5 +1,6 @@
 
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import ReparseRunner from '@/components/ReparseRunner';
 import MobileBgMakeModelSyncRunner from '@/components/MobileBgMakeModelSyncRunner';
 import { raw } from '@/db/client';
@@ -29,12 +30,13 @@ function mappingStatus(row: {
 }) {
   const mobileOk = row.mobile_make_id && row.mobile_model_id;
   const carsOk = row.cars_make_id && row.cars_model_id;
-  if (mobileOk && carsOk) return { label: 'Resolved', className: 'bg-green-900/40 text-green-300 border-green-700/60' };
-  if (mobileOk || carsOk) return { label: 'Partial', className: 'bg-yellow-900/40 text-yellow-300 border-yellow-700/60' };
-  return { label: 'Unresolved', className: 'bg-red-900/40 text-red-300 border-red-700/60' };
+  if (mobileOk && carsOk) return { labelKey: 'resolved' as const, className: 'bg-green-900/40 text-green-300 border-green-700/60' };
+  if (mobileOk || carsOk) return { labelKey: 'partial' as const, className: 'bg-yellow-900/40 text-yellow-300 border-yellow-700/60' };
+  return { labelKey: 'unresolved' as const, className: 'bg-red-900/40 text-red-300 border-red-700/60' };
 }
 
-export default function MappingPage() {
+export default async function MappingPage() {
+  const t = await getTranslations('ui');
   const dealers = getDealers();
   const rows = getMakeModelMappings(1000);
   const unresolvedCount = rows.filter((row) => !row.mobile_make_id || !row.mobile_model_id || !row.cars_make_id || !row.cars_model_id).length;
@@ -42,69 +44,69 @@ export default function MappingPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Make/Model Mapping</h1>
+        <h1 className="text-2xl font-bold text-white">{t('make_model_mapping')}</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Relationship view between mobile.bg and cars.bg make/model pairs, grouped across listings.
+          {t('make_model_mapping_description')}
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-5">
-          <h2 className="mb-2 text-lg font-semibold text-white">Sync Mobile.bg Make / Model Reference</h2>
+          <h2 className="mb-2 text-lg font-semibold text-white">{t('sync_mobilebg_make_model_reference')}</h2>
           <p className="mb-4 text-sm text-gray-400">
-            Refresh the stored make/model reference data and counts from mobile.bg with live feedback.
+            {t('sync_mobilebg_make_model_reference_description')}
           </p>
           <MobileBgMakeModelSyncRunner />
         </section>
 
         <section className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-5">
-          <h2 className="mb-4 text-lg font-semibold text-white">Reparse Make / Model</h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">{t('reparse_make_model')}</h2>
           <ReparseRunner dealers={dealers} />
         </section>
       </div>
 
       <section className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-5">
-        <h2 className="text-lg font-semibold text-white">Form Config</h2>
+        <h2 className="text-lg font-semibold text-white">{t('form_config')}</h2>
         <p className="mt-2 text-sm text-gray-400">
-          Review captured Mobile.bg edit-form snapshots and the live field values used for make/model-dependent reposts and updates.
+          {t('form_config_description')}
         </p>
         <div className="mt-4">
           <Link
             href="/mobilebg/edit-forms"
             className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
           >
-            Open Edit Form Config
+            {t('open_edit_form_config')}
           </Link>
         </div>
       </section>
 
       <div className="rounded-lg border border-gray-700 bg-gray-900/40 px-4 py-3 text-sm text-gray-300">
-        Found <span className="font-semibold text-white">{rows.length}</span> mapping pair(s), with{' '}
-        <span className="font-semibold text-red-300">{unresolvedCount}</span> incomplete pair(s).
+        {t('found')} <span className="font-semibold text-white">{rows.length}</span> {t('mapping_pairs_with')}{' '}
+        <span className="font-semibold text-red-300">{unresolvedCount}</span> {t('incomplete_pairs')}.
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-700/60">
         <table className="w-full min-w-[1300px] text-sm">
           <thead>
             <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-left">Mobile make</th>
-              <th className="px-3 py-2 text-left">Mobile model</th>
-              <th className="px-3 py-2 text-right">mobile make id</th>
-              <th className="px-3 py-2 text-right">mobile model id</th>
-              <th className="px-3 py-2 text-right">cars make id</th>
-              <th className="px-3 py-2 text-right">cars model id</th>
-              <th className="px-3 py-2 text-right">Listings</th>
-              <th className="px-3 py-2 text-left">Dealers</th>
-              <th className="px-3 py-2 text-left">Example listing</th>
-              <th className="px-3 py-2 text-right">Last edit</th>
+              <th className="px-3 py-2 text-left">{t('status')}</th>
+              <th className="px-3 py-2 text-left">{t('mobile_make')}</th>
+              <th className="px-3 py-2 text-left">{t('mobile_model')}</th>
+              <th className="px-3 py-2 text-right">{t('mobile_make_id')}</th>
+              <th className="px-3 py-2 text-right">{t('mobile_model_id')}</th>
+              <th className="px-3 py-2 text-right">{t('cars_make_id')}</th>
+              <th className="px-3 py-2 text-right">{t('cars_model_id')}</th>
+              <th className="px-3 py-2 text-right">{t('listings')}</th>
+              <th className="px-3 py-2 text-left">{t('dealers')}</th>
+              <th className="px-3 py-2 text-left">{t('example_listing')}</th>
+              <th className="px-3 py-2 text-right">{t('last_edit')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700/50">
             {rows.length === 0 && (
               <tr>
                 <td colSpan={11} className="py-16 text-center text-gray-500">
-                  No make/model mappings found.
+                  {t('no_make_model_mappings_found')}
                 </td>
               </tr>
             )}
@@ -114,7 +116,7 @@ export default function MappingPage() {
                 <tr key={`${row.make || 'na'}-${row.model || 'na'}-${row.mobile_make_id || 'na'}-${row.mobile_model_id || 'na'}-${idx}`} className="hover:bg-gray-800/40">
                   <td className="px-3 py-2">
                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${status.className}`}>
-                      {status.label}
+                      {t(status.labelKey)}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-gray-200">{row.make || '—'}</td>

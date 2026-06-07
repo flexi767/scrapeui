@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import type { DealerRow } from '@/lib/queries';
 import { readJsonError } from '@/lib/streaming-job';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export default function CarsBgSyncRunner({ dealers }: Props) {
+  const t = useTranslations('ui');
   const [liveMode, setLiveMode] = useState(false);
   const [currentDealer, setCurrentDealer] = useState<string | null>(null);
   const [selectedDealers, setSelectedDealers] = useState<string[]>(() => dealers.map((dealer) => dealer.slug));
@@ -69,7 +71,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
   }
 
   const streamRun = useStreamingRun<CarsBgSyncStreamEntry>({
-    fallbackStartError: 'Failed to start cars.bg sync',
+    fallbackStartError: t('failed_to_start_carsbg_sync'),
     start: (signal) => fetch('/api/editown/carsbg-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { PublicDealer, InnerPageKind } from "../types";
 import { ContactForm } from "./ContactForm";
 import s from "./InnerPage.module.css";

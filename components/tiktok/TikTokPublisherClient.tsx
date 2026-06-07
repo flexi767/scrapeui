@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   CopyIcon,
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function TikTokPublisherClient({ backupId }: Props) {
+  const t = useTranslations('ui');
   const [sharing, setSharing] = useState(false);
   const publisher = useTikTokVideoPublisher();
   const {
@@ -77,26 +79,26 @@ export function TikTokPublisherClient({ backupId }: Props) {
           text: caption,
           files: [file],
         });
-        toast.success("Share sheet opened");
+        toast.success(t('share_sheet_opened'));
       } catch {
         await navigator.clipboard.writeText(caption).catch(() => undefined);
         window.open("https://www.tiktok.com/upload", "_blank", "noopener,noreferrer");
-        toast.message("TikTok upload opened. Download the video here, then upload it there.");
+        toast.message(t('tiktok_upload_opened'));
         return;
       }
     } catch (error) {
-      toast.error(errorMessage(error, "Could not open share sheet"));
+      toast.error(errorMessage(error, t('could_not_open_share_sheet')));
     } finally {
       setSharing(false);
     }
   }
 
   if (loading) {
-    return <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-gray-300">Loading TikTok publisher...</div>;
+    return <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-gray-300">{t('loading_tiktok_publisher')}</div>;
   }
 
   if (!listing) {
-    return <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-6 text-red-100">Listing could not be loaded.</div>;
+    return <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-6 text-red-100">{t('listing_could_not_be_loaded')}</div>;
   }
 
   return (
@@ -104,11 +106,11 @@ export function TikTokPublisherClient({ backupId }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/editown" className="text-sm text-gray-400 hover:text-white">
-            Back to own listings
+            {t('back_to_own_listings')}
           </Link>
           <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold text-white">
             <TikTokIcon className="h-6 w-6 text-cyan-200" />
-            TikTok publish
+            {t('tiktok_publish')}
           </h1>
           <p className="mt-1 text-sm text-gray-400">{listing.title}</p>
         </div>
@@ -119,7 +121,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-700 px-3 text-sm text-gray-100 hover:bg-gray-800"
           >
             <CopyIcon className="h-4 w-4" />
-            Copy caption
+            {t('copy_caption')}
           </button>
           <button
             type="button"
@@ -128,7 +130,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-700 px-3 text-sm text-gray-100 hover:bg-gray-800 disabled:opacity-50"
           >
             <RefreshCwIcon className={`h-4 w-4 ${rendering ? "animate-spin" : ""}`} />
-            {rendering ? "Rendering..." : "Regenerate"}
+            {rendering ? t('rendering') : t('regenerate')}
           </button>
           <button
             type="button"
@@ -137,7 +139,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-700 px-3 text-sm text-gray-100 hover:bg-gray-800 disabled:opacity-50"
           >
             <DownloadIcon className="h-4 w-4" />
-            Video
+            {t('video')}
           </button>
           <button
             type="button"
@@ -146,7 +148,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
             className="inline-flex h-9 items-center gap-2 rounded-md bg-cyan-500 px-3 text-sm font-medium text-gray-950 hover:bg-cyan-400 disabled:opacity-50"
           >
             <SendIcon className="h-4 w-4" />
-            {sharing ? "Opening..." : "Post to TikTok"}
+            {sharing ? t('opening') : t('post_to_tiktok')}
           </button>
         </div>
       </div>

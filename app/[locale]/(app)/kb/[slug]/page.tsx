@@ -4,6 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TiptapViewer } from '@/components/editor/TiptapViewer';
 import { formatDateOnly } from '@/lib/date-format';
@@ -23,6 +24,7 @@ interface ArticleDetail {
 
 export default function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const t = useTranslations('ui');
   const router = useRouter();
   const [article, setArticle] = useState<ArticleDetail | null>(null);
 
@@ -44,12 +46,12 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
   }, [slug]);
 
   async function deleteArticle() {
-    if (!article || !confirm('Delete this article?')) return;
+    if (!article || !confirm(t('delete_article_confirm'))) return;
     await fetch(`/api/articles/${article.id}`, { method: 'DELETE' });
     router.push('/kb');
   }
 
-  if (!article) return <p className="text-gray-400">Loading...</p>;
+  if (!article) return <p className="text-gray-400">{t('loading')}</p>;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -73,7 +75,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
 
       {article.listings?.length > 0 && (
         <div className="mb-4">
-          <h3 className="mb-1 text-sm font-medium text-gray-400">Linked Cars</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-400">{t('linked_cars')}</h3>
           <div className="flex flex-wrap gap-2">
             {article.listings.map((l) => (
               <Link key={l.id} href={`/listings/${l.mobile_id}`}
@@ -91,7 +93,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
 
       {article.uploads?.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">Attachments</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t('attachments')}</h3>
           <div className="space-y-1">
             {article.uploads.map((u) => (
               <a key={u.id} href={`/api/uploads/${u.stored_name}`} target="_blank" rel="noreferrer"
@@ -105,9 +107,9 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
 
       <div className="mt-6 flex gap-2">
         <Link href={`/kb/${slug}/edit`}>
-          <Button variant="outline">Edit</Button>
+          <Button variant="outline">{t('edit')}</Button>
         </Link>
-        <Button variant="destructive" onClick={deleteArticle}>Delete</Button>
+        <Button variant="destructive" onClick={deleteArticle}>{t('delete')}</Button>
       </div>
     </div>
   );

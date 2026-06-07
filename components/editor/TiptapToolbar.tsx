@@ -2,6 +2,7 @@
 
 import type { Editor } from '@tiptap/react';
 import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 interface TiptapToolbarProps {
@@ -9,6 +10,7 @@ interface TiptapToolbarProps {
 }
 
 export function TiptapToolbar({ editor }: TiptapToolbarProps) {
+  const t = useTranslations('ui');
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {

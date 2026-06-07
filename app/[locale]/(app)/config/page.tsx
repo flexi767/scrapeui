@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import ConfigShell from '@/components/ConfigShell';
 import type { Dealer } from '@/components/dealers/types';
 import { raw } from '@/db/client';
@@ -22,7 +23,8 @@ function getDealers(): DealerRow[] {
   `).all() as DealerRow[];
 }
 
-export default function ConfigPage() {
+export default async function ConfigPage() {
+  const t = await getTranslations('ui');
   const dealers = getDealers();
 
   return (
@@ -31,9 +33,9 @@ export default function ConfigPage() {
         <div className="mx-auto max-w-screen-2xl px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/listings" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
-              ← Listings
+              ← {t('listings')}
             </Link>
-            <span className="text-sm font-medium text-gray-400">⚙ Config</span>
+            <span className="text-sm font-medium text-gray-400">⚙ {t('config')}</span>
           </div>
         </div>
       </header>
