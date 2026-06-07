@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import SavedSearchesWorkspace from '@/components/SavedSearchesWorkspace';
 import { getSavedSearchDetail, listSavedSearchSummaries } from '@/lib/mobile-bg/saved-searches';

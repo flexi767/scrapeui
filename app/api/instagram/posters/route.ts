@@ -11,9 +11,11 @@ import {
 } from "./cache";
 import {
   generatePosterVariants,
+  getPosterImageProvider,
   parseCollageSelections,
   parseVariantId,
   parseVariantPrompts,
+  validatePosterImageProvider,
   type PosterRequestBody,
 } from "./service";
 
@@ -24,10 +26,11 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if ("error" in auth) return auth.error;
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const provider = getPosterImageProvider();
+  const providerError = validatePosterImageProvider(provider);
+  if (providerError) {
     return Response.json(
-      { error: "OPENAI_API_KEY is not configured", variants: [] },
+      { error: providerError, variants: [] },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
       : `Create a premium Instagram poster for ${listing.title}.`;
   const force = body.force === true;
   const cacheOnly = body.cacheOnly === true;
-  const model = process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2";
+  const model = process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? (provider === "comfyui" ? "comfyui-workflow" : "gpt-image-2");
   const variantPrompts = parseVariantPrompts(body.variantPrompts);
   const variantId = parseVariantId(body.variantId);
   let targetVariantPrompts = variantId
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
   const cacheDir = getPosterCacheDir({
     backupId,
     prompt,
-    model,
+    model: `${provider}:${model}`,
     photoIds: listing.photos.map((photo) => photo.id),
     variantPrompts,
     collageSelections,
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
       listing,
       prompt,
       model,
-      apiKey,
+      provider,
       variantPrompts: targetVariantPrompts,
       collageSelections,
     });

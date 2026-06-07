@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { getPublicDealer, getPublicListing, getDealerTemplateConfig, getRelatedListings } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";

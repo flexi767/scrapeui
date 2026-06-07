@@ -9,7 +9,6 @@ interface DealerRow extends Dealer {
   created_at: string | null;
 }
 
-export const dynamic = 'force-dynamic';
 
 function getDealers(): DealerRow[] {
   return raw.prepare(`

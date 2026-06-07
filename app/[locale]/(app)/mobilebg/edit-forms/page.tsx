@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { getMobileBgEditForms } from '@/lib/queries';

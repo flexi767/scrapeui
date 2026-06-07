@@ -7,12 +7,16 @@ export function getTranslationsForLocale(locale: string) {
     .select({
       id: translationKeys.id,
       value: translations.value,
-      plural_form: translations.plural_form,
+      pluralForm: translations.pluralForm,
     })
     .from(translations)
     .innerJoin(
       translationKeys,
       eq(translations.translationKeyId, translationKeys.id),
+    )
+    .innerJoin(
+      locales,
+      eq(translations.localeCode, locales.code),
     )
     .where(
       and(

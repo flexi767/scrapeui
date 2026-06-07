@@ -17,17 +17,17 @@ export async function GET() {
 
     const result = keys.map((key) => {
       const transForKey = allTranslations.filter(
-        (t) => t.translation_key_id === key.id,
+        (t) => t.translationKeyId === key.id,
       );
 
       return {
         key: key.id,
         context: key.context,
         description: key.description,
-        bg: transForKey.find((t) => t.locale_code === 'bg')?.value || '',
-        en: transForKey.find((t) => t.locale_code === 'en')?.value || '',
-        de: transForKey.find((t) => t.locale_code === 'de')?.value || '',
-        ru: transForKey.find((t) => t.locale_code === 'ru')?.value || '',
+        bg: transForKey.find((t) => t.localeCode === 'bg')?.value || '',
+        en: transForKey.find((t) => t.localeCode === 'en')?.value || '',
+        de: transForKey.find((t) => t.localeCode === 'de')?.value || '',
+        ru: transForKey.find((t) => t.localeCode === 'ru')?.value || '',
       };
     });
 
@@ -57,19 +57,19 @@ export async function PUT(request: Request) {
       .from(translations)
       .where(
         and(
-          eq(translations.translation_key_id, key),
-          eq(translations.locale_code, locale),
+          eq(translations.translationKeyId, key),
+          eq(translations.localeCode, locale),
         ),
       )
       .get();
 
     if (existing) {
       db.update(translations)
-        .set({ value, updated_at: new Date().toISOString() })
+        .set({ value, updatedAt: new Date().toISOString() })
         .where(
           and(
-            eq(translations.translation_key_id, key),
-            eq(translations.locale_code, locale),
+            eq(translations.translationKeyId, key),
+            eq(translations.localeCode, locale),
           ),
         )
         .run();
@@ -77,12 +77,12 @@ export async function PUT(request: Request) {
       db.insert(translations)
         .values({
           id: nanoid(),
-          translation_key_id: key,
-          locale_code: locale,
+          translationKeyId: key,
+          localeCode: locale,
           value,
-          plural_form: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          pluralForm: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
         .run();
     }

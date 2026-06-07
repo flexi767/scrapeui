@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 import { getDealerByDomain } from '@/lib/query-modules/public';
 
@@ -30,7 +30,7 @@ const { auth } = NextAuth({
     authorized({ auth: session, request }) {
       const { pathname } = request.nextUrl;
       const isLoggedIn = !!session?.user;
-      const isLoginPage = pathname === '/login';
+      const isLoginPage = pathname === '/login' || pathname.includes('/login');
       const isApiAuth = pathname.startsWith('/api/auth');
       const isPublicDealerPage = pathname.startsWith('/d/');
       const isTokenCheckedBackupImage = pathname.startsWith('/api/mobilebg-backup-images/');

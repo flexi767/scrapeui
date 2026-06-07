@@ -1,3 +1,4 @@
+
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
 import { SortLink } from '@/components/listings/SortLink';

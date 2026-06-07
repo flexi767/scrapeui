@@ -1,8 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next-intl/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { setCookie } from '@/lib/translation-utils';
 
 const LOCALES = ['bg', 'en', 'de', 'ru'] as const;
@@ -15,6 +14,7 @@ const LOCALE_NAMES: Record<(typeof LOCALES)[number], string> = {
 
 export function LanguageSelector() {
   const locale = useLocale();
+  const pathname = usePathname();
   const router = useRouter();
 
   const handleChange = (newLocale: string) => {
@@ -22,8 +22,10 @@ export function LanguageSelector() {
     setCookie('NEXT_LOCALE', newLocale, 365);
 
     // Navigate to the same path in the new locale
-    // next-intl/navigation router handles locale prefix automatically
-    router.push(window.location.pathname.slice(`/${locale}`.length), { locale: newLocale as any });
+    // Remove current locale from pathname and prepend new locale
+    const pathWithoutLocale = pathname.replace(`/${locale}`, '');
+    const newPath = `/${newLocale}${pathWithoutLocale || ''}`;
+    router.push(newPath);
   };
 
   return (

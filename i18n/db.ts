@@ -21,11 +21,11 @@ export async function getTranslationsFromDb(locale: string) {
       const lastKey = keys[keys.length - 1];
 
       // Handle plural forms
-      if (row.plural_form) {
+      if (row.pluralForm) {
         if (!current[lastKey]) {
           current[lastKey] = {};
         }
-        current[lastKey][row.plural_form] = row.value;
+        current[lastKey][row.pluralForm] = row.value;
       } else {
         current[lastKey] = row.value;
       }
