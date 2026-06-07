@@ -23,10 +23,6 @@ export function getListingThumbSrc(
   row: ListingThumbSource,
   options: ListingThumbOptions = {},
 ) {
-  if (row.first_backup_image_id) {
-    return `/api/mobilebg-backup-images/${row.first_backup_image_id}`;
-  }
-
   const imageMeta = parseJson<ImageMeta | null>(row.image_meta, null);
   const thumbKeys = parseJson<string[]>(row.thumb_keys, []);
   const fullKeys = parseJson<string[]>(row.full_keys, []);
@@ -40,6 +36,10 @@ export function getListingThumbSrc(
 
   if (options.preferListingImage && images[0]?.thumb) {
     return images[0].thumb;
+  }
+
+  if (row.first_backup_image_id) {
+    return `/api/mobilebg-backup-images/${row.first_backup_image_id}`;
   }
 
   return getPreferredListingThumbUrl(
