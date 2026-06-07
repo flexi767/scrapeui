@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import {
   CarFront,
   ArchiveIcon,
@@ -34,16 +35,6 @@ interface Dealer {
   priority: number;
 }
 
-const navigationLinks = [
-  { href: '/listings', label: 'Listings', icon: CarFront, description: 'Browse all car listings' },
-  { href: '/editown', label: 'Edit Own', icon: EditIcon, description: 'Manage your listings' },
-  { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon, description: 'Mobile.bg integrations' },
-  { href: '/mapping', label: 'Mapping', icon: MapIcon, description: 'Brand & model mapping' },
-  { href: '/tasks', label: 'Tasks', icon: ListTodo, description: 'Task management' },
-  { href: '/kb', label: 'Knowledge Base', icon: BookIcon, description: 'Documentation' },
-  { href: '/config', label: 'Configuration', icon: SettingsIcon, description: 'System settings' },
-];
-
 function formatDate(dateString: string | null): string {
   if (!dateString) return 'Never';
   try {
@@ -72,11 +63,22 @@ function formatDate(dateString: string | null): string {
 
 export function Dashboard() {
   const { data: session, status: sessionStatus } = useSession();
+  const t = useTranslations('ui');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = session?.user?.role === 'admin';
+
+  const navigationLinks = [
+    { href: '/listings', label: t('listings'), icon: CarFront, description: t('browse_all_car_listings') },
+    { href: '/editown', label: t('edit_own'), icon: EditIcon, description: t('manage_your_listings') },
+    { href: '/mobilebg', label: t('mobile.bg'), icon: ArchiveIcon, description: t('mobile.bg_integrations') },
+    { href: '/mapping', label: t('mapping'), icon: MapIcon, description: t('brand_&_model_mapping') },
+    { href: '/tasks', label: t('tasks'), icon: ListTodo, description: t('my_tasks') },
+    { href: '/kb', label: t('knowledge_base'), icon: BookIcon, description: t('knowledge_base') },
+    { href: '/config', label: t('config'), icon: SettingsIcon, description: t('configuration') },
+  ];
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
