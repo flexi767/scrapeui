@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/command';
 
 export function QuickAdd() {
+  const t = useTranslations('ui');
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -39,53 +41,53 @@ export function QuickAdd() {
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-800 px-2 py-1.5 text-sm text-gray-400 hover:border-gray-500 hover:text-gray-200 sm:px-3"
-        title="Search or jump to"
+        title={t('search_or_jump_to')}
       >
-        <span className="hidden sm:inline">Search...</span>
+        <span className="hidden sm:inline">{t('search_ellipsis')}</span>
         <kbd className="rounded border border-gray-600 px-1.5 py-0.5 text-xs">⌘K</kbd>
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search or jump to..." />
+        <CommandInput placeholder={t('search_or_jump_to')} />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{t('no_results_found')}</CommandEmpty>
 
-          <CommandGroup heading="Create">
+          <CommandGroup heading={t('create')}>
             <CommandItem onSelect={() => navigate('/tasks/new')}>
-              New Task
+              {t('new_task')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/expenses/new')}>
-              New Expense
+              {t('new_expense')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/kb/new')}>
-              New Article
+              {t('new_article')}
             </CommandItem>
           </CommandGroup>
 
-          <CommandGroup heading="Navigate">
+          <CommandGroup heading={t('navigate')}>
             <CommandItem onSelect={() => navigate('/')}>
-              Listings
+              {t('listings')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/tasks')}>
-              All Tasks
+              {t('all_tasks')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/tasks/my')}>
-              My Tasks
+              {t('my_tasks')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/expenses')}>
-              Expenses
+              {t('expenses')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/kb')}>
-              Knowledge Base
+              {t('knowledge_base')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/files')}>
-              Files
+              {t('files')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/search')}>
-              Search
+              {t('search')}
             </CommandItem>
             <CommandItem onSelect={() => navigate('/config')}>
-              Config
+              {t('config')}
             </CommandItem>
           </CommandGroup>
         </CommandList>
