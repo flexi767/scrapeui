@@ -78,7 +78,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Run intl middleware first (handles locale detection and redirect)
+  // Run intl middleware first — it sets locale headers that server components need
   const intlResponse = intlMiddleware(request);
 
   // If intl wants to redirect (e.g. / → /bg), let it
@@ -86,8 +86,16 @@ export default async function middleware(request: NextRequest) {
     return intlResponse;
   }
 
-  // Then run auth check
-  return (auth as any)(request);
+  // Run auth check
+  const authResponse = await (auth as any)(request);
+
+  // If auth wants to redirect to login (non-2xx), honour it
+  if (authResponse instanceof NextResponse && authResponse.status !== 200) {
+    return authResponse;
+  }
+
+  // Auth passed — return the intl response so locale headers are preserved
+  return intlResponse;
 }
 
 export const config = {
