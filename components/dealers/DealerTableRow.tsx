@@ -1,4 +1,7 @@
+'use client';
+
 import type { Dispatch, SetStateAction } from 'react';
+import { useTranslations } from 'next-intl';
 import { CARS_BG_CREDENTIAL_SECTION, MOBILE_BG_CREDENTIAL_SECTION } from '@/lib/dealers/platformCredentials';
 import { SOCIAL_CREDENTIAL_SECTIONS, type SocialCredentialSection } from '@/lib/dealers/socialCredentials';
 import { DealerPlatformFields } from './DealerPlatformFields';
@@ -68,6 +71,7 @@ export function DealerTableRow({
   onToggleActive,
   onToggleOwn,
 }: DealerTableRowProps) {
+  const t = useTranslations('ui');
   return (
     <tr className={`align-top transition-colors duration-500 ${flashActive ? 'bg-blue-900/40' : 'hover:bg-gray-800/40'}`}>
       <td className="px-4 py-2 text-white">
@@ -134,7 +138,7 @@ export function DealerTableRow({
         ) : null}
       </td>
       <td className="px-4 py-2 text-center">
-        <button onClick={() => onToggleOwn(dealer)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealer.own ? 'bg-emerald-800/70 text-emerald-200' : 'bg-gray-700 text-gray-400'}`}>{dealer.own ? 'yes' : 'no'}</button>
+        <button onClick={() => onToggleOwn(dealer)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealer.own ? 'bg-emerald-800/70 text-emerald-200' : 'bg-gray-700 text-gray-400'}`}>{dealer.own ? t('yes') : t('no')}</button>
       </td>
       <td className="px-4 py-2 text-center">
         <div className="flex items-center justify-center gap-1">
@@ -153,7 +157,7 @@ export function DealerTableRow({
         )}
       </td>
       <td className="px-4 py-2 text-center">
-        <button onClick={() => onToggleActive(dealer)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealer.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}>{dealer.active ? 'on' : 'off'}</button>
+        <button onClick={() => onToggleActive(dealer)} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealer.active ? 'bg-green-800/70 text-green-200' : 'bg-gray-700 text-gray-400'}`}>{dealer.active ? t('on') : t('off')}</button>
         {editing && dealer.own === 1 && (
           <div className="mt-1.5 flex justify-center">
             {isLoginRunning ? (
@@ -175,7 +179,7 @@ export function DealerTableRow({
               />
             </div>
           ) : (
-            <span className="text-xs text-gray-500">own dealer only</span>
+            <span className="text-xs text-gray-500">{t('own_dealer_only')}</span>
           )
         ) : (
           <div className="max-w-[180px] space-y-0.5">
@@ -189,7 +193,7 @@ export function DealerTableRow({
           <div className="flex flex-col gap-1.5 items-start min-w-[160px]">
             <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
               <input type="checkbox" checked={editForm.public_enabled} onChange={e => setEditForm(f => ({ ...f, public_enabled: e.target.checked }))} />
-              Enabled
+              {t('enabled')}
             </label>
             <select value={editForm.template} onChange={e => setEditForm(f => ({ ...f, template: e.target.value as TemplateName }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
               {DEALER_TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -219,7 +223,7 @@ export function DealerTableRow({
               </a>
             ) : dealer.public_enabled === 1 ? (
               <a href="/templates" className="text-[10px] text-gray-500 hover:text-gray-300">
-                + add template
+                {t('add_template')}
               </a>
             ) : null}
           </div>
@@ -227,7 +231,7 @@ export function DealerTableRow({
       </td>
       <td className="px-4 py-2 text-center">
         <div className="flex items-center justify-center gap-1.5">
-          <button onClick={() => onSaveEdit(dealer.id)} disabled={saving} title="Save" className={`text-emerald-400 hover:text-emerald-300 disabled:opacity-50 ${editing ? '' : 'invisible'}`}>
+          <button onClick={() => onSaveEdit(dealer.id)} disabled={saving} title={t('save')} className={`text-emerald-400 hover:text-emerald-300 disabled:opacity-50 ${editing ? '' : 'invisible'}`}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>

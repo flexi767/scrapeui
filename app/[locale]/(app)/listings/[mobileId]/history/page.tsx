@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
 import { formatCount, formatDate, formatPrice } from '@/lib/utils';
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default async function PriceHistoryPage({ params }: Props) {
+  const t = await getTranslations('ui');
   const { mobileId } = await params;
   const listing = getListingByMobileId(mobileId);
   if (!listing) notFound();
@@ -35,8 +37,8 @@ export default async function PriceHistoryPage({ params }: Props) {
             ← {listing.title}
           </Link>
           <span className="text-gray-600">/</span>
-          <span className="text-sm text-gray-300">History</span>
-          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</Link>
+          <span className="text-sm text-gray-300">{t('history')}</span>
+          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">{t('config_link')}</Link>
         </div>
       </header>
 
@@ -50,7 +52,7 @@ export default async function PriceHistoryPage({ params }: Props) {
 
         {snapshots.length === 0 ? (
           <div className="rounded-lg border border-gray-700/60 p-12 text-center text-gray-500">
-            No history recorded yet.
+            {t('no_history_recorded')}
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-gray-700/60">
@@ -58,16 +60,16 @@ export default async function PriceHistoryPage({ params }: Props) {
               <thead>
                 <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
                   <th className="px-4 py-3 text-left">#</th>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-center">VAT</th>
-                  <th className="px-4 py-3 text-center">Last Edit</th>
-                  <th className="px-4 py-3 text-right">Views</th>
-                  <th className="px-4 py-3 text-center">Paid</th>
-                  <th className="px-4 py-3 text-center">К</th>
-                  <th className="px-4 py-3 text-left">Title</th>
-                  <th className="px-4 py-3 text-left">Description</th>
-                  <th className="px-4 py-3 text-right">Change</th>
+                  <th className="px-4 py-3 text-left">{t('date')}</th>
+                  <th className="px-4 py-3 text-right">{t('price')}</th>
+                  <th className="px-4 py-3 text-center">{t('vat')}</th>
+                  <th className="px-4 py-3 text-center">{t('last_edit')}</th>
+                  <th className="px-4 py-3 text-right">{t('views')}</th>
+                  <th className="px-4 py-3 text-center">{t('paid')}</th>
+                  <th className="px-4 py-3 text-center">{t('к')}</th>
+                  <th className="px-4 py-3 text-left">{t('title')}</th>
+                  <th className="px-4 py-3 text-left">{t('description')}</th>
+                  <th className="px-4 py-3 text-right">{t('change')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700/50">
@@ -128,7 +130,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                         {delta === null ? (
                           <span className="text-gray-600">—</span>
                         ) : delta === 0 ? (
-                          <span className="text-gray-500">no change</span>
+                          <span className="text-gray-500">{t('no_change')}</span>
                         ) : (
                           <span
                             className={
@@ -151,7 +153,7 @@ export default async function PriceHistoryPage({ params }: Props) {
         {pricePoints.length > 1 && (
           <div className="mt-6 rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Price Timeline
+              {t('price_timeline')}
             </h2>
             <div className="relative">
               {(() => {

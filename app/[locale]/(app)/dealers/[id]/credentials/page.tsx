@@ -178,6 +178,7 @@ function CredentialSectionWithSave({
 }
 
 export default function DealerCredentialsPage() {
+  const t = useTranslations('ui');
   const { data: session, status: sessionStatus } = useSession();
   const params = useParams();
   const dealerId = Number(params.id);
@@ -238,7 +239,7 @@ export default function DealerCredentialsPage() {
   if (!isAdmin && session?.user.dealerId !== dealerId) {
     return (
       <div className="min-h-screen bg-[#111827] flex items-center justify-center">
-        <p className="text-gray-400">Access denied.</p>
+        <p className="text-gray-400">{t('access_denied')}</p>
       </div>
     );
   }
@@ -275,7 +276,7 @@ export default function DealerCredentialsPage() {
         }),
       });
       await parseApiResponse<unknown>(res, 'Save failed');
-      toast.success('Public page settings saved');
+      toast.success(t('public_page_settings_saved'));
       await load();
     } catch (error) {
       toast.error(errorMessage(error, 'Save failed'));
@@ -299,7 +300,7 @@ export default function DealerCredentialsPage() {
         body: JSON.stringify({ public_content: Object.keys(payload).length ? JSON.stringify(payload) : null }),
       });
       await parseApiResponse<unknown>(res, 'Save failed');
-      toast.success('Page content saved');
+      toast.success(t('page_content_saved'));
       await load();
     } catch (error) {
       toast.error(errorMessage(error, 'Save failed'));
@@ -344,9 +345,9 @@ export default function DealerCredentialsPage() {
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <Link href={isAdmin ? '/config' : '/'} className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
-            ← {isAdmin ? 'Config' : 'Home'}
+            ← {isAdmin ? t('config') : t('home')}
           </Link>
-          <span className="text-sm font-medium text-gray-200">{dealer?.name ?? '…'} — Settings</span>
+          <span className="text-sm font-medium text-gray-200">{dealer?.name ?? '…'} — {t('settings')}</span>
         </div>
       </header>
 
@@ -365,6 +366,9 @@ export default function DealerCredentialsPage() {
             onTest={() => testLogin(section.testService)}
             testStatus={testStatus[section.testService]}
             testReason={testReason[section.testService]}
+            saveLabel={t('save')}
+            savingLabel={t('saving')}
+            testLoginLabel={t('test_login')}
           />
         ))}
 
@@ -379,6 +383,8 @@ export default function DealerCredentialsPage() {
             onSave={() => saveSection(section.fields.map((field) => field.key), section.title)}
             saving={saving === section.title}
             testable={false}
+            saveLabel={t('save')}
+            savingLabel={t('saving')}
           />
         ))}
 
