@@ -1,0 +1,1675 @@
+[
+  {
+    "key": "ui.—",
+    "value": "—",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 138
+  },
+  {
+    "key": "ui.+ддс",
+    "value": "+ДДС",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 137
+  },
+  {
+    "key": "ui.${index_+_2}._${variant.name}",
+    "value": "${index + 2}. ${variant.name}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/useZoomGallery.ts",
+    "line": 32
+  },
+  {
+    "key": "ui.${index_+_collagevariants.length_+_2}._listing_${index_+_1}",
+    "value": "${index + collageVariants.length + 2}. Listing ${index + 1}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/useZoomGallery.ts",
+    "line": 39
+  },
+  {
+    "key": "ui.1._cover",
+    "value": "1. Cover",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/useZoomGallery.ts",
+    "line": 26
+  },
+  {
+    "key": "ui.about",
+    "value": "About",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 8
+  },
+  {
+    "key": "ui.about_{dealer.name}",
+    "value": "About {dealer.name}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 61
+  },
+  {
+    "key": "ui.action",
+    "value": "Action",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 29
+  },
+  {
+    "key": "ui.actions",
+    "value": "Actions",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgActionPanel.tsx",
+    "line": 63
+  },
+  {
+    "key": "ui.active",
+    "value": "Active",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 53
+  },
+  {
+    "key": "ui.active_dealers",
+    "value": "Active Dealers",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 204
+  },
+  {
+    "key": "ui.active_listings",
+    "value": "Active Listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 180
+  },
+  {
+    "key": "ui.all_cars_checked",
+    "value": "All cars checked",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 78
+  },
+  {
+    "key": "ui.all_dealers",
+    "value": "All dealers",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/ReparseRunner.tsx",
+    "line": 62
+  },
+  {
+    "key": "ui.all_listings",
+    "value": "All Listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 27
+  },
+  {
+    "key": "ui.all_tasks",
+    "value": "All Tasks",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 58
+  },
+  {
+    "key": "ui.available_cars",
+    "value": "Available Cars",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/bold/ListingGrid.tsx",
+    "line": 47
+  },
+  {
+    "key": "ui.available_vehicles",
+    "value": "Available Vehicles",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 34
+  },
+  {
+    "key": "ui.batch_sync",
+    "value": "Batch Sync",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 37
+  },
+  {
+    "key": "ui.body_type",
+    "value": "Body Type",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/own-listings/TableHeader.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.brand_&_model_mapping",
+    "value": "Brand & model mapping",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.browse_all_car_listings",
+    "value": "Browse all car listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 38
+  },
+  {
+    "key": "ui.browse_our_full_inventory_belo",
+    "value": "Browse our full inventory below",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/night/ListingGrid.tsx",
+    "line": 25
+  },
+  {
+    "key": "ui.browser_parser_bookmarklet",
+    "value": "Browser parser bookmarklet",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/SavedSearchBookmarkletCards.tsx",
+    "line": 71
+  },
+  {
+    "key": "ui.button",
+    "value": "Button",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 72
+  },
+  {
+    "key": "ui.caption",
+    "value": "Caption",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 252
+  },
+  {
+    "key": "ui.capture/update/repost_use_a_si",
+    "value": "Capture/Update/Repost use a single dealer. Leave only one checked for those actions.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgActionPanel.tsx",
+    "line": 86
+  },
+  {
+    "key": "ui.carousel_order",
+    "value": "Carousel order",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/sections/CarouselOrderStrip.tsx",
+    "line": 21
+  },
+  {
+    "key": "ui.cars",
+    "value": "Cars",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 6
+  },
+  {
+    "key": "ui.cars.bg_sync",
+    "value": "Cars.bg Sync",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 38
+  },
+  {
+    "key": "ui.cars.bg_url",
+    "value": "Cars.bg URL",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 50
+  },
+  {
+    "key": "ui.changes",
+    "value": "Changes",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 25
+  },
+  {
+    "key": "ui.check_search_positions",
+    "value": "Check Search Positions",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-positions/SearchPositionsControlPanel.tsx",
+    "line": 31
+  },
+  {
+    "key": "ui.choose_a_listing_to_fill_in_th",
+    "value": "Choose a listing to fill in the Facebook tab.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/facebook-marketplace/MarketplacePickerClient.tsx",
+    "line": 81
+  },
+  {
+    "key": "ui.click_here",
+    "value": "Click here",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/generic/ButtonBlock.tsx",
+    "line": 43
+  },
+  {
+    "key": "ui.close",
+    "value": "Close",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/ui/sheet.tsx",
+    "line": 75
+  },
+  {
+    "key": "ui.collage_pages",
+    "value": "Collage pages",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/sections/GeneratedImageSections.tsx",
+    "line": 128
+  },
+  {
+    "key": "ui.color",
+    "value": "Color",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 30
+  },
+  {
+    "key": "ui.competitive_monthly_payment_pl",
+    "value": "Competitive monthly payment plans",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 85
+  },
+  {
+    "key": "ui.completed",
+    "value": "Completed",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/BatchSyncPanel.tsx",
+    "line": 34
+  },
+  {
+    "key": "ui.config",
+    "value": "Config",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 19
+  },
+  {
+    "key": "ui.configuration",
+    "value": "Configuration",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 44
+  },
+  {
+    "key": "ui.contact",
+    "value": "Contact",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/night/Shell.tsx",
+    "line": 33
+  },
+  {
+    "key": "ui.contact_{dealer.name}",
+    "value": "Contact {dealer.name}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 99
+  },
+  {
+    "key": "ui.contact_dealer",
+    "value": "Contact Dealer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 32
+  },
+  {
+    "key": "ui.contact_us",
+    "value": "Contact Us",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 33
+  },
+  {
+    "key": "ui.cta_section",
+    "value": "CTA Section",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 65
+  },
+  {
+    "key": "ui.current",
+    "value": "Current",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-positions/SearchPositionsControlPanel.tsx",
+    "line": 79
+  },
+  {
+    "key": "ui.current_dealer",
+    "value": "Current dealer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/cars-bg-sync/CarsBgSyncRunControls.tsx",
+    "line": 44
+  },
+  {
+    "key": "ui.dashboard",
+    "value": "Dashboard",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 153
+  },
+  {
+    "key": "ui.dealer",
+    "value": "Dealer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 26
+  },
+  {
+    "key": "ui.dealer_name",
+    "value": "Dealer Name",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-grid/HeroBanner.tsx",
+    "line": 39
+  },
+  {
+    "key": "ui.dealers",
+    "value": "Dealers",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeControls.tsx",
+    "line": 59
+  },
+  {
+    "key": "ui.deep_crawl",
+    "value": "Deep crawl",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeControls.tsx",
+    "line": 116
+  },
+  {
+    "key": "ui.delete_saved_search?",
+    "value": "Delete saved search?",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/SavedSearchDeleteDialog.tsx",
+    "line": 29
+  },
+  {
+    "key": "ui.deleted",
+    "value": "Deleted",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 29
+  },
+  {
+    "key": "ui.description",
+    "value": "Description",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 64
+  },
+  {
+    "key": "ui.details",
+    "value": "Details",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 58
+  },
+  {
+    "key": "ui.detected_changes",
+    "value": "Detected changes",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeChangesTable.tsx",
+    "line": 16
+  },
+  {
+    "key": "ui.diesel",
+    "value": "Diesel",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 40
+  },
+  {
+    "key": "ui.divider",
+    "value": "Divider",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 73
+  },
+  {
+    "key": "ui.documentation",
+    "value": "Documentation",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 43
+  },
+  {
+    "key": "ui.download_images",
+    "value": "Download images",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeControls.tsx",
+    "line": 131
+  },
+  {
+    "key": "ui.edit_forms",
+    "value": "Edit Forms",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 50
+  },
+  {
+    "key": "ui.edit_own",
+    "value": "Edit Own",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 304
+  },
+  {
+    "key": "ui.electric",
+    "value": "Electric",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.email",
+    "value": "Email",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/ContactForm.tsx",
+    "line": 53
+  },
+  {
+    "key": "ui.enquire",
+    "value": "Enquire",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/Shell.tsx",
+    "line": 31
+  },
+  {
+    "key": "ui.enquire_now",
+    "value": "Enquire Now",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingDetail.tsx",
+    "line": 33
+  },
+  {
+    "key": "ui.expenses",
+    "value": "Expenses",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 17
+  },
+  {
+    "key": "ui.failed",
+    "value": "Failed",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/RenewResetPanel.tsx",
+    "line": 51
+  },
+  {
+    "key": "ui.fb_bookmarklet",
+    "value": "FB Bookmarklet",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 42
+  },
+  {
+    "key": "ui.files",
+    "value": "Files",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 91
+  },
+  {
+    "key": "ui.filter_bar",
+    "value": "Filter Bar",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 55
+  },
+  {
+    "key": "ui.filters",
+    "value": "Filters",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 38
+  },
+  {
+    "key": "ui.finance",
+    "value": "Finance",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 7
+  },
+  {
+    "key": "ui.financing",
+    "value": "Financing",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 80
+  },
+  {
+    "key": "ui.footer",
+    "value": "Footer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 58
+  },
+  {
+    "key": "ui.format",
+    "value": "Format",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 235
+  },
+  {
+    "key": "ui.fuel",
+    "value": "Fuel",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 26
+  },
+  {
+    "key": "ui.gearbox",
+    "value": "Gearbox",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 28
+  },
+  {
+    "key": "ui.here_to_help",
+    "value": "Here to help",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 83
+  },
+  {
+    "key": "ui.hero_banner",
+    "value": "Hero Banner",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 54
+  },
+  {
+    "key": "ui.hybrid",
+    "value": "Hybrid",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 42
+  },
+  {
+    "key": "ui.ignored_for_ranking",
+    "value": "Ignored for ranking",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgSearchResultsTable.tsx",
+    "line": 248
+  },
+  {
+    "key": "ui.image",
+    "value": "Image",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 71
+  },
+  {
+    "key": "ui.image_gallery",
+    "value": "Image Gallery",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 61
+  },
+  {
+    "key": "ui.incl._vat",
+    "value": "Incl. VAT",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/executive/ListingGrid.tsx",
+    "line": 52
+  },
+  {
+    "key": "ui.inspected",
+    "value": "Inspected",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 77
+  },
+  {
+    "key": "ui.instagram_publish",
+    "value": "Instagram publish",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/InstagramPublisherClient.tsx",
+    "line": 150
+  },
+  {
+    "key": "ui.knowledge_base",
+    "value": "Knowledge Base",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 43
+  },
+  {
+    "key": "ui.last_scraping",
+    "value": "Last Scraping",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 221
+  },
+  {
+    "key": "ui.length",
+    "value": "Length",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 231
+  },
+  {
+    "key": "ui.linked_cars",
+    "value": "Linked Cars",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/shared/LinkedCarsSelector.tsx",
+    "line": 39
+  },
+  {
+    "key": "ui.listing",
+    "value": "Listing",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeChangesTable.tsx",
+    "line": 20
+  },
+  {
+    "key": "ui.listing_${index_+_1}",
+    "value": "Listing ${index + 1}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/sections/CollageImageSelector.tsx",
+    "line": 67
+  },
+  {
+    "key": "ui.listing_could_not_be_loaded.",
+    "value": "Listing could not be loaded.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 99
+  },
+  {
+    "key": "ui.listing_grid",
+    "value": "Listing Grid",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 56
+  },
+  {
+    "key": "ui.listings",
+    "value": "Listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 114
+  },
+  {
+    "key": "ui.live_log",
+    "value": "Live log",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/cars-bg-sync/CarsBgSyncLogPanel.tsx",
+    "line": 12
+  },
+  {
+    "key": "ui.live_sync_feedback",
+    "value": "Live sync feedback",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgMakeModelSyncRunner.tsx",
+    "line": 140
+  },
+  {
+    "key": "ui.load_more",
+    "value": "Load More",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-grid/Pagination.tsx",
+    "line": 29
+  },
+  {
+    "key": "ui.loading_instagram_publisher...",
+    "value": "Loading Instagram publisher...",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/InstagramPublisherClient.tsx",
+    "line": 111
+  },
+  {
+    "key": "ui.loading_tiktok_publisher...",
+    "value": "Loading TikTok publisher...",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 95
+  },
+  {
+    "key": "ui.make",
+    "value": "Make",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 40
+  },
+  {
+    "key": "ui.make_/_model",
+    "value": "Make / Model",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/own-listings/TableHeader.tsx",
+    "line": 8
+  },
+  {
+    "key": "ui.make_filter",
+    "value": "Make filter",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgMakeModelSyncRunner.tsx",
+    "line": 89
+  },
+  {
+    "key": "ui.make_model_year",
+    "value": "Make Model Year",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-grid/ListingGridBlock.tsx",
+    "line": 50
+  },
+  {
+    "key": "ui.manage_your_listings",
+    "value": "Manage your listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 39
+  },
+  {
+    "key": "ui.mapping",
+    "value": "Mapping",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.max_price",
+    "value": "Max Price",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 44
+  },
+  {
+    "key": "ui.max_price_(€)",
+    "value": "Max Price (€)",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/bold/ListingGrid.tsx",
+    "line": 40
+  },
+  {
+    "key": "ui.message",
+    "value": "Message",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/ContactForm.tsx",
+    "line": 57
+  },
+  {
+    "key": "ui.mileage",
+    "value": "Mileage",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 27
+  },
+  {
+    "key": "ui.mileage_↑",
+    "value": "Mileage ↑",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 63
+  },
+  {
+    "key": "ui.mobile.bg",
+    "value": "Mobile.bg",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 40
+  },
+  {
+    "key": "ui.mobile.bg_integrations",
+    "value": "Mobile.bg integrations",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 40
+  },
+  {
+    "key": "ui.mobile.bg_scraping",
+    "value": "Mobile.bg Scraping",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 239
+  },
+  {
+    "key": "ui.mobile.bg_url",
+    "value": "Mobile.bg URL",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 49
+  },
+  {
+    "key": "ui.mode",
+    "value": "Mode",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-positions/SearchPositionsControlPanel.tsx",
+    "line": 38
+  },
+  {
+    "key": "ui.model",
+    "value": "Model",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/instagram/sections/PosterPromptPanel.tsx",
+    "line": 70
+  },
+  {
+    "key": "ui.my_tasks",
+    "value": "My Tasks",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 59
+  },
+  {
+    "key": "ui.name",
+    "value": "Name",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/ContactForm.tsx",
+    "line": 49
+  },
+  {
+    "key": "ui.new_listing",
+    "value": "New Listing",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 39
+  },
+  {
+    "key": "ui.newest_first",
+    "value": "Newest First",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 60
+  },
+  {
+    "key": "ui.next_→",
+    "value": "Next →",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-grid/Pagination.tsx",
+    "line": 25
+  },
+  {
+    "key": "ui.no_dealers_yet",
+    "value": "No dealers yet",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 61
+  },
+  {
+    "key": "ui.no_listings_available",
+    "value": "No listings available",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/shared/LinkedCarsSelector.tsx",
+    "line": 42
+  },
+  {
+    "key": "ui.no_notifications",
+    "value": "No notifications",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/NotificationBell.tsx",
+    "line": 99
+  },
+  {
+    "key": "ui.no_output_yet.",
+    "value": "No output yet.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/cars-bg-sync/CarsBgSyncLogPanel.tsx",
+    "line": 15
+  },
+  {
+    "key": "ui.no_pending_field_changes",
+    "value": "No pending field changes",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 76
+  },
+  {
+    "key": "ui.no_results_found.",
+    "value": "No results found.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/QuickAdd.tsx",
+    "line": 51
+  },
+  {
+    "key": "ui.none",
+    "value": "None",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 126
+  },
+  {
+    "key": "ui.notifications",
+    "value": "Notifications",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/NotificationBell.tsx",
+    "line": 90
+  },
+  {
+    "key": "ui.only_reset_views",
+    "value": "Only reset views",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/RenewResetPanel.tsx",
+    "line": 117
+  },
+  {
+    "key": "ui.opens_each_listing_detail_page",
+    "value": "Opens each listing detail page to extract full data",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeControls.tsx",
+    "line": 117
+  },
+  {
+    "key": "ui.orig_#",
+    "value": "Orig #",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/own-listings/TableHeader.tsx",
+    "line": 19
+  },
+  {
+    "key": "ui.other",
+    "value": "Other",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeChangesTable.tsx",
+    "line": 25
+  },
+  {
+    "key": "ui.our_collection",
+    "value": "Our Collection",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/executive/ListingGrid.tsx",
+    "line": 25
+  },
+  {
+    "key": "ui.overview",
+    "value": "Overview",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 49
+  },
+  {
+    "key": "ui.own_listings",
+    "value": "Own Listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 36
+  },
+  {
+    "key": "ui.pagination",
+    "value": "Pagination",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 57
+  },
+  {
+    "key": "ui.paid",
+    "value": "Paid",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeChangesTable.tsx",
+    "line": 24
+  },
+  {
+    "key": "ui.parser_bookmarklet",
+    "value": "Parser bookmarklet",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/SavedSearchBookmarkletCards.tsx",
+    "line": 17
+  },
+  {
+    "key": "ui.part-exchange_welcome",
+    "value": "Part-exchange welcome",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 86
+  },
+  {
+    "key": "ui.pending",
+    "value": "Pending",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/BatchSyncPanel.tsx",
+    "line": 30
+  },
+  {
+    "key": "ui.petrol",
+    "value": "Petrol",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 39
+  },
+  {
+    "key": "ui.photos",
+    "value": "Photos",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 239
+  },
+  {
+    "key": "ui.power",
+    "value": "Power",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingDetail.tsx",
+    "line": 29
+  },
+  {
+    "key": "ui.price",
+    "value": "Price",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 245
+  },
+  {
+    "key": "ui.price_#",
+    "value": "Price #",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/own-listings/TableHeader.tsx",
+    "line": 20
+  },
+  {
+    "key": "ui.price_↑",
+    "value": "Price ↑",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 61
+  },
+  {
+    "key": "ui.price_↓",
+    "value": "Price ↓",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 62
+  },
+  {
+    "key": "ui.price_tag",
+    "value": "Price Tag",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 62
+  },
+  {
+    "key": "ui.priority",
+    "value": "Priority",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 52
+  },
+  {
+    "key": "ui.priority:",
+    "value": "Priority:",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/AddDealerForm.tsx",
+    "line": 72
+  },
+  {
+    "key": "ui.privacy",
+    "value": "Privacy",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 45
+  },
+  {
+    "key": "ui.privacy_policy",
+    "value": "Privacy Policy",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 133
+  },
+  {
+    "key": "ui.progress_updates_from_the_make",
+    "value": "Progress updates from the make/model reference sync.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgMakeModelSyncRunner.tsx",
+    "line": 141
+  },
+  {
+    "key": "ui.project_overview_and_quick_lin",
+    "value": "Project overview and quick links",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 154
+  },
+  {
+    "key": "ui.public",
+    "value": "Public",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 55
+  },
+  {
+    "key": "ui.pubtype",
+    "value": "Pubtype",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgMakeModelSyncRunner.tsx",
+    "line": 108
+  },
+  {
+    "key": "ui.quick_decisions,_minimal_paper",
+    "value": "Quick decisions, minimal paperwork",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 87
+  },
+  {
+    "key": "ui.quick_links",
+    "value": "Quick Links",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 267
+  },
+  {
+    "key": "ui.read_more_↓",
+    "value": "Read more ↓",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-detail/Description.tsx",
+    "line": 36
+  },
+  {
+    "key": "ui.recent_results",
+    "value": "Recent results",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-positions/SearchPositionsRecentResults.tsx",
+    "line": 13
+  },
+  {
+    "key": "ui.register_dealer",
+    "value": "Register Dealer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 92
+  },
+  {
+    "key": "ui.related",
+    "value": "Related",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 66
+  },
+  {
+    "key": "ui.reposts",
+    "value": "Reposts",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 51
+  },
+  {
+    "key": "ui.ride.",
+    "value": "Ride.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/bold/ListingGrid.tsx",
+    "line": 19
+  },
+  {
+    "key": "ui.run_edit-form_capture_and_repo",
+    "value": "Run edit-form capture and repost flows directly from scrapeui.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgActionPanel.tsx",
+    "line": 64
+  },
+  {
+    "key": "ui.run_scraper",
+    "value": "Run Scraper",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/ConfigShell.tsx",
+    "line": 28
+  },
+  {
+    "key": "ui.save_full-res_images_to_disk_(",
+    "value": "Save full-res images to disk (requires deep crawl)",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeControls.tsx",
+    "line": 132
+  },
+  {
+    "key": "ui.saved_searches",
+    "value": "Saved searches",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/SavedSearchList.tsx",
+    "line": 64
+  },
+  {
+    "key": "ui.search_fields",
+    "value": "Search fields",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/SavedSearchEditorListingSummary.tsx",
+    "line": 31
+  },
+  {
+    "key": "ui.search_path",
+    "value": "Search path",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/MobileBgMakeModelSyncRunner.tsx",
+    "line": 99
+  },
+  {
+    "key": "ui.search_positions",
+    "value": "Search Positions",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.search...",
+    "value": "Search...",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/QuickAdd.tsx",
+    "line": 44
+  },
+  {
+    "key": "ui.section",
+    "value": "Section",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 69
+  },
+  {
+    "key": "ui.select_make",
+    "value": "Select make",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-prefill/SearchPrefillFields.tsx",
+    "line": 83
+  },
+  {
+    "key": "ui.select_model",
+    "value": "Select model",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/search-prefill/SearchPrefillFields.tsx",
+    "line": 191
+  },
+  {
+    "key": "ui.showing_{startitem}–{enditem}_",
+    "value": "Showing {startItem}–{endItem} of {total} vehicles",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 91
+  },
+  {
+    "key": "ui.similar_car_{i_+_1}",
+    "value": "Similar Car {i + 1}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-detail/RelatedListings.tsx",
+    "line": 21
+  },
+  {
+    "key": "ui.similar_cars",
+    "value": "Similar Cars",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-detail/RelatedListings.tsx",
+    "line": 16
+  },
+  {
+    "key": "ui.slug",
+    "value": "Slug",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 48
+  },
+  {
+    "key": "ui.social",
+    "value": "Social",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/dealers/DealersTable.tsx",
+    "line": 54
+  },
+  {
+    "key": "ui.source_photos",
+    "value": "Source photos",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/tiktok/TikTokPublisherClient.tsx",
+    "line": 172
+  },
+  {
+    "key": "ui.spacer",
+    "value": "Spacer",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 74
+  },
+  {
+    "key": "ui.specs_table",
+    "value": "Specs Table",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 63
+  },
+  {
+    "key": "ui.status",
+    "value": "Status",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 23
+  },
+  {
+    "key": "ui.success",
+    "value": "Success",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/RenewResetPanel.tsx",
+    "line": 47
+  },
+  {
+    "key": "ui.support",
+    "value": "Support",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 82
+  },
+  {
+    "key": "ui.system_settings",
+    "value": "System settings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 44
+  },
+  {
+    "key": "ui.tailored_terms_to_suit_your_bu",
+    "value": "Tailored terms to suit your budget",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 88
+  },
+  {
+    "key": "ui.task_management",
+    "value": "Task management",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 42
+  },
+  {
+    "key": "ui.tasks",
+    "value": "Tasks",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 42
+  },
+  {
+    "key": "ui.templates",
+    "value": "Templates",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/AppSidebar.tsx",
+    "line": 18
+  },
+  {
+    "key": "ui.terms",
+    "value": "Terms",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/Shell.tsx",
+    "line": 46
+  },
+  {
+    "key": "ui.terms_&amp;_conditions",
+    "value": "Terms &amp; Conditions",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 150
+  },
+  {
+    "key": "ui.text",
+    "value": "Text",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/index.ts",
+    "line": 70
+  },
+  {
+    "key": "ui.thanks_—_your_message_has_been",
+    "value": "Thanks — your message has been sent. We&apos;ll be in touch soon.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/ContactForm.tsx",
+    "line": 41
+  },
+  {
+    "key": "ui.the_terms_governing_use_of_the",
+    "value": "The terms governing use of the {dealer.name} website.",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 151
+  },
+  {
+    "key": "ui.title",
+    "value": "Title",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/own-listings/TableHeader.tsx",
+    "line": 9
+  },
+  {
+    "key": "ui.top",
+    "value": "TOP",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 124
+  },
+  {
+    "key": "ui.total",
+    "value": "Total",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/RenewResetPanel.tsx",
+    "line": 43
+  },
+  {
+    "key": "ui.total_listings",
+    "value": "Total Listings",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/Dashboard.tsx",
+    "line": 163
+  },
+  {
+    "key": "ui.transmission",
+    "value": "Transmission",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-detail/SpecsTable.tsx",
+    "line": 17
+  },
+  {
+    "key": "ui.updated",
+    "value": "Updated",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/ChangedListingsTable.tsx",
+    "line": 28
+  },
+  {
+    "key": "ui.updated_today",
+    "value": "Updated today",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/night/ListingGrid.tsx",
+    "line": 19
+  },
+  {
+    "key": "ui.vat",
+    "value": "VAT",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/helpers.ts",
+    "line": 33
+  },
+  {
+    "key": "ui.vehicle",
+    "value": "Vehicle",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 57
+  },
+  {
+    "key": "ui.vehicles",
+    "value": "Vehicles",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/sunset/ListingGrid.tsx",
+    "line": 73
+  },
+  {
+    "key": "ui.view",
+    "value": "View",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/night/ListingGrid.tsx",
+    "line": 70
+  },
+  {
+    "key": "ui.view_→",
+    "value": "View →",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 83
+  },
+  {
+    "key": "ui.view_details",
+    "value": "View Details",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/executive/ListingGrid.tsx",
+    "line": 53
+  },
+  {
+    "key": "ui.views",
+    "value": "Views",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/scrape-runner/ScrapeChangesTable.tsx",
+    "line": 23
+  },
+  {
+    "key": "ui.vin:_{form.vin_||_\"—\"}",
+    "value": "VIN: {form.vin || \"—\"}",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/SavedListingSummary.tsx",
+    "line": 73
+  },
+  {
+    "key": "ui.vip",
+    "value": "VIP",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 125
+  },
+  {
+    "key": "ui.website",
+    "value": "Website",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/inner-pages/InnerPage.tsx",
+    "line": 108
+  },
+  {
+    "key": "ui.whatsapp",
+    "value": "WhatsApp",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/editor-blocks/listing-detail/CTASection.tsx",
+    "line": 32
+  },
+  {
+    "key": "ui.when",
+    "value": "When",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/ChangesFilterBar.tsx",
+    "line": 177
+  },
+  {
+    "key": "ui.year",
+    "value": "Year",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingDetail.tsx",
+    "line": 31
+  },
+  {
+    "key": "ui.year_↓",
+    "value": "Year ↓",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/FilterBar.tsx",
+    "line": 64
+  },
+  {
+    "key": "ui.year_from",
+    "value": "Year From",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/templates/pro/ListingGrid.tsx",
+    "line": 48
+  },
+  {
+    "key": "ui.автомобили_и_джипове",
+    "value": "Автомобили и джипове",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 4
+  },
+  {
+    "key": "ui.бусове_/_микробуси",
+    "value": "Бусове / Микробуси",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 5
+  },
+  {
+    "key": "ui.водни_мпс",
+    "value": "Водни МПС",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 8
+  },
+  {
+    "key": "ui.всички",
+    "value": "всички",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/saved-searches/useSavedSearchFormState.ts",
+    "line": 18
+  },
+  {
+    "key": "ui.за_части",
+    "value": "За части",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 17
+  },
+  {
+    "key": "ui.има",
+    "value": "има",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 135
+  },
+  {
+    "key": "ui.к",
+    "value": "К",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/edit-own-batch-sync/helpers.ts",
+    "line": 49
+  },
+  {
+    "key": "ui.мотоциклети_/_мотопеди",
+    "value": "Мотоциклети / Мотопеди",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 7
+  },
+  {
+    "key": "ui.нов",
+    "value": "Нов",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 14
+  },
+  {
+    "key": "ui.няма",
+    "value": "няма",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/FilterBar.tsx",
+    "line": 136
+  },
+  {
+    "key": "ui.повреден/ударен",
+    "value": "Повреден/ударен",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 16
+  },
+  {
+    "key": "ui.ремаркета",
+    "value": "Ремаркета",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 9
+  },
+  {
+    "key": "ui.специална_техника",
+    "value": "Специална техника",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 10
+  },
+  {
+    "key": "ui.товарни_автомобили",
+    "value": "Товарни автомобили",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 6
+  },
+  {
+    "key": "ui.употребяван",
+    "value": "Употребяван",
+    "context": "ui",
+    "file": "/Users/v/dev/scrapeui/components/new-listing-form/constants.ts",
+    "line": 15
+  }
+]
