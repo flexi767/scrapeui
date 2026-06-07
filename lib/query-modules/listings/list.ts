@@ -8,6 +8,68 @@ import {
   OWN_LISTING_SORT_COLUMNS,
 } from './list-filters';
 
+const ownListingFromClause = `
+  FROM ranked_backups b
+  LEFT JOIN listings l ON l.id = b.listing_id
+  LEFT JOIN dealers d ON b.dealer_id = d.id
+`;
+
+const ownListingSelectColumns = `
+  b.id as backup_id,
+  l.id, l.mobile_id,
+  COALESCE(b.title, l.title) as title,
+  COALESCE(b.make, l.make) as make,
+  COALESCE(b.model, l.model) as model,
+  l.reg_month, l.reg_year,
+  COALESCE(b.mileage, l.mileage) as mileage,
+  COALESCE(b.category, l.body_type) as body_type,
+  COALESCE(b.fuel, l.fuel) as fuel,
+  COALESCE(b.price_amount, l.current_price) as current_price,
+  l.price_change,
+  ${ownVatExpr} as vat,
+  COALESCE(b.kaparo, l.kaparo) as kaparo,
+  COALESCE(b.ad_status, l.ad_status) as ad_status,
+  l.last_edit,
+  l.carsbg_title,
+  l.carsbg_created_date,
+  l.carsbg_edited_date,
+  COALESCE(b.views, l.views) as views,
+  l.cars_total_views,
+  b.watching as watching,
+  l.is_new,
+  l.thumb_keys,
+  l.full_keys,
+  l.image_meta,
+  l.images_downloaded,
+  l.thumb_saved,
+  l.is_active,
+  ${firstBackupImageIdFromBackupExpr} as first_backup_image_id,
+  ${ownNeedsSyncExpr} as needs_sync,
+  CASE WHEN EXISTS (
+    SELECT 1
+    FROM saved_searches ss
+    WHERE ss.listing_id = l.id
+  ) THEN 1 ELSE 0 END as has_saved_search_profile,
+  CASE
+    WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
+    ELSE b.last_mobile_sync_status
+  END as last_mobile_sync_status,
+  b.last_mobile_sync_error,
+  b.last_mobile_sync_at,
+  b.search_checked_at,
+  b.search_original_position,
+  b.search_price_position,
+  b.search_first_result_price,
+  d.name as dealer_name,
+  d.slug as dealer_slug
+`;
+
+function stripTotalCount<T extends { total_count: number }>(row: T): Omit<T, 'total_count'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { total_count, ...rest } = row;
+  return rest;
+}
+
 function getListingPage(
   filters: ListingFilters,
   options: {
@@ -112,43 +174,8 @@ export function getOwnListings(filters: ListingFilters = {}) {
     ${rankedBackupsCte}
     SELECT
       COUNT(*) OVER() as total_count,
-      b.id as backup_id,
-      l.id, l.mobile_id,
-      COALESCE(b.title, l.title) as title,
-      COALESCE(b.make, l.make) as make,
-      COALESCE(b.model, l.model) as model,
-      l.reg_month, l.reg_year,
-      COALESCE(b.mileage, l.mileage) as mileage,
-      COALESCE(b.category, l.body_type) as body_type,
-      COALESCE(b.fuel, l.fuel) as fuel,
-      COALESCE(b.price_amount, l.current_price) as current_price,
-      l.price_change,
-      ${ownVatExpr} as vat,
-      COALESCE(b.kaparo, l.kaparo) as kaparo,
-      COALESCE(b.ad_status, l.ad_status) as ad_status,
-      l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, COALESCE(b.views, l.views) as views, l.cars_total_views, b.watching as watching, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active,
-      ${firstBackupImageIdFromBackupExpr} as first_backup_image_id,
-      ${ownNeedsSyncExpr} as needs_sync,
-      CASE WHEN EXISTS (
-        SELECT 1
-        FROM saved_searches ss
-        WHERE ss.listing_id = l.id
-      ) THEN 1 ELSE 0 END as has_saved_search_profile,
-      CASE
-        WHEN ${ownNeedsSyncExpr} = 0 AND b.last_mobile_sync_status = 'pending' THEN NULL
-        ELSE b.last_mobile_sync_status
-      END as last_mobile_sync_status,
-      b.last_mobile_sync_error,
-      b.last_mobile_sync_at,
-      b.search_checked_at,
-      b.search_original_position,
-      b.search_price_position,
-      b.search_first_result_price,
-      d.name as dealer_name, d.slug as dealer_slug
-    FROM ranked_backups b
-    LEFT JOIN listings l ON l.id = b.listing_id
-    LEFT JOIN dealers d ON b.dealer_id = d.id
+      ${ownListingSelectColumns}
+    ${ownListingFromClause}
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
     ORDER BY (l.id IS NULL) DESC, ${ownSortCol} ${sortDir}
     LIMIT ? OFFSET ?
@@ -162,9 +189,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
         `
     ${rankedBackupsCte}
     SELECT COUNT(*) as count
-    FROM ranked_backups b
-    LEFT JOIN listings l ON l.id = b.listing_id
-    LEFT JOIN dealers d ON b.dealer_id = d.id
+    ${ownListingFromClause}
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
   `,
       )
@@ -173,11 +198,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
   };
 
   const total = rows[0]?.total_count ?? (page > 1 ? countOwnListings() : 0);
-  const data = rows.map((row) => {
-    const listing = { ...row } as Partial<OwnListingRow & { total_count: number }>;
-    delete listing.total_count;
-    return listing as OwnListingRow;
-  });
+  const data = rows.map((row) => stripTotalCount(row) as OwnListingRow);
 
   return { data, total, page, limit };
 }
