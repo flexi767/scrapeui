@@ -18,25 +18,26 @@ interface InnerPageProps {
  * a dealer has not supplied copy for a page, we fall back to the templated
  * placeholder text below, keyed off the dealer name.
  */
-export function InnerPage({ kind, dealer }: InnerPageProps) {
+export async function InnerPage({ kind, dealer }: InnerPageProps) {
+  const t = await getTranslations('ui');
   return (
     <main className={s.wrap}>
-      <article className={s.card}>{renderBody(kind, dealer)}</article>
+      <article className={s.card}>{renderBody(kind, dealer, t)}</article>
     </main>
   );
 }
 
-/** Default page heading used when rendering dealer-supplied copy. */
-const PAGE_TITLES: Record<Exclude<InnerPageKind, "contact">, string> = {
-  about: "About",
-  finance: "Financing",
-  privacy: "Privacy Policy",
-  terms: "Terms & Conditions",
-};
+type TFunc = Awaited<ReturnType<typeof getTranslations<'ui'>>>;
 
 /** Split a freeform copy block into paragraphs on blank lines. */
-function customBody(kind: Exclude<InnerPageKind, "contact">, dealer: PublicDealer, text: string) {
-  const title = kind === "about" ? `About ${dealer.name}` : PAGE_TITLES[kind];
+function customBody(kind: Exclude<InnerPageKind, "contact">, dealer: PublicDealer, text: string, t: TFunc) {
+  const PAGE_TITLES: Record<Exclude<InnerPageKind, "contact">, string> = {
+    about: t('inner_page_about'),
+    finance: t('inner_page_finance'),
+    privacy: t('inner_page_privacy'),
+    terms: t('inner_page_terms'),
+  };
+  const title = kind === "about" ? `${t('inner_page_about')} ${dealer.name}` : PAGE_TITLES[kind];
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
     <>
@@ -48,78 +49,72 @@ function customBody(kind: Exclude<InnerPageKind, "contact">, dealer: PublicDeale
   );
 }
 
-function renderBody(kind: InnerPageKind, dealer: PublicDealer) {
+function renderBody(kind: InnerPageKind, dealer: PublicDealer, t: TFunc) {
   // Dealer-supplied copy takes precedence over the templated placeholders.
   if (kind !== "contact") {
     const custom = dealer.publicContent?.[kind]?.trim();
-    if (custom) return customBody(kind, dealer, custom);
+    if (custom) return customBody(kind, dealer, custom, t);
   }
 
   switch (kind) {
     case "about":
       return (
         <>
-          <h1 className={s.title}>About {dealer.name}</h1>
+          <h1 className={s.title}>{t('inner_page_about')} {dealer.name}</h1>
           <p className={s.lead}>
-            {dealer.name} is a trusted car dealership offering a carefully selected
-            range of quality vehicles.
+            {dealer.name} {t('about_lead_text')}
           </p>
           <p className={s.p}>
-            Every car in our showroom is inspected and prepared to a high standard.
-            Our team is on hand to help you find the right vehicle for your needs and
-            budget, with honest advice at every step.
+            {t('about_body_1')}
           </p>
           <p className={s.p}>
-            Browse our current stock online and get in touch to arrange a viewing or
-            test drive.
+            {t('about_body_2')}
           </p>
         </>
       );
     case "finance":
       return (
         <>
-          <h1 className={s.title}>Financing</h1>
+          <h1 className={s.title}>{t('inner_page_finance')}</h1>
           <p className={s.lead}>
-            Flexible finance options to help you drive away in the car you want.
+            {t('finance_lead_text')}
           </p>
           <ul className={s.list}>
-            <li>Competitive monthly payment plans</li>
-            <li>Part-exchange welcome</li>
-            <li>Quick decisions, minimal paperwork</li>
-            <li>Tailored terms to suit your budget</li>
+            <li>{t('finance_item_1')}</li>
+            <li>{t('finance_item_2')}</li>
+            <li>{t('finance_item_3')}</li>
+            <li>{t('finance_item_4')}</li>
           </ul>
           <p className={s.p}>
-            Finance is subject to status and affordability. Contact {dealer.name} for a
-            personalised quote and full terms.
+            {t('finance_body')} {dealer.name} {t('finance_body_suffix')}
           </p>
         </>
       );
     case "contact":
       return (
         <>
-          <h1 className={s.title}>Contact {dealer.name}</h1>
+          <h1 className={s.title}>{t('inner_page_contact')} {dealer.name}</h1>
           <p className={s.lead}>
-            Have a question about a vehicle? Send us a message and we&apos;ll get back
-            to you.
+            {t('contact_lead_text')}
           </p>
           <div className={s.contactGrid}>
             <div className={s.contactInfo}>
               {dealer.publicDomain && (
                 <div className={s.infoRow}>
-                  <span className={s.infoLabel}>Website</span>
+                  <span className={s.infoLabel}>{t('contact_label_website')}</span>
                   <span className={s.infoValue}>{dealer.publicDomain}</span>
                 </div>
               )}
               {dealer.mobileUrl && (
                 <div className={s.infoRow}>
-                  <span className={s.infoLabel}>Listings</span>
+                  <span className={s.infoLabel}>{t('contact_label_listings')}</span>
                   <a
                     href={dealer.mobileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={s.infoLink}
                   >
-                    View all our cars →
+                    {t('contact_view_all_cars')}
                   </a>
                 </div>
               )}
@@ -131,32 +126,28 @@ function renderBody(kind: InnerPageKind, dealer: PublicDealer) {
     case "privacy":
       return (
         <>
-          <h1 className={s.title}>Privacy Policy</h1>
+          <h1 className={s.title}>{t('inner_page_privacy')}</h1>
           <p className={s.lead}>
-            How {dealer.name} handles the information you share with us.
+            {t('privacy_lead_text_prefix')} {dealer.name} {t('privacy_lead_text_suffix')}
           </p>
           <p className={s.p}>
-            We collect only the information needed to respond to your enquiries and
-            provide our services. We do not sell your personal data to third parties.
+            {t('privacy_body_1')}
           </p>
           <p className={s.p}>
-            Information you submit through our enquiry form is used solely to contact
-            you about your request. You may ask us to remove your details at any time.
+            {t('privacy_body_2')}
           </p>
         </>
       );
     case "terms":
       return (
         <>
-          <h1 className={s.title}>Terms &amp; Conditions</h1>
-          <p className={s.lead}>The terms governing use of the {dealer.name} website.</p>
+          <h1 className={s.title}>{t('inner_page_terms')}</h1>
+          <p className={s.lead}>{t('terms_lead_text_prefix')} {dealer.name} {t('terms_lead_text_suffix')}</p>
           <p className={s.p}>
-            Vehicle details, pricing and availability are provided in good faith and may
-            change without notice. Listings do not form part of any contract.
+            {t('terms_body_1')}
           </p>
           <p className={s.p}>
-            Please confirm all vehicle details with {dealer.name} directly before making
-            a purchase decision.
+            {t('terms_body_2_prefix')} {dealer.name} {t('terms_body_2_suffix')}
           </p>
         </>
       );

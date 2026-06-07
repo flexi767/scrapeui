@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { parseApiResponse } from '@/lib/utils';
@@ -16,6 +17,7 @@ interface SearchResult {
 }
 
 export default function SearchPage() {
+  const t = useTranslations('ui');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,23 +49,23 @@ export default function SearchPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Search</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('search')}</h1>
 
       <form onSubmit={handleSearch} className="mb-6 flex gap-3">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search across tasks, cars, expenses, articles..."
+          placeholder={t('search_placeholder')}
           autoFocus
           className="flex-1"
         />
         <Button type="submit" disabled={loading}>
-          {loading ? 'Searching...' : 'Search'}
+          {loading ? t('searching') : t('search')}
         </Button>
       </form>
 
       {searched && !loading && results.length === 0 && (
-        <p className="text-gray-400">No results found.</p>
+        <p className="text-gray-400">{t('no_results_found')}</p>
       )}
 
       <div className="space-y-2">

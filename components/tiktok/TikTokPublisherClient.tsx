@@ -171,7 +171,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
           </div>
 
           <div>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Source photos</h2>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">{t('source_photos')}</h2>
             <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
               {photos.map((photo, index) => (
                 <div
@@ -214,7 +214,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
                     }`}
                   >
                     {photo.usable ? <EyeIcon className="h-3.5 w-3.5" /> : <EyeOffIcon className="h-3.5 w-3.5" />}
-                    {photo.usable ? "Use" : "Skip"}
+                    {photo.usable ? t('use') : t('skip')}
                   </button>
                 </div>
               ))}
@@ -226,32 +226,32 @@ export function TikTokPublisherClient({ backupId }: Props) {
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
               <TikTokIcon className="h-4 w-4 text-cyan-200" />
-              Video data
+              {t('video_data')}
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Length</div>
+                <div className="text-xs text-gray-500">{t('length')}</div>
                 <div className="text-gray-100">15s</div>
               </div>
               <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Format</div>
+                <div className="text-xs text-gray-500">{t('format')}</div>
                 <div className="text-gray-100">9:16</div>
               </div>
               <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Photos</div>
+                <div className="text-xs text-gray-500">{t('photos')}</div>
                 <div data-testid="tiktok-usable-photo-count" className="text-gray-100">
                   {usablePhotos.length}/{photos.length}
                 </div>
               </div>
               <div className="rounded-md bg-gray-800 px-3 py-2">
-                <div className="text-xs text-gray-500">Price</div>
+                <div className="text-xs text-gray-500">{t('price')}</div>
                 <div className="text-gray-100">{formatTikTokPrice(listing.price)}</div>
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <h2 className="mb-3 text-sm font-semibold text-white">Caption</h2>
+            <h2 className="mb-3 text-sm font-semibold text-white">{t('caption')}</h2>
             <textarea
               value={caption}
               onChange={(event) => setCaption(event.target.value)}

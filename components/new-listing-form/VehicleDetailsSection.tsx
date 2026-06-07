@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import {
   AutocompleteInput,
@@ -60,6 +63,7 @@ export function VehicleDetailsSection({
   onUpdateMake: (value: string) => void;
   onCategoryChange: (pubtype: string) => void | Promise<void>;
 }) {
+  const t = useTranslations('ui');
   return (
     <FormSection>
       <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_2fr_1fr_1fr]">
@@ -71,8 +75,8 @@ export function VehicleDetailsSection({
             value={form.make}
             onChange={onUpdateMake}
             options={makeOptions}
-            placeholder="Type make"
-            emptyLabel="No make matches"
+            placeholder={t('type_make')}
+            emptyLabel={t('no_make_matches')}
             hideLowCountOnEmpty
             open={openAutocomplete === "make"}
             focusWhenOpen
@@ -94,8 +98,8 @@ export function VehicleDetailsSection({
             value={form.model}
             onChange={(value) => setField("model", value)}
             options={modelOptions}
-            placeholder="Type model"
-            emptyLabel="No model matches"
+            placeholder={t('type_model')}
+            emptyLabel={t('no_model_matches')}
             open={openAutocomplete === "model"}
             focusWhenOpen
             onArrowLeft={() => onOpenAutocompleteChange("make")}

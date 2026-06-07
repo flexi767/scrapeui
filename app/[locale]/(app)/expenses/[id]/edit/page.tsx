@@ -3,6 +3,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 
 export default function EditExpensePage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('ui');
   const { id } = use(params);
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -61,45 +63,45 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
     router.push(`/expenses/${id}`);
   }
 
-  if (!loaded) return <p className="text-gray-400">Loading...</p>;
+  if (!loaded) return <p className="text-gray-400">{t('loading')}</p>;
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Edit Expense</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('edit_expense')}</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label>Title</Label>
+          <Label>{t('title')}</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Amount</Label>
+            <Label>{t('amount')}</Label>
             <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label>Currency</Label>
+            <Label>{t('currency')}</Label>
             <Input value={currency} readOnly className="bg-gray-900 text-gray-300" />
           </div>
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label>{t('date')}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Category</Label>
+          <Label>{t('category')}</Label>
           <select value={category} onChange={(e) => setCategory(e.target.value)}
             className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200">
             {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="space-y-2">
-          <Label>Notes</Label>
+          <Label>{t('notes')}</Label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-200" rows={3} />
         </div>
         <LinkedCarsSelector selected={selectedListings} onChange={setSelectedListings} />
         <div className="space-y-2">
-          <Label>Labels</Label>
+          <Label>{t('labels')}</Label>
           <div className="flex flex-wrap gap-2">
             {labels.map((l) => (
               <button key={l.id} type="button"
@@ -116,8 +118,8 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? t('saving') : t('save_changes')}</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>{t('cancel')}</Button>
         </div>
       </form>
     </div>

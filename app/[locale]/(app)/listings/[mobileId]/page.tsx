@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import EmblaCarousel from '@/components/EmblaCarousel';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
@@ -23,6 +24,7 @@ function SpecRow({ label, value }: { label: string; value?: string | number | nu
 }
 
 export default async function ListingDetailPage({ params }: Props) {
+  const t = await getTranslations('ui');
   const { mobileId } = await params;
   const listing = getListingByMobileId(mobileId);
   if (!listing) notFound();
@@ -56,7 +58,7 @@ export default async function ListingDetailPage({ params }: Props) {
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3">
           <Link href="/listings" className="text-sm text-gray-400 hover:text-white">
-            ← All Listings
+            {t('all_listings_back')}
           </Link>
           <span className="text-gray-600">/</span>
           <span className="truncate text-sm text-gray-300">{listing.title}</span>
@@ -65,10 +67,10 @@ export default async function ListingDetailPage({ params }: Props) {
           )}
           {!listing.is_active && (
             <span className="ml-2 rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] text-red-300">
-              Inactive
+              {t('inactive')}
             </span>
           )}
-          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ Config</Link>
+          <Link href="/config" className="ml-auto text-sm text-gray-400 hover:text-gray-200 transition-colors">{t('config_link')}</Link>
         </div>
       </header>
 
@@ -82,7 +84,7 @@ export default async function ListingDetailPage({ params }: Props) {
             {listing.description && (
               <div className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
                 <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-                  Description
+                  {t('description')}
                 </h2>
                 <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-300">
                   {listing.description}
@@ -148,7 +150,7 @@ export default async function ListingDetailPage({ params }: Props) {
             {/* Dealer */}
             <div className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-                Dealer
+                {t('dealer')}
               </h2>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-100">
@@ -156,7 +158,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 </span>
                 {Boolean(listing.dealer_own) && (
                   <span className="rounded-full bg-emerald-700 px-2 py-0.5 text-[11px] text-emerald-100">
-                    own
+                    {t('own')}
                   </span>
                 )}
               </div>
@@ -175,23 +177,23 @@ export default async function ListingDetailPage({ params }: Props) {
             {/* Specs */}
             <div className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-                Specs
+                {t('specs')}
               </h2>
-              <SpecRow label="Make" value={listing.make} />
-              <SpecRow label="Model" value={listing.model} />
-              <SpecRow label="Year" value={regDisplay} />
-              <SpecRow label="Fuel" value={listing.fuel} />
-              <SpecRow label="Color" value={listing.color} />
+              <SpecRow label={t('make')} value={listing.make} />
+              <SpecRow label={t('model')} value={listing.model} />
+              <SpecRow label={t('year')} value={regDisplay} />
+              <SpecRow label={t('fuel')} value={listing.fuel} />
+              <SpecRow label={t('color')} value={listing.color} />
               <SpecRow
-                label="Power"
+                label={t('power')}
                 value={listing.power ? `${listing.power} hp` : null}
               />
-              <SpecRow label="Mileage" value={formatMileage(listing.mileage)} />
+              <SpecRow label={t('mileage')} value={formatMileage(listing.mileage)} />
               <SpecRow
-                label="Views"
+                label={t('views')}
                 value={formatCount(listing.views)}
               />
-              <SpecRow label="Last Edit" value={formatDate(listing.last_edit)} />
+              <SpecRow label={t('last_edit')} value={formatDate(listing.last_edit)} />
             </div>
           </div>
         </div>

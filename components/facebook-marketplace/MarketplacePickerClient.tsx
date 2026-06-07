@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { errorMessage, parseApiResponse } from "@/lib/utils";
 
 interface MarketplaceListing {
@@ -19,10 +20,11 @@ interface MarketplaceListingsResponse {
 }
 
 export function MarketplacePickerClient() {
+  const t = useTranslations('ui');
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [status, setStatus] = useState("Waiting for listings");
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -37,7 +39,7 @@ export function MarketplacePickerClient() {
         if (trimmedQuery) params.set("search", trimmedQuery);
 
         setIsLoading(true);
-        setStatus("Loading listings...");
+        setStatus(t('loading_listings'));
         const response = await fetch(`/api/facebook-marketplace/listings?${params}`, {
           credentials: "same-origin",
           signal: controller.signal,
@@ -62,11 +64,11 @@ export function MarketplacePickerClient() {
   function chooseListing(listing: MarketplaceListing) {
     const openerOrigin = getFacebookOpenerOrigin();
     if (!openerOrigin) {
-      setStatus("Open this picker from a Facebook Marketplace bookmarklet tab.");
+      setStatus(t('marketplace_open_from_bookmarklet'));
       return;
     }
     if (!window.opener) {
-      setStatus("Facebook tab is not available.");
+      setStatus(t('marketplace_facebook_tab_unavailable'));
       return;
     }
     window.opener.postMessage({ type: "scrapeui:facebook-marketplace-listing", listing }, openerOrigin);
@@ -77,14 +79,14 @@ export function MarketplacePickerClient() {
   return (
     <div className="flex h-screen flex-col bg-slate-900 text-slate-200">
       <header className="border-b border-slate-800 p-3">
-        <h1 className="text-[15px] font-semibold text-white">scrapeui Marketplace</h1>
-        <p className="mt-1 text-sm text-slate-400">Choose a listing to fill in the Facebook tab.</p>
+        <h1 className="text-[15px] font-semibold text-white">{t('marketplace_title')}</h1>
+        <p className="mt-1 text-sm text-slate-400">{t('marketplace_subtitle')}</p>
       </header>
 
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search listings"
+        placeholder={t('search_listings')}
         autoFocus
         className="m-3 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none"
       />
@@ -92,7 +94,7 @@ export function MarketplacePickerClient() {
       <div className="min-h-0 flex-1 overflow-auto border-y border-slate-800">
         {listings.length === 0 ? (
           <div className="p-3 font-mono text-xs text-slate-400">
-            {emptyStateText({ isLoading, listingCount: listings.length, query })}
+            {emptyStateText({ isLoading, listingCount: listings.length, query, t })}
           </div>
         ) : (
           listings.map((listing) => (
@@ -110,7 +112,7 @@ export function MarketplacePickerClient() {
                 />
               ) : (
                 <div className="grid h-[50px] w-16 place-items-center rounded border border-slate-800 bg-slate-900 text-[11px] text-slate-500">
-                  No img
+                  {t('no_img')}
                 </div>
               )}
               <span className="min-w-0">
@@ -122,7 +124,7 @@ export function MarketplacePickerClient() {
         )}
       </div>
 
-      <div className="p-2.5 font-mono text-xs text-slate-400">{status}</div>
+      <div className="p-2.5 font-mono text-xs text-slate-400">{status ?? t('marketplace_waiting')}</div>
     </div>
   );
 }
@@ -144,14 +146,16 @@ function emptyStateText({
   isLoading,
   listingCount,
   query,
+  t,
 }: {
   isLoading: boolean;
   listingCount: number;
   query: string;
+  t: (key: string) => string;
 }) {
-  if (isLoading) return "Loading listings...";
-  if (listingCount === 0) return "No listings are available.";
-  return query.trim() ? "No listings match this search." : "No listings found.";
+  if (isLoading) return t('loading_listings');
+  if (listingCount === 0) return t('no_listings_available');
+  return query.trim() ? t('no_listings_match_search') : t('no_listings_found');
 }
 
 function getFacebookOpenerOrigin() {

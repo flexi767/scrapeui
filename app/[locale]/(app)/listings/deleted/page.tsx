@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
@@ -47,6 +48,7 @@ export default async function DeletedListingsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const t = await getTranslations('ui');
   const sp = await searchParams;
   const make = sp.make ?? '';
   const model = sp.model ?? '';
@@ -121,28 +123,28 @@ export default async function DeletedListingsPage({
           <table className="w-full min-w-[980px] text-sm">
             <thead>
               <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-                <th className="w-24 px-3 py-1.5 text-left">Img</th>
-                <th className="px-3 py-1.5 text-left">Make / Model</th>
-                <th className="px-3 py-1.5 text-left">Title</th>
-                <th className="px-3 py-1.5 text-left"><SortLink label="Dealer" sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-2 py-1.5 text-center w-14"><SortLink label="Paid" sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="pl-1 pr-3 py-1.5 text-right"><SortLink label="Price" sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-3 py-1.5 text-center">VAT</th>
-                <th className="px-2 py-1.5 text-center w-14"><SortLink label="К" sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-3 py-1.5 text-right">Views</th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="Last Edit" sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-3 py-1.5 text-right">Deleted</th>
-                <th className="px-2 py-1.5 text-center w-12">New</th>
-                <th className="px-3 py-1.5 text-right">Month</th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="Year" sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-3 py-1.5 text-center">Body Type</th>
-                <th className="px-3 py-1.5 text-center"><SortLink label="Fuel" sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
-                <th className="px-3 py-1.5 text-right"><SortLink label="KM" sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="w-24 px-3 py-1.5 text-left">{t('img')}</th>
+                <th className="px-3 py-1.5 text-left">{t('make_/_model')}</th>
+                <th className="px-3 py-1.5 text-left">{t('title')}</th>
+                <th className="px-3 py-1.5 text-left"><SortLink label={t('dealer')} sortKey="dealer" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label={t('paid')} sortKey="ad_status" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="pl-1 pr-3 py-1.5 text-right"><SortLink label={t('price')} sortKey="price" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-center">{t('vat')}</th>
+                <th className="px-2 py-1.5 text-center w-14"><SortLink label={t('к')} sortKey="kaparo" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-right">{t('views')}</th>
+                <th className="px-3 py-1.5 text-right"><SortLink label={t('last_edit')} sortKey="last_edit" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-right">{t('deleted')}</th>
+                <th className="px-2 py-1.5 text-center w-12">{t('new')}</th>
+                <th className="px-3 py-1.5 text-right">{t('month')}</th>
+                <th className="px-3 py-1.5 text-right"><SortLink label={t('year')} sortKey="reg_year" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-center">{t('body_type')}</th>
+                <th className="px-3 py-1.5 text-center"><SortLink label={t('fuel')} sortKey="fuel" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
+                <th className="px-3 py-1.5 text-right"><SortLink label={t('km')} sortKey="mileage" currentSort={sort} currentOrder={order} params={currentParams} basePath={BASE_PATH} /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
-                <tr><td colSpan={17} className="py-16 text-center text-gray-500">No deleted listings found</td></tr>
+                <tr><td colSpan={17} className="py-16 text-center text-gray-500">{t('no_deleted_listings_found')}</td></tr>
               )}
               {rows.map((row) => {
                 const thumb = getListingThumbSrc(row);

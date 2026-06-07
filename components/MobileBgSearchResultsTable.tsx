@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import { AdStatusBadge } from '@/components/listings/AdStatusBadge';
 import { VatBadge } from '@/components/listings/VatBadge';
@@ -48,6 +49,7 @@ export function MobileBgSearchResultsTable({
   sourceMobileId: string | null;
   saveAdMode?: boolean;
 }) {
+  const t = useTranslations('ui');
   const [ignoredResultIds, setIgnoredResultIds] = useState<string[]>(initialIgnoredResultIds ?? []);
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
   const [savingDraftIds, setSavingDraftIds] = useState<Record<string, boolean>>({});
@@ -70,7 +72,7 @@ export function MobileBgSearchResultsTable({
         nextIgnored ? [...new Set([...prev, mobileId])] : prev.filter((id) => id !== mobileId)
       ));
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to update ignored result'));
+      toast.error(errorMessage(error, t('failed_to_update_ignored_result')));
     } finally {
       setSavingIds((prev) => ({ ...prev, [mobileId]: false }));
     }
@@ -83,9 +85,9 @@ export function MobileBgSearchResultsTable({
     try {
       const backupId = await saveAdAsCarbrosDraft(row.url);
       setSavedDraftIds((prev) => ({ ...prev, [row.mobile_id]: backupId }));
-      toast.success('Saved ad as Carbros draft');
+      toast.success(t('saved_ad_as_carbros_draft'));
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to save ad as draft'));
+      toast.error(errorMessage(error, t('failed_to_save_ad_as_draft')));
     } finally {
       setSavingDraftIds((prev) => ({ ...prev, [row.mobile_id]: false }));
     }
@@ -135,26 +137,26 @@ export function MobileBgSearchResultsTable({
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
             <tr className="border-b border-slate-500/60 bg-slate-700/70 text-xs font-medium uppercase tracking-wider text-slate-200/70">
-              <th className="w-24 px-3 py-1.5 text-left">Img</th>
-              <th className="px-3 py-1.5 text-right">Orig #</th>
-              <th className="px-2 py-1.5 text-left">Make / Model</th>
-              <th className="px-2 py-1.5 text-left">Title</th>
-              <th className="px-2 py-1.5 text-left">Dealer</th>
-              <th className="px-2 py-1.5 text-center w-14">Paid</th>
-              <th className="pl-1 pr-3 py-1.5 text-right">Price</th>
-              <th className="px-3 py-1.5 text-center">VAT</th>
-              <th className="px-3 py-1.5 text-right">Year</th>
-              <th className="px-3 py-1.5 text-right">PS</th>
-              <th className="px-3 py-1.5 text-center">Body Type</th>
-              <th className="px-3 py-1.5 text-center">Fuel</th>
-              <th className="px-3 py-1.5 text-right">KM</th>
+              <th className="w-24 px-3 py-1.5 text-left">{t('col_img')}</th>
+              <th className="px-3 py-1.5 text-right">{t('col_orig_num')}</th>
+              <th className="px-2 py-1.5 text-left">{t('col_make_model')}</th>
+              <th className="px-2 py-1.5 text-left">{t('col_title')}</th>
+              <th className="px-2 py-1.5 text-left">{t('col_dealer')}</th>
+              <th className="px-2 py-1.5 text-center w-14">{t('col_paid')}</th>
+              <th className="pl-1 pr-3 py-1.5 text-right">{t('col_price')}</th>
+              <th className="px-3 py-1.5 text-center">{t('col_vat')}</th>
+              <th className="px-3 py-1.5 text-right">{t('col_year')}</th>
+              <th className="px-3 py-1.5 text-right">{t('col_ps')}</th>
+              <th className="px-3 py-1.5 text-center">{t('col_body_type')}</th>
+              <th className="px-3 py-1.5 text-center">{t('col_fuel')}</th>
+              <th className="px-3 py-1.5 text-right">{t('col_km')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-500/40">
             {rows.length === 0 && (
               <tr>
                 <td colSpan={12} className="py-10 text-center text-slate-200/60">
-                  No mobile.bg results found.
+                  {t('no_mobilebg_results_found')}
                 </td>
               </tr>
             )}
@@ -179,7 +181,7 @@ export function MobileBgSearchResultsTable({
                     alt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image'}
                     previewAlt={`${row.make ?? 'Listing'} ${row.model ?? ''}`.trim() || 'Listing image preview'}
                     placeholderClassName="h-10 w-14 rounded bg-slate-900"
-                    fallbackLabel="Missing"
+                    fallbackLabel={t('missing')}
                   />
                 </td>
 
@@ -195,8 +197,8 @@ export function MobileBgSearchResultsTable({
                             ? 'border-emerald-500/60 bg-emerald-950/50 text-emerald-200'
                             : 'border-emerald-500/60 bg-emerald-950/30 text-emerald-200 hover:bg-emerald-900/60'
                         }`}
-                        title={savedDraftIds[row.mobile_id] != null ? 'Saved as draft' : 'Save ad as Carbros draft'}
-                        aria-label={savedDraftIds[row.mobile_id] != null ? 'Saved as draft' : 'Save ad as Carbros draft'}
+                        title={savedDraftIds[row.mobile_id] != null ? t('saved_as_draft') : t('save_ad_as_carbros_draft')}
+                        aria-label={savedDraftIds[row.mobile_id] != null ? t('saved_as_draft') : t('save_ad_as_carbros_draft')}
                       >
                         {savingDraftIds[row.mobile_id] ? '…' : savedDraftIds[row.mobile_id] != null ? '✓' : '+'}
                       </button>
@@ -210,8 +212,8 @@ export function MobileBgSearchResultsTable({
                             ? 'border-amber-500/60 bg-amber-950/30 text-amber-200 hover:bg-amber-950/40'
                             : 'border-slate-500/60 bg-slate-900/40 text-slate-300 hover:bg-slate-700/60'
                         }`}
-                        title={isIgnored ? 'Unignore result' : 'Ignore result'}
-                        aria-label={isIgnored ? 'Unignore result' : 'Ignore result'}
+                        title={isIgnored ? t('unignore_result') : t('ignore_result')}
+                        aria-label={isIgnored ? t('unignore_result') : t('ignore_result')}
                       >
                         {savingIds[row.mobile_id] ? '…' : '×'}
                       </button>
@@ -245,7 +247,7 @@ export function MobileBgSearchResultsTable({
                       {getDisplayTitle(row)}
                     </a>
                     {isIgnored && (
-                      <div className="mt-1 text-[11px] uppercase tracking-wide text-amber-300/80">Ignored for ranking</div>
+                      <div className="mt-1 text-[11px] uppercase tracking-wide text-amber-300/80">{t('ignored_for_ranking')}</div>
                     )}
                   </div>
                 </td>

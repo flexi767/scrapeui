@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { formatDateOnly } from '@/lib/date-format';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 
@@ -18,6 +19,7 @@ interface UploadRow {
 }
 
 export default function FilesPage() {
+  const t = useTranslations('ui');
   const [files, setFiles] = useState<UploadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -64,9 +66,9 @@ export default function FilesPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Files</h1>
+        <h1 className="text-2xl font-bold">{t('files')}</h1>
         <label className="inline-flex cursor-pointer items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-50">
-          {uploading ? 'Uploading...' : 'Upload files'}
+          {uploading ? t('uploading') : t('upload_files')}
           <input
             type="file"
             multiple
@@ -80,9 +82,9 @@ export default function FilesPage() {
       {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
 
       {loading ? (
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       ) : files.length === 0 ? (
-        <p className="text-gray-400">No files uploaded yet.</p>
+        <p className="text-gray-400">{t('no_files_uploaded_yet')}</p>
       ) : (
         <div className="space-y-2">
           {files.map((f) => (

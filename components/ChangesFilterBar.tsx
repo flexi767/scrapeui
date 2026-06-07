@@ -113,7 +113,7 @@ export default function ChangesFilterBar({
         onChange={(e) => router.push(`${basePath}?${buildParams({ make: e.target.value, model: '' })}`)}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
       >
-        <option value="">Make</option>
+        <option value="">{t('make')}</option>
         {makes.map((make) => (
           <option key={make} value={make}>{make}</option>
         ))}
@@ -125,7 +125,7 @@ export default function ChangesFilterBar({
         onChange={(e) => router.push(`${basePath}?${buildParams({ model: e.target.value })}`)}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-40"
       >
-        <option value="">Model</option>
+        <option value="">{t('model')}</option>
         {availableModels.map((model) => (
           <option key={model} value={model}>{model}</option>
         ))}
@@ -134,12 +134,12 @@ export default function ChangesFilterBar({
       <MultiSelectDropdown
         buttonText={
           currentDealers.length === 0
-            ? 'Dealers'
+            ? t('dealers')
             : currentDealers.length === 1
             ? allDealers.find((dealer) => dealer.slug === currentDealers[0])?.name ?? currentDealers[0]
-            : `${currentDealers.length} dealers`
+            : `${currentDealers.length} ${t('dealers_count')}`
         }
-        clearLabel="Clear dealers"
+        clearLabel={t('clear_dealers')}
         options={allDealers.map((dealer) => ({
           value: dealer.slug,
           label: dealer.name,
@@ -154,14 +154,14 @@ export default function ChangesFilterBar({
       <MultiSelectDropdown
         buttonText={
           currentFieldsFromUrl.length === 0
-            ? 'Fields'
+            ? t('fields')
             : currentFields.length === fieldOptions.length
-            ? 'Fields'
+            ? t('fields')
             : currentFields.length === 1
             ? fieldOptions.find((field) => field.value === currentFields[0])?.label ?? currentFields[0]
-            : `Fields (${currentFields.length})`
+            : `${t('fields')} (${currentFields.length})`
         }
-        clearLabel="Reset fields"
+        clearLabel={t('reset_fields')}
         options={fieldOptions}
         selectedValues={currentFields}
         onToggle={onFieldToggle}
@@ -176,7 +176,7 @@ export default function ChangesFilterBar({
         onChange={(e) => router.push(`${basePath}?${buildParams({ when: e.target.value })}`)}
         className="h-8 rounded border border-gray-600 bg-gray-800 px-2 text-sm text-white focus:border-blue-500 focus:outline-none"
       >
-        <option value="">When</option>
+        <option value="">{t('when')}</option>
         {whenOptions.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
@@ -187,12 +187,12 @@ export default function ChangesFilterBar({
           onClick={() => router.push(basePath)}
           className="h-8 rounded border border-gray-600 bg-gray-800 px-3 text-sm text-gray-300 hover:border-gray-400 hover:text-white"
         >
-          Clear
+          {t('clear')}
         </button>
       )}
 
       <span className="ml-auto text-sm text-gray-400">
-        {formatCount(total)} changes
+        {formatCount(total)} {t('changes')}
       </span>
     </div>
   );

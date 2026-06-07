@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ScrapeChangesTable } from '@/components/scrape-runner/ScrapeChangesTable';
 import { ScrapeControls } from '@/components/scrape-runner/ScrapeControls';
 import { ScrapeLogPanel } from '@/components/scrape-runner/ScrapeLogPanel';
@@ -10,6 +11,7 @@ import { useAutoScroll } from '@/components/shared/useAutoScroll';
 import { useStreamingRun } from '@/components/shared/useStreamingRun';
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
+  const t = useTranslations('ui');
   const dealerSelection = useScrapeDealerSelection(initialDealers);
 
   const [deepCrawl, setDeepCrawl] = useState(false);
@@ -31,7 +33,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
   }, [changes.length]);
 
   const streamRun = useStreamingRun<ScrapeLogEntry>({
-    fallbackStartError: 'Failed to start scraper',
+    fallbackStartError: t('failed_to_start_scraper'),
     start: (signal) => fetch('/api/scrape', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,7 +91,7 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
       {/* Success banner */}
       {done && (
         <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-          ✅ Database updated
+          ✅ {t('database_updated')}
         </div>
       )}
 

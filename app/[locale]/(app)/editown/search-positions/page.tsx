@@ -11,9 +11,9 @@ export default async function EditOwnSearchPositionsPage() {
         <div className="mx-auto max-w-5xl px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/editown" className="text-sm text-gray-400 transition-colors hover:text-gray-200">
-              ← Edit Own
+              {t('back_to_edit_own')}
             </Link>
-            <span className="text-sm font-medium text-gray-400">Search Positions</span>
+            <span className="text-sm font-medium text-gray-400">{t('search_positions')}</span>
           </div>
         </div>
       </header>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { errorMessage, parseApiResponse } from "@/lib/utils";
 import { IMAGE_UPLOAD_BATCH_SIZE, type BackupImage } from "./constants";
@@ -10,6 +11,7 @@ interface BackupImagesResponse {
 }
 
 export function BackupImageManager({ backupId }: { backupId: number }) {
+  const t = useTranslations('ui');
   const [images, setImages] = useState<BackupImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -162,13 +164,13 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
     <section className="rounded-2xl border border-gray-800 bg-gray-950/70 p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Снимки</h2>
+          <h2 className="text-lg font-semibold text-white">{t('images')}</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Качи нови снимки, влачи ги за подреждане или махни ненужните.
+            {t('images_description')}
           </p>
         </div>
         <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-sky-400">
-          {uploading ? "Качване..." : "Качи снимки"}
+          {uploading ? t('uploading') : t('upload_images')}
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -182,16 +184,16 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
 
       {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
       {savingOrder ? (
-        <p className="mt-4 text-sm text-sky-300">Запазване на реда...</p>
+        <p className="mt-4 text-sm text-sky-300">{t('saving_order')}</p>
       ) : null}
 
       {loading ? (
         <div className="mt-5 rounded-xl border border-gray-800 bg-gray-900/50 p-4 text-sm text-gray-400">
-          Зареждане на снимките...
+          {t('loading_images')}
         </div>
       ) : images.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-gray-700 bg-gray-900/40 p-8 text-center text-sm text-gray-400">
-          Все още няма снимки към тази обява.
+          {t('no_images_yet')}
         </div>
       ) : (
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -234,7 +236,7 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
                         disabled={deletingId === image.id}
                         className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {deletingId === image.id ? "..." : "Да"}
+                        {deletingId === image.id ? "..." : t('yes')}
                       </button>
                       <button
                         type="button"
@@ -242,7 +244,7 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
                         disabled={deletingId === image.id}
                         className="rounded-full px-2 py-0.5 text-[11px] text-gray-400 transition hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Не
+                        {t('no')}
                       </button>
                     </div>
                   ) : (
@@ -250,8 +252,8 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
                       type="button"
                       onClick={() => setConfirmingDeleteId(image.id)}
                       disabled={deletingId === image.id}
-                      title="Изтрий снимката"
-                      aria-label="Изтрий снимката"
+                      title={t('delete_image')}
+                      aria-label={t('delete_image')}
                       className="ml-auto inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-base leading-none text-red-400 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       ×

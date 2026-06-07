@@ -163,20 +163,20 @@ export default async function ListingsChangesPage({
           <table className="w-full min-w-[1200px] text-sm">
             <thead>
               <tr className="border-b border-gray-700 bg-gray-800/60 text-xs font-medium uppercase tracking-wider text-gray-400">
-                <th className="w-24 px-3 py-1.5 text-left">Img</th>
-                <th className="px-3 py-1.5 text-left">Make / Model</th>
-                <th className="px-3 py-1.5 text-left">Title</th>
-                <th className="px-3 py-1.5 text-left">Dealer</th>
-                <th className="px-3 py-1.5 text-left">Fields</th>
-                <th className="px-3 py-1.5 text-left">Values</th>
-                <th className="px-3 py-1.5 text-right">When</th>
+                <th className="w-24 px-3 py-1.5 text-left">{t('img')}</th>
+                <th className="px-3 py-1.5 text-left">{t('make_/_model')}</th>
+                <th className="px-3 py-1.5 text-left">{t('title')}</th>
+                <th className="px-3 py-1.5 text-left">{t('dealer')}</th>
+                <th className="px-3 py-1.5 text-left">{t('fields')}</th>
+                <th className="px-3 py-1.5 text-left">{t('values')}</th>
+                <th className="px-3 py-1.5 text-right">{t('when')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-16 text-center text-gray-500">
-                    No tracked changes found
+                    {t('no_tracked_changes_found')}
                   </td>
                 </tr>
               )}

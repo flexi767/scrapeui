@@ -35,7 +35,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   async function deleteExpense() {
-    if (!confirm('Delete this expense?')) return;
+    if (!confirm(t('confirm_delete_expense'))) return;
     await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
     router.push('/expenses');
   }
@@ -84,7 +84,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
 
       {expense.tasks.length > 0 && (
         <div className="mb-4">
-          <h3 className="mb-1 text-sm font-medium text-gray-400">Linked Tasks</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-400">{t('linked_tasks')}</h3>
           <div className="flex flex-wrap gap-2">
             {expense.tasks.map((t) => (
               <Link key={t.id} href={`/tasks/${t.id}`}
@@ -109,7 +109,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
 
       {expense.uploads.length > 0 && (
         <div className="mb-6">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">Invoices / Receipts</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t('invoices_receipts')}</h3>
           <div className="space-y-1">
             {expense.uploads.map((u) => (
               <a key={u.id} href={`/api/uploads/${u.stored_name}`} target="_blank" rel="noreferrer"
@@ -124,9 +124,9 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
 
       <div className="flex gap-2">
         <Link href={`/expenses/${id}/edit`}>
-          <Button variant="outline">Edit</Button>
+          <Button variant="outline">{t('edit')}</Button>
         </Link>
-        <Button variant="destructive" onClick={deleteExpense}>Delete</Button>
+        <Button variant="destructive" onClick={deleteExpense}>{t('delete')}</Button>
       </div>
     </div>
   );

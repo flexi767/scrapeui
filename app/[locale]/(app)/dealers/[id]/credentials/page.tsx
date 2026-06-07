@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import {
   SOCIAL_CREDENTIAL_SECTIONS,
@@ -66,7 +67,7 @@ function StatusIcon({ status, reason }: { status: TestStatus; reason?: string })
 }
 
 function CredentialSection({
-  title, icon, fields, values, onChange, onTest, testStatus, testReason, testable = true,
+  title, icon, fields, values, onChange, onTest, testStatus, testReason, testable = true, testLoginLabel,
 }: {
   title: string;
   icon: string;
@@ -77,6 +78,7 @@ function CredentialSection({
   testStatus?: TestStatus;
   testReason?: string;
   testable?: boolean;
+  testLoginLabel?: string;
 }) {
   return (
     <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
@@ -92,7 +94,7 @@ function CredentialSection({
             className="flex items-center gap-1.5 px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs text-gray-300 rounded transition-colors"
           >
             {testStatus === 'testing' ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Test login
+            {testLoginLabel ?? 'Test login'}
             {testStatus && testStatus !== 'testing' && (
               <StatusIcon status={testStatus} reason={testReason} />
             )}
@@ -129,6 +131,9 @@ function CredentialSectionWithSave({
   testStatus,
   testReason,
   testable,
+  saveLabel,
+  savingLabel,
+  testLoginLabel,
 }: {
   title: string;
   icon: string;
@@ -141,6 +146,9 @@ function CredentialSectionWithSave({
   testStatus?: TestStatus;
   testReason?: string;
   testable?: boolean;
+  saveLabel?: string;
+  savingLabel?: string;
+  testLoginLabel?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -154,6 +162,7 @@ function CredentialSectionWithSave({
         testStatus={testStatus}
         testReason={testReason}
         testable={testable}
+        testLoginLabel={testLoginLabel}
       />
       <div className="flex justify-end">
         <button
@@ -161,7 +170,7 @@ function CredentialSectionWithSave({
           disabled={saving}
           className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? (savingLabel ?? 'Saving…') : (saveLabel ?? 'Save')}
         </button>
       </div>
     </div>

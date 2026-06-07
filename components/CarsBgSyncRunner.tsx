@@ -143,7 +143,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
           if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
             toast.success(`Cars.bg sync finished: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`);
           } else {
-            toast.error(`Cars.bg sync finished with failures`);
+            toast.error(t('carsbg_sync_finished_with_failures'));
           }
         } else {
           toast.success(`Cars.bg plan ready: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`);
@@ -163,12 +163,12 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       appendLog({ kind: 'error', message });
       toast.error(message);
     },
-    onStopRequested: () => appendLog({ kind: 'log', message: 'Stopping cars.bg sync…' }),
+    onStopRequested: () => appendLog({ kind: 'log', message: t('stopping_carsbg_sync') }),
   });
 
   async function run(live: boolean) {
     if (selectedDealers.length === 0) {
-      toast.error('Select at least one dealer');
+      toast.error(t('select_at_least_one_dealer'));
       return;
     }
     resetRunState(live);

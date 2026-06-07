@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { AdStatusBadge } from './AdStatusBadge';
@@ -17,7 +18,8 @@ interface Props {
   basePath: string;
 }
 
-export function ListingTableRow({ row, currentParams, statuses, basePath }: Props) {
+export async function ListingTableRow({ row, currentParams, statuses, basePath }: Props) {
+  const t = await getTranslations('ui');
   const thumb = getListingThumbSrc(row);
   const thumbAlt = getListingThumbAlt(row);
   const listingSlug = row.mobile_id || row.cars_id || String(row.id);
@@ -79,7 +81,7 @@ export function ListingTableRow({ row, currentParams, statuses, basePath }: Prop
             </Link>
           ) : <span className="whitespace-nowrap text-gray-400">{row.dealer_name ?? '—'}</span>}
           {row.source === 'c' && (
-            <span className="rounded bg-purple-900/70 px-1 py-0.5 text-[10px] text-purple-200">cars</span>
+            <span className="rounded bg-purple-900/70 px-1 py-0.5 text-[10px] text-purple-200">{t('source_cars')}</span>
           )}
         </div>
       </td>
@@ -141,7 +143,7 @@ export function ListingTableRow({ row, currentParams, statuses, basePath }: Prop
       {/* New */}
       <td className="px-2 py-1 text-center">
         {row.is_new ? (
-          <span className="rounded-full bg-emerald-800/70 px-2 py-0.5 text-[11px] text-emerald-200">new</span>
+          <span className="rounded-full bg-emerald-800/70 px-2 py-0.5 text-[11px] text-emerald-200">{t('listing_new')}</span>
         ) : (
           <span className="text-gray-600">—</span>
         )}

@@ -77,22 +77,22 @@ export default function DealerRegisterPage() {
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <Link href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
-            ← Config
+            ← {t('config')}
           </Link>
-          <span className="text-sm font-medium text-gray-400">Register Dealer</span>
+          <span className="text-sm font-medium text-gray-400">{t('register_dealer')}</span>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-100 mb-6">Register New Dealer</h1>
+        <h1 className="text-xl font-semibold text-gray-100 mb-6">{t('register_new_dealer')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dealer info */}
           <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
-            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Dealer Info</h2>
+            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">{t('dealer_info')}</h2>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Name *</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('name_required')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.name}
@@ -103,7 +103,7 @@ export default function DealerRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Slug * <span className="text-gray-500 text-xs">(used in public URL)</span></label>
+              <label className="block text-sm text-gray-400 mb-1">{t('slug_required')} <span className="text-gray-500 text-xs">({t('used_in_public_url')})</span></label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500 font-mono"
                 value={form.slug}
@@ -112,11 +112,11 @@ export default function DealerRegisterPage() {
                 pattern="[a-z0-9-]+"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Lowercase letters, numbers, dashes only</p>
+              <p className="text-xs text-gray-500 mt-1">{t('slug_hint')}</p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Mobile.bg listing URL</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('mobilebg_listing_url')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.mobile_url}
@@ -134,11 +134,11 @@ export default function DealerRegisterPage() {
                   checked={form.own}
                   onChange={(e) => set('own', e.target.checked)}
                 />
-                Own listing (we manage this dealer)
+                {t('own_listing_we_manage')}
               </label>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Priority</label>
+                <label className="text-sm text-gray-400">{t('priority')}</label>
                 <input
                   type="number"
                   className="w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
@@ -152,11 +152,11 @@ export default function DealerRegisterPage() {
 
           {/* Login account */}
           <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
-            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Login Account</h2>
-            <p className="text-xs text-gray-500">A user account will be created for the dealer to log in and manage their credentials.</p>
+            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">{t('login_account')}</h2>
+            <p className="text-xs text-gray-500">{t('login_account_description')}</p>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Username *</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('username_required')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.username}
@@ -168,13 +168,13 @@ export default function DealerRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Password *</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('password_required')}</label>
               <input
                 type="password"
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.password}
                 onChange={(e) => set('password', e.target.value)}
-                placeholder="Min 6 characters"
+                placeholder={t('min_6_characters')}
                 required
                 autoComplete="new-password"
               />
@@ -187,10 +187,10 @@ export default function DealerRegisterPage() {
               disabled={saving}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded transition-colors"
             >
-              {saving ? 'Registering…' : 'Register Dealer'}
+              {saving ? t('registering') : t('register_dealer')}
             </button>
             <Link href="/config" className="text-sm text-gray-400 hover:text-gray-200">
-              Cancel
+              {t('cancel')}
             </Link>
           </div>
         </form>

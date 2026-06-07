@@ -1,16 +1,18 @@
 
 import { getMobileBgRepostJobs } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
+import { getTranslations } from 'next-intl/server';
 
-export default function MobileBgRepostsPage() {
+export default async function MobileBgRepostsPage() {
+  const t = await getTranslations('ui');
   const jobs = getMobileBgRepostJobs(250);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Mobile.bg Reposts</h1>
+        <h1 className="text-2xl font-bold text-white">{t('mobilebg_reposts_title')}</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Database-backed repost jobs linked to backed up listings and eventual target mobile.bg IDs.
+          {t('mobilebg_reposts_description')}
         </p>
       </div>
 
@@ -18,17 +20,17 @@ export default function MobileBgRepostsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-700 bg-gray-800/60 text-xs uppercase tracking-wider text-gray-400">
-              <th className="px-4 py-2 text-left">Source</th>
-              <th className="px-4 py-2 text-left">Dealer</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Target ID</th>
-              <th className="px-4 py-2 text-right">Started</th>
+              <th className="px-4 py-2 text-left">{t('col_source')}</th>
+              <th className="px-4 py-2 text-left">{t('col_dealer')}</th>
+              <th className="px-4 py-2 text-left">{t('col_status')}</th>
+              <th className="px-4 py-2 text-left">{t('col_target_id')}</th>
+              <th className="px-4 py-2 text-right">{t('col_started')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {jobs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-gray-500">No repost jobs yet.</td>
+                <td colSpan={5} className="px-4 py-12 text-center text-gray-500">{t('no_repost_jobs_yet')}</td>
               </tr>
             ) : jobs.map((job) => (
               <tr key={job.id} className="hover:bg-gray-800/40">

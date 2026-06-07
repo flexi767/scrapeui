@@ -333,7 +333,7 @@ export function OwnListingTableRow({
       <td className="px-2 py-1.5">
         {row.is_new === 1 && (
           <span className="rounded-full bg-emerald-900/70 px-2 py-0.5 text-xs text-emerald-200">
-            new
+            {t('badge_new')}
           </span>
         )}
       </td>
