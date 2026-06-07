@@ -2,8 +2,10 @@ import {
   integer,
   sqliteTable,
   text,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 // ─── Existing tables ──────────────────────────────────────────────
 
@@ -536,6 +538,47 @@ export const listingSearchResultIgnores = sqliteTable(
   }),
 );
 
+// ─── Translations / Localization ──────────────────────────────────
+
+export const locales = sqliteTable("locales", {
+  code: text("code").primaryKey(), // 'bg', 'en', 'de', 'ru'
+  name: text("name").notNull(), // 'Bulgarian', 'English', etc.
+  isActive: integer("is_active").default(1), // 1 = enabled, 0 = disabled
+});
+
+export const translationKeys = sqliteTable("translation_keys", {
+  id: text("id").primaryKey(), // 'nav.listings', 'error.not_found', etc.
+  context: text("context"), // 'ui', 'content', 'error', 'form'
+  description: text("description"), // Help text for translators
+  pluralRules: integer("plural_rules").default(0), // 1 if has plural variants
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const translations = sqliteTable(
+  "translations",
+  {
+    id: text("id").primaryKey(), // UUID
+    translationKeyId: text("translation_key_id")
+      .notNull()
+      .references(() => translationKeys.id, { onDelete: "cascade" }),
+    localeCode: text("locale_code")
+      .notNull()
+      .references(() => locales.code, { onDelete: "cascade" }),
+    value: text("value").notNull(), // The translated string
+    pluralForm: text("plural_form"), // 'zero', 'one', 'few', 'many', 'other', or null
+    interpolationVars: text("interpolation_vars"), // JSON metadata
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    uniqueKeyLocaleForm: unique().on(
+      table.translationKeyId,
+      table.localeCode,
+      table.pluralForm,
+    ),
+  }),
+);
+
 // ─── Type exports ─────────────────────────────────────────────────
 
 export type Dealer = typeof dealers.$inferSelect;
@@ -558,3 +601,6 @@ export type Upload = typeof uploads.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
+export type Locale = typeof locales.$inferSelect;
+export type TranslationKey = typeof translationKeys.$inferSelect;
+export type Translation = typeof translations.$inferSelect;
