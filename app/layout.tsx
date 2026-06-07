@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
-import { Toaster } from "sonner";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Dealer Listings Tracker',
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html suppressHydrationWarning>
       <body className="min-h-screen bg-[#111827] text-gray-100 antialiased">
         {children}
         <Toaster theme="dark" position="top-right" richColors />
