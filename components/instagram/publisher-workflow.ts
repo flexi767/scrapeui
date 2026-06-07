@@ -13,6 +13,8 @@ export type PosterGenerationOptions = {
   force?: boolean;
   cacheOnly?: boolean;
   variantId?: string;
+  imageProvider?: string;
+  imageModel?: string;
 };
 
 export function normalizeVariantPrompts(prompts: PosterVariantPrompt[]) {
@@ -180,6 +182,8 @@ export async function generateAiPosters(
       variantId: options.variantId,
       force: Boolean(options.force),
       cacheOnly: Boolean(options.cacheOnly),
+      imageProvider: options.imageProvider,
+      imageModel: options.imageModel,
     }),
   });
 

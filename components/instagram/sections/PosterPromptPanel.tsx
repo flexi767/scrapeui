@@ -4,14 +4,25 @@ import {
   type InstagramListingPayload,
   type PosterVariantPrompt,
 } from "../poster";
+import type {
+  PosterImageModelOption,
+  PosterImageProviderId,
+  PosterImageProviderOption,
+} from "../useInstagramPosterWorkflow";
 import { StepHeader } from "./shared";
 
 interface PosterPromptPanelProps {
   prompt: string;
   listing: InstagramListingPayload;
   variantPrompts: PosterVariantPrompt[];
+  imageProvider: PosterImageProviderId;
+  imageModel: string;
+  imageProviderOptions: PosterImageProviderOption[];
+  imageModelOptions: PosterImageModelOption[];
   onPromptChange: (prompt: string) => void;
   onVariantPromptChange: (id: string, prompt: string) => void;
+  onImageProviderChange: (provider: PosterImageProviderId) => void;
+  onImageModelChange: (model: string) => void;
   onSaveDefaultsForFuture: () => void;
   onReset: () => void;
 }
@@ -20,8 +31,14 @@ export function PosterPromptPanel({
   prompt,
   listing,
   variantPrompts,
+  imageProvider,
+  imageModel,
+  imageProviderOptions,
+  imageModelOptions,
   onPromptChange,
   onVariantPromptChange,
+  onImageProviderChange,
+  onImageModelChange,
   onSaveDefaultsForFuture,
   onReset,
 }: PosterPromptPanelProps) {
@@ -56,6 +73,39 @@ export function PosterPromptPanel({
         rows={10}
         className="w-full resize-y rounded-md border border-gray-700 bg-gray-950 p-3 text-sm leading-6 text-gray-200 outline-none focus:border-pink-400"
       />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Image API</span>
+          <select
+            value={imageProvider}
+            onChange={(event) => onImageProviderChange(event.target.value as PosterImageProviderId)}
+            className="mt-1 h-10 w-full rounded-md border border-gray-700 bg-gray-950 px-3 text-sm text-gray-100 outline-none focus:border-pink-400"
+          >
+            {imageProviderOptions.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            {imageProvider === "comfyui" ? "ComfyUI model" : "OpenAI model"}
+          </span>
+          <select
+            value={imageModel}
+            onChange={(event) => onImageModelChange(event.target.value)}
+            className="mt-1 h-10 w-full rounded-md border border-gray-700 bg-gray-950 px-3 text-sm text-gray-100 outline-none focus:border-pink-400"
+          >
+            {imageModelOptions.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <details className="mt-4 rounded-md border border-gray-800 bg-gray-950 p-3">
         <summary className="cursor-pointer text-sm font-semibold text-white marker:text-gray-500">

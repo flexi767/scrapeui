@@ -38,6 +38,28 @@ interface ServerPosterDefaults {
   variantPrompts: PosterVariantPrompt[];
 }
 
+export type PosterImageProviderId = "openai" | "comfyui";
+
+export interface PosterImageModelOption {
+  id: string;
+  label: string;
+}
+
+export interface PosterImageProviderOption {
+  id: PosterImageProviderId;
+  label: string;
+  defaultModel: string;
+  models: PosterImageModelOption[];
+}
+
+interface PosterImageOptionsResponse {
+  defaultProvider: PosterImageProviderId;
+  providers: PosterImageProviderOption[];
+}
+
+const IMAGE_PROVIDER_STORAGE_KEY = "scrapeui:instagram-poster-image-provider";
+const IMAGE_MODEL_STORAGE_PREFIX = "scrapeui:instagram-poster-image-model:";
+
 const PROMPT_TEMPLATE_FIELDS = [
   ["{make}", "make"],
   ["{model}", "model"],
@@ -71,12 +93,51 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
   const [selectedVariantId, setSelectedVariantId] = useState("hero");
   const [posterPrompt, setPosterPrompt] = useState("");
   const [variantPrompts, setVariantPrompts] = useState<PosterVariantPrompt[]>(DEFAULT_POSTER_VARIANT_PROMPTS);
+  const [imageProvider, setImageProviderState] = useState<PosterImageProviderId>("openai");
+  const [imageModelByProvider, setImageModelByProvider] = useState<Record<string, string>>({});
+  const [imageProviderOptions, setImageProviderOptions] = useState<PosterImageProviderOption[]>([
+    { id: "openai", label: "OpenAI", defaultModel: "gpt-image-2", models: [{ id: "gpt-image-2", label: "gpt-image-2" }] },
+    { id: "comfyui", label: "ComfyUI", defaultModel: "default", models: [{ id: "default", label: "Default workflow" }] },
+  ]);
   const [collageSelections, setCollageSelections] = useState<CollageSelections>({
     exteriorPhotoIds: [],
     interiorPhotoIds: [],
   });
   const canvasSeedRef = useRef(0);
   const initialPosterGeneratedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadImageOptions() {
+      try {
+        const options = await fetch("/api/instagram/poster-image-options").then((response) =>
+          parseApiResponse<PosterImageOptionsResponse>(response, "Could not load image provider options"),
+        );
+        if (cancelled) return;
+        setImageProviderOptions(options.providers);
+        const savedProvider = getLocalStorageItem(IMAGE_PROVIDER_STORAGE_KEY) as PosterImageProviderId | null;
+        const nextProvider: PosterImageProviderId =
+          savedProvider && options.providers.some((provider) => provider.id === savedProvider) ? savedProvider : "openai";
+        setImageProviderState(nextProvider);
+        setImageModelByProvider(
+          Object.fromEntries(
+            options.providers.map((provider) => {
+              const savedModel = getLocalStorageItem(`${IMAGE_MODEL_STORAGE_PREFIX}${provider.id}`);
+              const model =
+                savedModel && provider.models.some((item) => item.id === savedModel) ? savedModel : provider.defaultModel;
+              return [provider.id, model];
+            }),
+          ),
+        );
+      } catch (error) {
+        toast.error(errorMessage(error, "Could not load image provider options"));
+      }
+    }
+    void loadImageOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadServerPosterDefaults = useCallback(async (data: InstagramListingPayload) => {
     try {
@@ -142,6 +203,22 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     () => new Map(DEFAULT_POSTER_VARIANT_PROMPTS.map((variant, index) => [variant.id, index])),
     [],
   );
+  const selectedProviderOption = useMemo(
+    () => imageProviderOptions.find((provider) => provider.id === imageProvider) ?? imageProviderOptions[0],
+    [imageProvider, imageProviderOptions],
+  );
+  const imageModel = imageModelByProvider[imageProvider] ?? selectedProviderOption?.defaultModel ?? "";
+  const selectedProviderModels = selectedProviderOption?.models ?? [];
+
+  const setImageProvider = useCallback((provider: PosterImageProviderId) => {
+    setImageProviderState(provider);
+    setLocalStorageItem(IMAGE_PROVIDER_STORAGE_KEY, provider);
+  }, []);
+
+  const setImageModel = useCallback((model: string) => {
+    setImageModelByProvider((current) => ({ ...current, [imageProvider]: model }));
+    setLocalStorageItem(`${IMAGE_MODEL_STORAGE_PREFIX}${imageProvider}`, model);
+  }, [imageProvider]);
 
   const mergeGeneratedVariants = useCallback(
     (current: PosterVariant[], next: PosterVariant[]) =>
@@ -187,6 +264,8 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
       const { variants: aiVariants, cached } = await generateAiPosters(listing.backupId, prompt, prompts, selections, {
         force,
         variantId,
+        imageProvider,
+        imageModel,
       });
       if (canvasSeedRef.current !== seed) return;
       const textVariants = await applyConsistentTextToVariants(listing, aiVariants);
@@ -231,7 +310,7 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
         setGeneratingVariantIds([]);
       }
     }
-  }, [collageSelections, listing, mergeGeneratedVariants, posterPrompt, variantPrompts]);
+  }, [collageSelections, imageModel, imageProvider, listing, mergeGeneratedVariants, posterPrompt, variantPrompts]);
 
   const loadCachedPosters = useCallback(async () => {
     if (!listing) return;
@@ -242,6 +321,8 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     try {
       const { variants: cachedVariants } = await generateAiPosters(listing.backupId, prompt, prompts, selections, {
         cacheOnly: true,
+        imageProvider,
+        imageModel,
       });
       if (cachedVariants.length > 0) {
         const textVariants = await applyConsistentTextToVariants(listing, cachedVariants);
@@ -251,7 +332,7 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     } catch (error) {
       toast.error(errorMessage(error, "Could not load saved posters"));
     }
-  }, [collageSelections, listing, posterPrompt, variantPrompts]);
+  }, [collageSelections, imageModel, imageProvider, listing, posterPrompt, variantPrompts]);
 
   useEffect(() => {
     if (!listing || !posterPrompt || initialPosterGeneratedRef.current) return;
@@ -324,6 +405,12 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
     setPosterPrompt,
     variantPrompts,
     setVariantPrompts,
+    imageProvider,
+    setImageProvider,
+    imageModel,
+    setImageModel,
+    imageProviderOptions,
+    selectedProviderModels,
     collageSelections,
     hasVariants: variants.length > 0,
     coverVariants,

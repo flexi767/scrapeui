@@ -56,7 +56,18 @@ COMFYUI_WORKFLOW_PATH=workflows/instagram-poster-flux.json
 COMFYUI_TIMEOUT_MS=180000
 ```
 
+OpenAI remains the UI default. The poster screen also has an image API selector, so you can switch between OpenAI and ComfyUI per generation.
+
 `COMFYUI_WORKFLOW_PATH` must point to a ComfyUI API-format workflow JSON, not the UI-format workflow. ScrapeUI queues it through `/prompt`, polls `/history/{prompt_id}`, and reads the first output image unless `COMFYUI_OUTPUT_NODE_ID` is set.
+
+To expose multiple ComfyUI model choices in the UI, configure `COMFYUI_MODELS` as JSON. Each ComfyUI model can point at a different API-format workflow:
+
+```bash
+COMFYUI_MODELS='[
+  {"id":"flux-dev","label":"FLUX.1 dev","workflowPath":"workflows/instagram-flux-dev.json"},
+  {"id":"flux-schnell","label":"FLUX.1 schnell","workflowPath":"workflows/instagram-flux-schnell.json"}
+]'
+```
 
 There are two ways to pass prompt/reference data into the workflow:
 

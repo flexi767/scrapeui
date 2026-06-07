@@ -11,10 +11,12 @@ import {
 } from "./cache";
 import {
   generatePosterVariants,
-  getPosterImageProvider,
+  parseImageModel,
+  parseImageProvider,
   parseCollageSelections,
   parseVariantId,
   parseVariantPrompts,
+  resolvePosterImageModel,
   validatePosterImageProvider,
   type PosterRequestBody,
 } from "./service";
@@ -26,8 +28,10 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if ("error" in auth) return auth.error;
 
-  const provider = getPosterImageProvider();
-  const providerError = validatePosterImageProvider(provider);
+  const body = (await request.json()) as PosterRequestBody;
+  const provider = parseImageProvider(body.imageProvider);
+  const requestedModel = parseImageModel(body.imageModel);
+  const providerError = validatePosterImageProvider(provider, requestedModel);
   if (providerError) {
     return Response.json(
       { error: providerError, variants: [] },
@@ -35,7 +39,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = (await request.json()) as PosterRequestBody;
   const backupId = Number(body.backupId);
   if (!Number.isFinite(backupId)) {
     return Response.json({ error: "Invalid backupId" }, { status: 400 });
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
       : `Create a premium Instagram poster for ${listing.title}.`;
   const force = body.force === true;
   const cacheOnly = body.cacheOnly === true;
-  const model = process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? (provider === "comfyui" ? "comfyui-workflow" : "gpt-image-2");
+  const model = resolvePosterImageModel(provider, requestedModel);
   const variantPrompts = parseVariantPrompts(body.variantPrompts);
   const variantId = parseVariantId(body.variantId);
   let targetVariantPrompts = variantId
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
   const cacheDir = getPosterCacheDir({
     backupId,
     prompt,
-    model: `${provider}:${model}`,
+    model: `${provider}:${model.id}`,
     photoIds: listing.photos.map((photo) => photo.id),
     variantPrompts,
     collageSelections,

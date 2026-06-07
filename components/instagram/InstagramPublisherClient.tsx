@@ -38,6 +38,12 @@ export function InstagramPublisherClient({ backupId }: Props) {
     setPosterPrompt,
     variantPrompts,
     setVariantPrompts,
+    imageProvider,
+    setImageProvider,
+    imageModel,
+    setImageModel,
+    imageProviderOptions,
+    selectedProviderModels,
     collageSelections,
     hasVariants,
     coverVariants,
@@ -185,10 +191,16 @@ export function InstagramPublisherClient({ backupId }: Props) {
           prompt={posterPrompt}
           listing={listing}
           variantPrompts={variantPrompts}
+          imageProvider={imageProvider}
+          imageModel={imageModel}
+          imageProviderOptions={imageProviderOptions}
+          imageModelOptions={selectedProviderModels}
           onPromptChange={setPosterPrompt}
           onVariantPromptChange={(id, prompt) =>
             setVariantPrompts((current) => current.map((item) => (item.id === id ? { ...item, prompt } : item)))
           }
+          onImageProviderChange={setImageProvider}
+          onImageModelChange={setImageModel}
           onSaveDefaultsForFuture={saveDefaultsForFuture}
           onReset={resetPosterPrompt}
         />

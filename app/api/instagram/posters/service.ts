@@ -19,6 +19,8 @@ export interface PosterRequestBody {
   variantId?: unknown;
   variantPrompts?: unknown;
   collageSelections?: unknown;
+  imageProvider?: unknown;
+  imageModel?: unknown;
 }
 
 export interface PosterVariantResult {
@@ -33,7 +35,16 @@ interface OpenAIImageResponse {
   error?: { message?: string };
 }
 
-type PosterImageProvider = "openai" | "comfyui";
+export type PosterImageProvider = "openai" | "comfyui";
+
+export interface PosterImageModelOption {
+  id: string;
+  label: string;
+}
+
+interface PosterImageModelConfig extends PosterImageModelOption {
+  workflowPath?: string;
+}
 
 interface ReferenceImageRow {
   id: number;
@@ -83,6 +94,14 @@ export function parseVariantId(raw: unknown) {
 
 export function parseCollageSelections(raw: unknown) {
   return parsePosterCollageSelections(raw);
+}
+
+export function parseImageProvider(raw: unknown) {
+  return typeof raw === "string" && raw.trim() ? getPosterImageProvider(raw) : getPosterImageProvider();
+}
+
+export function parseImageModel(raw: unknown) {
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
 function buildImagePrompt(
@@ -189,12 +208,97 @@ export function getPosterImageProvider(rawProvider = process.env.INSTAGRAM_POSTE
   return "openai";
 }
 
-export function validatePosterImageProvider(provider: PosterImageProvider) {
+function parseModelList(rawValue: string | undefined, fallback: PosterImageModelConfig[]) {
+  if (!rawValue?.trim()) return fallback;
+  const trimmed = rawValue.trim();
+  if (trimmed.startsWith("[")) {
+    const parsed = JSON.parse(trimmed) as Array<Partial<PosterImageModelConfig> | string>;
+    const models = parsed
+      .map((item) => {
+        if (typeof item === "string") return { id: item, label: item };
+        if (!item.id) return null;
+        return {
+          id: item.id,
+          label: item.label || item.id,
+          workflowPath: item.workflowPath,
+        };
+      })
+      .filter((item): item is PosterImageModelConfig => Boolean(item));
+    return models.length > 0 ? models : fallback;
+  }
+  const models = trimmed
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((id) => ({ id, label: id }));
+  return models.length > 0 ? models : fallback;
+}
+
+function getOpenAiModelOptions() {
+  return parseModelList(process.env.INSTAGRAM_POSTER_OPENAI_MODELS, [
+    { id: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2", label: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2" },
+  ]);
+}
+
+function getComfyModelOptions() {
+  return parseModelList(process.env.COMFYUI_MODELS, [
+    {
+      id: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "default",
+      label: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "Default ComfyUI workflow",
+      workflowPath: process.env.COMFYUI_WORKFLOW_PATH,
+    },
+  ]);
+}
+
+export function getPosterImageModelOptions(provider: PosterImageProvider): PosterImageModelOption[] {
+  const models = provider === "comfyui" ? getComfyModelOptions() : getOpenAiModelOptions();
+  return models.map(({ id, label }) => ({ id, label }));
+}
+
+function getPosterImageModelConfig(provider: PosterImageProvider, modelId: string | null): PosterImageModelConfig {
+  const models = provider === "comfyui" ? getComfyModelOptions() : getOpenAiModelOptions();
+  const defaultModel = models[0];
+  const selected = modelId ? models.find((model) => model.id === modelId) : defaultModel;
+  if (!selected) throw new Error(`Invalid ${provider === "comfyui" ? "ComfyUI" : "OpenAI"} image model`);
+  return selected;
+}
+
+export function getPosterImageProviderOptions() {
+  const defaultProvider = getPosterImageProvider();
+  return {
+    defaultProvider,
+    providers: [
+      {
+        id: "openai" as const,
+        label: "OpenAI",
+        defaultModel: getPosterImageModelConfig("openai", null).id,
+        models: getPosterImageModelOptions("openai"),
+      },
+      {
+        id: "comfyui" as const,
+        label: "ComfyUI",
+        defaultModel: getPosterImageModelConfig("comfyui", null).id,
+        models: getPosterImageModelOptions("comfyui"),
+      },
+    ],
+  };
+}
+
+export function resolvePosterImageModel(provider: PosterImageProvider, modelId: string | null) {
+  return getPosterImageModelConfig(provider, modelId);
+}
+
+export function validatePosterImageProvider(provider: PosterImageProvider, modelId: string | null) {
   if (provider === "openai" && !process.env.OPENAI_API_KEY) {
     return "OPENAI_API_KEY is not configured";
   }
-  if (provider === "comfyui" && !process.env.COMFYUI_WORKFLOW_PATH) {
-    return "COMFYUI_WORKFLOW_PATH is not configured";
+  try {
+    const model = getPosterImageModelConfig(provider, modelId);
+    if (provider === "comfyui" && !model.workflowPath && !process.env.COMFYUI_WORKFLOW_PATH) {
+      return "COMFYUI_WORKFLOW_PATH is not configured";
+    }
+  } catch (error) {
+    return error instanceof Error ? error.message : "Invalid image model";
   }
   return null;
 }
@@ -211,8 +315,8 @@ function getComfyPollMs() {
   return Number(process.env.COMFYUI_POLL_MS ?? 1000);
 }
 
-function getComfyWorkflowPath() {
-  const workflowPath = process.env.COMFYUI_WORKFLOW_PATH;
+function getComfyWorkflowPath(model: PosterImageModelConfig) {
+  const workflowPath = model.workflowPath ?? process.env.COMFYUI_WORKFLOW_PATH;
   if (!workflowPath) throw new Error("COMFYUI_WORKFLOW_PATH is not configured");
   return path.isAbsolute(workflowPath) ? workflowPath : path.join(process.cwd(), workflowPath);
 }
@@ -350,10 +454,12 @@ async function readComfyOutputImage(baseUrl: string, output: ComfyOutputImage) {
 
 async function generateComfyPosterVariant({
   imagePrompt,
+  model,
   referenceImages,
   variant,
 }: {
   imagePrompt: string;
+  model: PosterImageModelConfig;
   referenceImages: ReferenceImageRow[];
   variant: PosterVariantPrompt;
 }) {
@@ -361,7 +467,7 @@ async function generateComfyPosterVariant({
   const uploadedImages = await Promise.all(
     referenceImages.map((image, index) => uploadComfyImage(baseUrl, image, variant.id, index)),
   );
-  const workflow = JSON.parse(await readFile(getComfyWorkflowPath(), "utf8")) as Record<string, unknown>;
+  const workflow = JSON.parse(await readFile(getComfyWorkflowPath(model), "utf8")) as Record<string, unknown>;
   const patchedWorkflow = applyComfyWorkflowInputs(workflow, imagePrompt, uploadedImages);
   const promptId = await queueComfyPrompt(baseUrl, patchedWorkflow);
   const outputs = await pollComfyHistory(baseUrl, promptId);
@@ -437,7 +543,7 @@ export async function generatePosterVariants({
 }: {
   listing: NonNullable<ReturnType<typeof buildInstagramListingPayload>>;
   prompt: string;
-  model: string;
+  model: PosterImageModelConfig;
   provider: PosterImageProvider;
   variantPrompts: PosterVariantPrompt[];
   collageSelections: CollageSelections;
@@ -449,8 +555,8 @@ export async function generatePosterVariants({
       const referenceImages = getReferenceImages(getVariantPhotoIds(listing, variant.id, collageSelections));
       const dataUrl =
         provider === "comfyui"
-          ? await generateComfyPosterVariant({ imagePrompt, referenceImages, variant })
-          : await generateOpenAiPosterVariant({ imagePrompt, model, apiKey, referenceImages, variant });
+          ? await generateComfyPosterVariant({ imagePrompt, model, referenceImages, variant })
+          : await generateOpenAiPosterVariant({ imagePrompt, model: model.id, apiKey, referenceImages, variant });
 
       return {
         id: variant.id,
