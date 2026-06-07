@@ -10,7 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TooltipProvider>
         <div className="flex h-screen flex-col overflow-hidden bg-[#111827]">
           <AppSidebar />
-          <main className="min-h-0 flex-1 overflow-y-auto p-4">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</main>
         </div>
       </TooltipProvider>
     </SessionProvider>

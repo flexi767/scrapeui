@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 
 interface TranslationRow {
   key: string;
@@ -14,7 +13,6 @@ interface TranslationRow {
 }
 
 export function TranslationEditor() {
-  const t = useTranslations('ui');
   const [rows, setRows] = useState<TranslationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
@@ -51,12 +49,20 @@ export function TranslationEditor() {
     }
   };
 
-  const filteredRows = rows.filter(
-    (row) =>
-      row.key.includes(filter) ||
-      row.context.includes(filter) ||
-      row.bg.includes(filter),
-  );
+  const normalizedFilter = filter.trim().toLowerCase();
+  const filteredRows = normalizedFilter
+    ? rows.filter((row) =>
+        [
+          row.key,
+          row.context,
+          row.description,
+          row.bg,
+          row.en,
+          row.de,
+          row.ru,
+        ].some((value) => value?.toLowerCase().includes(normalizedFilter)),
+      )
+    : rows;
 
   if (loading) return <div>Loading...</div>;
 

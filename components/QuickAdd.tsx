@@ -40,11 +40,11 @@ export function QuickAdd() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-800 px-2 py-1.5 text-sm text-gray-400 hover:border-gray-500 hover:text-gray-200 sm:px-3"
+        className="flex h-7 items-center gap-1.5 rounded-md border border-gray-600 bg-gray-800 px-2 text-[11px] font-medium text-gray-400 hover:border-gray-500 hover:text-gray-200 sm:px-2.5"
         title={t('search_or_jump_to')}
       >
         <span className="hidden sm:inline">{t('search_ellipsis')}</span>
-        <kbd className="rounded border border-gray-600 px-1.5 py-0.5 text-xs">⌘K</kbd>
+        <kbd className="rounded border border-gray-600 px-1 py-0.5 text-[10px] leading-none">⌘K</kbd>
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>

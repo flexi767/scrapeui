@@ -102,7 +102,7 @@ export default async function EditOwnPage({
     <div className="min-h-screen bg-[#111827]">
       {/* Sticky header */}
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-[1600px] px-4 py-3">
+        <div className="mx-auto max-w-[1600px] px-4 py-2">
           <Suspense>
             <FilterBar
               makes={makes}
@@ -124,7 +124,7 @@ export default async function EditOwnPage({
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-4 py-4">
+      <main className="mx-auto max-w-[1600px] px-4 py-2">
         <OwnListingsTable key={currentParams.toString()} initialRows={rows} />
 
         {/* Pagination */}

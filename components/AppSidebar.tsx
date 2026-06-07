@@ -8,6 +8,15 @@ import { cn } from '@/lib/utils';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { locales } from '@/i18n/routing';
+
+const localePrefixPattern = new RegExp(
+  `^/(${locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?=/|$)`,
+);
+
+function stripLocalePrefix(pathname: string) {
+  return pathname.replace(localePrefixPattern, '') || '/';
+}
 
 function pathMatches(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -19,7 +28,7 @@ function pathMatchesAny(pathname: string, matches: string[]) {
 
 export function AppSidebar() {
   const t = useTranslations('ui');
-  const pathname = usePathname();
+  const pathname = stripLocalePrefix(usePathname());
   const { data: session } = useSession();
 
   const navItems = [
@@ -30,6 +39,7 @@ export function AppSidebar() {
     { href: '/tasks', label: t('tasks'), icon: TaskIcon, match: ['/tasks'] },
     { href: '/expenses', label: t('expenses'), icon: ExpenseIcon, match: ['/expenses'] },
     { href: '/templates', label: t('templates'), icon: TemplateIcon, match: ['/templates'] },
+    { href: '/translations', label: 'Translations', icon: TranslateIcon, match: ['/translations'] },
     { href: '/config', label: t('config'), icon: GearIcon, match: ['/config', '/dealers'] },
   ];
 
@@ -84,15 +94,8 @@ export function AppSidebar() {
     },
   ];
 
-  const isAdmin = session?.user?.role === 'admin';
   const dealerId = session?.user?.dealerId;
   const activeSection = sectionItems.find((section) => pathMatchesAny(pathname, section.match));
-  const utilityLinks = [
-    { href: '/mapping', label: t('mapping'), icon: MapIcon },
-    { href: '/kb', label: t('knowledge_base'), icon: BookIcon },
-    { href: '/files', label: t('files'), icon: FileIcon },
-    ...(isAdmin ? [{ href: '/dealers/register', label: t('register_dealer'), icon: PlusIcon }] : []),
-  ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-700 bg-gray-950/95 shadow-lg shadow-black/10 backdrop-blur">
@@ -120,6 +123,7 @@ export function AppSidebar() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <LanguageSelector />
           <QuickAdd />
           <NotificationBell />
           {dealerId && (
@@ -151,33 +155,31 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <div className="flex min-h-7 items-center gap-1.5 border-t border-gray-800 px-3">
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5">
-          {(activeSection?.links ?? utilityLinks).map((item) => {
-            const active = pathMatches(pathname, item.href);
+      {activeSection && (
+        <div className="flex min-h-7 items-center gap-1.5 border-t border-gray-800 px-3">
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5">
+            {activeSection.links.map((item) => {
+              const active = pathMatches(pathname, item.href);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-[11px] font-medium transition-colors',
-                  active
-                    ? 'bg-gray-800 text-gray-100'
-                    : 'text-gray-500 hover:bg-gray-800/70 hover:text-gray-300',
-                )}
-              >
-                <item.icon className="h-3.5 w-3.5 shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <LanguageSelector />
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-[11px] font-medium transition-colors',
+                    active
+                      ? 'bg-gray-800 text-gray-100'
+                      : 'text-gray-500 hover:bg-gray-800/70 hover:text-gray-300',
+                  )}
+                >
+                  <item.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-      </div>
+      )}
     </header>
   );
 }
@@ -309,6 +311,14 @@ function SearchIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35m1.6-5.15a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0Z" />
+    </svg>
+  );
+}
+
+function TranslateIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21 15 3m-8.25 5.25h9.75M4.5 5.25h12m-10.5 0c.5 3.5 2.25 6.25 5.25 8.25m3.75-8.25c-.5 2.75-1.75 5-3.75 6.75m6 9 1.125-2.625m0 0L19.5 15h.75l1.125 3.375m-2.25 0h2.25" />
     </svg>
   );
 }
