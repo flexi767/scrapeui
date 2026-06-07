@@ -17,11 +17,12 @@ async function translateText(text: string, targetLang: string): Promise<string> 
 }
 
 async function autoTranslate() {
-  console.log('🌐 Starting auto-translation for German (DE) and Russian (RU)...\n');
+  console.log('🌐 Starting auto-translation for Bulgarian (BG), German (DE) and Russian (RU)...\n');
 
   // Get all translation keys using raw SQL
   const keys = raw.prepare('SELECT id FROM translation_keys').all() as any[];
 
+  let bgTranslated = 0;
   let deTranslated = 0;
   let ruTranslated = 0;
   let skipped = 0;
@@ -33,6 +34,7 @@ async function autoTranslate() {
       .all(key.id) as any[];
 
     const enTrans = existingTrans.find((t) => t.locale_code === 'en');
+    const bgTrans = existingTrans.find((t) => t.locale_code === 'bg');
     const deTrans = existingTrans.find((t) => t.locale_code === 'de');
     const ruTrans = existingTrans.find((t) => t.locale_code === 'ru');
 
@@ -42,6 +44,24 @@ async function autoTranslate() {
     }
 
     const enValue = enTrans.value;
+
+    // Translate to Bulgarian if missing or is placeholder (same as English)
+    if (!bgTrans || bgTrans.value === enValue) {
+      console.log(`Translating to BG: "${enValue.substring(0, 50)}..."`);
+      const bgValue = await translateText(enValue, 'bg');
+
+      if (bgTrans) {
+        raw.prepare(
+          'UPDATE translations SET value = ?, updated_at = ? WHERE translation_key_id = ? AND locale_code = ?'
+        ).run(bgValue, new Date().toISOString(), key.id, 'bg');
+      } else {
+        raw.prepare(
+          'INSERT INTO translations (id, translation_key_id, locale_code, value, plural_form, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(nanoid(), key.id, 'bg', bgValue, null, new Date().toISOString(), new Date().toISOString());
+      }
+      bgTranslated++;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
     // Translate to German if missing or is placeholder
     if (!deTrans || deTrans.value === enValue) {
@@ -102,6 +122,7 @@ async function autoTranslate() {
 
   console.log('\n✅ Auto-translation complete!\n');
   console.log(`📊 Summary:`);
+  console.log(`   Bulgarian (BG) translated: ${bgTranslated}`);
   console.log(`   German (DE) translated: ${deTranslated}`);
   console.log(`   Russian (RU) translated: ${ruTranslated}`);
   console.log(`   Skipped (already translated): ${skipped}\n`);
