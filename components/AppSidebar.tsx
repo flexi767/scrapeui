@@ -26,7 +26,7 @@ export function AppSidebar() {
     { href: '/dashboard', label: t('dashboard'), icon: DashboardIcon, match: ['/dashboard'] },
     { href: '/listings', label: t('listings'), icon: CarIcon, match: ['/listings'] },
     { href: '/editown', label: t('edit_own'), icon: EditIcon, match: ['/editown', '/facebook-marketplace'] },
-    { href: '/mobilebg', label: t('mobile.bg'), icon: ArchiveIcon, match: ['/mobilebg'] },
+    { href: '/mobilebg', label: t('mobile_bg'), icon: ArchiveIcon, match: ['/mobilebg'] },
     { href: '/tasks', label: t('tasks'), icon: TaskIcon, match: ['/tasks'] },
     { href: '/expenses', label: t('expenses'), icon: ExpenseIcon, match: ['/expenses'] },
     { href: '/templates', label: t('templates'), icon: TemplateIcon, match: ['/templates'] },
@@ -49,7 +49,7 @@ export function AppSidebar() {
       links: [
         { href: '/editown', label: t('own_listings'), icon: EditIcon },
         { href: '/editown/sync', label: t('batch_sync'), icon: UploadIcon },
-        { href: '/editown/carsbg-sync', label: t('cars.bg_sync'), icon: UploadIcon },
+        { href: '/editown/carsbg-sync', label: t('cars_bg_sync'), icon: UploadIcon },
         { href: '/editown/new', label: t('new_listing'), icon: PlusIcon },
         { href: '/editown/saved-searches', label: t('saved_searches'), icon: SearchIcon },
         { href: '/editown/search-positions', label: t('search_positions'), icon: SearchIcon },

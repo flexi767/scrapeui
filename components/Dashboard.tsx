@@ -73,7 +73,7 @@ export function Dashboard() {
   const navigationLinks = [
     { href: '/listings', label: t('listings'), icon: CarFront, description: t('browse_all_car_listings') },
     { href: '/editown', label: t('edit_own'), icon: EditIcon, description: t('manage_your_listings') },
-    { href: '/mobilebg', label: t('mobile.bg'), icon: ArchiveIcon, description: t('mobile.bg_integrations') },
+    { href: '/mobilebg', label: t('mobile_bg'), icon: ArchiveIcon, description: t('mobile_bg_integrations') },
     { href: '/mapping', label: t('mapping'), icon: MapIcon, description: t('brand_&_model_mapping') },
     { href: '/tasks', label: t('tasks'), icon: ListTodo, description: t('my_tasks') },
     { href: '/kb', label: t('knowledge_base'), icon: BookIcon, description: t('knowledge_base') },
