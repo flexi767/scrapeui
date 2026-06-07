@@ -2,73 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LanguageSelector } from '@/components/LanguageSelector';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon, match: ['/dashboard'] },
-  { href: '/listings', label: 'Listings', icon: CarIcon, match: ['/listings'] },
-  { href: '/editown', label: 'Edit Own', icon: EditIcon, match: ['/editown', '/facebook-marketplace'] },
-  { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon, match: ['/mobilebg'] },
-  { href: '/tasks', label: 'Tasks', icon: TaskIcon, match: ['/tasks'] },
-  { href: '/expenses', label: 'Expenses', icon: ExpenseIcon, match: ['/expenses'] },
-  { href: '/templates', label: 'Templates', icon: TemplateIcon, match: ['/templates'] },
-  { href: '/config', label: 'Config', icon: GearIcon, match: ['/config', '/dealers'] },
-];
-
-const sectionItems = [
-  {
-    id: 'listings',
-    match: ['/listings'],
-    links: [
-      { href: '/listings', label: 'All Listings', icon: CarIcon },
-      { href: '/listings/changes', label: 'Changes', icon: ClockIcon },
-      { href: '/listings/deleted', label: 'Deleted', icon: TrashIcon },
-    ],
-  },
-  {
-    id: 'editown',
-    match: ['/editown', '/facebook-marketplace'],
-    links: [
-      { href: '/editown', label: 'Own Listings', icon: EditIcon },
-      { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon },
-      { href: '/editown/carsbg-sync', label: 'Cars.bg Sync', icon: UploadIcon },
-      { href: '/editown/new', label: 'New Listing', icon: PlusIcon },
-      { href: '/editown/saved-searches', label: 'Saved Searches', icon: SearchIcon },
-      { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon },
-      { href: '/facebook-marketplace/bookmarklet', label: 'FB Bookmarklet', icon: UploadIcon },
-    ],
-  },
-  {
-    id: 'mobilebg',
-    match: ['/mobilebg'],
-    links: [
-      { href: '/mobilebg', label: 'Overview', icon: ArchiveIcon },
-      { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon },
-      { href: '/mobilebg/reposts', label: 'Reposts', icon: UploadIcon },
-    ],
-  },
-  {
-    id: 'tasks',
-    match: ['/tasks'],
-    links: [
-      { href: '/tasks', label: 'All Tasks', icon: TaskIcon },
-      { href: '/tasks/my', label: 'My Tasks', icon: UserTaskIcon },
-    ],
-  },
-  {
-    id: 'workspace',
-    match: ['/mapping', '/kb', '/files'],
-    links: [
-      { href: '/mapping', label: 'Mapping', icon: MapIcon },
-      { href: '/kb', label: 'Knowledge Base', icon: BookIcon },
-      { href: '/files', label: 'Files', icon: FileIcon },
-    ],
-  },
-];
 
 function pathMatches(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -79,17 +18,80 @@ function pathMatchesAny(pathname: string, matches: string[]) {
 }
 
 export function AppSidebar() {
+  const t = useTranslations('ui');
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  const navItems = [
+    { href: '/dashboard', label: t('dashboard'), icon: DashboardIcon, match: ['/dashboard'] },
+    { href: '/listings', label: t('listings'), icon: CarIcon, match: ['/listings'] },
+    { href: '/editown', label: t('edit_own'), icon: EditIcon, match: ['/editown', '/facebook-marketplace'] },
+    { href: '/mobilebg', label: t('mobile.bg'), icon: ArchiveIcon, match: ['/mobilebg'] },
+    { href: '/tasks', label: t('tasks'), icon: TaskIcon, match: ['/tasks'] },
+    { href: '/expenses', label: t('expenses'), icon: ExpenseIcon, match: ['/expenses'] },
+    { href: '/templates', label: t('templates'), icon: TemplateIcon, match: ['/templates'] },
+    { href: '/config', label: t('config'), icon: GearIcon, match: ['/config', '/dealers'] },
+  ];
+
+  const sectionItems = [
+    {
+      id: 'listings',
+      match: ['/listings'],
+      links: [
+        { href: '/listings', label: t('all_listings'), icon: CarIcon },
+        { href: '/listings/changes', label: t('changes'), icon: ClockIcon },
+        { href: '/listings/deleted', label: t('deleted'), icon: TrashIcon },
+      ],
+    },
+    {
+      id: 'editown',
+      match: ['/editown', '/facebook-marketplace'],
+      links: [
+        { href: '/editown', label: t('own_listings'), icon: EditIcon },
+        { href: '/editown/sync', label: t('batch_sync'), icon: UploadIcon },
+        { href: '/editown/carsbg-sync', label: t('cars.bg_sync'), icon: UploadIcon },
+        { href: '/editown/new', label: t('new_listing'), icon: PlusIcon },
+        { href: '/editown/saved-searches', label: t('saved_searches'), icon: SearchIcon },
+        { href: '/editown/search-positions', label: t('search_positions'), icon: SearchIcon },
+        { href: '/facebook-marketplace/bookmarklet', label: t('fb_bookmarklet'), icon: UploadIcon },
+      ],
+    },
+    {
+      id: 'mobilebg',
+      match: ['/mobilebg'],
+      links: [
+        { href: '/mobilebg', label: t('overview'), icon: ArchiveIcon },
+        { href: '/mobilebg/edit-forms', label: t('edit_forms'), icon: FormIcon },
+        { href: '/mobilebg/reposts', label: t('reposts'), icon: UploadIcon },
+      ],
+    },
+    {
+      id: 'tasks',
+      match: ['/tasks'],
+      links: [
+        { href: '/tasks', label: t('all_tasks'), icon: TaskIcon },
+        { href: '/tasks/my', label: t('my_tasks'), icon: UserTaskIcon },
+      ],
+    },
+    {
+      id: 'workspace',
+      match: ['/mapping', '/kb', '/files'],
+      links: [
+        { href: '/mapping', label: t('mapping'), icon: MapIcon },
+        { href: '/kb', label: t('knowledge_base'), icon: BookIcon },
+        { href: '/files', label: t('files'), icon: FileIcon },
+      ],
+    },
+  ];
 
   const isAdmin = session?.user?.role === 'admin';
   const dealerId = session?.user?.dealerId;
   const activeSection = sectionItems.find((section) => pathMatchesAny(pathname, section.match));
   const utilityLinks = [
-    { href: '/mapping', label: 'Mapping', icon: MapIcon },
-    { href: '/kb', label: 'Knowledge Base', icon: BookIcon },
-    { href: '/files', label: 'Files', icon: FileIcon },
-    ...(isAdmin ? [{ href: '/dealers/register', label: 'Register Dealer', icon: PlusIcon }] : []),
+    { href: '/mapping', label: t('mapping'), icon: MapIcon },
+    { href: '/kb', label: t('knowledge_base'), icon: BookIcon },
+    { href: '/files', label: t('files'), icon: FileIcon },
+    ...(isAdmin ? [{ href: '/dealers/register', label: t('register_dealer'), icon: PlusIcon }] : []),
   ];
 
   return (
