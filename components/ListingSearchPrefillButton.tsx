@@ -15,6 +15,7 @@ import {
 } from '@/components/listing-search-prefill/DialogPanels';
 import { DialogActions } from '@/components/listing-search-prefill/DialogActions';
 import { useListingSearchPrefill } from '@/components/listing-search-prefill/useListingSearchPrefill';
+import { useTranslations } from 'next-intl';
 
 export default function ListingSearchPrefillButton({
   listingId,
@@ -23,6 +24,7 @@ export default function ListingSearchPrefillButton({
   listingId: number;
   showQuickResultsButton?: boolean;
 }) {
+  const t = useTranslations('ui');
   const [open, setOpen] = useState(false);
   const searchPrefill = useListingSearchPrefill(listingId);
   const {
@@ -89,7 +91,7 @@ export default function ListingSearchPrefillButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="h-[min(94vh,1100px)] w-[min(98vw,1680px)] max-w-[min(98vw,1680px)] sm:h-[min(94vh,1100px)] sm:w-[min(98vw,1680px)] sm:max-w-[min(98vw,1680px)] overflow-hidden border border-slate-500 bg-slate-700 text-white shadow-2xl" showCloseButton>
           {loading && (
-            <LoadingPanel label="Loading mobile.bg search fields…" />
+            <LoadingPanel label={t('loading_search_fields')} />
           )}
 
           <ErrorPanel message={error} />
@@ -123,7 +125,7 @@ export default function ListingSearchPrefillButton({
               <MessagesPanel messages={data.omitted} />
 
               {resultsLoading && (
-                <LoadingPanel label="Loading mobile.bg results…" />
+                <LoadingPanel label={t('loading_results')} />
               )}
 
               <ErrorPanel message={resultsError} />

@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import type { SearchField } from "@/lib/mobile-bg/search-form-shared";
 import {
   MOBILE_BG_CATEGORY_OPTIONS,
@@ -44,6 +47,7 @@ export function SearchPrefillFields({
   onUpdateLocation,
   onUpdateMake,
 }: SearchPrefillFieldsProps) {
+  const t = useTranslations('ui');
   const selectedMake = getFieldValue("marka");
   const modelOptions = modelsByMake[selectedMake] ?? [];
 
@@ -80,7 +84,7 @@ export function SearchPrefillFields({
                       onChange={(event) => onUpdateMake(event.target.value)}
                       className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 pr-14 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
                     >
-                      <option value="">Select make</option>
+                      <option value="">{t('select_make')}</option>
                       {makes.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.value}
@@ -188,7 +192,7 @@ export function SearchPrefillFields({
                       }
                       className="w-full rounded border border-slate-400/70 bg-slate-100 px-3 py-2 pr-14 text-sm text-slate-950 focus:border-blue-500 focus:outline-none"
                     >
-                      <option value="">Select model</option>
+                      <option value="">{t('select_model')}</option>
                       {modelOptions.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.value}

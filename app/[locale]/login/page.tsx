@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
+  const t = useTranslations('ui');
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(process.env.NODE_ENV === "development");
@@ -42,7 +44,7 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
-      setError("Invalid username or password");
+      setError(t('invalid_username_or_password'));
       setLoading(false);
     } else {
       router.push("/dashboard");
@@ -54,38 +56,38 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#111827]">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-gray-700 bg-gray-800 p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-100">Sign In</h1>
-          <p className="mt-1 text-sm text-gray-400">Dealer Management System</p>
+          <h1 className="text-2xl font-bold text-gray-100">{t('sign_in')}</h1>
+          <p className="mt-1 text-sm text-gray-400">{t('dealer_management_system')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t('username')}</Label>
             <Input
               id="username"
               name="username"
               type="text"
               required
               autoFocus
-              placeholder="Enter username"
+              placeholder={t('enter_username')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('password')}</Label>
             <Input
               id="password"
               name="password"
               type="password"
               required
-              placeholder="Enter password"
+              placeholder={t('enter_password')}
             />
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? t('signing_in') : t('sign_in')}
           </Button>
         </form>
       </div>

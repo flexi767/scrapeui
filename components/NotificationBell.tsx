@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
 
 const NOTIFICATIONS_API_ENABLED = false;
@@ -17,6 +18,7 @@ interface NotificationItem {
 }
 
 export function NotificationBell() {
+  const t = useTranslations('ui');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -87,16 +89,16 @@ export function NotificationBell() {
       {open && (
         <div className="absolute left-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
           <div className="flex items-center justify-between border-b border-gray-700 px-4 py-2">
-            <span className="text-sm font-medium text-gray-200">Notifications</span>
+            <span className="text-sm font-medium text-gray-200">{t('notifications')}</span>
             {unread > 0 && (
               <button onClick={markAllRead} className="text-xs text-blue-400 hover:text-blue-300">
-                Mark all read
+                {t('mark_all_read')}
               </button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gray-400">No notifications</p>
+              <p className="px-4 py-6 text-center text-sm text-gray-400">{t('no_notifications')}</p>
             ) : (
               notifications.slice(0, 20).map((n) => (
                 <Link
