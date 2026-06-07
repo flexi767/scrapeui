@@ -1,8 +1,10 @@
 
 import Link from 'next/link';
 import SearchPositionsRunner from '@/components/SearchPositionsRunner';
+import { getTranslations } from 'next-intl/server';
 
-export default function EditOwnSearchPositionsPage() {
+export default async function EditOwnSearchPositionsPage() {
+  const t = await getTranslations('ui');
   return (
     <div className="min-h-screen bg-[#111827]">
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">

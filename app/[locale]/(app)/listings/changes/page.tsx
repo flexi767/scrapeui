@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ChangesFilterBar from '@/components/ChangesFilterBar';
 import { ListingsPagination } from '@/components/listings/ListingsPagination';
@@ -96,6 +97,7 @@ export default async function ListingsChangesPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const t = await getTranslations('ui');
   const sp = await searchParams;
   const make = sp.make ?? '';
   const model = sp.model ?? '';

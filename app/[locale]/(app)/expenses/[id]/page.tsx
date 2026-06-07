@@ -63,14 +63,14 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
 
       {expense.notes && (
         <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4">
-          <h3 className="mb-1 text-sm font-medium text-gray-400">Notes</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-400">{t('notes')}</h3>
           <p className="text-sm text-gray-200 whitespace-pre-wrap">{expense.notes}</p>
         </div>
       )}
 
       {expense.listings.length > 0 && (
         <div className="mb-4">
-          <h3 className="mb-1 text-sm font-medium text-gray-400">Linked Cars</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-400">{t('linked_cars')}</h3>
           <div className="flex flex-wrap gap-2">
             {expense.listings.map((l) => (
               <Link key={l.id} href={`/listings/${l.mobile_id}`}

@@ -64,21 +64,21 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
       <ToolbarButton
         active={editor.isActive('bold')}
         onClick={() => editor.chain().focus().toggleBold().run()}
-        title="Bold"
+        title={t('toolbar_bold')}
       >
         B
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('italic')}
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        title="Italic"
+        title={t('toolbar_italic')}
       >
         <em>I</em>
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('strike')}
         onClick={() => editor.chain().focus().toggleStrike().run()}
-        title="Strikethrough"
+        title={t('toolbar_strikethrough')}
       >
         <s>S</s>
       </ToolbarButton>
@@ -88,14 +88,14 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
       <ToolbarButton
         active={editor.isActive('heading', { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        title="Heading 2"
+        title={t('toolbar_heading_2')}
       >
         H2
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('heading', { level: 3 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        title="Heading 3"
+        title={t('toolbar_heading_3')}
       >
         H3
       </ToolbarButton>
@@ -105,42 +105,42 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
       <ToolbarButton
         active={editor.isActive('bulletList')}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        title="Bullet List"
+        title={t('toolbar_bullet_list')}
       >
         •
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('orderedList')}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        title="Numbered List"
+        title={t('toolbar_numbered_list')}
       >
         1.
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('blockquote')}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        title="Blockquote"
+        title={t('toolbar_blockquote')}
       >
         &ldquo;
       </ToolbarButton>
       <ToolbarButton
         active={editor.isActive('codeBlock')}
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        title="Code Block"
+        title={t('toolbar_code_block')}
       >
         {'</>'}
       </ToolbarButton>
 
       <Divider />
 
-      <ToolbarButton active={editor.isActive('link')} onClick={handleLink} title="Link">
+      <ToolbarButton active={editor.isActive('link')} onClick={handleLink} title={t('toolbar_link')}>
         🔗
       </ToolbarButton>
 
       <ToolbarButton
         active={false}
         onClick={() => fileInput.current?.click()}
-        title="Upload Image"
+        title={t('toolbar_upload_image')}
       >
         📷
       </ToolbarButton>
@@ -158,7 +158,7 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
       <ToolbarButton
         active={false}
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        title="Horizontal Rule"
+        title={t('toolbar_horizontal_rule')}
       >
         —
       </ToolbarButton>

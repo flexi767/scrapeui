@@ -30,6 +30,7 @@ export default function ChangesFilterBar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const t = useTranslations('ui');
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
@@ -95,7 +96,7 @@ export default function ChangesFilterBar({
       <input
         key={currentSearch}
         type="search"
-        placeholder="Search…"
+        placeholder={t('search_placeholder')}
         defaultValue={currentSearch}
         onChange={(e) => {
           if (debounceRef.current) clearTimeout(debounceRef.current);

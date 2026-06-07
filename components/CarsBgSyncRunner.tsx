@@ -80,7 +80,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
     }),
     stop: async () => {
       const res = await fetch('/api/editown/carsbg-sync', { method: 'DELETE' });
-      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop cars.bg sync'));
+      if (!res.ok) throw new Error(await readJsonError(res, t('failed_to_stop_carsbg_sync')));
     },
     onEvent: (event) => {
       if (event.type === 'start') {
@@ -128,7 +128,7 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
       }
 
       if (event.type === 'error') {
-        const message = event.message || 'Cars.bg sync failed';
+        const message = event.message || t('carsbg_sync_failed');
         appendLog({ kind: 'error', message });
         toast.error(message);
         return;

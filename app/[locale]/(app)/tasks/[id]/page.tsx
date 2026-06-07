@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,6 +51,7 @@ interface TimeEntryItem {
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const t = useTranslations('ui');
   const router = useRouter();
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -115,12 +117,12 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function deleteTask() {
-    if (!confirm('Delete this task?')) return;
+    if (!confirm(t('delete_this_task'))) return;
     await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
     router.push('/tasks');
   }
 
-  if (!task) return <p className="text-gray-400">Loading...</p>;
+  if (!task) return <p className="text-gray-400">{t('loading')}</p>;
 
   const totalMinutes = timeEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
 
@@ -132,16 +134,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <StatusBadge status={task.status} />
           <PriorityBadge priority={task.priority} />
           {task.is_recurring === 1 && (
-            <span className="text-xs text-gray-400">Recurring</span>
+            <span className="text-xs text-gray-400">{t('recurring')}</span>
           )}
         </div>
         <h1 className="text-2xl font-bold">{task.title}</h1>
         <div className="mt-1 flex items-center gap-4 text-sm text-gray-400">
-          <span>Created by {task.creator_name}</span>
-          {task.assignee_name && <span>Assigned to {task.assignee_name}</span>}
+          <span>{t('created_by')} {task.creator_name}</span>
+          {task.assignee_name && <span>{t('assigned_to')} {task.assignee_name}</span>}
           {task.deadline && (
             <span className={isOverdue(task.deadline, task.status) ? 'text-red-400 font-medium' : ''}>
-              Due {task.deadline}
+              {t('due')} {task.deadline}
             </span>
           )}
         </div>
@@ -151,34 +153,34 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       <div className="mb-6 flex flex-wrap gap-2">
         {task.status !== 'in_progress' && task.status !== 'done' && (
           <Button size="sm" onClick={() => handleStatusChange('in_progress')}>
-            Start Working
+            {t('start_working')}
           </Button>
         )}
         {task.status !== 'done' && (
           <Button size="sm" variant="outline" onClick={() => handleStatusChange('done')}>
-            Mark Done
+            {t('mark_done')}
           </Button>
         )}
         {task.status !== 'cancelled' && task.status !== 'done' && (
           <Button size="sm" variant="outline" onClick={() => handleStatusChange('cancelled')}>
-            Cancel
+            {t('cancel')}
           </Button>
         )}
         {(task.status === 'done' || task.status === 'cancelled') && (
           <Button size="sm" variant="outline" onClick={() => handleStatusChange('backlog')}>
-            Reopen
+            {t('reopen')}
           </Button>
         )}
         <Link href={`/tasks/${id}/edit`}>
-          <Button size="sm" variant="outline">Edit</Button>
+          <Button size="sm" variant="outline">{t('edit')}</Button>
         </Link>
-        <Button size="sm" variant="destructive" onClick={deleteTask}>Delete</Button>
+        <Button size="sm" variant="destructive" onClick={deleteTask}>{t('delete')}</Button>
       </div>
 
       {/* Linked entities */}
       {task.listings.length > 0 && (
         <div className="mb-4">
-          <h3 className="mb-1 text-sm font-medium text-gray-400">Linked Cars</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-400">{t('linked_cars')}</h3>
           <div className="flex flex-wrap gap-2">
             {task.listings.map((l) => (
               <Link
@@ -217,7 +219,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       {/* Subtasks */}
       {task.subtasks.length > 0 && (
         <div className="mb-6">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">Subtasks</h3>
+          <h3 className="mb-2 text-sm font-medium text-gray-400">{t('subtasks')}</h3>
           <div className="space-y-1">
             {task.subtasks.map((st) => (
               <Link
@@ -236,9 +238,9 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       {/* Tabs: Comments, Time, Activity */}
       <Tabs defaultValue="comments" className="mt-6">
         <TabsList className="bg-gray-800">
-          <TabsTrigger value="comments">Comments ({comments.length})</TabsTrigger>
+          <TabsTrigger value="comments">{t('comments')} ({comments.length})</TabsTrigger>
           <TabsTrigger value="time">
-            Time ({totalMinutes ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : '0'})
+            {t('time')} ({totalMinutes ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : '0'})
           </TabsTrigger>
         </TabsList>
 
@@ -257,9 +259,9 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             <TiptapEditor
               content={commentBody}
               onChange={setCommentBody}
-              placeholder="Write a comment..."
+              placeholder={t('write_a_comment')}
             />
-            <Button size="sm" onClick={addComment}>Add Comment</Button>
+            <Button size="sm" onClick={addComment}>{t('add_comment')}</Button>
           </div>
         </TabsContent>
 
@@ -269,10 +271,10 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700 text-left text-gray-400">
-                    <th className="px-4 py-2">Date</th>
-                    <th className="px-4 py-2">Duration</th>
-                    <th className="px-4 py-2">Description</th>
-                    <th className="px-4 py-2">User</th>
+                    <th className="px-4 py-2">{t('date')}</th>
+                    <th className="px-4 py-2">{t('duration')}</th>
+                    <th className="px-4 py-2">{t('description')}</th>
+                    <th className="px-4 py-2">{t('user')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -293,7 +295,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
           <div className="flex items-end gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Minutes</label>
+              <label className="text-xs text-gray-400">{t('minutes')}</label>
               <Input
                 type="number"
                 value={timeDuration}
@@ -303,7 +305,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">Date</label>
+              <label className="text-xs text-gray-400">{t('date')}</label>
               <Input
                 type="date"
                 value={timeDate}
@@ -312,14 +314,14 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               />
             </div>
             <div className="flex-1 space-y-1">
-              <label className="text-xs text-gray-400">Description</label>
+              <label className="text-xs text-gray-400">{t('description')}</label>
               <Input
                 value={timeDesc}
                 onChange={(e) => setTimeDesc(e.target.value)}
-                placeholder="What did you work on?"
+                placeholder={t('what_did_you_work_on')}
               />
             </div>
-            <Button size="sm" onClick={addTimeEntry}>Log Time</Button>
+            <Button size="sm" onClick={addTimeEntry}>{t('log_time')}</Button>
           </div>
         </TabsContent>
       </Tabs>

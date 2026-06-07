@@ -48,7 +48,7 @@ export default function DealerRegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.slug.trim() || !form.username.trim() || !form.password.trim()) {
-      toast.error('Name, slug, username and password are required');
+      toast.error(t('name_slug_username_password_required'));
       return;
     }
     setSaving(true);
@@ -60,10 +60,10 @@ export default function DealerRegisterPage() {
       });
       const data = await parseApiResponse<{ id?: number }>(res, 'Failed');
       if (!data.id) {
-        toast.error('Failed');
+        toast.error(t('failed'));
         return;
       }
-      toast.success(`Dealer "${form.name}" registered`);
+      toast.success(t('dealer_registered', { name: form.name }));
       router.push(`/dealers/${data.id}/credentials`);
     } catch (error) {
       toast.error(errorMessage(error, 'Failed'));
