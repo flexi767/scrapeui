@@ -237,13 +237,13 @@ export function DealerTableRow({
             </svg>
           </button>
           {editing ? (
-            <button onClick={onCancelEdit} title="Cancel" className="text-gray-400 hover:text-white">
+            <button onClick={onCancelEdit} title={t('cancel')} className="text-gray-400 hover:text-white">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           ) : (
-            <button onClick={() => onStartEdit(dealer)} title="Edit" className="text-gray-400 hover:text-blue-400">
+            <button onClick={() => onStartEdit(dealer)} title={t('edit')} className="text-gray-400 hover:text-blue-400">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414a2 2 0 01.586-1.414z" />
               </svg>
@@ -252,7 +252,7 @@ export function DealerTableRow({
         </div>
       </td>
       <td className="px-4 py-2 text-center">
-        <button onClick={() => onDelete(dealer)} title="Delete" className="text-gray-600 hover:text-red-400">
+        <button onClick={() => onDelete(dealer)} title={t('delete')} className="text-gray-600 hover:text-red-400">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 011-1h4a1 1 0 011 1m-7 0H5m14 0h-2" />
           </svg>
