@@ -1,4 +1,17 @@
 import type { ListingFilters } from '../types';
+import {
+  ownAdStatusExpr,
+  ownEffectiveVatExpr,
+  ownExtrasJsonExpr,
+  ownFuelExpr,
+  ownKaparoExpr,
+  ownMakeExpr,
+  ownMileageExpr,
+  ownModelExpr,
+  ownPriceExpr,
+  ownTitleExpr,
+  ownViewsExpr,
+} from '../types';
 
 export const LISTING_SORT_COLUMNS: Record<string, string> = {
   price: 'l.current_price',
@@ -14,24 +27,17 @@ export const LISTING_SORT_COLUMNS: Record<string, string> = {
 };
 
 export const OWN_LISTING_SORT_COLUMNS: Record<string, string> = {
-  price: 'COALESCE(b.price_amount, l.current_price)',
+  price: ownPriceExpr,
   last_edit: 'l.last_edit',
   carsbg_created_date: 'l.carsbg_created_date',
-  views: 'COALESCE(b.views, l.views)',
-  mileage: 'COALESCE(b.mileage, l.mileage)',
-  fuel: 'COALESCE(b.fuel, l.fuel)',
+  views: ownViewsExpr,
+  mileage: ownMileageExpr,
+  fuel: ownFuelExpr,
   dealer: 'd.priority DESC, d.name',
-  ad_status: 'COALESCE(b.ad_status, l.ad_status)',
-  kaparo: 'COALESCE(b.kaparo, l.kaparo)',
+  ad_status: ownAdStatusExpr,
+  kaparo: ownKaparoExpr,
   reg_year: 'l.reg_year',
 };
-
-const ownVatFilterExpr = `(CASE
-  WHEN b.vat_included IN ('included', 'exempt', 'excluded') THEN b.vat_included
-  WHEN b.vat_included IN (1, '1') THEN 'included'
-  WHEN b.vat_included IN (0, '0') THEN 'exempt'
-  ELSE l.vat
-END)`;
 
 type FilterParams = (string | number)[];
 
@@ -173,18 +179,18 @@ export function buildOwnListingFilters(
   const params: (string | number)[] = [];
 
   if (make) {
-    wheres.push('COALESCE(b.make, l.make) = ?');
+    wheres.push(`${ownMakeExpr} = ?`);
     params.push(make);
   }
   if (model) {
-    wheres.push('COALESCE(b.model, l.model) = ?');
+    wheres.push(`${ownModelExpr} = ?`);
     params.push(model);
   }
-  addInFilter(wheres, params, 'COALESCE(b.ad_status, l.ad_status)', statuses);
-  addNullableInFilter(wheres, params, ownVatFilterExpr, vatValues);
-  addInFilter(wheres, params, 'COALESCE(b.fuel, l.fuel)', fuels);
-  addLikeAnyFilter(wheres, params, 'COALESCE(b.extras_json, l.extras_json)', extras);
-  addMinMaxFilter(wheres, params, 'COALESCE(b.price_amount, l.current_price)', priceMin, priceMax);
+  addInFilter(wheres, params, ownAdStatusExpr, statuses);
+  addNullableInFilter(wheres, params, ownEffectiveVatExpr, vatValues);
+  addInFilter(wheres, params, ownFuelExpr, fuels);
+  addLikeAnyFilter(wheres, params, ownExtrasJsonExpr, extras);
+  addMinMaxFilter(wheres, params, ownPriceExpr, priceMin, priceMax);
   if (priceChangeMin !== null || priceChangeMax !== null) {
     wheres.push('l.price_change IS NOT NULL');
     addMinMaxFilter(wheres, params, 'l.price_change', priceChangeMin, priceChangeMax);
@@ -196,7 +202,7 @@ export function buildOwnListingFilters(
   addInFilter(wheres, params, 'l.reg_year', years);
   if (search) {
     wheres.push(
-      '(COALESCE(b.title, l.title) LIKE ? OR COALESCE(b.make, l.make) LIKE ? OR COALESCE(b.model, l.model) LIKE ?)',
+      `(${ownTitleExpr} LIKE ? OR ${ownMakeExpr} LIKE ? OR ${ownModelExpr} LIKE ?)`,
     );
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }

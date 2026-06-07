@@ -6,6 +6,15 @@ import { acceptMobileBgCookies } from '@/lib/mobile-bg/auth';
 import { DealerBackupConfig } from '@/lib/mobile-bg/constants';
 import { applyCapturedMobileBgDraft, buildBackupFieldOverrides, selectMobileBgDependentFields } from '@/lib/mobile-bg/draft';
 import { captureEditFormSnapshot, submitMyAdsEditForm } from '@/lib/mobile-bg/edit-form';
+import {
+  ownAdStatusExpr,
+  ownBodyTypeExpr,
+  ownEffectiveVatExpr,
+  ownFuelExpr,
+  ownMileageExpr,
+  ownPriceExpr,
+  ownTitleExpr,
+} from '@/lib/query-modules/types';
 import { SCRAPED_ROOT } from '@/lib/storage-paths';
 import { markSyncFailed, markSyncRunning } from '@/lib/mobile-bg/sync-status';
 import { errorMessage, parseJson } from '@/lib/utils';
@@ -87,25 +96,24 @@ export async function updateBackupOnMobileBg(
       b.id,
       b.listing_id,
       b.mobile_id,
-      COALESCE(b.title, l.title) as title,
+      ${ownTitleExpr} as title,
       b.source_title,
-      COALESCE(b.price_amount, l.current_price) as price_amount,
+      ${ownPriceExpr} as price_amount,
       CASE
-        WHEN b.vat_included IS NOT NULL THEN b.vat_included
-        WHEN l.vat = 'included' THEN 'yes'
-        WHEN l.vat = 'excluded' THEN 'no'
-        WHEN l.vat = 'exempt' THEN 'no'
+        WHEN ${ownEffectiveVatExpr} = 'included' THEN 'yes'
+        WHEN ${ownEffectiveVatExpr} = 'excluded' THEN 'no'
+        WHEN ${ownEffectiveVatExpr} = 'exempt' THEN 'no'
         ELSE NULL
       END as vat_included,
-      COALESCE(b.mileage, l.mileage) as mileage,
-      COALESCE(b.fuel, l.fuel) as fuel,
+      ${ownMileageExpr} as mileage,
+      ${ownFuelExpr} as fuel,
       COALESCE(b.power, l.power) as power,
       COALESCE(b.engine, l.carsbg_title) as engine,
       COALESCE(b.color, l.color) as color,
       COALESCE(b.transmission, l.transmission) as transmission,
-      COALESCE(b.category, l.body_type) as body_type,
+      ${ownBodyTypeExpr} as body_type,
       COALESCE(b.description, l.description) as description,
-      COALESCE(b.ad_status, l.ad_status) as ad_status,
+      ${ownAdStatusExpr} as ad_status,
       b.tech_data_json
     FROM mobilebg_backups b
     LEFT JOIN listings l ON l.id = b.listing_id

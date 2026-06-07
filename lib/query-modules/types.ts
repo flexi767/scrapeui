@@ -267,14 +267,29 @@ export const ownVatExpr = `
   END
 `;
 
+export const ownDraftActiveExpr = `(l.id IS NULL OR COALESCE(b.draft_needs_sync, 0) = 1)`;
+
+export const ownMakeExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.make, l.make) ELSE l.make END`;
+export const ownModelExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.model, l.model) ELSE l.model END`;
+export const ownTitleExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.title, l.title) ELSE l.title END`;
+export const ownMileageExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.mileage, l.mileage) ELSE l.mileage END`;
+export const ownBodyTypeExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.category, l.body_type) ELSE l.body_type END`;
+export const ownFuelExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.fuel, l.fuel) ELSE l.fuel END`;
+export const ownPriceExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.price_amount, l.current_price) ELSE l.current_price END`;
+export const ownEffectiveVatExpr = `CASE WHEN ${ownDraftActiveExpr} THEN ${ownVatExpr} ELSE l.vat END`;
+export const ownKaparoExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.kaparo, l.kaparo) ELSE l.kaparo END`;
+export const ownAdStatusExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.ad_status, l.ad_status) ELSE l.ad_status END`;
+export const ownViewsExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.views, l.views) ELSE l.views END`;
+export const ownExtrasJsonExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.extras_json, l.extras_json) ELSE l.extras_json END`;
+
 export const ownNeedsSyncExpr = `
   CASE
     WHEN COALESCE(b.draft_needs_sync, 0) = 1 AND (
-      IFNULL(COALESCE(b.title, l.title), '') != IFNULL(l.title, '') OR
-      IFNULL(COALESCE(b.price_amount, l.current_price), -1) != IFNULL(l.current_price, -1) OR
-      IFNULL(${ownVatExpr}, '') != IFNULL(l.vat, '') OR
-      IFNULL(COALESCE(b.ad_status, l.ad_status), 'none') != IFNULL(l.ad_status, 'none') OR
-      IFNULL(COALESCE(b.kaparo, l.kaparo), 0) != IFNULL(l.kaparo, 0)
+      IFNULL(${ownTitleExpr}, '') != IFNULL(l.title, '') OR
+      IFNULL(${ownPriceExpr}, -1) != IFNULL(l.current_price, -1) OR
+      IFNULL(${ownEffectiveVatExpr}, '') != IFNULL(l.vat, '') OR
+      IFNULL(${ownAdStatusExpr}, 'none') != IFNULL(l.ad_status, 'none') OR
+      IFNULL(${ownKaparoExpr}, 0) != IFNULL(l.kaparo, 0)
     ) THEN 1
     ELSE 0
   END
