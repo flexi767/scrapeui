@@ -8,29 +8,74 @@ import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { href: '/listings', label: 'Listings', icon: CarIcon },
-  { href: '/listings/changes', label: 'Changes', icon: ClockIcon, indent: true },
-  { href: '/listings/deleted', label: 'Deleted Listings', icon: TrashIcon, indent: true },
-  { href: '/editown', label: 'Edit Own', icon: EditIcon, indent: true },
-  { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon, indent: true },
-  { href: '/editown/carsbg-sync', label: 'Cars.bg Sync', icon: UploadIcon, indent: true },
-  { href: '/editown/new', label: 'New Listing', icon: PlusIcon, indent: true },
-  { href: '/facebook-marketplace/bookmarklet', label: 'FB Bookmarklet', icon: UploadIcon, indent: true },
-  { href: '/editown/saved-searches', label: 'Saved Searches', icon: SearchIcon, indent: true },
-  { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon, indent: true },
-  { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon },
-  { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon, indent: true },
-  { href: '/mobilebg/reposts', label: 'Reposts', icon: UploadIcon, indent: true },
-  { href: '/mapping', label: 'Mapping', icon: MapIcon },
-  { href: '/tasks', label: 'Tasks', icon: TaskIcon },
-  { href: '/tasks/my', label: 'My Tasks', icon: UserTaskIcon, indent: true },
-  { href: '/expenses', label: 'Expenses', icon: ExpenseIcon },
-  { href: '/kb', label: 'Knowledge Base', icon: BookIcon },
-  { href: '/files', label: 'Files', icon: FileIcon },
-  { href: '/templates', label: 'Templates', icon: TemplateIcon },
-  { href: '/config', label: 'Config', icon: GearIcon },
+  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon, match: ['/dashboard'] },
+  { href: '/listings', label: 'Listings', icon: CarIcon, match: ['/listings'] },
+  { href: '/editown', label: 'Edit Own', icon: EditIcon, match: ['/editown', '/facebook-marketplace'] },
+  { href: '/mobilebg', label: 'Mobile.bg', icon: ArchiveIcon, match: ['/mobilebg'] },
+  { href: '/tasks', label: 'Tasks', icon: TaskIcon, match: ['/tasks'] },
+  { href: '/expenses', label: 'Expenses', icon: ExpenseIcon, match: ['/expenses'] },
+  { href: '/templates', label: 'Templates', icon: TemplateIcon, match: ['/templates'] },
+  { href: '/config', label: 'Config', icon: GearIcon, match: ['/config', '/dealers'] },
 ];
+
+const sectionItems = [
+  {
+    id: 'listings',
+    match: ['/listings'],
+    links: [
+      { href: '/listings', label: 'All Listings', icon: CarIcon },
+      { href: '/listings/changes', label: 'Changes', icon: ClockIcon },
+      { href: '/listings/deleted', label: 'Deleted', icon: TrashIcon },
+    ],
+  },
+  {
+    id: 'editown',
+    match: ['/editown', '/facebook-marketplace'],
+    links: [
+      { href: '/editown', label: 'Own Listings', icon: EditIcon },
+      { href: '/editown/sync', label: 'Batch Sync', icon: UploadIcon },
+      { href: '/editown/carsbg-sync', label: 'Cars.bg Sync', icon: UploadIcon },
+      { href: '/editown/new', label: 'New Listing', icon: PlusIcon },
+      { href: '/editown/saved-searches', label: 'Saved Searches', icon: SearchIcon },
+      { href: '/editown/search-positions', label: 'Search Positions', icon: SearchIcon },
+      { href: '/facebook-marketplace/bookmarklet', label: 'FB Bookmarklet', icon: UploadIcon },
+    ],
+  },
+  {
+    id: 'mobilebg',
+    match: ['/mobilebg'],
+    links: [
+      { href: '/mobilebg', label: 'Overview', icon: ArchiveIcon },
+      { href: '/mobilebg/edit-forms', label: 'Edit Forms', icon: FormIcon },
+      { href: '/mobilebg/reposts', label: 'Reposts', icon: UploadIcon },
+    ],
+  },
+  {
+    id: 'tasks',
+    match: ['/tasks'],
+    links: [
+      { href: '/tasks', label: 'All Tasks', icon: TaskIcon },
+      { href: '/tasks/my', label: 'My Tasks', icon: UserTaskIcon },
+    ],
+  },
+  {
+    id: 'workspace',
+    match: ['/mapping', '/kb', '/files'],
+    links: [
+      { href: '/mapping', label: 'Mapping', icon: MapIcon },
+      { href: '/kb', label: 'Knowledge Base', icon: BookIcon },
+      { href: '/files', label: 'Files', icon: FileIcon },
+    ],
+  },
+];
+
+function pathMatches(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function pathMatchesAny(pathname: string, matches: string[]) {
+  return matches.some((match) => pathMatches(pathname, match));
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -38,66 +83,95 @@ export function AppSidebar() {
 
   const isAdmin = session?.user?.role === 'admin';
   const dealerId = session?.user?.dealerId;
-
-  const dynamicItems = [
-    ...navItems,
-    ...(isAdmin ? [{ href: '/dealers/register', label: 'Register Dealer', icon: PlusIcon, indent: true }] : []),
-    ...(dealerId ? [{ href: `/dealers/${dealerId}/credentials`, label: 'My Settings', icon: GearIcon, indent: false }] : []),
+  const activeSection = sectionItems.find((section) => pathMatchesAny(pathname, section.match));
+  const utilityLinks = [
+    { href: '/mapping', label: 'Mapping', icon: MapIcon },
+    { href: '/kb', label: 'Knowledge Base', icon: BookIcon },
+    { href: '/files', label: 'Files', icon: FileIcon },
+    ...(isAdmin ? [{ href: '/dealers/register', label: 'Register Dealer', icon: PlusIcon }] : []),
   ];
 
   return (
-    <aside className="flex h-screen w-52 flex-col border-r border-gray-700 bg-gray-900">
-      <div className="flex h-14 items-center gap-2 border-b border-gray-700 px-3">
-        <QuickAdd />
-        <NotificationBell />
-      </div>
+    <header className="sticky top-0 z-40 border-b border-gray-700 bg-gray-950/95 shadow-lg shadow-black/10 backdrop-blur">
+      <div className="flex min-h-14 items-center gap-3 px-4">
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-2">
+          {navItems.map((item) => {
+            const active = pathMatchesAny(pathname, item.match);
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {dynamicItems.map((item) => {
-          const exactActive = pathname === item.href;
-          const sectionOpen = !exactActive && pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-400 hover:bg-gray-800/80 hover:text-gray-200',
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-          return (
+        <div className="flex shrink-0 items-center gap-2">
+          <QuickAdd />
+          <NotificationBell />
+          {dealerId && (
             <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                item.indent && 'ml-2 border-l border-gray-800 pl-5',
-                exactActive
-                  ? 'bg-gray-800 text-white'
-                  : sectionOpen
-                  ? 'bg-gray-800/40 text-gray-200'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200',
-              )}
+              href={`/dealers/${dealerId}/credentials`}
+              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+              title="My settings"
+              aria-label="My settings"
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              <GearIcon className="h-4 w-4" />
             </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-gray-700 p-3">
-        <div className="flex items-center gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-gray-200">
+          )}
+          <div className="hidden min-w-0 max-w-32 sm:block">
+            <p className="truncate text-xs font-medium text-gray-200">
               {session?.user?.name}
             </p>
-            <p className="truncate text-xs text-gray-500">
+            <p className="truncate text-[11px] text-gray-500">
               {session?.user?.role}
             </p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="ml-auto shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+            className="shrink-0 rounded-md p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
             title="Sign out"
+            aria-label="Sign out"
           >
             <LogoutIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
-    </aside>
+
+      <div className="flex min-h-10 items-center gap-2 border-t border-gray-800 px-4">
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1.5">
+          {(activeSection?.links ?? utilityLinks).map((item) => {
+            const active = pathMatches(pathname, item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'inline-flex h-7 shrink-0 items-center gap-1.5 rounded px-2 text-xs font-medium transition-colors',
+                  active
+                    ? 'bg-gray-800 text-gray-100'
+                    : 'text-gray-500 hover:bg-gray-800/70 hover:text-gray-300',
+                )}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </header>
   );
 }
 

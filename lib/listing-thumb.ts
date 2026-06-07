@@ -35,7 +35,11 @@ export function getListingThumbSrc(
   );
 
   if (options.preferListingImage && images[0]?.thumb) {
-    return images[0].thumb;
+    return getPreferredListingThumbUrl(
+      row.mobile_id,
+      images[0].thumb,
+      row.thumb_saved,
+    );
   }
 
   if (row.first_backup_image_id) {
