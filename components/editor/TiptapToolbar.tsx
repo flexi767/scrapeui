@@ -3,7 +3,7 @@
 import type { Editor } from '@tiptap/react';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
+import { apiRequest, cn } from '@/lib/utils';
 
 interface TiptapToolbarProps {
   editor: Editor;
@@ -22,13 +22,11 @@ export function TiptapToolbar({ editor }: TiptapToolbarProps) {
       form.append('files', file);
     }
 
-    const res = await fetch('/api/uploads', { method: 'POST', body: form });
-    if (!res.ok) return;
-
-    const payload = (await res.json().catch(() => ({}))) as {
+    const payload = await apiRequest<{
       uploads?: Array<{ url: string }>;
       url?: string;
-    };
+    }>('/api/uploads', 'Failed to upload image', { method: 'POST', body: form }).catch(() => null);
+    if (!payload) return;
     const urls = [
       ...new Set(
         [

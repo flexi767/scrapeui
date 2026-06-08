@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
-import { formatPrice } from '@/lib/utils';
+import { apiRequest, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 
 interface ListingSummary {
@@ -26,9 +26,9 @@ export function LinkedCarsSelector({
   const [listings, setListings] = useState<ListingSummary[]>([]);
 
   useEffect(() => {
-    fetch('/api/listings?summaries=1')
-      .then((r) => r.json())
-      .then(setListings);
+    apiRequest<ListingSummary[]>('/api/listings?summaries=1', 'Failed to load linked cars')
+      .then(setListings)
+      .catch(() => {});
   }, []);
 
   function toggle(id: number) {

@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import type { DealerRow } from '@/lib/queries';
-import { readJsonError } from '@/lib/streaming-job';
+import { startJsonStream, stopJsonStream } from '@/lib/streaming-job';
 import { CarsBgSyncDealerSelector } from '@/components/cars-bg-sync/CarsBgSyncDealerSelector';
 import { CarsBgSyncDoneBanner } from '@/components/cars-bg-sync/CarsBgSyncDoneBanner';
 import { CarsBgSyncLogPanel } from '@/components/cars-bg-sync/CarsBgSyncLogPanel';
@@ -72,16 +72,8 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
 
   const streamRun = useStreamingRun<CarsBgSyncStreamEntry>({
     fallbackStartError: t('failed_to_start_carsbg_sync'),
-    start: (signal) => fetch('/api/editown/carsbg-sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ live: liveRunRef.current, dealers: selectedDealers }),
-      signal,
-    }),
-    stop: async () => {
-      const res = await fetch('/api/editown/carsbg-sync', { method: 'DELETE' });
-      if (!res.ok) throw new Error(await readJsonError(res, t('failed_to_stop_carsbg_sync')));
-    },
+    start: (signal) => startJsonStream('/api/editown/carsbg-sync', { json: { live: liveRunRef.current, dealers: selectedDealers }, signal }),
+    stop: () => stopJsonStream('/api/editown/carsbg-sync', t('failed_to_stop_carsbg_sync')),
     onEvent: (event) => {
       if (event.type === 'start') {
         if (event.message) appendLog({ kind: 'status', message: event.message });

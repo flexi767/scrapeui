@@ -7,6 +7,33 @@ export async function readJsonError(response: Response, fallback: string): Promi
   }
 }
 
+export function startJsonStream(
+  url: string,
+  {
+    json,
+    signal,
+  }: {
+    json?: unknown;
+    signal?: AbortSignal;
+  } = {},
+): Promise<Response> {
+  const headers = new Headers();
+  const init: RequestInit = { method: 'POST', signal };
+
+  if (json !== undefined) {
+    headers.set('Content-Type', 'application/json');
+    init.headers = headers;
+    init.body = JSON.stringify(json);
+  }
+
+  return fetch(url, init);
+}
+
+export async function stopJsonStream(url: string, fallback: string): Promise<void> {
+  const response = await fetch(url, { method: 'DELETE' });
+  if (!response.ok) throw new Error(await readJsonError(response, fallback));
+}
+
 export async function streamJsonEvents<T>(
   response: Response,
   onEvent: (event: T) => void,

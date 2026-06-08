@@ -9,6 +9,7 @@ import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/ty
 import { useScrapeDealerSelection } from '@/components/scrape-runner/useScrapeDealerSelection';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
 import { useStreamingRun } from '@/components/shared/useStreamingRun';
+import { startJsonStream, stopJsonStream } from '@/lib/streaming-job';
 
 export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDealers: ScrapeDealer[]; onRunStart?: () => void }) {
   const t = useTranslations('ui');
@@ -34,15 +35,11 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
 
   const streamRun = useStreamingRun<ScrapeLogEntry>({
     fallbackStartError: t('failed_to_start_scraper'),
-    start: (signal) => fetch('/api/scrape', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dealers: dealerSelection.effectiveSelected, deepCrawl, downloadImages: effectiveDownloadImages, source: dealerSelection.source }),
+    start: (signal) => startJsonStream('/api/scrape', {
+      json: { dealers: dealerSelection.effectiveSelected, deepCrawl, downloadImages: effectiveDownloadImages, source: dealerSelection.source },
       signal,
     }),
-    stop: async () => {
-      await fetch('/api/scrape', { method: 'DELETE' });
-    },
+    stop: () => stopJsonStream('/api/scrape', 'Failed to stop scraper'),
     onEvent: (obj) => {
       setLog(prev => [...prev, obj]);
       if (obj.type === 'complete') setDone(true);

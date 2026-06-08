@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { readJsonError } from '@/lib/streaming-job';
-import { errorMessage } from '@/lib/utils';
+import { apiRequest, errorMessage } from '@/lib/utils';
 interface DealerOption {
   slug: string;
   name: string;
@@ -39,15 +38,10 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
   ) {
     setRunning(true);
     try {
-      const res = await fetch(endpoint, {
+      await apiRequest<unknown>(endpoint, 'Action failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        json: payload,
       });
-      if (!res.ok) {
-        toast.error(await readJsonError(res, 'Action failed'));
-        return;
-      }
       toast.success(successMessage);
       if (typeof window !== 'undefined') window.location.reload();
     } catch (error) {

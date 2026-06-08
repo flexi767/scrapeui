@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
+import { apiRequest } from '@/lib/utils';
 
 const NOTIFICATIONS_API_ENABLED = false;
 
@@ -17,6 +18,11 @@ interface NotificationItem {
   created_at: string;
 }
 
+interface NotificationsResponse {
+  notifications?: NotificationItem[];
+  unreadCount?: number;
+}
+
 export function NotificationBell() {
   const t = useTranslations('ui');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -25,8 +31,7 @@ export function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
 
   function loadNotifications() {
-    fetch('/api/notifications')
-      .then((r) => r.json())
+    apiRequest<NotificationsResponse>('/api/notifications', 'Failed to load notifications')
       .then((data) => {
         setNotifications(data.notifications || []);
         setUnread(data.unreadCount || 0);
@@ -57,10 +62,9 @@ export function NotificationBell() {
       return;
     }
 
-    await fetch('/api/notifications', {
+    await apiRequest<unknown>('/api/notifications', 'Failed to mark notifications read', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      json: {},
     });
     setUnread(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, read_at: readAt })));

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { readJsonError } from '@/lib/streaming-job';
+import { startJsonStream, stopJsonStream } from '@/lib/streaming-job';
 import { labelForRow, labelForTarget, logEntryFromResult, summaryFromCompleteEvent } from '@/components/search-positions/helpers';
 import { SearchPositionsDoneBanner } from '@/components/search-positions/SearchPositionsDoneBanner';
 import { SearchPositionsLogPanel } from '@/components/search-positions/SearchPositionsLogPanel';
@@ -44,16 +44,8 @@ export default function SearchPositionsRunner() {
 
   const streamRun = useStreamingRun<SearchPositionStreamEntry>({
     fallbackStartError: 'Failed to start search-position run',
-    start: (signal) => fetch('/api/editown/search-ranks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ missingOnly: missingOnlyRef.current }),
-      signal,
-    }),
-    stop: async () => {
-      const res = await fetch('/api/editown/search-ranks', { method: 'DELETE' });
-      if (!res.ok) throw new Error(await readJsonError(res, 'Failed to stop search-position run'));
-    },
+    start: (signal) => startJsonStream('/api/editown/search-ranks', { json: { missingOnly: missingOnlyRef.current }, signal }),
+    stop: () => stopJsonStream('/api/editown/search-ranks', 'Failed to stop search-position run'),
     onEvent: (event) => {
       if (event.type === 'start') {
         setStats(event.stats);

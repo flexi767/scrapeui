@@ -16,7 +16,7 @@ import {
   Clock,
   Play,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { apiRequest, cn, isAbortError } from '@/lib/utils';
 
 interface DashboardStats {
   totalListings: number;
@@ -102,20 +102,16 @@ export function Dashboard() {
       inFlight = controller;
       if (showLoading) setLoading(true);
       try {
-        const [statsRes, dealersRes] = await Promise.all([
-          fetch('/api/dashboard/stats', { signal: controller.signal }),
-          isAdmin ? fetch('/api/dealers', { signal: controller.signal }) : Promise.resolve(null),
+        const [statsData, dealersData] = await Promise.all([
+          apiRequest<DashboardStats>('/api/dashboard/stats', 'Stats request failed', { signal: controller.signal }),
+          isAdmin ? apiRequest<Dealer[]>('/api/dealers', 'Dealers request failed', { signal: controller.signal }) : Promise.resolve([]),
         ]);
-        if (!statsRes.ok) throw new Error(`Stats request failed: ${statsRes.status}`);
-        if (dealersRes && !dealersRes.ok) throw new Error(`Dealers request failed: ${dealersRes.status}`);
-        const statsData = await statsRes.json();
-        const dealersData = dealersRes ? await dealersRes.json() : [];
         if (cancelled) return;
         lastFetchAt = Date.now();
         setStats(statsData);
         setDealers(Array.isArray(dealersData) ? dealersData : []);
       } catch (error) {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && !isAbortError(error)) {
           console.error('Failed to fetch dashboard data:', error);
         }
       } finally {

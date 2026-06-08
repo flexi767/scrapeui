@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { readJsonError, streamJsonEvents } from '@/lib/streaming-job';
+import { readJsonError, startJsonStream, streamJsonEvents } from '@/lib/streaming-job';
 import { errorMessage } from '@/lib/utils';
 
 interface SyncLogEntry {
@@ -42,14 +42,12 @@ export default function MobileBgMakeModelSyncRunner() {
     setCompleted(null);
 
     try {
-      const res = await fetch('/api/mobile-bg/makes/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await startJsonStream('/api/mobile-bg/makes/sync', {
+        json: {
           onlyMake: onlyMake.trim() || undefined,
           searchPath: searchPath.trim() || DEFAULT_SEARCH_PATH,
           pubtype: pubtype.trim() || DEFAULT_PUBTYPE,
-        }),
+        },
       });
 
       if (!res.ok || !res.body) {

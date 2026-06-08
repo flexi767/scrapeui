@@ -1,5 +1,5 @@
 import type { EditOwnSyncRow } from '@/lib/queries';
-import { readJsonError } from '@/lib/streaming-job';
+import { readJsonError, startJsonStream } from '@/lib/streaming-job';
 import { apiRequest } from '@/lib/utils';
 import { isEditOwnSyncRow } from './helpers';
 
@@ -17,10 +17,7 @@ export async function revertDraftToSource(backupId: number) {
 }
 
 export async function startBatchSync(signal: AbortSignal) {
-  const res = await fetch('/api/editown/batch-sync', {
-    method: 'POST',
-    signal,
-  });
+  const res = await startJsonStream('/api/editown/batch-sync', { signal });
 
   if (!res.ok || !res.body) {
     throw new Error(await readJsonError(res, 'Failed to start batch sync'));
@@ -42,12 +39,7 @@ export async function startRenewReset({
   onlyReset: boolean;
   signal: AbortSignal;
 }) {
-  const res = await fetch('/api/editown/renew-reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dealerSlugs, onlyReset }),
-    signal,
-  });
+  const res = await startJsonStream('/api/editown/renew-reset', { json: { dealerSlugs, onlyReset }, signal });
 
   if (!res.ok || !res.body) {
     throw new Error(await readJsonError(res, 'Failed to start renew & reset'));
