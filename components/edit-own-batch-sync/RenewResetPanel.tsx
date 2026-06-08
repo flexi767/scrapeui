@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { LogPanel } from './LogPanel';
 import type { LogEntry, OwnDealer, RunStats } from './types';
 
@@ -32,6 +35,7 @@ export function RenewResetPanel({
   onToggleOnlyReset: () => void;
   onRunOrStop: () => void;
 }) {
+  const t = useTranslations('ui');
   if (ownDealers.length === 0) return null;
 
   return (
@@ -40,28 +44,28 @@ export function RenewResetPanel({
         {renewStats && (
           <>
             <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-              <span className="uppercase tracking-wide text-gray-500">Total</span>
+              <span className="uppercase tracking-wide text-gray-500">{t('total')}</span>
               <span className="ml-2 text-lg font-semibold text-white">{renewStats.total}</span>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-              <span className="uppercase tracking-wide text-gray-500">Success</span>
+              <span className="uppercase tracking-wide text-gray-500">{t('success')}</span>
               <span className="ml-2 text-lg font-semibold text-emerald-400">{renewStats.succeeded}</span>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm">
-              <span className="uppercase tracking-wide text-gray-500">Failed</span>
+              <span className="uppercase tracking-wide text-gray-500">{t('failed')}</span>
               <span className="ml-2 text-lg font-semibold text-red-400">{renewStats.failed}</span>
             </div>
           </>
         )}
         <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-sm text-right">
-          <span className="uppercase tracking-wide text-gray-500">Mode</span>
-          <span className="ml-2 text-sm font-medium text-gray-100">{renewRunning ? 'Running' : 'Idle'}</span>
+          <span className="uppercase tracking-wide text-gray-500">{t('mode')}</span>
+          <span className="ml-2 text-sm font-medium text-gray-100">{renewRunning ? t('running') : t('idle')}</span>
         </div>
       </div>
 
       <div>
         <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
-          <span>Dealers</span>
+          <span>{t('dealers')}</span>
           <span className="text-xs text-gray-500">({renewDealers.length} selected)</span>
           <button
             type="button"
@@ -69,7 +73,7 @@ export function RenewResetPanel({
             disabled={renewRunning}
             className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:text-gray-600"
           >
-            {renewDealers.length === ownDealers.length ? 'Deselect all' : 'Select all'}
+            {renewDealers.length === ownDealers.length ? t('deselect_all') : t('select_all')}
           </button>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -102,7 +106,7 @@ export function RenewResetPanel({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           )}
-          {renewStopping ? 'Stopping…' : renewRunning ? 'Stop' : renewOnlyReset ? 'Reset views' : 'Renew & Reset'}
+          {renewStopping ? t('stopping') : renewRunning ? t('stop') : renewOnlyReset ? t('reset_views') : t('renew_and_reset')}
         </button>
 
         <div
@@ -114,7 +118,7 @@ export function RenewResetPanel({
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${renewOnlyReset ? 'translate-x-6' : 'translate-x-1'}`} />
           </div>
-          <span className="text-sm font-medium text-gray-200">Only reset views</span>
+          <span className="text-sm font-medium text-gray-200">{t('only_reset_views')}</span>
         </div>
       </div>
 

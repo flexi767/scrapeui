@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 
 interface Dealer { id: number; slug: string; name: string; }
@@ -21,6 +22,7 @@ interface Result {
 }
 
 export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
+  const t = useTranslations('ui');
   const [dealer, setDealer]       = useState('');
   const [missingOnly, setMissing] = useState(false);
   const [dryRun, setDryRun]       = useState(true);
@@ -53,13 +55,13 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
       {/* Options */}
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Dealer</label>
+          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('dealer')}</label>
           <select
             value={dealer}
             onChange={e => setDealer(e.target.value)}
             className="rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
           >
-            <option value="">All dealers</option>
+            <option value="">{t('all_dealers')}</option>
             {dealers.map(d => <option key={d.slug} value={d.slug}>{d.name}</option>)}
           </select>
         </div>
@@ -67,13 +69,13 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
         <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer pb-2">
           <input type="checkbox" checked={missingOnly} onChange={e => setMissing(e.target.checked)}
             className="rounded border-gray-600 bg-gray-800 text-blue-500" />
-          Missing only
+          {t('missing_only')}
         </label>
 
         <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer pb-2">
           <input type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)}
             className="rounded border-gray-600 bg-gray-800 text-blue-500" />
-          Dry run
+          {t('dry_run')}
         </label>
 
         <button
@@ -81,7 +83,7 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
           disabled={running}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 pb-2"
         >
-          {running ? 'Running…' : 'Reparse'}
+          {running ? t('running_ellipsis') : t('reparse')}
         </button>
       </div>
 

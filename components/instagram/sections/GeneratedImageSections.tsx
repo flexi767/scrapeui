@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import { RefreshCwIcon, ZoomInIcon } from "lucide-react";
 import { type PosterVariant, type PosterVariantPrompt } from "../poster";
 import { StepHeader, type ZoomImage } from "./shared";
@@ -29,6 +32,7 @@ export function GeneratedImageSections({
   onGenerateVariant,
   onZoom,
 }: GeneratedImageSectionsProps) {
+  const t = useTranslations('ui');
   const variantsById = new Map([...coverVariants, ...collageVariants].map((variant) => [variant.id, variant]));
   const expectedCoverVariants = expectedVariants.filter((variant) => variant.role !== "collage");
   const expectedCollageVariants = expectedVariants.filter((variant) => variant.role === "collage");
@@ -66,7 +70,7 @@ export function GeneratedImageSections({
           </span>
         ) : (
           <div className="flex aspect-square items-center justify-center bg-gray-950 p-4 text-center text-xs text-gray-500">
-            {isGenerating ? "Generating..." : `${index + 1}. ${expected.name}`}
+            {isGenerating ? t('generating') : `${index + 1}. ${expected.name}`}
           </div>
         )}
         <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2">
@@ -89,7 +93,7 @@ export function GeneratedImageSections({
             className="inline-flex h-7 items-center gap-1.5 rounded border border-gray-700 px-2 text-xs text-gray-200 hover:bg-gray-800 disabled:opacity-50"
           >
             <RefreshCwIcon className={`h-3 w-3 ${isGenerating ? "animate-spin" : ""}`} />
-            {variant ? "Regenerate" : "Generate"}
+            {variant ? t('regenerate') : t('generate')}
           </button>
         </div>
       </div>
@@ -101,8 +105,8 @@ export function GeneratedImageSections({
       <div className="flex items-center justify-between">
         <StepHeader
           step="Step 3"
-          title="Review and choose cover"
-          detail="The two collage pages are added to the carousel automatically."
+          title={t('review_and_choose_cover')}
+          detail={t('collage_pages_carousel_hint')}
         />
         <button
           type="button"
@@ -111,21 +115,21 @@ export function GeneratedImageSections({
           className="inline-flex h-8 items-center gap-2 rounded-md border border-gray-700 px-3 text-xs text-gray-200 hover:bg-gray-800 disabled:opacity-50"
         >
           <RefreshCwIcon className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
-          Regenerate
+          {t('regenerate')}
         </button>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {expectedCoverVariants.map(renderVariantCard)}
         {!hasVariants && expectedCoverVariants.length === 0 && (
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 text-sm text-gray-400">
-            {generating ? "Generating poster options..." : "Generate posters after selecting collage images."}
+            {generating ? t('generating_poster_options') : t('generate_posters_after_selecting')}
           </div>
         )}
       </div>
 
       {expectedCollageVariants.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Collage pages</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">{t('collage_pages')}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {expectedCollageVariants.map(renderVariantCard)}
           </div>

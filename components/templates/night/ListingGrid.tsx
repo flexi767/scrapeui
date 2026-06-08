@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
@@ -9,35 +10,36 @@ import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
+  const t = useTranslations('ui');
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
 
   return (
     <Shell dealer={dealer} current="cars">
       <div className={s.ticker}>
-        <span><strong>{total}</strong> vehicles available</span>
-        <span>Updated today</span>
+        <span><strong>{total}</strong> {t('vehicles_available')}</span>
+        <span>{t('updated_today')}</span>
         <span>{dealer.name}</span>
       </div>
 
       <div className={s.heroStrip}>
         <h1 className={s.heroH1}>{dealer.name}</h1>
-        <p className={s.heroSub}>Browse our full inventory below</p>
+        <p className={s.heroSub}>{t('browse_inventory')}</p>
       </div>
 
       <div className={s.main}>
         <aside className={s.sidebar}>
-          <div className={s.sidebarTitle}>Filters</div>
+          <div className={s.sidebarTitle}>{t('filters')}</div>
           <div className={s.filterGroup}>
-            <label className={s.filterLabel}>Make</label>
+            <label className={s.filterLabel}>{t('make')}</label>
             <MakeSelect base={base} filters={filters} makes={makes} className={s.filterSelect} allLabel="All" />
           </div>
           <div className={s.filterGroup}>
-            <label className={s.filterLabel}>Fuel</label>
+            <label className={s.filterLabel}>{t('fuel')}</label>
             <FuelSelect base={base} filters={filters} className={s.filterSelect} allLabel="Any" />
           </div>
           <div className={s.filterGroup}>
-            <label className={s.filterLabel}>Max Price</label>
+            <label className={s.filterLabel}>{t('max_price')}</label>
             <PriceMaxInput base={base} filters={filters} className={s.filterInput} />
           </div>
         </aside>

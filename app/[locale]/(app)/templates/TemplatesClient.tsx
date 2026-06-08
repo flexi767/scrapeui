@@ -99,9 +99,9 @@ function ForkModal({
         )}
         {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} disabled={busy} className="text-sm px-4 py-2 rounded-md text-gray-400 hover:text-white">Cancel</button>
+          <button onClick={onClose} disabled={busy} className="text-sm px-4 py-2 rounded-md text-gray-400 hover:text-white">{t('cancel')}</button>
           <button onClick={submit} disabled={busy} className="text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium">
-            {busy ? 'Forking…' : 'Fork'}
+            {busy ? t('forking') : t('fork')}
           </button>
         </div>
       </div>
@@ -113,6 +113,7 @@ function ForkModal({
 
 function ActivateButton({ configId }: { configId: number }) {
   const router = useRouter();
+  const t = useTranslations('ui');
   const [busy, setBusy] = useState(false);
   const activate = async () => {
     setBusy(true);
@@ -126,13 +127,14 @@ function ActivateButton({ configId }: { configId: number }) {
   };
   return (
     <button onClick={activate} disabled={busy} className="text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 px-3 py-1.5 rounded-md">
-      {busy ? '…' : 'Activate'}
+      {busy ? '…' : t('activate')}
     </button>
   );
 }
 
 function DeleteButton({ configId }: { configId: number }) {
   const router = useRouter();
+  const t = useTranslations('ui');
   const [busy, setBusy] = useState(false);
   const del = async () => {
     if (!confirm('Delete this config?')) return;
@@ -147,7 +149,7 @@ function DeleteButton({ configId }: { configId: number }) {
   };
   return (
     <button onClick={del} disabled={busy} className="text-sm bg-red-900/60 hover:bg-red-800 disabled:opacity-50 text-red-300 px-3 py-1.5 rounded-md">
-      {busy ? '…' : 'Delete'}
+      {busy ? '…' : t('delete')}
     </button>
   );
 }
@@ -163,6 +165,7 @@ export function TemplatesClient({
   bases: Config[];
   dealerOptions: DealerOption[];
 }) {
+  const t = useTranslations('ui');
   const [forkSource, setForkSource] = useState<{ id: number; dealerId: number | null; name: string } | null>(null);
 
   return (
@@ -179,25 +182,25 @@ export function TemplatesClient({
 
       {mine.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">My Configs</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">{t('my_configs')}</h2>
           <div className="space-y-2">
             {mine.map((c) => (
               <div key={c.id} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-4 py-3">
                 <div>
                   <span className="font-medium">{c.name}</span>
                   {c.isActive === 1 && (
-                    <span className="ml-2 text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-0.5">Active</span>
+                    <span className="ml-2 text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-0.5">{t('active')}</span>
                   )}
                   <div className="text-xs text-gray-500 mt-0.5">Updated {formatDateOnly(c.updatedAt)}</div>
                 </div>
                 <div className="flex gap-2">
                   {c.isActive === 0 && <ActivateButton configId={c.id} />}
-                  <Link href={`/templates/editor/${c.id}`} className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md">Edit</Link>
+                  <Link href={`/templates/editor/${c.id}`} className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md">{t('edit')}</Link>
                   <button
                     onClick={() => setForkSource({ id: c.id, dealerId: c.dealerId, name: c.name })}
                     className="text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-md"
                   >
-                    Fork
+                    {t('fork')}
                   </button>
                   {c.isActive === 0 && <DeleteButton configId={c.id} />}
                 </div>
@@ -208,9 +211,9 @@ export function TemplatesClient({
       )}
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Base Templates (fork to use)</h2>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">{t('base_templates')}</h2>
         {bases.length === 0 ? (
-          <p className="text-sm text-gray-500">No base templates found. Run the seed script to add them.</p>
+          <p className="text-sm text-gray-500">{t('no_base_templates')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {bases.map((c) => (
@@ -220,7 +223,7 @@ export function TemplatesClient({
                   onClick={() => setForkSource({ id: c.id, dealerId: c.dealerId, name: c.name })}
                   className="text-sm w-full bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-md"
                 >
-                  Use This Template
+                  {t('use_this_template')}
                 </button>
               </div>
             ))}

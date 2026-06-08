@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import {
   formatPosterMileage,
   formatPosterPrice,
@@ -42,13 +45,14 @@ export function PosterPromptPanel({
   onSaveDefaultsForFuture,
   onReset,
 }: PosterPromptPanelProps) {
+  const t = useTranslations('ui');
   return (
     <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <StepHeader
           step="Step 1"
-          title="Set the style"
-          detail="This main prompt controls the overall look of the cover and collage pages."
+          title={t('set_the_style')}
+          detail={t('poster_prompt_detail')}
         />
         <div className="flex gap-2 self-start sm:self-auto">
           <button
@@ -56,14 +60,14 @@ export function PosterPromptPanel({
             onClick={onSaveDefaultsForFuture}
             className="inline-flex h-8 items-center rounded-md border border-pink-500/60 px-3 text-xs text-pink-100 hover:bg-pink-500/10"
           >
-            Save default
+            {t('save_default')}
           </button>
           <button
             type="button"
             onClick={onReset}
             className="inline-flex h-8 items-center rounded-md border border-gray-700 px-3 text-xs text-gray-200 hover:bg-gray-800"
           >
-            Reset
+            {t('reset')}
           </button>
         </div>
       </div>
@@ -76,7 +80,7 @@ export function PosterPromptPanel({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Image API</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{t('image_api')}</span>
           <select
             value={imageProvider}
             onChange={(event) => onImageProviderChange(event.target.value as PosterImageProviderId)}
@@ -109,23 +113,23 @@ export function PosterPromptPanel({
 
       <details className="mt-4 rounded-md border border-gray-800 bg-gray-950 p-3">
         <summary className="cursor-pointer text-sm font-semibold text-white marker:text-gray-500">
-          Post data
+          {t('post_data')}
         </summary>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-md bg-gray-900 px-3 py-2">
-            <div className="text-xs text-gray-500">Make</div>
+            <div className="text-xs text-gray-500">{t('make')}</div>
             <div className="text-gray-100">{listing.make ?? "-"}</div>
           </div>
           <div className="rounded-md bg-gray-900 px-3 py-2">
-            <div className="text-xs text-gray-500">Model</div>
+            <div className="text-xs text-gray-500">{t('model')}</div>
             <div className="text-gray-100">{listing.model ?? "-"}</div>
           </div>
           <div className="rounded-md bg-gray-900 px-3 py-2">
-            <div className="text-xs text-gray-500">Mileage</div>
+            <div className="text-xs text-gray-500">{t('mileage')}</div>
             <div className="text-gray-100">{formatPosterMileage(listing.mileage)}</div>
           </div>
           <div className="rounded-md bg-gray-900 px-3 py-2">
-            <div className="text-xs text-gray-500">Price</div>
+            <div className="text-xs text-gray-500">{t('price')}</div>
             <div className="text-gray-100">{formatPosterPrice(listing.price)}</div>
           </div>
         </div>
@@ -139,10 +143,10 @@ export function PosterPromptPanel({
 
       <details className="mt-4 rounded-md border border-gray-800 bg-gray-950 p-3">
         <summary className="cursor-pointer text-sm font-semibold text-white marker:text-gray-500">
-          Advanced variant prompts
+          {t('advanced_variant_prompts')}
         </summary>
         <div className="mt-1 text-xs text-gray-500">
-          Fine-tune each generated page only when the default flow is not enough.
+          {t('advanced_variant_prompts_hint')}
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {variantPrompts.map((variant) => (

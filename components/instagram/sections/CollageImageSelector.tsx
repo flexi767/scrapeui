@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import { RefreshCwIcon } from "lucide-react";
 import {
   type CollageSelections,
@@ -24,6 +27,7 @@ export function CollageImageSelector({
   onGenerate,
   onZoom,
 }: CollageImageSelectorProps) {
+  const t = useTranslations('ui');
   const canGenerate = selections.exteriorPhotoIds.length > 0 && selections.interiorPhotoIds.length > 0;
 
   return (
@@ -34,7 +38,7 @@ export function CollageImageSelector({
       <div className="mb-3 mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <StepHeader
           step="Step 2"
-          title="Choose collage images"
+          title={t('choose_collage_images')}
           detail={`Exterior ${selections.exteriorPhotoIds.length} / Interior ${selections.interiorPhotoIds.length}`}
         />
         <div className="flex gap-2">
@@ -43,7 +47,7 @@ export function CollageImageSelector({
             onClick={onDefaults}
             className="inline-flex h-8 items-center rounded-md border border-gray-700 px-3 text-xs text-gray-200 hover:bg-gray-800"
           >
-            Defaults
+            {t('defaults')}
           </button>
         </div>
       </div>
@@ -84,7 +88,7 @@ export function CollageImageSelector({
                     onChange={() => onToggle("exteriorPhotoIds", photo.id)}
                     className="h-3.5 w-3.5 accent-pink-500"
                   />
-                  Exterior
+                  {t('exterior')}
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 rounded border border-gray-800 px-2 py-1.5 hover:bg-gray-800">
                   <input
@@ -93,7 +97,7 @@ export function CollageImageSelector({
                     onChange={() => onToggle("interiorPhotoIds", photo.id)}
                     className="h-3.5 w-3.5 accent-purple-500"
                   />
-                  Interior
+                  {t('interior')}
                 </label>
               </div>
             </div>
@@ -103,8 +107,8 @@ export function CollageImageSelector({
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-gray-800 bg-gray-950 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-gray-400">
           {canGenerate
-            ? "Ready to generate. Existing cached images will be reused when possible."
-            : "Select at least one exterior and one interior image."}
+            ? t('ready_to_generate')
+            : t('select_exterior_and_interior')}
         </div>
         <button
           type="button"
@@ -113,7 +117,7 @@ export function CollageImageSelector({
           className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-pink-600 px-4 text-sm font-medium text-white hover:bg-pink-500 disabled:opacity-50"
         >
           <RefreshCwIcon className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-          {generating ? "Generating..." : "Generate posters"}
+          {generating ? t('generating') : t('generate_posters')}
         </button>
       </div>
     </details>

@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { ScrapeDealer, ScrapeSource } from '@/components/scrape-runner/types';
 
 interface ScrapeControlsProps {
@@ -35,6 +38,7 @@ export function ScrapeControls({
   onToggleDownloadImages,
   onRunClick,
 }: ScrapeControlsProps) {
+  const t = useTranslations('ui');
   return (
     <div className="space-y-5 rounded-lg border border-gray-700 bg-gray-800/60 p-6">
       <div className="flex w-fit items-center gap-1 rounded-lg bg-gray-900/60 p-1">
@@ -56,7 +60,7 @@ export function ScrapeControls({
 
       <div>
         <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-300">
-          <span>Dealers</span>
+          <span>{t('dealers')}</span>
           <span className="text-xs text-gray-500">({effectiveSelected.length} selected)</span>
           <button
             type="button"
@@ -64,7 +68,7 @@ export function ScrapeControls({
             disabled={running || availableDealers.length === 0}
             className="text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 disabled:cursor-not-allowed disabled:text-gray-600"
           >
-            {allActiveSelected ? 'Deselect all' : 'Select all'}
+            {allActiveSelected ? t('deselect_all') : t('select_all')}
           </button>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -100,7 +104,7 @@ export function ScrapeControls({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           )}
-          {stopping ? 'Stopping…' : running ? 'Stop' : 'Run'}
+          {stopping ? t('stopping') : running ? t('stop') : t('run')}
         </button>
 
         <div
@@ -113,8 +117,8 @@ export function ScrapeControls({
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deepCrawl ? 'translate-x-6' : 'translate-x-1'}`} />
           </div>
           <div>
-            <span className="text-sm font-medium text-gray-200">Deep crawl</span>
-            <p className="mt-0.5 text-xs text-gray-400">Opens each listing detail page to extract full data</p>
+            <span className="text-sm font-medium text-gray-200">{t('deep_crawl')}</span>
+            <p className="mt-0.5 text-xs text-gray-400">{t('deep_crawl_desc')}</p>
           </div>
         </div>
 
@@ -128,8 +132,8 @@ export function ScrapeControls({
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${downloadImages && deepCrawl ? 'translate-x-6' : 'translate-x-1'}`} />
           </div>
           <div>
-            <span className="text-sm font-medium text-gray-200">Download images</span>
-            <p className="mt-0.5 text-xs text-gray-400">Save full-res images to disk (requires deep crawl)</p>
+            <span className="text-sm font-medium text-gray-200">{t('download_images')}</span>
+            <p className="mt-0.5 text-xs text-gray-400">{t('download_images_desc')}</p>
           </div>
         </div>
       </div>

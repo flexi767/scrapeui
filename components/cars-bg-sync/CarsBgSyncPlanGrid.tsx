@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { formatPrice } from '@/lib/utils';
 import { listingLabel } from '@/components/cars-bg-sync/helpers';
 import type { DiffItem, MissingItem, StaleCarsItem } from '@/components/cars-bg-sync/types';
@@ -27,8 +30,9 @@ export function CarsBgSyncPlanGrid({
 }
 
 function MissingListingsCard({ missing }: { missing: MissingItem[] }) {
+  const t = useTranslations('ui');
   return (
-    <PlanCard title="Missing On Cars.bg" empty={missing.length === 0 ? 'No missing listings in the current plan.' : null}>
+    <PlanCard title={t('missing_on_carsbg')} empty={missing.length === 0 ? t('no_missing_listings') : null}>
       {missing.map((item, index) => (
         <div key={`${item.mobileId || index}`} className="px-4 py-3 text-sm">
           <div className="text-white">{listingLabel(item)}</div>
@@ -52,8 +56,9 @@ function DiffListingsCard({
   openDescriptionKey: string | null;
   onToggleDescription: (key: string) => void;
 }) {
+  const t = useTranslations('ui');
   return (
-    <PlanCard title="Price Diffs" empty={diffs.length === 0 ? 'No price diffs in the current plan.' : null}>
+    <PlanCard title={t('price_diffs')} empty={diffs.length === 0 ? t('no_price_diffs') : null}>
       {diffs.map((item, index) => {
         const diffKey = `${item.mobileId || item.carsId || index}`;
         const descriptionOpen = openDescriptionKey === diffKey;
@@ -100,13 +105,13 @@ function DiffListingsCard({
             {descriptionOpen && item.descriptionDiff && (
               <div className="mt-3 grid gap-3 xl:grid-cols-2">
                 <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
-                  <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">Old</div>
+                  <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">{t('old')}</div>
                   <div className="whitespace-pre-wrap text-xs text-gray-300">
                     {item.oldDescription?.trim() || '—'}
                   </div>
                 </div>
                 <div className="rounded-lg border border-gray-700/60 bg-gray-950/40 p-3">
-                  <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">New</div>
+                  <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">{t('new')}</div>
                   <div className="whitespace-pre-wrap text-xs text-gray-200">
                     {item.newDescription?.trim() || '—'}
                   </div>
@@ -121,8 +126,9 @@ function DiffListingsCard({
 }
 
 function StaleOffersCard({ staleCarsIds }: { staleCarsIds: StaleCarsItem[] }) {
+  const t = useTranslations('ui');
   return (
-    <PlanCard title="Stale Cars.bg Offers" empty={staleCarsIds.length === 0 ? 'No stale offers in the current plan.' : null}>
+    <PlanCard title={t('stale_carsbg_offers')} empty={staleCarsIds.length === 0 ? t('no_stale_offers') : null}>
       {staleCarsIds.map((item, index) => (
         <div key={`${item.carsId || index}`} className="px-4 py-3 text-sm">
           <div className="text-white">{item.carsId || 'Unknown cars.bg id'}</div>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
@@ -18,6 +19,7 @@ function fuelBadgeClass(fuel: string | null): string {
 }
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
+  const t = useTranslations('ui');
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
   const startItem = (page - 1) * limit + 1;
@@ -35,17 +37,17 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
 
       <div className={s.main}>
         <aside className={s.sidebar}>
-          <div className={s.sbTitle}>Filters</div>
+          <div className={s.sbTitle}>{t('filters')}</div>
           <div className={s.sbSection}>
-            <label>Make</label>
+            <label>{t('make')}</label>
             <MakeSelect base={base} filters={filters} makes={makes} className={s.sbSelect} allLabel="All" />
           </div>
           <div className={s.sbSection}>
-            <label>Max Price</label>
+            <label>{t('max_price')}</label>
             <PriceMaxInput base={base} filters={filters} className={s.sbInput} />
           </div>
           <div className={s.sbSection}>
-            <label>Year From</label>
+            <label>{t('year_from')}</label>
             <input className={s.sbInput} placeholder="e.g. 2018" defaultValue={filters.yearFrom ?? ""}
               onBlur={(e) => { if (e.target.value) window.location.href = filterHref(base, filters, { yearFrom: e.target.value, page: 1 }); }} />
           </div>

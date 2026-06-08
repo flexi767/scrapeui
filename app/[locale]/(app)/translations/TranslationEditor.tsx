@@ -105,13 +105,13 @@ export function TranslationEditor() {
       )
     : rows;
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>{t('loading')}</div>;
 
   return (
     <div>
       <input
         type="text"
-        placeholder="Search by key, context, or value..."
+        placeholder={t('search_translations')}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4 px-4 py-2 bg-gray-800 text-gray-100 border border-gray-600 rounded w-full"
@@ -178,9 +178,9 @@ export function TranslationEditor() {
                   onClick={() => handleAutoTranslate(row.key)}
                   disabled={translatingKey === row.key || !row.en.trim()}
                   className="rounded border border-blue-500/60 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-200 transition-colors hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  title="Translate from EN to BG, DE, and RU"
+                  title={t('translate_from_en')}
                 >
-                  {translatingKey === row.key ? 'Translating...' : 'Translate'}
+                  {translatingKey === row.key ? t('translating') : t('translate')}
                 </button>
               </td>
             </tr>
