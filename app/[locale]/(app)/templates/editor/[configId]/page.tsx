@@ -1,8 +1,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
-import { getDealerTemplateConfig } from "@/lib/queries";
-import { raw } from "@/db/client";
+import { getDealerTemplateConfig, getDealerTemplateDealerContext } from "@/lib/queries";
 import { EditorClient } from "./EditorClient";
 
 interface Props { params: Promise<{ configId: string }> }
@@ -24,17 +23,12 @@ export default async function EditorPage({ params }: Props) {
   let isActive = false;
   let firstListingId: string | null = null;
   if (config.dealerId) {
-    const row = raw
-      .prepare(`SELECT slug, active_template_config_id FROM dealers WHERE id = ?`)
-      .get(config.dealerId) as { slug: string; active_template_config_id: number | null } | undefined;
-    if (row) {
-      dealerSlug = row.slug;
-      isActive = row.active_template_config_id === config.id;
+    const dealerContext = getDealerTemplateDealerContext(config.dealerId);
+    if (dealerContext) {
+      dealerSlug = dealerContext.slug;
+      isActive = dealerContext.activeTemplateConfigId === config.id;
+      firstListingId = dealerContext.firstListingId;
     }
-    const firstListing = raw
-      .prepare(`SELECT mobile_id FROM listings WHERE dealer_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1`)
-      .get(config.dealerId) as { mobile_id: string } | undefined;
-    firstListingId = firstListing?.mobile_id ?? null;
   }
 
   return <EditorClient config={config} dealerSlug={dealerSlug} isActive={isActive} firstListingId={firstListingId} />;

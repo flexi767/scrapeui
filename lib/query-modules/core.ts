@@ -61,6 +61,17 @@ export function getOwnDealers({ activeOnly = false }: { activeOnly?: boolean } =
     .all() as DealerRow[];
 }
 
+export function getActiveDealers(): DealerRow[] {
+  return raw
+    .prepare(
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
+       FROM dealers
+       WHERE active = 1
+       ORDER BY priority DESC, name`,
+    )
+    .all() as DealerRow[];
+}
+
 export function getMobileBgDealers(): DealerRow[] {
   return raw
     .prepare(

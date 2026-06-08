@@ -3,24 +3,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import ReparseRunner from '@/components/ReparseRunner';
 import MobileBgMakeModelSyncRunner from '@/components/MobileBgMakeModelSyncRunner';
-import { raw } from '@/db/client';
-import { getMakeModelMappings } from '@/lib/queries';
+import { getActiveDealers, getMakeModelMappings } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
-
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-}
-
-function getDealers(): DealerRow[] {
-  return raw.prepare(`
-    SELECT id, slug, name
-    FROM dealers
-    WHERE active = 1
-    ORDER BY priority DESC, name
-  `).all() as DealerRow[];
-}
 
 function mappingStatus(row: {
   mobile_make_id: number | null;
@@ -37,7 +21,7 @@ function mappingStatus(row: {
 
 export default async function MappingPage() {
   const t = await getTranslations('ui');
-  const dealers = getDealers();
+  const dealers = getActiveDealers();
   const rows = getMakeModelMappings(1000);
   const unresolvedCount = rows.filter((row) => !row.mobile_make_id || !row.mobile_model_id || !row.cars_make_id || !row.cars_model_id).length;
 

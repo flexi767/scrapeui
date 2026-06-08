@@ -12,6 +12,34 @@ export interface DealerTemplateConfig {
   updatedAt: string;
 }
 
+export interface DealerTemplateListRow {
+  id: number;
+  dealerId: number | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  isActive: number;
+}
+
+export interface DealerTemplateDealerOption {
+  id: number;
+  name: string;
+}
+
+export interface DealerTemplateDealerContext {
+  slug: string;
+  activeTemplateConfigId: number | null;
+  firstListingId: string | null;
+}
+
+const TEMPLATE_LIST_SELECT = `
+  SELECT dtc.id, dtc.dealer_id as dealerId, dtc.name,
+          dtc.created_at as createdAt, dtc.updated_at as updatedAt,
+          CASE WHEN d.active_template_config_id = dtc.id THEN 1 ELSE 0 END as isActive
+  FROM dealer_template_configs dtc
+  LEFT JOIN dealers d ON d.id = dtc.dealer_id
+`;
+
 export function listDealerTemplateConfigs(dealerId: number): DealerTemplateConfig[] {
   return raw
     .prepare(
@@ -33,6 +61,35 @@ export function listAllDealerTemplateConfigs(): DealerTemplateConfig[] {
        ORDER BY dealer_id IS NULL DESC, dealer_id ASC, created_at ASC`,
     )
     .all() as DealerTemplateConfig[];
+}
+
+export function listDealerTemplateConfigRowsForSession(session: {
+  role: string;
+  dealerId: number | null;
+}): DealerTemplateListRow[] {
+  if (session.role === "admin") {
+    return raw
+      .prepare(
+        `${TEMPLATE_LIST_SELECT}
+         ORDER BY dtc.dealer_id IS NULL DESC, dtc.dealer_id ASC, dtc.created_at ASC`,
+      )
+      .all() as DealerTemplateListRow[];
+  }
+
+  if (!session.dealerId) return [];
+  return raw
+    .prepare(
+      `${TEMPLATE_LIST_SELECT}
+       WHERE dtc.dealer_id = ? OR dtc.dealer_id IS NULL
+       ORDER BY dtc.dealer_id IS NULL DESC, dtc.created_at ASC`,
+    )
+    .all(session.dealerId) as DealerTemplateListRow[];
+}
+
+export function listDealerTemplateDealerOptions(): DealerTemplateDealerOption[] {
+  return raw
+    .prepare(`SELECT id, name FROM dealers ORDER BY active DESC, priority DESC, name ASC`)
+    .all() as DealerTemplateDealerOption[];
 }
 
 export function getDealerTemplateConfig(id: number): DealerTemplateConfig | null {
@@ -59,6 +116,23 @@ export function getActiveDealerTemplateConfig(dealerId: number): DealerTemplateC
     )
     .get(dealerId) as DealerTemplateConfig | undefined;
   return row ?? null;
+}
+
+export function getDealerTemplateDealerContext(dealerId: number): DealerTemplateDealerContext | null {
+  const dealer = raw
+    .prepare(`SELECT slug, active_template_config_id as activeTemplateConfigId FROM dealers WHERE id = ?`)
+    .get(dealerId) as { slug: string; activeTemplateConfigId: number | null } | undefined;
+  if (!dealer) return null;
+
+  const firstListing = raw
+    .prepare(`SELECT mobile_id as firstListingId FROM listings WHERE dealer_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1`)
+    .get(dealerId) as { firstListingId: string } | undefined;
+
+  return {
+    slug: dealer.slug,
+    activeTemplateConfigId: dealer.activeTemplateConfigId,
+    firstListingId: firstListing?.firstListingId ?? null,
+  };
 }
 
 export function createDealerTemplateConfig(params: {

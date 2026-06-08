@@ -9,12 +9,8 @@ import { MOBILE_BG_COLORS } from "@/lib/mobile-bg/colors";
 import { raw } from "@/db/client";
 import { getListingThumbSrc } from "@/lib/listing-thumb";
 import { notDuplicateLExpr } from "@/lib/query-modules/types";
+import { getOwnDealers } from "@/lib/queries";
 
-interface DealerRow {
-  id: number;
-  slug: string;
-  name: string;
-}
 interface DealerListingSummaryRow {
   backup_id: number;
   dealer_id: number;
@@ -30,14 +26,6 @@ interface DealerListingSummaryRow {
   thumb_saved: number | null;
   first_backup_image_id: number | null;
   is_draft: number;
-}
-
-function getOwnDealers(): DealerRow[] {
-  return raw
-    .prepare(
-      `SELECT id, slug, name FROM dealers WHERE own = 1 AND active = 1 ORDER BY priority DESC, name`,
-    )
-    .all() as DealerRow[];
 }
 
 function getOwnListingsByDealer(): Record<
@@ -151,7 +139,7 @@ export default async function NewListingPage() {
     ? Array.from(transmissionMap.values())
     : [];
 
-  const dealers = getOwnDealers();
+  const dealers = getOwnDealers({ activeOnly: true });
   const initialDealerId = dealers.find(
     (dealer) => dealer.slug === "carbros",
   )?.id;

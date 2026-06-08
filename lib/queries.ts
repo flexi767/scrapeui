@@ -15,5 +15,13 @@ export {
   forkDealerTemplateConfig,
   activateDealerTemplateConfig,
   deleteDealerTemplateConfig,
+  listDealerTemplateConfigRowsForSession,
+  listDealerTemplateDealerOptions,
+  getDealerTemplateDealerContext,
 } from "./query-modules/dealer-templates";
-export type { DealerTemplateConfig } from "./query-modules/dealer-templates";
+export type {
+  DealerTemplateConfig,
+  DealerTemplateDealerContext,
+  DealerTemplateDealerOption,
+  DealerTemplateListRow,
+} from "./query-modules/dealer-templates";
