@@ -1,5 +1,6 @@
 'use client';
 import { useNode, type UserComponent } from '@craftjs/core';
+import { useTranslations } from 'next-intl';
 
 interface ListingGridBlockProps {
   columns?: 2 | 3 | 4;
@@ -23,6 +24,7 @@ export const ListingGridBlock: UserComponent<ListingGridBlockProps> = ({
   showFuel = true,
 }) => {
   const { connectors: { connect, drag } } = useNode();
+  const t = useTranslations('ui');
   return (
     <div
       ref={(ref) => { if (ref) connect(drag(ref)); }}
@@ -52,7 +54,7 @@ export const ListingGridBlock: UserComponent<ListingGridBlockProps> = ({
               {showPrice && <span>€12 500</span>}
               {showYear && <span>2020</span>}
               {showMileage && <span>95 000 km</span>}
-              {showFuel && <span>Diesel</span>}
+              {showFuel && <span>{t('diesel')}</span>}
             </div>
           </div>
         </div>

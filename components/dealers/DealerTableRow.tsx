@@ -151,7 +151,7 @@ export function DealerTableRow({
             {isLoginRunning ? (
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
             ) : (
-              <LoginBadge result={loginResult?.['mobile.bg']} label="mobile" />
+              <LoginBadge result={loginResult?.['mobile.bg']} label={t('mobile')} />
             )}
           </div>
         )}
@@ -163,7 +163,7 @@ export function DealerTableRow({
             {isLoginRunning ? (
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400" />
             ) : (
-              <LoginBadge result={loginResult?.['cars.bg']} label="cars" />
+              <LoginBadge result={loginResult?.['cars.bg']} label={t('cars')} />
             )}
           </div>
         )}
