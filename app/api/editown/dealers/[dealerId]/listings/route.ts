@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
 import { ownEditableSelectExprs, rankedBackupsCte } from '@/lib/query-modules/types';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
@@ -22,6 +23,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ dealerId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const dealerId = parsePositiveIntParam((await params).dealerId);
   if (!dealerId) {
     return NextResponse.json({ error: 'Invalid dealer ID' }, { status: 400 });

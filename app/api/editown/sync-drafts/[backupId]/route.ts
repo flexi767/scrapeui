@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { getEditOwnSyncRows } from '@/lib/queries';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
@@ -9,6 +10,9 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> }
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const backupId = parsePositiveIntParam((await params).backupId);
     if (!backupId) {

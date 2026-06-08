@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { getMobileBgVatLabel } from '@/lib/vat';
 import { parseJson, normalizeVin } from '@/lib/utils';
 import { normalizeExtras } from '@/lib/mobile-bg/extras';
@@ -66,6 +67,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ dealerId: string; mobileId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { dealerId: dealerIdParam, mobileId } = await params;
   const dealerId = parsePositiveIntParam(dealerIdParam);
   if (!dealerId) {
