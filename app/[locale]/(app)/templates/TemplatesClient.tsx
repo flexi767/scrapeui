@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { formatDateOnly } from '@/lib/date-format';
 import { errorMessage, parseApiResponse } from '@/lib/utils';
 import Link from 'next/link';
@@ -35,6 +36,7 @@ function ForkModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const t = useTranslations('ui');
   const [name, setName] = useState(`${defaultName} (copy)`);
   const [dealerId, setDealerId] = useState(
     sourceDealerId === null && dealerOptions.length === 1 ? String(dealerOptions[0].id) : '',
@@ -69,8 +71,8 @@ function ForkModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm mx-4 p-6 shadow-xl">
-        <h2 className="text-lg font-semibold mb-4">Fork Template</h2>
-        <label className="block text-sm text-gray-400 mb-1">Config name</label>
+        <h2 className="text-lg font-semibold mb-4">{t('fork_template')}</h2>
+        <label className="block text-sm text-gray-400 mb-1">{t('config_name')}</label>
         <input
           autoFocus
           value={name}
@@ -80,13 +82,13 @@ function ForkModal({
         />
         {requiresDealer && (
           <>
-            <label className="block text-sm text-gray-400 mt-4 mb-1">Dealer</label>
+            <label className="block text-sm text-gray-400 mt-4 mb-1">{t('dealer')}</label>
             <select
               value={dealerId}
               onChange={(e) => { setDealerId(e.target.value); setError(''); }}
               className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-blue-500 mb-1"
             >
-              <option value="">Select dealer</option>
+              <option value="">{t('select_dealer')}</option>
               {dealerOptions.map((dealer) => (
                 <option key={dealer.id} value={dealer.id}>
                   {dealer.name}

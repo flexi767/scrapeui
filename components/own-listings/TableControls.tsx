@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Check, RefreshCw, X } from "lucide-react";
 import { OwnListingRow } from "@/lib/queries";
 
@@ -80,12 +81,14 @@ export function SyncStateButton({
   syncing: boolean;
   onSync: () => void;
 }) {
+  const t = useTranslations("ui");
+
   if (syncing) {
     return (
       <button
         disabled
-        title="Syncing…"
-        aria-label="Syncing"
+        title={t("syncing")}
+        aria-label={t("syncing")}
         className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-500/50 text-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
       >
         <RefreshCw className="h-3 w-3 animate-spin" />
@@ -97,8 +100,8 @@ export function SyncStateButton({
     return (
       <button
         onClick={onSync}
-        title={row.last_mobile_sync_error || "Sync failed. Retry"}
-        aria-label="Retry sync"
+        title={row.last_mobile_sync_error || t("retry_sync")}
+        aria-label={t("retry_sync")}
         className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 text-red-300 hover:bg-red-500/10"
       >
         <X className="h-3 w-3" />
@@ -110,8 +113,8 @@ export function SyncStateButton({
     return (
       <button
         onClick={onSync}
-        title="Sync pending"
-        aria-label="Start sync"
+        title={t("sync_pending")}
+        aria-label={t("start_sync")}
         className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-500/60 text-blue-200 hover:bg-blue-500/10"
       >
         <RefreshCw className="h-3 w-3" />
@@ -122,7 +125,7 @@ export function SyncStateButton({
   if (row.last_mobile_sync_status === "success") {
     return (
       <StatusSymbol
-        title="Sync succeeded"
+        title={t("sync_succeeded")}
         className="border-emerald-500/50 text-emerald-300"
       >
         <Check className="h-3 w-3" />
@@ -131,7 +134,7 @@ export function SyncStateButton({
   }
 
   return (
-    <StatusSymbol title="Up to date" className="border-gray-700 text-gray-400">
+    <StatusSymbol title={t("up_to_date")} className="border-gray-700 text-gray-400">
       <Check className="h-3 w-3" />
     </StatusSymbol>
   );

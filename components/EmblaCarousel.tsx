@@ -2,6 +2,7 @@
 
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface Image {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function EmblaCarousel({ images, title }: Props) {
+  const t = useTranslations('ui');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
@@ -117,7 +119,7 @@ export default function EmblaCarousel({ images, title }: Props) {
         <button
           onClick={scrollPrev}
           className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-          aria-label="Previous image"
+          aria-label={t("previous_image")}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -126,7 +128,7 @@ export default function EmblaCarousel({ images, title }: Props) {
         <button
           onClick={scrollNext}
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-          aria-label="Next image"
+          aria-label={t("next_image")}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

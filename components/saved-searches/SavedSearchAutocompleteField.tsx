@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import {
   AutocompleteInput,
   type AutocompleteOption,
@@ -30,6 +33,7 @@ export function SavedSearchAutocompleteField({
   onUpdateField: (name: string, value: string) => void;
   onUpdateMake: (value: string) => void;
 }) {
+  const t = useTranslations('ui');
   const isMake = kind === "marka";
 
   return (
@@ -40,7 +44,7 @@ export function SavedSearchAutocompleteField({
       }
       options={options}
       placeholder={isMake ? "Type make" : "Type model"}
-      emptyLabel={isMake ? "No make matches" : "No model matches"}
+      emptyLabel={isMake ? t('no_make_matches') : t('no_model_matches')}
       hideLowCountOnEmpty={isMake}
       focusWhenOpen
       open={openAutocomplete === kind}

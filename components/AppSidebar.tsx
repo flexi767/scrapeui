@@ -130,8 +130,8 @@ export function AppSidebar() {
             <Link
               href={`/dealers/${dealerId}/credentials`}
               className="rounded-md p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-              title="My settings"
-              aria-label="My settings"
+              title={t("my_settings")}
+              aria-label={t("my_settings")}
             >
               <GearIcon className="h-4 w-4" />
             </Link>
@@ -147,8 +147,8 @@ export function AppSidebar() {
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            title="Sign out"
-            aria-label="Sign out"
+            title={t("sign_out")}
+            aria-label={t("sign_out")}
           >
             <LogoutIcon className="h-4 w-4" />
           </button>

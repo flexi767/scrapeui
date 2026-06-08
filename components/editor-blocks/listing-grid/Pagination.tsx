@@ -1,5 +1,6 @@
 'use client';
 import { useNode, type UserComponent } from '@craftjs/core';
+import { useTranslations } from 'next-intl';
 
 interface PaginationProps {
   style?: 'numbered' | 'prev-next' | 'load-more';
@@ -11,6 +12,7 @@ export const Pagination: UserComponent<PaginationProps> = ({
   color = '#2563eb',
 }) => {
   const { connectors: { connect, drag } } = useNode();
+  const t = useTranslations('ui');
   return (
     <div
       ref={(ref) => { if (ref) connect(drag(ref)); }}
@@ -21,12 +23,12 @@ export const Pagination: UserComponent<PaginationProps> = ({
       ))}
       {pStyle === 'prev-next' && (
         <>
-          <div style={{ padding: '6px 16px', border: `1px solid ${color}`, borderRadius: 6, color, cursor: 'pointer', fontSize: 13 }}>← Previous</div>
-          <div style={{ padding: '6px 16px', background: color, borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13 }}>Next →</div>
+          <div style={{ padding: '6px 16px', border: `1px solid ${color}`, borderRadius: 6, color, cursor: 'pointer', fontSize: 13 }}>{t('pagination_previous')}</div>
+          <div style={{ padding: '6px 16px', background: color, borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13 }}>{t('pagination_next')}</div>
         </>
       )}
       {pStyle === 'load-more' && (
-        <div style={{ padding: '10px 32px', background: color, borderRadius: 8, color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Load More</div>
+        <div style={{ padding: '10px 32px', background: color, borderRadius: 8, color: '#fff', fontWeight: 600, cursor: 'pointer' }}>{t('load_more')}</div>
       )}
     </div>
   );

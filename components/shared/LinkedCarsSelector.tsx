@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
@@ -21,6 +22,7 @@ export function LinkedCarsSelector({
   selected: number[];
   onChange: (ids: number[]) => void;
 }) {
+  const t = useTranslations('ui');
   const [listings, setListings] = useState<ListingSummary[]>([]);
 
   useEffect(() => {
@@ -36,10 +38,10 @@ export function LinkedCarsSelector({
 
   return (
     <div className="space-y-2">
-      <Label>Linked Cars</Label>
+      <Label>{t('linked_cars')}</Label>
       <div className="max-h-48 overflow-y-auto rounded-md border border-gray-600 bg-gray-800 p-2">
         {listings.length === 0 ? (
-          <p className="text-sm text-gray-400">No listings available</p>
+          <p className="text-sm text-gray-400">{t('no_listings_available')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-1">
             {listings.map((l) => (

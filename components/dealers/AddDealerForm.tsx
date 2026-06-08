@@ -1,4 +1,7 @@
+'use client';
+
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   CARS_BG_CREDENTIAL_SECTION,
   MOBILE_BG_CREDENTIAL_SECTION,
@@ -22,12 +25,13 @@ const MOBILE_URL_FIELD = getPlatformUrlField(MOBILE_BG_CREDENTIAL_SECTION);
 const CARS_URL_FIELD = getPlatformUrlField(CARS_BG_CREDENTIAL_SECTION);
 
 export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDealerFormProps) {
+  const t = useTranslations('ui');
   return (
     <form onSubmit={onSubmit} className="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4 space-y-3">
       <h3 className="text-sm font-medium text-gray-300">Add</h3>
       <div className="grid grid-cols-4 items-start gap-3">
         <DealerTextInput
-          placeholder="Name"
+          placeholder={t('name')}
           value={form.name}
           onValueChange={(value) =>
             setForm((current) => ({
@@ -39,7 +43,7 @@ export function AddDealerForm({ adding, error, form, setForm, onSubmit }: AddDea
           required
         />
         <DealerTextInput
-          placeholder="Slug"
+          placeholder={t('slug')}
           value={form.slug}
           onValueChange={(value) =>
             setForm((current) => ({ ...current, slug: slugifyDealerName(value) }))
