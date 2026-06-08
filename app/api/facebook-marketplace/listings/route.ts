@@ -1,22 +1,15 @@
 import { NextRequest } from "next/server";
 import { raw } from "@/db/client";
+import { requireAuth } from "@/lib/api/auth-helpers";
 import { buildMarketplaceListingPayloads } from "@/lib/facebook-marketplace/listing-payload";
 import { getOwnListings } from "@/lib/queries";
 
 export const runtime = "nodejs";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Private-Network": "true",
-};
-
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders });
-}
-
 export async function GET(request: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const sp = request.nextUrl.searchParams;
   const limit = Math.min(Math.max(Number(sp.get("limit") || 50), 1), 300);
   const search = sp.get("search") || "";
@@ -40,7 +33,6 @@ export async function GET(request: NextRequest) {
     { listings },
     {
       headers: {
-        ...corsHeaders,
         "Cache-Control": "no-store",
       },
     },
