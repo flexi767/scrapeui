@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 import path from "path";
+import { requireAuth } from "@/lib/api/auth-helpers";
 import { readJsonBody } from "@/lib/api/json-body";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const body = await readJsonBody<{ backupId?: unknown }>(req, {});
   const { backupId } = body ?? {};
 

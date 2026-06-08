@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
+import { requireAuth } from '@/lib/api/auth-helpers';
 
 export const runtime = 'nodejs';
 
@@ -11,6 +12,9 @@ interface Body {
 }
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const body = await req.json() as Body;
   const scriptArgs: string[] = [];
 

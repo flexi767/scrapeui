@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
@@ -23,6 +24,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
@@ -51,6 +55,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const { backupId: backupIdParam } = await params;
     const backupId = parsePositiveIntParam(backupIdParam);
@@ -196,6 +203,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {

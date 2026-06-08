@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import {
   deleteSearchProfile,
   getSavedSearchProfile,
@@ -12,6 +13,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
@@ -26,6 +30,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
@@ -45,6 +52,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ listingId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const listingId = parseIntParam((await params).listingId);
   if (listingId == null) {
     return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });

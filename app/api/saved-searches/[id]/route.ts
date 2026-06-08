@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import {
   deleteSavedSearch,
   getSavedSearchDetail,
@@ -14,6 +15,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
@@ -31,6 +35,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });
@@ -62,6 +69,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const id = parseIntParam((await params).id);
   if (id == null) {
     return NextResponse.json({ error: 'Invalid saved search id' }, { status: 400 });

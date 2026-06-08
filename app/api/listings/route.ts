@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { getListings, getListingSummaries } from '@/lib/queries';
 
 export async function GET(request: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const sp = request.nextUrl.searchParams;
 
   if (sp.has('summaries')) {

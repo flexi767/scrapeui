@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { readJsonBody } from '@/lib/api/json-body';
 import { currentIsoTimestamp } from '@/lib/date-format';
@@ -62,6 +63,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
@@ -78,6 +82,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
@@ -141,6 +148,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {

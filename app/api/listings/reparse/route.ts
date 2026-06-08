@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { fetchMakesModels, parseMakeModelSync } from '@/lib/mobile-bg/makes-models';
 
 interface Body {
@@ -96,6 +97,9 @@ function parseFromUrl(url: string): { make: string; model: string } | null {
 }
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const body = await req.json() as Body;
   const { id, dealer, missingOnly = false, dryRun = false } = body;
 

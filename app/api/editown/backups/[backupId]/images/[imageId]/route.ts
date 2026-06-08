@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { refreshImageCount, normalizeImageOrder, STORAGE_IMAGE_ROOT } from '../image-helpers';
 
@@ -20,6 +21,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ backupId: string; imageId: string }> },
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { backupId: backupIdParam, imageId: imageIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   const imageId = parsePositiveIntParam(imageIdParam);
