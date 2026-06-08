@@ -3,7 +3,7 @@ import { raw } from '@/db/client';
 import { getMobileBgVatLabel } from '@/lib/vat';
 import { parseJson, normalizeVin } from '@/lib/utils';
 import { normalizeExtras } from '@/lib/mobile-bg/extras';
-import { rankedBackupsCte } from '@/lib/query-modules/types';
+import { ownEditableSelectExprs, rankedBackupsCte } from '@/lib/query-modules/types';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 const MONTH_NAMES = [
@@ -77,26 +77,26 @@ export async function GET(
     SELECT
       l.dealer_id,
       l.mobile_id,
-      COALESCE(b.make, l.make) as make,
-      COALESCE(b.model, l.model) as model,
-      COALESCE(b.title, l.title) as title,
-      COALESCE(b.fuel, l.fuel) as fuel,
-      COALESCE(b.power, l.power) as power,
-      COALESCE(b.transmission, l.transmission) as transmission,
-      COALESCE(b.category, l.body_type) as body_type,
-      COALESCE(b.mileage, l.mileage) as mileage,
-      COALESCE(b.color, l.color) as color,
-      COALESCE(b.description, l.description) as description,
-      COALESCE(b.price_amount, l.current_price) as price_amount,
-      COALESCE(b.price_currency, 'EUR') as price_currency,
-      COALESCE(b.vat_included, l.vat) as vat_value,
+      ${ownEditableSelectExprs.make} as make,
+      ${ownEditableSelectExprs.model} as model,
+      ${ownEditableSelectExprs.title} as title,
+      ${ownEditableSelectExprs.fuel} as fuel,
+      ${ownEditableSelectExprs.power} as power,
+      ${ownEditableSelectExprs.transmission} as transmission,
+      ${ownEditableSelectExprs.bodyType} as body_type,
+      ${ownEditableSelectExprs.mileage} as mileage,
+      ${ownEditableSelectExprs.color} as color,
+      ${ownEditableSelectExprs.description} as description,
+      ${ownEditableSelectExprs.price} as price_amount,
+      ${ownEditableSelectExprs.priceCurrency} as price_currency,
+      ${ownEditableSelectExprs.vat} as vat_value,
       COALESCE(b.year, CAST(NULLIF(l.reg_year, '') AS INTEGER)) as year,
       l.reg_month,
       b.engine,
       COALESCE(NULLIF(l.vin, ''), NULL) as vin,
       l.euronorm,
       b.phones_json,
-      COALESCE(b.extras_json, l.extras_json) as extras_json,
+      ${ownEditableSelectExprs.extrasJson} as extras_json,
       b.tech_data_json,
       s.fields_json as snapshot_fields_json,
       s.checked_boxes_json as snapshot_checked_json

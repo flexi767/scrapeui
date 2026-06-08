@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { buildImageList, getThumbProxyUrl, parseJson, type ImageMeta } from '@/lib/utils';
-import { rankedBackupsCte } from '@/lib/query-modules/types';
+import { ownEditableSelectExprs, rankedBackupsCte } from '@/lib/query-modules/types';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 
 interface DealerListingSummaryRow {
@@ -31,10 +31,10 @@ export async function GET(
     ${rankedBackupsCte}
     SELECT
       l.mobile_id,
-      COALESCE(b.make, l.make) as make,
-      COALESCE(b.model, l.model) as model,
-      COALESCE(b.title, l.title) as title,
-      COALESCE(b.price_amount, l.current_price) as price_amount,
+      ${ownEditableSelectExprs.make} as make,
+      ${ownEditableSelectExprs.model} as model,
+      ${ownEditableSelectExprs.title} as title,
+      ${ownEditableSelectExprs.price} as price_amount,
       l.thumb_keys,
       l.full_keys,
       l.image_meta,

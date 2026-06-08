@@ -4,6 +4,7 @@ import { normalizeVatValue } from '@/lib/vat';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { readJsonBody } from '@/lib/api/json-body';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { mobileBgDraftPendingSetClause } from '@/lib/mobile-bg/draft-sync-status';
 import { errorMessage } from '@/lib/utils';
 import {
   buildBackupForm,
@@ -112,9 +113,7 @@ export async function PATCH(
           vat_included = ?,
           extras_json = ?,
           tech_data_json = ?,
-          draft_needs_sync = CASE WHEN listing_id IS NULL THEN draft_needs_sync ELSE 1 END,
-          last_mobile_sync_status = CASE WHEN listing_id IS NULL THEN last_mobile_sync_status ELSE 'pending' END,
-          last_mobile_sync_error = CASE WHEN listing_id IS NULL THEN last_mobile_sync_error ELSE NULL END,
+          ${mobileBgDraftPendingSetClause},
           updated_at = ?
         WHERE id = ?
       `).run(
@@ -169,9 +168,7 @@ export async function PATCH(
         vat_included = ?,
         kaparo = ?,
         ad_status = ?,
-        draft_needs_sync = 1,
-        last_mobile_sync_status = 'pending',
-        last_mobile_sync_error = NULL,
+        ${mobileBgDraftPendingSetClause},
         updated_at = ?
       WHERE id = ?
     `).run(title, priceAmount, vatIncluded, kaparo, adStatus, now, backupId);

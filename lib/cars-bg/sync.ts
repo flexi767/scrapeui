@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { runUpdate } from '@/lib/listings/sql';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { loginToCarsBg } from '@/lib/cars-bg/auth';
 import {
   extractOfferId,
@@ -19,6 +19,7 @@ import {
   applyCarsBgSyncedContent,
   getCarsBgTitleValue,
   planCarsBgDealerSync,
+  type CarsBgDiff,
   type CarsBgSyncPlan,
 } from '@/lib/cars-bg/sync-plan';
 
@@ -77,6 +78,56 @@ export function clearCarsId(db: Database.Database, carsId: string): void {
   );
 }
 
+async function syncCarsBgDiff(
+  db: Database.Database,
+  page: Page,
+  diff: CarsBgDiff,
+  logger: (message: string) => void,
+): Promise<boolean> {
+  const targetId = diff.mobileBg.carsId || diff.carsBg.carsId || extractOfferId(diff.carsBg.url);
+  if (!targetId) return false;
+
+  const updateParts: string[] = [];
+  let ok = true;
+
+  if (diff.priceDiff && diff.mobileBg.price.amount != null) {
+    updateParts.push(`price €${diff.carsBg.price.amount ?? '—'} -> €${diff.mobileBg.price.amount}`);
+    ok = ok && await updateListingPrice(page, targetId, diff.mobileBg);
+  }
+
+  let contentUpdated = false;
+  if (diff.titleDiff || diff.descriptionDiff) {
+    const changedFields = [
+      diff.titleDiff ? 'title' : null,
+      diff.descriptionDiff ? 'description' : null,
+    ].filter(Boolean).join('/');
+    updateParts.push(changedFields);
+    contentUpdated = await updateListingContent(page, targetId, diff.mobileBg);
+    ok = ok && contentUpdated;
+  }
+
+  logger(`Updating cars.bg ${updateParts.join(', ')} for ${diff.mobileBg.fullTitle}`);
+
+  if (!diff.mobileBg.carsId && targetId && diff.mobileBg.mobileId) {
+    saveCarsId(db, diff.mobileBg.mobileId, targetId);
+  }
+  if (diff.priceDiff) {
+    applyCarsBgSyncedContent(db, diff.carsBg.id, {
+      price: diff.mobileBg.price.amount ?? null,
+    });
+  }
+  if (contentUpdated) {
+    applyCarsBgSyncedContent(db, diff.carsBg.id, {
+      title: diff.titleDiff ? (getCarsBgTitleValue(diff.mobileBg) || null) : undefined,
+      description: diff.descriptionDiff
+        ? (sanitizeCarsBgDescription(diff.mobileBg.description || diff.mobileBg.fullTitle) || null)
+        : undefined,
+    });
+  }
+
+  return ok;
+}
+
 export async function syncCarsBgDealer(
   db: Database.Database,
   dealer: CarsBgDealerAccount,
@@ -118,52 +169,10 @@ export async function syncCarsBgDealer(
     if (!loggedIn) throw new Error(`Cars.bg login failed for ${dealer.slug}`);
 
     for (const diff of plan.diffs) {
-      const targetId = diff.mobileBg.carsId || diff.carsBg.carsId || extractOfferId(diff.carsBg.url);
-      if (!targetId) {
-        result.failedUpdates++;
-        continue;
-      }
-      const updateParts: string[] = [];
-      let ok = true;
-      if (diff.priceDiff && diff.mobileBg.price.amount != null) {
-        updateParts.push(`price €${diff.carsBg.price.amount ?? '—'} -> €${diff.mobileBg.price.amount}`);
-        ok = ok && await updateListingPrice(page, targetId, diff.mobileBg);
-      }
-      let contentUpdated = false;
-      if (diff.titleDiff || diff.descriptionDiff) {
-        const changedFields = [
-          diff.titleDiff ? 'title' : null,
-          diff.descriptionDiff ? 'description' : null,
-        ].filter(Boolean).join('/');
-        updateParts.push(changedFields);
-        contentUpdated = await updateListingContent(page, targetId, diff.mobileBg);
-        ok = ok && contentUpdated;
-      }
-      logger(`Updating cars.bg ${updateParts.join(', ')} for ${diff.mobileBg.fullTitle}`);
-      if (ok) {
+      if (await syncCarsBgDiff(db, page, diff, logger)) {
         result.updated++;
       } else {
         result.failedUpdates++;
-      }
-      if (!diff.mobileBg.carsId && targetId && diff.mobileBg.mobileId) {
-        saveCarsId(db, diff.mobileBg.mobileId, targetId);
-      }
-      if (diff.priceDiff) {
-        applyCarsBgSyncedContent(db, diff.carsBg.id, {
-          price: diff.mobileBg.price.amount ?? null,
-        });
-      }
-      if (contentUpdated) {
-        // Mirror what we just pushed to cars.bg onto the local `source='c'`
-        // row so the next planCarsBgDealerSync run doesn't re-detect the same
-        // diff. updateListingContent pushes the mobile.bg carsbg_title and the
-        // mobile.bg description (sanitized).
-        applyCarsBgSyncedContent(db, diff.carsBg.id, {
-          title: diff.titleDiff ? (getCarsBgTitleValue(diff.mobileBg) || null) : undefined,
-          description: diff.descriptionDiff
-            ? (sanitizeCarsBgDescription(diff.mobileBg.description || diff.mobileBg.fullTitle) || null)
-            : undefined,
-        });
       }
     }
 

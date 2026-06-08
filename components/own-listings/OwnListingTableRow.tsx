@@ -3,17 +3,14 @@
 import { type KeyboardEvent } from "react";
 import { SearchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
-import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
 import { formatDateOnly } from "@/lib/date-format";
-import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
 import { OwnListingRow } from "@/lib/queries";
 import { formatCount, formatDate } from "@/lib/utils";
-import { OwnListingPublishButtons } from "./OwnListingPublishButtons";
 import { OwnListingPriceCell } from "./OwnListingPriceCell";
-import { SyncStateButton, stopEditorPointerPropagation } from "./TableControls";
+import { OwnListingActionCell, OwnListingTitleCell } from "./OwnListingTableCells";
+import { stopEditorPointerPropagation } from "./TableControls";
 import { getOwnListingRowKey, type OwnListingEditForm } from "./editing";
 import { CARS_BG_TITLE_MAX_LENGTH } from "@/lib/cars-bg/title";
 
@@ -56,8 +53,6 @@ export function OwnListingTableRow({
   onEditorKeyDown,
 }: OwnListingTableRowProps) {
   const t = useTranslations('ui');
-  const thumbSrc = getListingThumbSrc(row, { preferListingImage: true });
-  const thumbAlt = getListingThumbAlt(row);
   const kmFormatted = formatCount(row.mileage);
 
   return (
@@ -73,104 +68,30 @@ export function OwnListingTableRow({
       onClick={!editing ? () => onStartEdit(row) : undefined}
       style={{ cursor: editing ? "default" : "pointer" }}
     >
-      <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start gap-2">
-          <div className="flex flex-row items-start gap-1">
-            <OwnListingPublishButtons
-              publishingToFb={publishingToFb}
-              row={row}
-              onPublishToFacebook={onPublishToFacebook}
-            />
-            <div className="flex flex-col items-center gap-1">
-              <SyncStateButton
-                row={row}
-                syncing={syncing}
-                onSync={() => onSync(row)}
-              />
-              {editing ? (
-                <button
-                  onClick={() => onSave({ closeAfterSave: true })}
-                  disabled={saving}
-                  title={t('save')}
-                  className="text-green-400 hover:text-green-300 disabled:opacity-50 text-base leading-none"
-                >
-                  ✓
-                </button>
-              ) : (
-                <button
-                  onClick={() => onStartEdit(row)}
-                  disabled={saving}
-                  title={t('edit')}
-                  className={`text-gray-400 hover:text-white text-base leading-none ${saving ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
-                >
-                  ✎
-                </button>
-              )}
-            </div>
-          </div>
-          <ListingSearchPrefillButton listingId={row.id} />
-          <ListingThumbPreview
-            src={thumbSrc}
-            alt={thumbAlt}
-            previewAlt={`${thumbAlt} preview`}
-            placeholderClassName="h-12 w-16 rounded bg-gray-700"
-          />
-        </div>
-      </td>
+      <OwnListingActionCell
+        row={row}
+        editing={editing}
+        saving={saving}
+        syncing={syncing}
+        publishingToFb={publishingToFb}
+        onStartEdit={onStartEdit}
+        onSave={onSave}
+        onSync={onSync}
+        onPublishToFacebook={onPublishToFacebook}
+      />
 
       <td className="px-2 py-1.5 whitespace-nowrap">
         <div className="font-medium text-white">{row.make ?? "—"}</div>
         <div className="text-xs text-gray-400">{row.model ?? "—"}</div>
       </td>
 
-      <td className="px-2 py-1.5 max-w-[200px]">
-        {editing ? (
-          <div className="space-y-2">
-            <textarea
-              rows={2}
-              value={editForm.title}
-              onChange={(e) =>
-                onEditFormChange({ ...editForm, title: e.target.value })
-              }
-              onClick={stopEditorPointerPropagation}
-              onMouseDown={stopEditorPointerPropagation}
-              onPointerDown={stopEditorPointerPropagation}
-              onKeyDown={onEditorKeyDown}
-              className="min-h-12 w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white resize-y"
-            />
-            <div>
-              <input
-                type="text"
-                maxLength={CARS_BG_TITLE_MAX_LENGTH}
-                value={editForm.carsbg_title}
-                onChange={(e) =>
-                  onEditFormChange({
-                    ...editForm,
-                    carsbg_title: e.target.value.slice(0, CARS_BG_TITLE_MAX_LENGTH),
-                  })
-                }
-                onClick={stopEditorPointerPropagation}
-                onMouseDown={stopEditorPointerPropagation}
-                onPointerDown={stopEditorPointerPropagation}
-                onKeyDown={onEditorKeyDown}
-                placeholder={t('carsbg_title_placeholder')}
-                className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs leading-5 text-white"
-              />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <span className="block whitespace-normal break-words text-xs text-gray-400">
-              {row.title}
-            </span>
-            {row.carsbg_title && (
-              <span className="mt-1 block whitespace-normal break-words text-[11px] text-gray-500">
-                {row.carsbg_title}
-              </span>
-            )}
-          </div>
-        )}
-      </td>
+      <OwnListingTitleCell
+        row={row}
+        editing={editing}
+        editForm={editForm}
+        onEditFormChange={onEditFormChange}
+        onEditorKeyDown={onEditorKeyDown}
+      />
 
       <td className="px-2 py-1.5 text-gray-400">
         {editing && (

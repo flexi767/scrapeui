@@ -1,5 +1,5 @@
 import { OwnListingRow } from '@/lib/queries';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 import {
   buildOwnListingPatchBody,
   getOwnListingSaveEndpoint,
@@ -7,33 +7,27 @@ import {
 } from './editing';
 
 export async function saveOwnListingEdit(row: OwnListingRow, form: OwnListingEditForm) {
-  const res = await fetch(getOwnListingSaveEndpoint(row), {
+  return apiRequest<unknown>(getOwnListingSaveEndpoint(row), 'Save failed', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildOwnListingPatchBody(form)),
+    json: buildOwnListingPatchBody(form),
   });
-  return parseApiResponse<unknown>(res, 'Save failed');
 }
 
 export async function syncOwnListingToMobileBg(row: OwnListingRow) {
-  const res = await fetch('/api/mobilebg/updates', {
+  await apiRequest<unknown>('/api/mobilebg/updates', 'Sync failed', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    json: {
       dealerSlug: row.dealer_slug,
       backupId: row.backup_id,
-    }),
+    },
   });
-  await parseApiResponse<unknown>(res, 'Sync failed');
 }
 
 export async function launchFacebookMarketplaceDraft(row: OwnListingRow) {
-  const res = await fetch('/api/facebook-marketplace', {
+  const data = await apiRequest<{ message?: string }>('/api/facebook-marketplace', 'Failed to launch Facebook Marketplace', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ backupId: row.backup_id }),
+    json: { backupId: row.backup_id },
   });
-  const data = await parseApiResponse<{ message?: string }>(res, 'Failed to launch Facebook Marketplace');
 
   return data.message ?? 'Facebook Marketplace browser launched';
 }

@@ -181,6 +181,24 @@ export async function parseApiResponse<T>(response: Response, fallbackError: str
   return payload as T;
 }
 
+export async function apiRequest<T>(
+  url: string,
+  fallbackError: string,
+  options: RequestInit & { json?: unknown } = {},
+): Promise<T> {
+  const { json, headers, ...init } = options;
+  const requestHeaders = new Headers(headers);
+  if (json !== undefined) {
+    requestHeaders.set('Content-Type', 'application/json');
+  }
+  const response = await fetch(url, {
+    ...init,
+    headers: requestHeaders,
+    body: json === undefined ? init.body : JSON.stringify(json),
+  });
+  return parseApiResponse<T>(response, fallbackError);
+}
+
 export function errorMessage(error: unknown, fallback?: string): string {
   return error instanceof Error ? error.message : fallback ?? String(error);
 }

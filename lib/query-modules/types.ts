@@ -275,12 +275,37 @@ export const ownTitleExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.tit
 export const ownMileageExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.mileage, l.mileage) ELSE l.mileage END`;
 export const ownBodyTypeExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.category, l.body_type) ELSE l.body_type END`;
 export const ownFuelExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.fuel, l.fuel) ELSE l.fuel END`;
+export const ownPowerExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.power, l.power) ELSE l.power END`;
+export const ownTransmissionExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.transmission, l.transmission) ELSE l.transmission END`;
+export const ownColorExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.color, l.color) ELSE l.color END`;
+export const ownDescriptionExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.description, l.description) ELSE l.description END`;
 export const ownPriceExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.price_amount, l.current_price) ELSE l.current_price END`;
+export const ownPriceCurrencyExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.price_currency, 'EUR') ELSE 'EUR' END`;
 export const ownEffectiveVatExpr = `CASE WHEN ${ownDraftActiveExpr} THEN ${ownVatExpr} ELSE l.vat END`;
 export const ownKaparoExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.kaparo, l.kaparo) ELSE l.kaparo END`;
 export const ownAdStatusExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.ad_status, l.ad_status) ELSE l.ad_status END`;
 export const ownViewsExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.views, l.views) ELSE l.views END`;
 export const ownExtrasJsonExpr = `CASE WHEN ${ownDraftActiveExpr} THEN COALESCE(b.extras_json, l.extras_json) ELSE l.extras_json END`;
+
+export const ownEditableSelectExprs = {
+  make: ownMakeExpr,
+  model: ownModelExpr,
+  title: ownTitleExpr,
+  mileage: ownMileageExpr,
+  bodyType: ownBodyTypeExpr,
+  fuel: ownFuelExpr,
+  power: ownPowerExpr,
+  transmission: ownTransmissionExpr,
+  color: ownColorExpr,
+  description: ownDescriptionExpr,
+  price: ownPriceExpr,
+  priceCurrency: ownPriceCurrencyExpr,
+  vat: ownEffectiveVatExpr,
+  kaparo: ownKaparoExpr,
+  adStatus: ownAdStatusExpr,
+  views: ownViewsExpr,
+  extrasJson: ownExtrasJsonExpr,
+} as const;
 
 export const ownNeedsSyncExpr = `
   CASE

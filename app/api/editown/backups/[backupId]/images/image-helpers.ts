@@ -1,6 +1,7 @@
 import path from 'path';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { mobileBgDraftPendingSetClause } from '@/lib/mobile-bg/draft-sync-status';
 
 export const STORAGE_IMAGE_ROOT = path.join(process.cwd(), 'storage', 'mobilebg-backups');
 
@@ -12,9 +13,7 @@ export function refreshImageCount(backupId: number): void {
       SET image_count = (
         SELECT COUNT(*) FROM mobilebg_backup_images WHERE backup_id = ?
       ),
-      draft_needs_sync = CASE WHEN listing_id IS NULL THEN draft_needs_sync ELSE 1 END,
-      last_mobile_sync_status = CASE WHEN listing_id IS NULL THEN last_mobile_sync_status ELSE 'pending' END,
-      last_mobile_sync_error = CASE WHEN listing_id IS NULL THEN last_mobile_sync_error ELSE NULL END,
+      ${mobileBgDraftPendingSetClause},
       updated_at = ?
       WHERE id = ?
     `,
