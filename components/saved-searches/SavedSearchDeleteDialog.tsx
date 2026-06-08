@@ -1,4 +1,7 @@
+'use client';
+
 import { Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,13 +25,14 @@ export function SavedSearchDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations('ui');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border border-gray-700 bg-gray-900 text-gray-100">
         <DialogHeader>
-          <DialogTitle>Delete saved search?</DialogTitle>
+          <DialogTitle>{t('delete_saved_search')}</DialogTitle>
           <DialogDescription className="text-gray-400">
-            This will permanently remove the saved search.
+            {t('delete_saved_search_confirm')}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -39,7 +43,7 @@ export function SavedSearchDeleteDialog({
             onClick={onCancel}
             disabled={busy}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             type="button"
@@ -53,7 +57,7 @@ export function SavedSearchDeleteDialog({
             ) : (
               <Trash2 className="mr-1 h-4 w-4" />
             )}
-            Delete
+            {t('delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
