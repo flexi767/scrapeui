@@ -4,6 +4,9 @@ import { translations, translationKeys } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { invalidateTranslationCache } from '@/lib/translation-cache';
+import { getTranslationsFromDb } from '@/i18n/db';
+
+const ALL_LOCALES = ['bg', 'en', 'de', 'ru'] as const;
 
 export async function GET() {
   const session = await auth();
@@ -88,7 +91,11 @@ export async function PUT(request: Request) {
         .run();
     }
 
+    // Clear stale cache then immediately re-warm all locales so the
+    // next page render hits the cache rather than the DB.
     invalidateTranslationCache();
+    await Promise.all(ALL_LOCALES.map((l) => getTranslationsFromDb(l)));
+
     return Response.json({ success: true });
   } catch (error) {
     console.error('Error updating translation:', error);
