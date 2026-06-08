@@ -10,6 +10,7 @@ import {
   previousValueIfChanged,
 } from '@/lib/listings/snapshots';
 import { normalizeListingSpecs } from '@/lib/listings/normalize';
+import { booleanFlag, priceChanged as hasPriceChanged } from '@/lib/listings/persistence-utils';
 import { runInsert, runUpdate, type ColumnValues } from '@/lib/listings/sql';
 import { type MakesMap } from '@/lib/mobile-bg/makes-models';
 
@@ -213,13 +214,13 @@ export async function upsertMobileBgListing(
     !!listing.description;
 
   if (existing) {
-    const priceChanged = price !== null && price !== existing.current_price;
+    const priceChanged = hasPriceChanged(price, existing.current_price);
     const vatChanged = vat != null ? vat !== existing.vat : false;
     const lastEditChanged = isDeep ? (listing.lastEdit || null) !== (existing.last_edit || null) : false;
     const hadViews = existing.views != null;
     const viewsChanged = isDeep ? hadViews && views !== existing.views : false;
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
-    const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
+    const kaparoChanged = booleanFlag(listing.kaparo) !== booleanFlag(existing.kaparo);
     const titleChanged = normalizedTitle !== (existing.title || '');
     const hadDescription = Boolean((existing.description || '').trim());
     const descriptionChanged = isDeep
@@ -231,7 +232,7 @@ export async function upsertMobileBgListing(
       lastEdit: { changed: lastEditChanged, previous: existing.last_edit || null },
       views: { changed: viewsChanged, previous: existing.views },
       adStatus: { changed: adStatusChanged, previous: existing.ad_status || 'none' },
-      kaparo: { changed: kaparoChanged, previous: existing.kaparo ? 1 : 0 },
+      kaparo: { changed: kaparoChanged, previous: booleanFlag(existing.kaparo) },
       title: { changed: titleChanged, previous: existing.title || null },
       description: { changed: descriptionChanged, previous: existing.description || null },
     };
@@ -314,8 +315,8 @@ export async function upsertMobileBgListing(
         description: isDeep ? listing.description || null : existing.description,
         extras_json: isDeep ? extrasJson : (existing.extras_json ?? null),
         ad_status: listing.adStatus || existing.ad_status || 'none',
-        kaparo: listing.kaparo ? 1 : 0,
-        is_new: isDeep ? (listing.isNew ? 1 : 0) : existing.is_new,
+        kaparo: booleanFlag(listing.kaparo),
+        is_new: isDeep ? booleanFlag(listing.isNew) : existing.is_new,
         last_edit: isDeep ? listing.lastEdit || null : existing.last_edit,
         views: isDeep ? views : (existing.views ?? null),
         current_price: price,
@@ -355,8 +356,8 @@ export async function upsertMobileBgListing(
     description: listing.description || null,
     extras_json: extrasJson,
     ad_status: listing.adStatus || 'none',
-    kaparo: listing.kaparo ? 1 : 0,
-    is_new: listing.isNew ? 1 : 0,
+    kaparo: booleanFlag(listing.kaparo),
+    is_new: booleanFlag(listing.isNew),
     last_edit: listing.lastEdit || null,
     views,
     current_price: price,

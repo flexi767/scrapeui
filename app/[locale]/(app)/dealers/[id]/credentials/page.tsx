@@ -10,47 +10,30 @@ import { useTranslations } from 'next-intl';
 import { CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import {
   SOCIAL_CREDENTIAL_SECTIONS,
-  pickSocialAccountFields,
-  type SocialAccountFields,
   type SocialCredentialField,
 } from '@/lib/dealers/socialCredentials';
 import {
   PLATFORM_CREDENTIAL_SECTIONS,
-  pickPlatformAccountFields,
-  type PlatformAccountFields,
   type PlatformCredentialField,
   type PlatformTestService,
 } from '@/lib/dealers/platformCredentials';
 import { DEALER_TEMPLATES as TEMPLATES } from '@/lib/dealer-config';
-import { errorMessage, parseApiResponse } from '@/lib/utils';
-
-interface DealerCreds extends PlatformAccountFields<string | null>, SocialAccountFields<string | null> {
-  id: number;
-  slug: string;
-  name: string;
-  public_enabled: number;
-  template: string;
-  public_domain: string | null;
-  public_content: string | null;
-}
-
-const CONTENT_PAGES = [
-  { key: 'about', label: 'About', placeholder: 'Tell visitors about your dealership. Leave blank to use the default text.' },
-  { key: 'finance', label: 'Financing', placeholder: 'Describe your finance options. Leave blank to use the default text.' },
-  { key: 'privacy', label: 'Privacy Policy', placeholder: 'Your privacy policy. Leave blank to use the default text.' },
-  { key: 'terms', label: 'Terms & Conditions', placeholder: 'Your terms. Leave blank to use the default text.' },
-] as const;
-
-type ContentForm = Record<(typeof CONTENT_PAGES)[number]['key'], string>;
-
-const EMPTY_CONTENT: ContentForm = { about: '', finance: '', privacy: '', terms: '' };
+import {
+  buildPublicContentPayload,
+  CONTENT_PAGES,
+  EMPTY_CONTENT,
+  fetchDealerCredentials,
+  getCredentialForm,
+  getPublicForm,
+  parseContentForm,
+  patchDealerCredentials,
+  testDealerCredentialLogin,
+  type ContentForm,
+  type DealerCreds,
+} from '@/components/dealers/credentials-api';
+import { errorMessage } from '@/lib/utils';
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'fail';
-
-interface PlatformTestResult {
-  ok: boolean;
-  reason?: string;
-}
 
 type CredentialField = PlatformCredentialField | SocialCredentialField | {
   key: string;
@@ -196,28 +179,11 @@ export default function DealerCredentialsPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/dealers/${dealerId}/credentials`);
-      const data = await parseApiResponse<DealerCreds>(res, 'Could not load dealer');
+      const data = await fetchDealerCredentials(dealerId);
       setDealer(data);
-      setForm({
-        ...pickPlatformAccountFields(data),
-        ...pickSocialAccountFields(data),
-      });
-      setPublicForm({
-        public_enabled: data.public_enabled === 1,
-        template: data.template ?? 'bold',
-        public_domain: data.public_domain ?? '',
-      });
-      let parsedContent: Partial<ContentForm> = {};
-      if (data.public_content) {
-        try { parsedContent = JSON.parse(data.public_content) as Partial<ContentForm>; } catch { parsedContent = {}; }
-      }
-      setContentForm({
-        about: parsedContent.about ?? '',
-        finance: parsedContent.finance ?? '',
-        privacy: parsedContent.privacy ?? '',
-        terms: parsedContent.terms ?? '',
-      });
+      setForm(getCredentialForm(data));
+      setPublicForm(getPublicForm(data));
+      setContentForm(parseContentForm(data.public_content));
     } catch (error) {
       toast.error(errorMessage(error, 'Could not load dealer'));
     } finally {
@@ -249,12 +215,7 @@ export default function DealerCredentialsPage() {
     for (const k of keys) payload[k] = form[k] || null;
     setSaving(sectionName);
     try {
-      const res = await fetch(`/api/dealers/${dealerId}/credentials`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      await parseApiResponse<unknown>(res, 'Save failed');
+      await patchDealerCredentials(dealerId, payload);
       toast.success(`${sectionName} saved`);
     } catch (error) {
       toast.error(errorMessage(error, 'Save failed'));
@@ -266,16 +227,11 @@ export default function DealerCredentialsPage() {
   async function savePublic() {
     setSaving('public');
     try {
-      const res = await fetch(`/api/dealers/${dealerId}/credentials`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          public_enabled: publicForm.public_enabled,
-          template: publicForm.template,
-          public_domain: publicForm.public_domain || null,
-        }),
+      await patchDealerCredentials(dealerId, {
+        public_enabled: publicForm.public_enabled,
+        template: publicForm.template,
+        public_domain: publicForm.public_domain || null,
       });
-      await parseApiResponse<unknown>(res, 'Save failed');
       toast.success(t('public_page_settings_saved'));
       await load();
     } catch (error) {
@@ -288,18 +244,9 @@ export default function DealerCredentialsPage() {
   async function saveContent() {
     setSaving('content');
     try {
-      // Only persist non-empty pages so blank fields fall back to the defaults.
-      const payload: Record<string, string> = {};
-      for (const { key } of CONTENT_PAGES) {
-        const value = contentForm[key].trim();
-        if (value) payload[key] = value;
-      }
-      const res = await fetch(`/api/dealers/${dealerId}/credentials`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ public_content: Object.keys(payload).length ? JSON.stringify(payload) : null }),
+      await patchDealerCredentials(dealerId, {
+        public_content: buildPublicContentPayload(contentForm),
       });
-      await parseApiResponse<unknown>(res, 'Save failed');
       toast.success(t('page_content_saved'));
       await load();
     } catch (error) {
@@ -312,23 +259,16 @@ export default function DealerCredentialsPage() {
   async function testLogin(service: PlatformTestService) {
     setTestStatus((s) => ({ ...s, [service]: 'testing' }));
     try {
-      const res = await fetch('/api/dealers/test-logins', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [dealerId] }),
-      });
-      const data = await parseApiResponse<Record<number, Record<string, PlatformTestResult>>>(res, 'Test failed');
-      const result = data[dealerId];
-      const key = PLATFORM_CREDENTIAL_SECTIONS.find((section) => section.testService === service)?.loginResultKey;
-      if (!key) return;
-      const r = result?.[key];
+      const test = await testDealerCredentialLogin(dealerId, service);
+      if (!test) return;
+      const r = test.result;
       if (r?.ok) {
         setTestStatus((s) => ({ ...s, [service]: 'ok' }));
-        toast.success(`${key} login OK`);
+        toast.success(`${test.key} login OK`);
       } else {
         setTestStatus((s) => ({ ...s, [service]: 'fail' }));
         setTestReason((s) => ({ ...s, [service]: r?.reason ?? 'Login failed' }));
-        toast.error(`${key} login failed: ${r?.reason ?? 'unknown'}`);
+        toast.error(`${test.key} login failed: ${r?.reason ?? 'unknown'}`);
       }
     } catch (error) {
       setTestStatus((s) => ({ ...s, [service]: 'fail' }));

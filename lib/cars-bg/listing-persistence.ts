@@ -17,6 +17,12 @@ import {
   previousValueIfChanged,
 } from '@/lib/listings/snapshots';
 import { normalizeListingSpecs } from '@/lib/listings/normalize';
+import {
+  booleanFlag,
+  jsonOrNull,
+  normalizeProvidedDescription,
+  priceChanged as hasPriceChanged,
+} from '@/lib/listings/persistence-utils';
 import { runInsert, runUpdate } from '@/lib/listings/sql';
 import { type MakesMap } from '@/lib/mobile-bg/makes-models';
 
@@ -135,17 +141,17 @@ export function applyCarsBgOwnerDetails(
 
   if (viewsChanged) insertListingSnapshot(db, existingCars.id, { views: oldViews, recordedAt: now });
 
-  const descriptionProvided = typeof details.description === 'string';
+  const description = normalizeProvidedDescription(details.description);
 
   runUpdate(
     db,
     'listings',
     {
       cars_total_views: details.carsTotalViews,
-      cars_images: details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
+      cars_images: jsonOrNull(details.carsImages),
       image_count: imageCount,
       full_keys: fullKeys,
-      description: descriptionProvided ? details.description!.trim() || null : undefined,
+      description: description.provided ? description.value : undefined,
       last_seen_at: now,
     },
     { sql: 'id = ?', params: [existingCars.id] },
@@ -190,7 +196,7 @@ export function applyCarsBgOwnerDetails(
     'listings',
     {
       cars_total_views: details.carsTotalViews,
-      cars_images: details.carsImages.length > 0 ? JSON.stringify(details.carsImages) : null,
+      cars_images: jsonOrNull(details.carsImages),
     },
     { sql: 'id = ?', params: [matchingMobile.id] },
   );
@@ -249,8 +255,7 @@ export function upsertCarsBgListing(
   const carsbgCreatedDate: string | null = listing.carsbgCreatedDate ?? null;
   const carsbgEditedDate: string | null = listing.carsbgEditedDate ?? null;
   const rawDescription: string | null | undefined = listing.description;
-  const descriptionProvided = typeof rawDescription === 'string';
-  const descriptionValue: string | null = descriptionProvided ? (rawDescription!.trim() || null) : null;
+  const description = normalizeProvidedDescription(rawDescription);
   const matchingMobile = findMatchingMobileListing(db, dealerId, listing, make, model);
   const isDuplicate = matchingMobile ? 1 : 0;
   const mobileCarsPrice = matchingMobile
@@ -283,14 +288,14 @@ export function upsertCarsBgListing(
   const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as ExistingCarsListing | undefined;
 
   if (existing) {
-    const priceChanged = price !== null && price !== existing.current_price;
+    const priceChanged = hasPriceChanged(price, existing.current_price);
     const titleChanged = normalizedTitle !== (existing.title || '');
     const adStatusChanged = (listing.adStatus || 'none') !== (existing.ad_status || 'none');
-    const kaparoChanged = (listing.kaparo ? 1 : 0) !== (existing.kaparo ? 1 : 0);
+    const kaparoChanged = booleanFlag(listing.kaparo) !== booleanFlag(existing.kaparo);
     const snapshotChanges = {
       price: { changed: priceChanged, previous: existing.current_price },
       adStatus: { changed: adStatusChanged, previous: existing.ad_status || 'none' },
-      kaparo: { changed: kaparoChanged, previous: existing.kaparo ? 1 : 0 },
+      kaparo: { changed: kaparoChanged, previous: booleanFlag(existing.kaparo) },
       title: { changed: titleChanged, previous: existing.title || null },
     };
     const trackedChange = hasListingSnapshotChanges(snapshotChanges);
@@ -351,7 +356,7 @@ export function upsertCarsBgListing(
         power: listing.power || existing.power,
         mileage: listing.mileage || existing.mileage,
         ad_status: listing.adStatus || existing.ad_status || 'none',
-        kaparo: listing.kaparo ? 1 : 0,
+        kaparo: booleanFlag(listing.kaparo),
         current_price: price,
         price_change: priceChangeDelta,
         reg_year: listing.year || existing.reg_year,
@@ -360,9 +365,9 @@ export function upsertCarsBgListing(
         carsbg_created_date: carsbgCreatedDate || existing.carsbg_created_date || null,
         carsbg_edited_date: carsbgEditedDate || existing.carsbg_edited_date || null,
         cars_price: null,
-        description: descriptionProvided ? descriptionValue : undefined,
+        description: description.provided ? description.value : undefined,
         image_count: hasImages ? listingImages.length : undefined,
-        full_keys: hasImages ? JSON.stringify(listingImages) : undefined,
+        full_keys: hasImages ? jsonOrNull(listingImages) : undefined,
         last_seen_at: now,
         duplicate: isDuplicate,
       },
@@ -399,7 +404,7 @@ export function upsertCarsBgListing(
     power: listing.power || null,
     mileage: listing.mileage || null,
     ad_status: listing.adStatus || 'none',
-    kaparo: listing.kaparo ? 1 : 0,
+    kaparo: booleanFlag(listing.kaparo),
     current_price: price,
     reg_year: listing.year || null,
     last_edit: carsbgEditedDate,
@@ -407,9 +412,9 @@ export function upsertCarsBgListing(
     carsbg_created_date: carsbgCreatedDate,
     carsbg_edited_date: carsbgEditedDate,
     cars_price: null,
-    description: descriptionValue,
+    description: description.value,
     image_count: listing.images?.length || 0,
-    full_keys: listing.images ? JSON.stringify(listing.images) : null,
+    full_keys: jsonOrNull(listing.images),
     first_seen_at: now,
     last_seen_at: now,
     is_active: 1,

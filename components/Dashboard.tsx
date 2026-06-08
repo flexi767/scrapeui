@@ -152,8 +152,8 @@ export function Dashboard() {
       <div className="mx-auto max-w-7xl space-y-8 p-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400">Project overview and quick links</p>
+          <h1 className="text-4xl font-bold text-white">{t('dashboard')}</h1>
+          <p className="text-gray-400">{t('project_overview_and_quick_links')}</p>
         </div>
 
         {/* Stats Grid */}
@@ -162,7 +162,7 @@ export function Dashboard() {
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-400">Total Listings</p>
+                <p className="text-sm font-medium text-gray-400">{t('total_listings')}</p>
                 {loading ? (
                   <div className="h-8 w-16 animate-pulse rounded bg-gray-700" />
                 ) : (
@@ -179,7 +179,7 @@ export function Dashboard() {
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-400">Active Listings</p>
+                <p className="text-sm font-medium text-gray-400">{t('active_listings')}</p>
                 {loading ? (
                   <div className="h-8 w-16 animate-pulse rounded bg-gray-700" />
                 ) : (
@@ -187,7 +187,7 @@ export function Dashboard() {
                     <p className="text-3xl font-bold text-white">{stats?.activeListings ?? 0}</p>
                     {stats && (
                       <p className="text-xs text-gray-500">
-                        {((stats.activeListings / stats.totalListings) * 100).toFixed(0)}% of total
+                        {((stats.activeListings / stats.totalListings) * 100).toFixed(0)}% {t('of_total')}
                       </p>
                     )}
                   </>
@@ -203,7 +203,7 @@ export function Dashboard() {
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-400">Active Dealers</p>
+                <p className="text-sm font-medium text-gray-400">{t('active_dealers')}</p>
                 {loading ? (
                   <div className="h-8 w-16 animate-pulse rounded bg-gray-700" />
                 ) : (
@@ -220,7 +220,7 @@ export function Dashboard() {
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-400">Last Scraping</p>
+                <p className="text-sm font-medium text-gray-400">{t('last_scraping')}</p>
                 {loading ? (
                   <div className="h-8 w-24 animate-pulse rounded bg-gray-700" />
                 ) : (
@@ -238,14 +238,14 @@ export function Dashboard() {
 
         {/* Scraping Section */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white">Mobile.bg Scraping</h2>
+          <h2 className="text-xl font-bold text-white">{t('mobilebg_scraping')}</h2>
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-400 mb-3">
                   {ownDealers.length > 0
-                    ? `Ready to scrape ${ownDealers.length} own dealer(s): ${ownDealers.map(d => d.name).join(', ')}`
-                    : 'No dealers configured for scraping'}
+                    ? `${t('ready_to_scrape')} ${ownDealers.length} ${t('own_dealers')}: ${ownDealers.map(d => d.name).join(', ')}`
+                    : t('no_dealers_configured')}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -254,10 +254,10 @@ export function Dashboard() {
                   className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
                 >
                   <Play className="h-4 w-4" />
-                  Start Scraping
+                  {t('start_scraping')}
                 </Link>
                 <p className="text-xs text-gray-500">
-                  Go to Configuration to select dealers and run the scraper
+                  {t('go_to_config_to_scrape')}
                 </p>
               </div>
             </div>
@@ -266,7 +266,7 @@ export function Dashboard() {
 
         {/* Quick Links */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white">Quick Links</h2>
+          <h2 className="text-xl font-bold text-white">{t('quick_links')}</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {navigationLinks.map((link) => {
               const Icon = link.icon;

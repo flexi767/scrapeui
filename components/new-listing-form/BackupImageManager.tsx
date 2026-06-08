@@ -1,94 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-import { errorMessage, parseApiResponse } from "@/lib/utils";
-import { IMAGE_UPLOAD_BATCH_SIZE, type BackupImage } from "./constants";
-
-interface BackupImagesResponse {
-  images?: BackupImage[];
-}
+import { useBackupImages } from "./useBackupImages";
 
 export function BackupImageManager({ backupId }: { backupId: number }) {
   const t = useTranslations('ui');
-  const [images, setImages] = useState<BackupImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [savingOrder, setSavingOrder] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const {
+    images,
+    loading,
+    uploading,
+    savingOrder,
+    deletingId,
+    error,
+    uploadImages,
+    saveOrder,
+    deleteImage,
+  } = useBackupImages(backupId);
   const [draggedImageId, setDraggedImageId] = useState<number | null>(null);
   const [dragOverImageId, setDragOverImageId] = useState<number | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(
     null,
   );
-  const [error, setError] = useState("");
 
-  const loadImages = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch(`/api/editown/backups/${backupId}/images`);
-      const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при зареждане на снимките.");
-      setImages(data.images ?? []);
-    } catch (loadError) {
-      setError(errorMessage(loadError, "Грешка при зареждане на снимките."));
-    } finally {
-      setLoading(false);
-    }
-  }, [backupId]);
-
-  useEffect(() => {
-    void loadImages();
-  }, [loadImages]);
-
-  async function uploadImages(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleUploadImages(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files.length === 0) return;
-
-    setUploading(true);
-    setError("");
-    try {
-      for (let index = 0; index < files.length; index += IMAGE_UPLOAD_BATCH_SIZE) {
-        const formData = new FormData();
-        for (const file of files.slice(index, index + IMAGE_UPLOAD_BATCH_SIZE)) {
-          formData.append("images", file);
-        }
-
-        const response = await fetch(`/api/editown/backups/${backupId}/images`, {
-          method: "POST",
-          body: formData,
-        });
-        const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при качване на снимките.");
-        setImages(data.images ?? []);
-      }
-    } catch (uploadError) {
-      setError(errorMessage(uploadError, "Грешка при качване на снимките."));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function saveOrder(nextImages: BackupImage[]) {
-    const previous = images;
-    setImages(nextImages);
-    setSavingOrder(true);
-    setError("");
-    try {
-      const response = await fetch(`/api/editown/backups/${backupId}/images`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageIds: nextImages.map((image) => image.id) }),
-      });
-      const data = await parseApiResponse<BackupImagesResponse>(response, "Грешка при пренареждане на снимките.");
-      setImages(data.images ?? nextImages);
-    } catch (orderError) {
-      setImages(previous);
-      setError(errorMessage(orderError, "Грешка при пренареждане на снимките."));
-    } finally {
-      setSavingOrder(false);
-    }
+    void uploadImages(files);
   }
 
   function reorderImages(sourceId: number, targetId: number) {
@@ -142,22 +81,9 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
     setDragOverImageId(null);
   }
 
-  async function deleteImage(imageId: number) {
-    setDeletingId(imageId);
-    setError("");
-    try {
-      const response = await fetch(
-        `/api/editown/backups/${backupId}/images/${imageId}`,
-        { method: "DELETE" },
-      );
-      await parseApiResponse<unknown>(response, "Грешка при изтриване на снимката.");
-      setImages((current) => current.filter((image) => image.id !== imageId));
-      setConfirmingDeleteId(null);
-    } catch (deleteError) {
-      setError(errorMessage(deleteError, "Грешка при изтриване на снимката."));
-    } finally {
-      setDeletingId(null);
-    }
+  async function handleDeleteImage(imageId: number) {
+    await deleteImage(imageId);
+    setConfirmingDeleteId(null);
   }
 
   return (
@@ -177,7 +103,7 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
             multiple
             className="sr-only"
             disabled={uploading}
-            onChange={uploadImages}
+            onChange={handleUploadImages}
           />
         </label>
       </div>
@@ -232,7 +158,7 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
                     <div className="ml-auto flex shrink-0 items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => void deleteImage(image.id)}
+                        onClick={() => void handleDeleteImage(image.id)}
                         disabled={deletingId === image.id}
                         className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                       >

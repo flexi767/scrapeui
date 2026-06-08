@@ -1,4 +1,4 @@
-import { parseApiResponse } from "@/lib/utils";
+import { apiRequest } from "@/lib/utils";
 import type { MakeEntry } from "@/lib/mobile-bg/makes-models";
 import type { City } from "@/lib/mobile-bg/regions";
 import type {
@@ -11,37 +11,31 @@ export interface SaveDraftResponse {
 }
 
 export async function fetchCities(regionValue: string) {
-  const response = await fetch(
+  return apiRequest<City[]>(
     `/api/mobile-bg/cities?region=${encodeURIComponent(regionValue)}`,
+    "Грешка при зареждане на градовете.",
   );
-  return parseApiResponse<City[]>(response, "Грешка при зареждане на градовете.");
 }
 
 export async function fetchMakes(pubtype: string) {
-  const response = await fetch(
+  return apiRequest<MakeEntry[]>(
     `/api/mobile-bg/makes?pubtype=${encodeURIComponent(pubtype)}`,
+    "Грешка при зареждане на марките.",
   );
-  return parseApiResponse<MakeEntry[]>(response, "Грешка при зареждане на марките.");
 }
 
 export async function createDraft(form: FormState) {
-  const response = await fetch("/api/editown", {
+  return apiRequest<SaveDraftResponse>("/api/editown", "Грешка при запазване.", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(form),
+    json: form,
   });
-  return parseApiResponse<SaveDraftResponse>(response, "Грешка при запазване.");
 }
 
 export async function updateDraft(backupId: number, form: FormState) {
-  const response = await fetch(`/api/editown/backups/${backupId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(form),
-  });
-  return parseApiResponse<SaveDraftResponse>(
-    response,
+  return apiRequest<SaveDraftResponse>(
+    `/api/editown/backups/${backupId}`,
     "Грешка при запазване на промените.",
+    { method: "PATCH", json: form },
   );
 }
 
@@ -57,16 +51,14 @@ export async function fetchListingPrefill({
   const url = mobileId
     ? `/api/editown/dealers/${encodeURIComponent(dealerId)}/listings/${encodeURIComponent(mobileId)}`
     : `/api/editown/backups/${backupId}`;
-  const response = await fetch(url);
-  return parseApiResponse<PrefillResponse>(
-    response,
+  return apiRequest<PrefillResponse>(
+    url,
     "Грешка при зареждане на обявата.",
   );
 }
 
 export async function deleteDraftById(backupId: number) {
-  const response = await fetch(`/api/editown/backups/${backupId}`, {
+  await apiRequest<unknown>(`/api/editown/backups/${backupId}`, "Грешка при изтриване на черновата.", {
     method: "DELETE",
   });
-  await parseApiResponse(response, "Грешка при изтриване на черновата.");
 }

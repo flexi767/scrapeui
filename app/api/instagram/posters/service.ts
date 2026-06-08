@@ -1,7 +1,6 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import { raw } from "@/db/client";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
 import {
   parsePosterCollageSelections,
@@ -10,6 +9,27 @@ import {
   type PosterVariantPrompt,
 } from "@/lib/instagram/poster-variants";
 import { formatListingMileage, formatListingPrice } from "@/lib/listing-format";
+import {
+  getPosterImageProvider,
+  type PosterImageModelConfig,
+  type PosterImageProvider,
+} from "./model-config";
+import {
+  appendReferenceImages,
+  getReferenceImages,
+  mimeFromFilename,
+  mimeFromOutputFilename,
+  type ReferenceImageRow,
+} from "./reference-images";
+export {
+  getPosterImageModelOptions,
+  getPosterImageProvider,
+  getPosterImageProviderOptions,
+  resolvePosterImageModel,
+  validatePosterImageProvider,
+  type PosterImageModelOption,
+  type PosterImageProvider,
+} from "./model-config";
 
 export interface PosterRequestBody {
   backupId?: unknown;
@@ -33,23 +53,6 @@ export interface PosterVariantResult {
 interface OpenAIImageResponse {
   data?: Array<{ b64_json?: string }>;
   error?: { message?: string };
-}
-
-export type PosterImageProvider = "openai" | "comfyui";
-
-export interface PosterImageModelOption {
-  id: string;
-  label: string;
-}
-
-interface PosterImageModelConfig extends PosterImageModelOption {
-  workflowPath?: string;
-}
-
-interface ReferenceImageRow {
-  id: number;
-  filename: string | null;
-  local_path: string | null;
 }
 
 interface ComfyUploadedImage {
@@ -148,48 +151,6 @@ function buildImagePrompt(
     .join("\n");
 }
 
-function getReferenceImages(photoIds: number[]) {
-  if (photoIds.length === 0) return [];
-  const placeholders = photoIds.map(() => "?").join(", ");
-  const rows = raw
-    .prepare(
-      `SELECT id, filename, local_path
-       FROM mobilebg_backup_images
-       WHERE id IN (${placeholders})`,
-    )
-    .all(...photoIds) as ReferenceImageRow[];
-  const byId = new Map(rows.map((row) => [row.id, row]));
-  return photoIds
-    .map((id) => byId.get(id))
-    .filter((row): row is ReferenceImageRow => Boolean(row?.local_path));
-}
-
-function mimeFromFilename(filename: string | null, localPath: string) {
-  const ext = path.extname(filename || localPath).toLowerCase();
-  if (ext === ".png") return "image/png";
-  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
-  return "image/webp";
-}
-
-function mimeFromOutputFilename(filename: string | undefined) {
-  const ext = path.extname(filename ?? "").toLowerCase();
-  if (ext === ".png") return "image/png";
-  if (ext === ".webp") return "image/webp";
-  return "image/jpeg";
-}
-
-async function appendReferenceImages(formData: FormData, referenceImages: ReferenceImageRow[]) {
-  for (const image of referenceImages) {
-    if (!image.local_path) continue;
-    const bytes = await readFile(image.local_path);
-    const filename = image.filename || path.basename(image.local_path);
-    const file = new File([bytes], filename, {
-      type: mimeFromFilename(filename, image.local_path),
-    });
-    formData.append("image[]", file);
-  }
-}
-
 function getVariantPhotoIds(
   listing: NonNullable<ReturnType<typeof buildInstagramListingPayload>>,
   variantId: string,
@@ -200,107 +161,6 @@ function getVariantPhotoIds(
   if (variantId === "ai-exterior-collage") return validIds(collageSelections.exteriorPhotoIds);
   if (variantId === "ai-interior-collage") return validIds(collageSelections.interiorPhotoIds);
   return listing.photos.slice(0, 4).map((photo) => photo.id);
-}
-
-export function getPosterImageProvider(rawProvider = process.env.INSTAGRAM_POSTER_IMAGE_PROVIDER): PosterImageProvider {
-  const provider = rawProvider?.trim().toLowerCase();
-  if (provider === "comfy" || provider === "comfyui") return "comfyui";
-  return "openai";
-}
-
-function parseModelList(rawValue: string | undefined, fallback: PosterImageModelConfig[]) {
-  if (!rawValue?.trim()) return fallback;
-  const trimmed = rawValue.trim();
-  if (trimmed.startsWith("[")) {
-    const parsed = JSON.parse(trimmed) as Array<Partial<PosterImageModelConfig> | string>;
-    const models = parsed
-      .map((item) => {
-        if (typeof item === "string") return { id: item, label: item };
-        if (!item.id) return null;
-        return {
-          id: item.id,
-          label: item.label || item.id,
-          workflowPath: item.workflowPath,
-        };
-      })
-      .filter((item): item is PosterImageModelConfig => Boolean(item));
-    return models.length > 0 ? models : fallback;
-  }
-  const models = trimmed
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((id) => ({ id, label: id }));
-  return models.length > 0 ? models : fallback;
-}
-
-function getOpenAiModelOptions() {
-  return parseModelList(process.env.INSTAGRAM_POSTER_OPENAI_MODELS, [
-    { id: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2", label: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "gpt-image-2" },
-  ]);
-}
-
-function getComfyModelOptions() {
-  return parseModelList(process.env.COMFYUI_MODELS, [
-    {
-      id: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "default",
-      label: process.env.INSTAGRAM_POSTER_IMAGE_MODEL ?? "Default ComfyUI workflow",
-      workflowPath: process.env.COMFYUI_WORKFLOW_PATH,
-    },
-  ]);
-}
-
-export function getPosterImageModelOptions(provider: PosterImageProvider): PosterImageModelOption[] {
-  const models = provider === "comfyui" ? getComfyModelOptions() : getOpenAiModelOptions();
-  return models.map(({ id, label }) => ({ id, label }));
-}
-
-function getPosterImageModelConfig(provider: PosterImageProvider, modelId: string | null): PosterImageModelConfig {
-  const models = provider === "comfyui" ? getComfyModelOptions() : getOpenAiModelOptions();
-  const defaultModel = models[0];
-  const selected = modelId ? models.find((model) => model.id === modelId) : defaultModel;
-  if (!selected) throw new Error(`Invalid ${provider === "comfyui" ? "ComfyUI" : "OpenAI"} image model`);
-  return selected;
-}
-
-export function getPosterImageProviderOptions() {
-  const defaultProvider = getPosterImageProvider();
-  return {
-    defaultProvider,
-    providers: [
-      {
-        id: "openai" as const,
-        label: "OpenAI",
-        defaultModel: getPosterImageModelConfig("openai", null).id,
-        models: getPosterImageModelOptions("openai"),
-      },
-      {
-        id: "comfyui" as const,
-        label: "ComfyUI",
-        defaultModel: getPosterImageModelConfig("comfyui", null).id,
-        models: getPosterImageModelOptions("comfyui"),
-      },
-    ],
-  };
-}
-
-export function resolvePosterImageModel(provider: PosterImageProvider, modelId: string | null) {
-  return getPosterImageModelConfig(provider, modelId);
-}
-
-export function validatePosterImageProvider(provider: PosterImageProvider, modelId: string | null) {
-  if (provider === "openai" && !process.env.OPENAI_API_KEY) {
-    return "OPENAI_API_KEY is not configured";
-  }
-  try {
-    const model = getPosterImageModelConfig(provider, modelId);
-    if (provider === "comfyui" && !model.workflowPath && !process.env.COMFYUI_WORKFLOW_PATH) {
-      return "COMFYUI_WORKFLOW_PATH is not configured";
-    }
-  } catch (error) {
-    return error instanceof Error ? error.message : "Invalid image model";
-  }
-  return null;
 }
 
 function getComfyBaseUrl() {
