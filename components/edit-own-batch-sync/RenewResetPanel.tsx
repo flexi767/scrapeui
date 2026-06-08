@@ -124,7 +124,7 @@ export function RenewResetPanel({
 
       {renewDone && (
         <div className="rounded-lg border border-green-700/60 bg-green-900/20 px-4 py-3 text-sm text-green-400">
-          Done — {renewOnlyReset ? 'reset' : 'renewed'} {renewDone.succeeded}, failed {renewDone.failed}
+          {renewOnlyReset ? t('done_reset_count', { count: renewDone.succeeded, failed: renewDone.failed }) : t('done_renewed_count', { count: renewDone.succeeded, failed: renewDone.failed })}
         </div>
       )}
 

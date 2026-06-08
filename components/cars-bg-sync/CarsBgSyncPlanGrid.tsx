@@ -71,10 +71,10 @@ function DiffListingsCard({
             </div>
             <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
               {item.priceDiff && (
-                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">price</span>
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-200">{t('price_label')}</span>
               )}
               {item.titleDiff && (
-                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-200">title</span>
+                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-200">{t('title_label')}</span>
               )}
               {item.descriptionDiff && (
                 <button
@@ -82,7 +82,7 @@ function DiffListingsCard({
                   onClick={() => onToggleDescription(diffKey)}
                   className="rounded-full bg-violet-500/15 px-2 py-0.5 text-violet-200 transition-colors hover:bg-violet-500/25"
                 >
-                  description
+                  {t('description_label')}
                 </button>
               )}
             </div>

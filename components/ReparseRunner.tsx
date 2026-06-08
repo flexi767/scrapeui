@@ -93,12 +93,12 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
       {result && (
         <div className="space-y-3">
           <p className="text-sm text-gray-300">
-            Processed <span className="text-white font-medium">{result.processed}</span> listings
+            {t('processed')} <span className="text-white font-medium">{result.processed}</span> {t('listings')}
             {' — '}
-            <span className="text-white font-medium">{result.changed}</span> would change
+            <span className="text-white font-medium">{result.changed}</span> {t('would_change')}
             {result.dryRun
-              ? <span className="ml-2 text-yellow-400 text-xs">(dry run — no writes)</span>
-              : <span className="ml-2 text-emerald-400 text-xs">✓ saved</span>
+              ? <span className="ml-2 text-yellow-400 text-xs">{t('dry_run_no_writes')}</span>
+              : <span className="ml-2 text-emerald-400 text-xs">{t('saved_check')}</span>
             }
           </p>
 
