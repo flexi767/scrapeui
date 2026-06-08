@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { City, Region } from "@/lib/mobile-bg/regions";
 import {
   FormSection,
@@ -26,17 +29,18 @@ export function LocationSection({
   setField: SetFormField;
   onRegionChange: (regionValue: string) => void | Promise<void>;
 }) {
+  const t = useTranslations('ui');
   return (
     <FormSection>
       <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_1fr_1.1fr]">
         <SelectField
-          label="Цвят"
+          label={t('color')}
           value={form.color}
           onChange={(value) => setField("color", value)}
           options={COLOR_OPTIONS}
         />
         <SelectField
-          label="Намира се в"
+          label={t('located_in')}
           value={form.region}
           onChange={onRegionChange}
           options={[
@@ -49,7 +53,7 @@ export function LocationSection({
           accent
         />
         <SelectField
-          label="Град"
+          label={t('city')}
           value={form.city}
           onChange={(value) => setField("city", value)}
           options={[
@@ -62,7 +66,7 @@ export function LocationSection({
           disabled={!form.region || citiesLoading}
         />
         <InputField
-          label="VIN номер"
+          label={t('vin_number')}
           value={form.vin}
           onChange={(value) => setField("vin", value)}
           maxLength={17}

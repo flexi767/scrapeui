@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { formatPrice } from "@/lib/utils";
 
@@ -69,6 +72,7 @@ export function DealerListingPicker({
   onSelect: (mobileId: string, backupId: number | null) => void;
   onRequestDeleteDraft: (backupId: number) => void;
 }) {
+  const t = useTranslations('ui');
   if (loading) {
     return (
       <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">
@@ -130,7 +134,7 @@ export function DealerListingPicker({
                     className="h-12 w-16 rounded object-contain"
                     style={{ aspectRatio: "4/3" }}
                     fallbackClassName="h-12 w-16 rounded bg-gray-800 text-gray-400"
-                    fallbackLabel="Missing"
+                    fallbackLabel={t('missing')}
                   />
                 ) : (
                   <div className="h-12 w-16 rounded bg-gray-800" />

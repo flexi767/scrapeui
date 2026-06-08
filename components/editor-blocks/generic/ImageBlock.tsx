@@ -1,5 +1,6 @@
 'use client';
 import { useNode, type UserComponent } from '@craftjs/core';
+import { useTranslations } from 'next-intl';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface ImageBlockProps {
@@ -18,11 +19,12 @@ export const ImageBlock: UserComponent<ImageBlockProps> = ({
   linkHref,
 }) => {
   const { connectors: { connect, drag } } = useNode();
+  const t = useTranslations('ui');
   const img = (
     <ImageWithFallback
       src={src}
       alt={alt}
-      fallbackLabel="No image"
+      fallbackLabel={t('no_image')}
       style={{ width, display: 'block' }}
     />
   );

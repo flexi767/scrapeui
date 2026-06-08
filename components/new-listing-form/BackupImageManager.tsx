@@ -221,7 +221,7 @@ export function BackupImageManager({ backupId }: { backupId: number }) {
                 alt={image.filename}
                 className="aspect-[4/3] w-full object-cover"
                 fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
-                fallbackLabel="Missing"
+                fallbackLabel={t('missing')}
               />
               <div className="p-3">
                 <div className="flex items-center gap-2">

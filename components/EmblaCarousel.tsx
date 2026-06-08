@@ -108,7 +108,7 @@ export default function EmblaCarousel({ images, title }: Props) {
                 alt={title ? `${title} — photo ${i + 1}` : `Photo ${i + 1}`}
                 className="aspect-[4/3] w-full cursor-zoom-in object-cover"
                 fallbackClassName="flex aspect-[4/3] w-full items-center justify-center bg-gray-800 text-gray-400"
-                fallbackLabel="Missing"
+                fallbackLabel={t('missing')}
                 onClick={() => setLightbox(img.full)}
               />
             </div>
@@ -160,7 +160,7 @@ export default function EmblaCarousel({ images, title }: Props) {
               transition: dragging ? 'none' : 'transform 0.2s',
             }}
             fallbackClassName="flex max-h-screen max-w-full items-center justify-center bg-gray-900 p-4 text-gray-400"
-            fallbackLabel="Missing"
+            fallbackLabel={t('missing')}
             onMouseDown={(e) => {
               if (!zoomed) return;
               e.preventDefault();
@@ -263,7 +263,7 @@ export default function EmblaCarousel({ images, title }: Props) {
                 alt=""
                 className="h-12 w-full object-cover"
                 fallbackClassName="flex h-12 w-full items-center justify-center bg-gray-800 text-gray-400"
-                fallbackLabel="Missing"
+                fallbackLabel={t('missing')}
               />
             </button>
           ))}
