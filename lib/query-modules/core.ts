@@ -41,46 +41,32 @@ export interface DealerRowFull extends DealerRow {
   cars_password?: string | null;
 }
 
-export function getAllDealers(): DealerRow[] {
-  // Credentials are excluded here; config and auth-sensitive routes use narrower queries.
+function getDealerRows(where = ''): DealerRow[] {
   return raw
     .prepare(
-      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS} FROM dealers ORDER BY priority DESC, name`,
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
+       FROM dealers
+       ${where}
+       ORDER BY priority DESC, name`,
     )
     .all() as DealerRow[];
+}
+
+export function getAllDealers(): DealerRow[] {
+  // Credentials are excluded here; config and auth-sensitive routes use narrower queries.
+  return getDealerRows();
 }
 
 export function getOwnDealers({ activeOnly = false }: { activeOnly?: boolean } = {}): DealerRow[] {
-  return raw
-    .prepare(
-      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
-       FROM dealers
-       WHERE own = 1${activeOnly ? ' AND active = 1' : ''}
-       ORDER BY priority DESC, name`,
-    )
-    .all() as DealerRow[];
+  return getDealerRows(`WHERE own = 1${activeOnly ? ' AND active = 1' : ''}`);
 }
 
 export function getActiveDealers(): DealerRow[] {
-  return raw
-    .prepare(
-      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
-       FROM dealers
-       WHERE active = 1
-       ORDER BY priority DESC, name`,
-    )
-    .all() as DealerRow[];
+  return getDealerRows('WHERE active = 1');
 }
 
 export function getMobileBgDealers(): DealerRow[] {
-  return raw
-    .prepare(
-      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
-       FROM dealers
-       WHERE active = 1 AND mobile_url IS NOT NULL AND mobile_url != ''
-       ORDER BY priority DESC, name`,
-    )
-    .all() as DealerRow[];
+  return getDealerRows("WHERE active = 1 AND mobile_url IS NOT NULL AND mobile_url != ''");
 }
 
 export function getDealerBySlug(slug: string): DealerRowFull | undefined {

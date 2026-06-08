@@ -1,5 +1,12 @@
 import { raw } from '@/db/client';
 import type { LabelRow, ListingSummary } from './core';
+import { getWindowTotal, omitQueryFields } from './query-utils';
+import {
+  getRelatedLabels,
+  getRelatedListingSummaries,
+  getRelatedUploads,
+  type UploadSummary,
+} from './relations';
 
 export interface ExpenseRow {
   id: number;
@@ -52,7 +59,9 @@ export function getExpenses(filters: ExpenseFilters = {}) {
   const rows = raw
     .prepare(
       `
-    SELECT e.*, u.name as creator_name
+    SELECT COUNT(*) OVER() as total_count,
+      COALESCE(SUM(e.amount) OVER(), 0) as total_amount,
+      e.*, u.name as creator_name
     FROM expenses e
     LEFT JOIN users u ON u.id = e.created_by_id
     ${where}
@@ -60,25 +69,31 @@ export function getExpenses(filters: ExpenseFilters = {}) {
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as ExpenseRow[];
+    .all(...params, limit, offset) as Array<ExpenseRow & { total_count: number; total_amount: number }>;
 
-  const { count } = raw
-    .prepare(
-      `
-    SELECT COUNT(*) as count FROM expenses e ${where}
+  const getExpenseTotals = () => {
+    const totals = raw
+      .prepare(
+        `
+    SELECT COUNT(*) as count, COALESCE(SUM(e.amount), 0) as total_amount
+    FROM expenses e
+    ${where}
   `,
-    )
-    .get(...params) as { count: number };
+      )
+      .get(...params) as { count: number; total_amount: number };
+    return totals;
+  };
 
-  const { total_amount } = raw
-    .prepare(
-      `
-    SELECT COALESCE(SUM(e.amount), 0) as total_amount FROM expenses e ${where}
-  `,
-    )
-    .get(...params) as { total_amount: number };
+  const firstRow = rows[0];
+  const fallbackTotals = firstRow ? null : page > 1 ? getExpenseTotals() : { count: 0, total_amount: 0 };
 
-  return { data: rows, total: count, totalAmount: total_amount, page, limit };
+  return {
+    data: rows.map((row) => omitQueryFields(row, ['total_count', 'total_amount'])),
+    total: firstRow?.total_count ?? fallbackTotals?.count ?? 0,
+    totalAmount: firstRow?.total_amount ?? fallbackTotals?.total_amount ?? 0,
+    page,
+    limit,
+  };
 }
 
 export function getExpenseById(id: number) {
@@ -95,16 +110,7 @@ export function getExpenseById(id: number) {
 
   if (!expense) return null;
 
-  const listings = raw
-    .prepare(
-      `
-    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
-    FROM expense_listings el
-    JOIN listings l ON l.id = el.listing_id
-    WHERE el.expense_id = ?
-  `,
-    )
-    .all(id) as ListingSummary[];
+  const listings = getRelatedListingSummaries('expense', id);
 
   const tasks = raw
     .prepare(
@@ -117,26 +123,8 @@ export function getExpenseById(id: number) {
     )
     .all(id) as { id: number; title: string; status: string }[];
 
-  const labels = raw
-    .prepare(
-      `
-    SELECT lb.id, lb.name, lb.color
-    FROM expense_labels el
-    JOIN labels lb ON lb.id = el.label_id
-    WHERE el.expense_id = ?
-  `,
-    )
-    .all(id) as LabelRow[];
-
-  const uploads = raw
-    .prepare(
-      `
-    SELECT * FROM uploads
-    WHERE entity_type = 'expense' AND entity_id = ?
-    ORDER BY created_at DESC
-  `,
-    )
-    .all(id);
+  const labels = getRelatedLabels('expense', id);
+  const uploads = getRelatedUploads('expense', id);
 
   return { ...expense, listings, tasks, labels, uploads };
 }
@@ -159,18 +147,6 @@ export type ArticleDetailRow = ArticleRow & {
   listings: ListingSummary[];
   uploads: UploadSummary[];
 };
-
-export interface UploadSummary {
-  id: number;
-  filename: string;
-  stored_name: string;
-  mime_type: string;
-  size_bytes: number;
-  entity_type: string | null;
-  entity_id: number | null;
-  uploaded_by_id: number | null;
-  created_at: string;
-}
 
 export interface ArticleFilters {
   search?: string;
@@ -201,7 +177,8 @@ export function getArticles(filters: ArticleFilters = {}) {
   const rows = raw
     .prepare(
       `
-    SELECT a.*, u.name as author_name
+    SELECT COUNT(*) OVER() as total_count,
+      a.*, u.name as author_name
     FROM articles a
     LEFT JOIN users u ON u.id = a.author_id
     ${where}
@@ -209,17 +186,25 @@ export function getArticles(filters: ArticleFilters = {}) {
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as ArticleRow[];
+    .all(...params, limit, offset) as Array<ArticleRow & { total_count: number }>;
 
-  const { count } = raw
-    .prepare(
-      `
+  const countArticles = () => {
+    const { count } = raw
+      .prepare(
+        `
     SELECT COUNT(*) as count FROM articles a ${where}
   `,
-    )
-    .get(...params) as { count: number };
+      )
+      .get(...params) as { count: number };
+    return count;
+  };
 
-  return { data: rows, total: count, page, limit };
+  return {
+    data: rows.map((row) => omitQueryFields(row, ['total_count'])),
+    total: getWindowTotal(rows, page, countArticles, 'total_count'),
+    page,
+    limit,
+  };
 }
 
 export function getArticleById(id: number): ArticleDetailRow | null {
@@ -236,37 +221,9 @@ export function getArticleById(id: number): ArticleDetailRow | null {
 
   if (!article) return null;
 
-  const listings = raw
-    .prepare(
-      `
-    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
-    FROM article_listings al
-    JOIN listings l ON l.id = al.listing_id
-    WHERE al.article_id = ?
-  `,
-    )
-    .all(id) as ListingSummary[];
-
-  const labels = raw
-    .prepare(
-      `
-    SELECT lb.id, lb.name, lb.color
-    FROM article_labels al
-    JOIN labels lb ON lb.id = al.label_id
-    WHERE al.article_id = ?
-  `,
-    )
-    .all(id) as LabelRow[];
-
-  const uploads = raw
-    .prepare(
-      `
-    SELECT * FROM uploads
-    WHERE entity_type = 'article' AND entity_id = ?
-    ORDER BY created_at DESC
-  `,
-    )
-    .all(id) as UploadSummary[];
+  const listings = getRelatedListingSummaries('article', id);
+  const labels = getRelatedLabels('article', id);
+  const uploads = getRelatedUploads('article', id);
 
   return { ...article, labels, listings, uploads };
 }

@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { getTranslationValuesForKey } from '@/lib/translations/rows';
 
 /**
  * Reports translation_keys that are missing a row for an active locale, or
@@ -19,10 +20,7 @@ function main() {
   const untranslated: { key: string; locale: string; value: string }[] = [];
 
   for (const { id } of keys) {
-    const rows = raw
-      .prepare('SELECT locale_code, value FROM translations WHERE translation_key_id = ?')
-      .all(id) as { locale_code: string; value: string }[];
-
+    const rows = getTranslationValuesForKey(id);
     const byLocale = new Map(rows.map((r) => [r.locale_code, r.value]));
     const enValue = byLocale.get('en');
 

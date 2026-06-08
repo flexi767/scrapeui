@@ -1,5 +1,6 @@
 import { raw } from '@/db/client';
-import type { LabelRow, ListingSummary } from './core';
+import { getWindowTotal, omitQueryFields } from './query-utils';
+import { getRelatedLabels, getRelatedListingSummaries } from './relations';
 
 export interface TaskRow {
   id: number;
@@ -63,7 +64,8 @@ export function getTasks(filters: TaskFilters = {}) {
   const rows = raw
     .prepare(
       `
-    SELECT t.*,
+    SELECT COUNT(*) OVER() as total_count,
+      t.*,
       a.name as assignee_name,
       c.name as creator_name
     FROM tasks t
@@ -77,17 +79,25 @@ export function getTasks(filters: TaskFilters = {}) {
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as TaskRow[];
+    .all(...params, limit, offset) as Array<TaskRow & { total_count: number }>;
 
-  const { count } = raw
-    .prepare(
-      `
+  const countTasks = () => {
+    const { count } = raw
+      .prepare(
+        `
     SELECT COUNT(*) as count FROM tasks t ${where}
   `,
-    )
-    .get(...params) as { count: number };
+      )
+      .get(...params) as { count: number };
+    return count;
+  };
 
-  return { data: rows, total: count, page, limit };
+  return {
+    data: rows.map((row) => omitQueryFields(row, ['total_count'])),
+    total: getWindowTotal(rows, page, countTasks, 'total_count'),
+    page,
+    limit,
+  };
 }
 
 export function getTaskById(id: number) {
@@ -107,27 +117,8 @@ export function getTaskById(id: number) {
 
   if (!task) return null;
 
-  const listings = raw
-    .prepare(
-      `
-    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
-    FROM task_listings tl
-    JOIN listings l ON l.id = tl.listing_id
-    WHERE tl.task_id = ?
-  `,
-    )
-    .all(id) as ListingSummary[];
-
-  const labels = raw
-    .prepare(
-      `
-    SELECT lb.id, lb.name, lb.color
-    FROM task_labels tl
-    JOIN labels lb ON lb.id = tl.label_id
-    WHERE tl.task_id = ?
-  `,
-    )
-    .all(id) as LabelRow[];
+  const listings = getRelatedListingSummaries('task', id);
+  const labels = getRelatedLabels('task', id);
 
   const subtasks = raw
     .prepare(

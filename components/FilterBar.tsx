@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
@@ -303,8 +304,8 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         )}
         {showPageLinks && (
           <>
-            <a href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">{t('edit_own')}</a>
-            <a href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ {t('config')}</a>
+            <Link href="/editown" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">{t('edit_own')}</Link>
+            <Link href="/config" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">⚙ {t('config')}</Link>
           </>
         )}
       </div>

@@ -18,60 +18,52 @@ export async function GET(request: NextRequest) {
   if (!q) return NextResponse.json([]);
 
   const like = `%${q}%`;
-  const results: SearchResult[] = [];
-
-  // Search tasks
-  const tasks = raw.prepare(`
-    SELECT id, title, status, priority FROM tasks
-    WHERE title LIKE ? LIMIT 10
-  `).all(like) as { id: number; title: string; status: string; priority: string }[];
-  for (const t of tasks) {
-    results.push({
-      type: 'task', id: t.id, title: t.title,
-      subtitle: `${t.status} — ${t.priority}`,
-      url: `/tasks/${t.id}`,
-    });
-  }
-
-  // Search listings
-  const listings = raw.prepare(`
-    SELECT id, mobile_id, title, make, model FROM listings
-    WHERE title LIKE ? OR make LIKE ? OR model LIKE ? OR mobile_id LIKE ?
-    LIMIT 10
-  `).all(like, like, like, like) as { id: number; mobile_id: string; title: string; make: string; model: string }[];
-  for (const l of listings) {
-    results.push({
-      type: 'listing', id: l.id, title: l.title || `${l.make} ${l.model}`,
-      subtitle: l.mobile_id,
-      url: `/listings/${l.mobile_id}`,
-    });
-  }
-
-  // Search expenses
-  const expenses = raw.prepare(`
-    SELECT id, title, amount, currency, category FROM expenses
-    WHERE title LIKE ? LIMIT 10
-  `).all(like) as { id: number; title: string; amount: number; currency: string; category: string }[];
-  for (const e of expenses) {
-    results.push({
-      type: 'expense', id: e.id, title: e.title,
-      subtitle: `${(e.amount / 100).toFixed(2)} ${e.currency} — ${e.category}`,
-      url: `/expenses/${e.id}`,
-    });
-  }
-
-  // Search articles
-  const articles = raw.prepare(`
-    SELECT id, title, slug FROM articles
-    WHERE title LIKE ? LIMIT 10
-  `).all(like) as { id: number; title: string; slug: string }[];
-  for (const a of articles) {
-    results.push({
-      type: 'article', id: a.id, title: a.title,
-      subtitle: '',
-      url: `/kb/${a.slug}`,
-    });
-  }
+  const results = raw.prepare(`
+    SELECT type, id, title, subtitle, url
+    FROM (
+      SELECT 0 as group_order, 'task' as type, id, title,
+        status || ' — ' || priority as subtitle,
+        '/tasks/' || id as url
+      FROM (
+        SELECT id, title, status, priority
+        FROM tasks
+        WHERE title LIKE ?
+        LIMIT 10
+      )
+      UNION ALL
+      SELECT 1 as group_order, 'listing' as type, id,
+        COALESCE(NULLIF(title, ''), TRIM(COALESCE(make, '') || ' ' || COALESCE(model, ''))) as title,
+        COALESCE(mobile_id, '') as subtitle,
+        '/listings/' || COALESCE(mobile_id, '') as url
+      FROM (
+        SELECT id, mobile_id, title, make, model
+        FROM listings
+        WHERE title LIKE ? OR make LIKE ? OR model LIKE ? OR mobile_id LIKE ?
+        LIMIT 10
+      )
+      UNION ALL
+      SELECT 2 as group_order, 'expense' as type, id, title,
+        printf('%.2f', amount / 100.0) || ' ' || currency || ' — ' || category as subtitle,
+        '/expenses/' || id as url
+      FROM (
+        SELECT id, title, amount, currency, category
+        FROM expenses
+        WHERE title LIKE ?
+        LIMIT 10
+      )
+      UNION ALL
+      SELECT 3 as group_order, 'article' as type, id, title,
+        '' as subtitle,
+        '/kb/' || slug as url
+      FROM (
+        SELECT id, title, slug
+        FROM articles
+        WHERE title LIKE ?
+        LIMIT 10
+      )
+    )
+    ORDER BY group_order
+  `).all(like, like, like, like, like, like, like) as SearchResult[];
 
   return NextResponse.json(results);
 }

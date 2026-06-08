@@ -1,12 +1,10 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
 import { invalidateTranslationCache } from '@/lib/translation-cache';
 import { getTranslationsFromDb } from '@/i18n/db';
-
-const ALL_LOCALES = ['bg', 'en', 'de', 'ru'] as const;
+import { isLocale, locales, type Locale } from '@/i18n/routing';
+import { upsertTranslation } from '@/lib/translations/upsert';
 
 export async function GET() {
   const session = await auth();
@@ -18,12 +16,12 @@ export async function GET() {
     // Fetch all translation keys with their translations for all locales
     const keys = db.select().from(translationKeys).all();
     const allTranslations = db.select().from(translations).all();
-    const translationsByKey = new Map<string, Partial<Record<typeof ALL_LOCALES[number], string>>>();
+    const translationsByKey = new Map<string, Partial<Record<Locale, string>>>();
 
     for (const translation of allTranslations) {
-      if (!ALL_LOCALES.includes(translation.localeCode as typeof ALL_LOCALES[number])) continue;
+      if (!isLocale(translation.localeCode)) continue;
       const values = translationsByKey.get(translation.translationKeyId) ?? {};
-      values[translation.localeCode as typeof ALL_LOCALES[number]] = translation.value;
+      values[translation.localeCode] = translation.value;
       translationsByKey.set(translation.translationKeyId, values);
     }
 
@@ -59,47 +57,16 @@ export async function PUT(request: Request) {
     if (!key || !locale || value === undefined) {
       return new Response('Missing required fields', { status: 400 });
     }
-
-    // Find or create translation
-    const existing = db
-      .select()
-      .from(translations)
-      .where(
-        and(
-          eq(translations.translationKeyId, key),
-          eq(translations.localeCode, locale),
-        ),
-      )
-      .get();
-
-    if (existing) {
-      db.update(translations)
-        .set({ value, updatedAt: new Date().toISOString() })
-        .where(
-          and(
-            eq(translations.translationKeyId, key),
-            eq(translations.localeCode, locale),
-          ),
-        )
-        .run();
-    } else {
-      db.insert(translations)
-        .values({
-          id: nanoid(),
-          translationKeyId: key,
-          localeCode: locale,
-          value,
-          pluralForm: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .run();
+    if (typeof key !== 'string' || typeof locale !== 'string' || !isLocale(locale) || typeof value !== 'string') {
+      return new Response('Invalid translation payload', { status: 400 });
     }
+
+    upsertTranslation(key, locale, value);
 
     // Clear stale cache then immediately re-warm all locales so the
     // next page render hits the cache rather than the DB.
     invalidateTranslationCache();
-    await Promise.all(ALL_LOCALES.map((l) => getTranslationsFromDb(l)));
+    await Promise.all(locales.map((l) => getTranslationsFromDb(l)));
 
     return Response.json({ success: true });
   } catch (error) {

@@ -64,6 +64,9 @@ const { auth } = NextAuth({
     },
   },
 });
+const authMiddleware = auth as unknown as (
+  request: NextRequest,
+) => Promise<NextResponse | Response | undefined>;
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -87,7 +90,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Run auth check
-  const authResponse = await (auth as any)(request);
+  const authResponse = await authMiddleware(request);
 
   // If auth wants to redirect to login (non-2xx), honour it
   if (authResponse instanceof NextResponse && authResponse.status !== 200) {

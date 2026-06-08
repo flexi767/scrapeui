@@ -1,42 +1,75 @@
 import { raw } from '@/db/client';
-import { nanoid } from 'nanoid';
+import {
+  translationSourceLocale,
+  translationTargetLocales,
+  type TranslationTargetLocale,
+} from '@/i18n/routing';
+import { getTranslationValuesForKey, type TranslationValueRow } from '@/lib/translations/rows';
+import { translateText } from '@/lib/translations/google-translate';
+import { upsertTranslation } from '@/lib/translations/upsert';
 
-// Simple translation function using Google's free API (no key required)
-async function translateText(text: string, targetLang: string): Promise<string> {
+interface TranslationKeyRow {
+  id: string;
+}
+
+const SUMMARY_LABELS: Record<TranslationTargetLocale, string> = {
+  bg: 'Bulgarian (BG)',
+  de: 'German (DE)',
+  ru: 'Russian (RU)',
+};
+
+const TARGET_LOCALES = translationTargetLocales.map((code) => ({
+  code,
+  summaryLabel: SUMMARY_LABELS[code],
+}));
+
+type TranslationCounts = Record<TranslationTargetLocale, number>;
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function translateWithFallback(text: string, targetLocale: TranslationTargetLocale): Promise<string> {
   try {
-    const response = await fetch(
-      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
-    );
-
-    const data = await response.json() as any;
-    return data[0][0][0]; // Extract translated text from nested array
+    return await translateText(text, targetLocale);
   } catch (error) {
     console.error(`Translation failed for "${text}":`, error);
-    return text; // Return original if translation fails
+    return text;
   }
+}
+
+async function ensureTranslation(params: {
+  existing: TranslationValueRow | undefined;
+  keyId: string;
+  locale: TranslationTargetLocale;
+  englishValue: string;
+}): Promise<boolean> {
+  if (params.existing && params.existing.value !== params.englishValue) {
+    return false;
+  }
+
+  console.log(`Translating to ${params.locale.toUpperCase()}: "${params.englishValue.substring(0, 50)}..."`);
+  const translatedValue = await translateWithFallback(params.englishValue, params.locale);
+  upsertTranslation(params.keyId, params.locale, translatedValue);
+
+  await delay(100);
+  return true;
 }
 
 async function autoTranslate() {
   console.log('🌐 Starting auto-translation for Bulgarian (BG), German (DE) and Russian (RU)...\n');
 
   // Get all translation keys using raw SQL
-  const keys = raw.prepare('SELECT id FROM translation_keys').all() as any[];
+  const keys = raw.prepare('SELECT id FROM translation_keys').all() as TranslationKeyRow[];
 
-  let bgTranslated = 0;
-  let deTranslated = 0;
-  let ruTranslated = 0;
+  const translatedCounts: TranslationCounts = { bg: 0, de: 0, ru: 0 };
   let skipped = 0;
 
   for (const key of keys) {
     // Get existing translations for this key
-    const existingTrans = raw
-      .prepare('SELECT * FROM translations WHERE translation_key_id = ?')
-      .all(key.id) as any[];
+    const existingTrans = getTranslationValuesForKey(key.id);
 
-    const enTrans = existingTrans.find((t) => t.locale_code === 'en');
-    const bgTrans = existingTrans.find((t) => t.locale_code === 'bg');
-    const deTrans = existingTrans.find((t) => t.locale_code === 'de');
-    const ruTrans = existingTrans.find((t) => t.locale_code === 'ru');
+    const enTrans = existingTrans.find((t) => t.locale_code === translationSourceLocale);
 
     if (!enTrans) {
       skipped++;
@@ -44,87 +77,29 @@ async function autoTranslate() {
     }
 
     const enValue = enTrans.value;
+    const existingByLocale = new Map(existingTrans.map((translation) => [
+      translation.locale_code,
+      translation,
+    ]));
 
-    // Translate to Bulgarian if missing or is placeholder (same as English)
-    if (!bgTrans || bgTrans.value === enValue) {
-      console.log(`Translating to BG: "${enValue.substring(0, 50)}..."`);
-      const bgValue = await translateText(enValue, 'bg');
-
-      if (bgTrans) {
-        raw.prepare(
-          'UPDATE translations SET value = ?, updated_at = ? WHERE translation_key_id = ? AND locale_code = ?'
-        ).run(bgValue, new Date().toISOString(), key.id, 'bg');
-      } else {
-        raw.prepare(
-          'INSERT INTO translations (id, translation_key_id, locale_code, value, plural_form, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).run(nanoid(), key.id, 'bg', bgValue, null, new Date().toISOString(), new Date().toISOString());
+    for (const target of TARGET_LOCALES) {
+      const didTranslate = await ensureTranslation({
+        existing: existingByLocale.get(target.code),
+        keyId: key.id,
+        locale: target.code,
+        englishValue: enValue,
+      });
+      if (didTranslate) {
+        translatedCounts[target.code]++;
       }
-      bgTranslated++;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    // Translate to German if missing or is placeholder
-    if (!deTrans || deTrans.value === enValue) {
-      console.log(`Translating to DE: "${enValue.substring(0, 50)}..."`);
-      const deValue = await translateText(enValue, 'de');
-
-      if (deTrans) {
-        // Update existing
-        raw.prepare(
-          'UPDATE translations SET value = ?, updated_at = ? WHERE translation_key_id = ? AND locale_code = ?'
-        ).run(deValue, new Date().toISOString(), key.id, 'de');
-      } else {
-        // Create new
-        raw.prepare(
-          'INSERT INTO translations (id, translation_key_id, locale_code, value, plural_form, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).run(
-          nanoid(),
-          key.id,
-          'de',
-          deValue,
-          null,
-          new Date().toISOString(),
-          new Date().toISOString()
-        );
-      }
-      deTranslated++;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    // Translate to Russian if missing or is placeholder
-    if (!ruTrans || ruTrans.value === enValue) {
-      console.log(`Translating to RU: "${enValue.substring(0, 50)}..."`);
-      const ruValue = await translateText(enValue, 'ru');
-
-      if (ruTrans) {
-        // Update existing
-        raw.prepare(
-          'UPDATE translations SET value = ?, updated_at = ? WHERE translation_key_id = ? AND locale_code = ?'
-        ).run(ruValue, new Date().toISOString(), key.id, 'ru');
-      } else {
-        // Create new
-        raw.prepare(
-          'INSERT INTO translations (id, translation_key_id, locale_code, value, plural_form, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).run(
-          nanoid(),
-          key.id,
-          'ru',
-          ruValue,
-          null,
-          new Date().toISOString(),
-          new Date().toISOString()
-        );
-      }
-      ruTranslated++;
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
   console.log('\n✅ Auto-translation complete!\n');
   console.log(`📊 Summary:`);
-  console.log(`   Bulgarian (BG) translated: ${bgTranslated}`);
-  console.log(`   German (DE) translated: ${deTranslated}`);
-  console.log(`   Russian (RU) translated: ${ruTranslated}`);
+  for (const target of TARGET_LOCALES) {
+    console.log(`   ${target.summaryLabel} translated: ${translatedCounts[target.code]}`);
+  }
   console.log(`   Skipped (already translated): ${skipped}\n`);
   console.log(`Next steps:`);
   console.log(`1. Review translations in admin UI: /[locale]/(app)/translations`);

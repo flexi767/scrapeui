@@ -1,5 +1,6 @@
 import { raw } from '@/db/client';
 import { firstBackupImageIdExpr } from '../types';
+import { getWindowTotal, omitQueryFields } from '../query-utils';
 import {
   actualTrackedChangePredicate,
   buildTrackedChangesWhere,
@@ -136,29 +137,6 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
     ${where}
   `;
 
-  const totalRow = raw
-    .prepare(
-      `
-    WITH change_rows AS (
-      SELECT
-        s.price as snapshot_price,
-        s.vat as snapshot_vat,
-        s.last_edit as snapshot_last_edit,
-        s.views as snapshot_views,
-        s.ad_status as snapshot_ad_status,
-        s.kaparo as snapshot_kaparo,
-        s.title as snapshot_title,
-        s.description as snapshot_description,
-        ${trackedChangeTargetSelect}
-      ${baseFrom}
-    )
-    SELECT COUNT(*) as count
-    FROM change_rows
-    WHERE ${actualTrackedChangePredicate}
-  `,
-    )
-    .get(...params) as { count: number };
-
   const data = raw
     .prepare(
       `
@@ -200,14 +178,44 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
         l.description as current_description
       ${baseFrom}
     )
-    SELECT *
+    SELECT change_rows.*, COUNT(*) OVER() as total_count
     FROM change_rows
     WHERE ${actualTrackedChangePredicate}
     ORDER BY recorded_at DESC, id DESC
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as TrackedChangeRow[];
+    .all(...params, limit, offset) as Array<TrackedChangeRow & { total_count: number }>;
 
-  return { data, total: totalRow.count };
+  const countTrackedChanges = () => {
+    const totalRow = raw
+      .prepare(
+        `
+    WITH change_rows AS (
+      SELECT
+        s.price as snapshot_price,
+        s.vat as snapshot_vat,
+        s.last_edit as snapshot_last_edit,
+        s.views as snapshot_views,
+        s.ad_status as snapshot_ad_status,
+        s.kaparo as snapshot_kaparo,
+        s.title as snapshot_title,
+        s.description as snapshot_description,
+        ${trackedChangeTargetSelect}
+      ${baseFrom}
+    )
+    SELECT COUNT(*) as count
+    FROM change_rows
+    WHERE ${actualTrackedChangePredicate}
+  `,
+      )
+      .get(...params) as { count: number };
+    return totalRow.count;
+  };
+
+  const total = getWindowTotal(data, page, countTrackedChanges, 'total_count');
+  return {
+    data: data.map((row) => omitQueryFields(row, ['total_count'])),
+    total,
+  };
 }

@@ -1,6 +1,6 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
-import { runInsert } from "@/lib/listings/sql";
+import { runInsert, runUpdate } from "@/lib/listings/sql";
 
 export interface DealerTemplateConfig {
   id: number;
@@ -32,6 +32,14 @@ export interface DealerTemplateDealerContext {
   firstListingId: string | null;
 }
 
+function templateConfigSelect(alias = ''): string {
+  const prefix = alias ? `${alias}.` : '';
+  return `
+  ${prefix}id, ${prefix}dealer_id as dealerId, ${prefix}base_template_id as baseTemplateId,
+  ${prefix}name, ${prefix}config_json as configJson, ${prefix}created_at as createdAt, ${prefix}updated_at as updatedAt
+`;
+}
+
 const TEMPLATE_LIST_SELECT = `
   SELECT dtc.id, dtc.dealer_id as dealerId, dtc.name,
           dtc.created_at as createdAt, dtc.updated_at as updatedAt,
@@ -43,8 +51,7 @@ const TEMPLATE_LIST_SELECT = `
 export function listDealerTemplateConfigs(dealerId: number): DealerTemplateConfig[] {
   return raw
     .prepare(
-      `SELECT id, dealer_id as dealerId, base_template_id as baseTemplateId,
-              name, config_json as configJson, created_at as createdAt, updated_at as updatedAt
+      `SELECT ${templateConfigSelect()}
        FROM dealer_template_configs
        WHERE dealer_id = ? OR dealer_id IS NULL
        ORDER BY dealer_id IS NULL DESC, created_at ASC`,
@@ -55,8 +62,7 @@ export function listDealerTemplateConfigs(dealerId: number): DealerTemplateConfi
 export function listAllDealerTemplateConfigs(): DealerTemplateConfig[] {
   return raw
     .prepare(
-      `SELECT id, dealer_id as dealerId, base_template_id as baseTemplateId,
-              name, config_json as configJson, created_at as createdAt, updated_at as updatedAt
+      `SELECT ${templateConfigSelect()}
        FROM dealer_template_configs
        ORDER BY dealer_id IS NULL DESC, dealer_id ASC, created_at ASC`,
     )
@@ -95,8 +101,7 @@ export function listDealerTemplateDealerOptions(): DealerTemplateDealerOption[] 
 export function getDealerTemplateConfig(id: number): DealerTemplateConfig | null {
   const row = raw
     .prepare(
-      `SELECT id, dealer_id as dealerId, base_template_id as baseTemplateId,
-              name, config_json as configJson, created_at as createdAt, updated_at as updatedAt
+      `SELECT ${templateConfigSelect()}
        FROM dealer_template_configs WHERE id = ?`,
     )
     .get(id) as DealerTemplateConfig | undefined;
@@ -106,9 +111,7 @@ export function getDealerTemplateConfig(id: number): DealerTemplateConfig | null
 export function getActiveDealerTemplateConfig(dealerId: number): DealerTemplateConfig | null {
   const row = raw
     .prepare(
-      `SELECT dtc.id, dtc.dealer_id as dealerId, dtc.base_template_id as baseTemplateId,
-              dtc.name, dtc.config_json as configJson,
-              dtc.created_at as createdAt, dtc.updated_at as updatedAt
+      `SELECT ${templateConfigSelect('dtc')}
        FROM dealer_template_configs dtc
        JOIN dealers d ON d.active_template_config_id = dtc.id
        WHERE d.id = ?
@@ -157,22 +160,19 @@ export function updateDealerTemplateConfig(
   id: number,
   fields: { name?: string; configJson?: string },
 ): void {
+  if (fields.name === undefined && fields.configJson === undefined) return;
+
   const now = currentIsoTimestamp();
-  if (fields.name !== undefined && fields.configJson !== undefined) {
-    raw
-      .prepare(
-        `UPDATE dealer_template_configs SET name = ?, config_json = ?, updated_at = ? WHERE id = ?`,
-      )
-      .run(fields.name, fields.configJson, now, id);
-  } else if (fields.name !== undefined) {
-    raw
-      .prepare(`UPDATE dealer_template_configs SET name = ?, updated_at = ? WHERE id = ?`)
-      .run(fields.name, now, id);
-  } else if (fields.configJson !== undefined) {
-    raw
-      .prepare(`UPDATE dealer_template_configs SET config_json = ?, updated_at = ? WHERE id = ?`)
-      .run(fields.configJson, now, id);
-  }
+  runUpdate(
+    raw,
+    "dealer_template_configs",
+    {
+      name: fields.name,
+      config_json: fields.configJson,
+      updated_at: now,
+    },
+    { sql: "id = ?", params: [id] },
+  );
 }
 
 export function forkDealerTemplateConfig(sourceId: number, newName: string, targetDealerId: number): number {

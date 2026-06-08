@@ -1,5 +1,6 @@
 import { db } from '@/db/client';
-import { locales, translationKeys, translations } from '@/db/schema';
+import { translationKeys, translations } from '@/db/schema';
+import { locales, type Locale } from '@/i18n/routing';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +11,26 @@ interface ExtractedKey {
   context: string;
   file: string;
   line: number;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('UNIQUE constraint failed');
+}
+
+function insertTranslation(localeCode: Locale, key: ExtractedKey): void {
+  try {
+    db.insert(translations).values({
+      id: nanoid(),
+      translationKeyId: key.key,
+      localeCode,
+      value: key.value,
+      pluralForm: null,
+    }).run();
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      console.error(`Error creating ${localeCode.toUpperCase()} translation for ${key.key}:`, error);
+    }
+  }
 }
 
 async function seedTranslations() {
@@ -30,70 +51,14 @@ async function seedTranslations() {
         description: `Extracted from ${path.basename(key.file)}:${key.line}`,
         pluralRules: 0,
       }).run();
-    } catch (error: any) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) {
         console.error(`Error creating key ${key.key}:`, error);
       }
     }
 
-    // Create Bulgarian translation (use extracted English value as fallback)
-    try {
-      db.insert(translations).values({
-        id: nanoid(),
-        translationKeyId: key.key,
-        localeCode: 'bg',
-        value: key.value,
-        pluralForm: null,
-      }).run();
-    } catch (error: any) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
-        console.error(`Error creating BG translation for ${key.key}:`, error);
-      }
-    }
-
-    // Create English translation
-    try {
-      db.insert(translations).values({
-        id: nanoid(),
-        translationKeyId: key.key,
-        localeCode: 'en',
-        value: key.value,
-        pluralForm: null,
-      }).run();
-    } catch (error: any) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
-        console.error(`Error creating EN translation for ${key.key}:`, error);
-      }
-    }
-
-    // Create German placeholder (same as English for now)
-    try {
-      db.insert(translations).values({
-        id: nanoid(),
-        translationKeyId: key.key,
-        localeCode: 'de',
-        value: key.value,
-        pluralForm: null,
-      }).run();
-    } catch (error: any) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
-        console.error(`Error creating DE translation for ${key.key}:`, error);
-      }
-    }
-
-    // Create Russian placeholder (same as English for now)
-    try {
-      db.insert(translations).values({
-        id: nanoid(),
-        translationKeyId: key.key,
-        localeCode: 'ru',
-        value: key.value,
-        pluralForm: null,
-      }).run();
-    } catch (error: any) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
-        console.error(`Error creating RU translation for ${key.key}:`, error);
-      }
+    for (const localeCode of locales) {
+      insertTranslation(localeCode, key);
     }
   }
 

@@ -1,4 +1,7 @@
 import { raw } from "@/db/client";
+import { currentIsoTimestamp } from "@/lib/date-format";
+import { runInsert } from "@/lib/listings/sql";
+import { getWindowTotal, omitQueryFields } from "./query-utils";
 import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -132,13 +135,13 @@ export interface DealerEnquiryInput {
 }
 
 export function createDealerEnquiry(input: DealerEnquiryInput): number {
-  const now = new Date().toISOString();
-  const result = raw
-    .prepare(
-      `INSERT INTO dealer_enquiries (dealer_id, name, email, message, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
-    .run(input.dealerId, input.name, input.email, input.message, now);
+  const result = runInsert(raw, "dealer_enquiries", {
+    dealer_id: input.dealerId,
+    name: input.name,
+    email: input.email,
+    message: input.message,
+    created_at: currentIsoTimestamp(),
+  });
   return Number(result.lastInsertRowid);
 }
 
@@ -208,13 +211,10 @@ export function getPublicListings(
 
   const where = wheres.join(" AND ");
 
-  const countRow = raw
-    .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
-    .get(...params) as { n: number };
-
   const rows = raw
     .prepare(
       `SELECT
+        COUNT(*) OVER() as totalCount,
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
         l.transmission, l.mileage, l.current_price as currentPrice,
@@ -227,7 +227,14 @@ export function getPublicListings(
        ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`,
     )
-    .all(...params, safeLimit, offset) as PublicListing[];
+    .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>;
+
+  const countListings = () => {
+    const row = raw
+      .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
+      .get(...params) as { n: number };
+    return row.n;
+  };
 
   // Available makes for filter dropdown
   const makeRows = raw
@@ -239,8 +246,8 @@ export function getPublicListings(
     .all(dealerId) as { make: string }[];
 
   return {
-    listings: rows,
-    total: countRow.n,
+    listings: rows.map((row) => omitQueryFields(row, ['totalCount'])),
+    total: getWindowTotal(rows, safePage, countListings, 'totalCount'),
     page: safePage,
     limit: safeLimit,
     makes: makeRows.map((r) => r.make),

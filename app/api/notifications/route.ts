@@ -3,6 +3,18 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
 
+interface NotificationQueryRow {
+  id: number | null;
+  user_id: number | null;
+  type: string | null;
+  entity_type: string | null;
+  entity_id: number | null;
+  title: string | null;
+  read_at: string | null;
+  created_at: string | null;
+  unread_count: number;
+}
+
 export async function GET() {
   const check = await requireAuth();
   if ('error' in check) return check.error;
@@ -13,19 +25,39 @@ export async function GET() {
   // Check for overdue tasks and generate notifications
   generateOverdueNotifications(userId);
 
-  const notifications = raw.prepare(`
-    SELECT * FROM notifications
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 50
-  `).all(userId);
+  const rows = raw.prepare(`
+    WITH unread AS (
+      SELECT COUNT(*) as unread_count
+      FROM notifications
+      WHERE user_id = ? AND read_at IS NULL
+    ),
+    recent AS (
+      SELECT id, user_id, type, entity_type, entity_id, title, read_at, created_at
+      FROM notifications
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+      LIMIT 50
+    )
+    SELECT recent.*, unread.unread_count
+    FROM unread
+    LEFT JOIN recent ON 1 = 1
+  `).all(userId, userId) as NotificationQueryRow[];
 
-  const unreadCount = raw.prepare(`
-    SELECT COUNT(*) as count FROM notifications
-    WHERE user_id = ? AND read_at IS NULL
-  `).get(userId) as { count: number };
+  const unreadCount = rows[0]?.unread_count ?? 0;
+  const notifications = rows
+    .filter((row) => row.id !== null)
+    .map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      type: row.type,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id,
+      title: row.title,
+      read_at: row.read_at,
+      created_at: row.created_at,
+    }));
 
-  return NextResponse.json({ notifications, unreadCount: unreadCount.count });
+  return NextResponse.json({ notifications, unreadCount });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -53,9 +85,11 @@ function generateOverdueNotifications(userId: number) {
   const today = formatDateInputValue();
   const now = currentIsoTimestamp();
 
-  // Find overdue tasks assigned to this user (or unassigned)
-  const overdue = raw.prepare(`
-    SELECT t.id, t.title FROM tasks t
+  // Find overdue tasks assigned to this user (or unassigned) and insert new notifications.
+  raw.prepare(`
+    INSERT INTO notifications (user_id, type, entity_type, entity_id, title, created_at)
+    SELECT ?, 'task_overdue', 'task', t.id, 'Overdue: ' || t.title, ?
+    FROM tasks t
     WHERE t.deadline < ? AND t.status NOT IN ('done', 'cancelled')
     AND (t.assignee_id = ? OR t.assignee_id IS NULL)
     AND NOT EXISTS (
@@ -64,14 +98,5 @@ function generateOverdueNotifications(userId: number) {
       AND n.type = 'task_overdue' AND n.user_id = ?
       AND n.created_at > date(?, '-1 day')
     )
-  `).all(today, userId, userId, now) as { id: number; title: string }[];
-
-  const insert = raw.prepare(`
-    INSERT INTO notifications (user_id, type, entity_type, entity_id, title, created_at)
-    VALUES (?, 'task_overdue', 'task', ?, ?, ?)
-  `);
-
-  for (const t of overdue) {
-    insert.run(userId, t.id, `Overdue: ${t.title}`, now);
-  }
+  `).run(userId, now, today, userId, userId, now);
 }

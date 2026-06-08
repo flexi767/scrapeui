@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import { CARS_BG_CREDENTIAL_SECTION, MOBILE_BG_CREDENTIAL_SECTION } from '@/lib/dealers/platformCredentials';
@@ -222,9 +223,9 @@ export function DealerTableRow({
                 custom tmpl #{dealer.active_template_config_id}
               </a>
             ) : dealer.public_enabled === 1 ? (
-              <a href="/templates" className="text-[10px] text-gray-500 hover:text-gray-300">
+              <Link href="/templates" className="text-[10px] text-gray-500 hover:text-gray-300">
                 {t('add_template')}
-              </a>
+              </Link>
             ) : null}
           </div>
         )}

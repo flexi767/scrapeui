@@ -24,6 +24,7 @@ import {
   LISTING_SORT_COLUMNS,
   OWN_LISTING_SORT_COLUMNS,
 } from './list-filters';
+import { getWindowTotal, omitQueryFields } from '../query-utils';
 
 const ownListingFromClause = `
   FROM ranked_backups b
@@ -81,12 +82,6 @@ const ownListingSelectColumns = `
   d.slug as dealer_slug
 `;
 
-function stripTotalCount<T extends { total_count: number }>(row: T): Omit<T, 'total_count'> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { total_count, ...rest } = row;
-  return rest;
-}
-
 function getListingPage(
   filters: ListingFilters,
   options: {
@@ -111,6 +106,7 @@ function getListingPage(
     .prepare(
       `
     SELECT
+      COUNT(*) OVER() as total_count,
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
       l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active${deletedAtSelect},
@@ -124,20 +120,26 @@ function getListingPage(
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as ListingRow[];
+    .all(...params, limit, offset) as Array<ListingRow & { total_count: number }>;
 
-  const { count } = raw
-    .prepare(
-      `
+  const countListings = () => {
+    const { count } = raw
+      .prepare(
+        `
     SELECT COUNT(*) as count
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
   `,
-    )
-    .get(...params) as { count: number };
+      )
+      .get(...params) as { count: number };
+    return count;
+  };
 
-  return { data: rows, total: count, page, limit };
+  const total = getWindowTotal(rows, page, countListings, 'total_count');
+  const data = rows.map((row) => omitQueryFields(row, ['total_count']));
+
+  return { data, total, page, limit };
 }
 
 export function getListings(filters: ListingFilters = {}) {
@@ -214,8 +216,8 @@ export function getOwnListings(filters: ListingFilters = {}) {
     return count;
   };
 
-  const total = rows[0]?.total_count ?? (page > 1 ? countOwnListings() : 0);
-  const data = rows.map((row) => stripTotalCount(row) as OwnListingRow);
+  const total = getWindowTotal(rows, page, countOwnListings, 'total_count');
+  const data = rows.map((row) => omitQueryFields(row, ['total_count']));
 
   return { data, total, page, limit };
 }
