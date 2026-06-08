@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { invalidateTranslationCache } from '@/lib/translation-cache';
 
 export async function GET() {
   const session = await auth();
@@ -87,6 +88,7 @@ export async function PUT(request: Request) {
         .run();
     }
 
+    invalidateTranslationCache();
     return Response.json({ success: true });
   } catch (error) {
     console.error('Error updating translation:', error);

@@ -1,6 +1,13 @@
 import { getTranslationsForLocale } from '@/lib/translation-queries';
+import {
+  getCachedTranslations,
+  setCachedTranslations,
+} from '@/lib/translation-cache';
 
 export async function getTranslationsFromDb(locale: string) {
+  const cached = getCachedTranslations(locale);
+  if (cached) return cached;
+
   const messages: Record<string, Record<string, string>> = {};
 
   try {
@@ -24,6 +31,7 @@ export async function getTranslationsFromDb(locale: string) {
       messages[namespace][key] = row.value;
     });
 
+    setCachedTranslations(locale, messages);
     return messages;
   } catch (error) {
     console.error(`Failed to load translations for locale ${locale}:`, error);
