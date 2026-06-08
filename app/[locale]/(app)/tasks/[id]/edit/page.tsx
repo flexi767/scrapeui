@@ -9,7 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
-import type { LabelRow, UserRow } from '@/lib/queries';
+import { apiRequest } from '@/lib/utils';
+import type { LabelRow, TaskRow, UserRow } from '@/lib/queries';
+
+type TaskDetails = TaskRow & {
+  listings?: { id: number }[];
+  labels?: { id: number }[];
+};
 
 export default function EditTaskPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -31,9 +37,9 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/tasks/${id}`).then(r => r.json()),
-      fetch('/api/users').then(r => r.json()),
-      fetch('/api/labels').then(r => r.json()),
+      apiRequest<TaskDetails>(`/api/tasks/${id}`, 'Failed to load task'),
+      apiRequest<UserRow[]>('/api/users', 'Failed to load users'),
+      apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels'),
     ]).then(([task, usersData, labelsData]) => {
       setTitle(task.title);
       setDescription(task.description || '');
@@ -53,16 +59,15 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
     e.preventDefault();
     setSaving(true);
 
-    await fetch(`/api/tasks/${id}`, {
+    await apiRequest<unknown>(`/api/tasks/${id}`, 'Failed to save task', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      json: {
         title, description: description || null, status, priority,
         assigneeId: assigneeId ? Number(assigneeId) : null,
         deadline: deadline || null,
         listingIds: selectedListings,
         labelIds: selectedLabels,
-      }),
+      },
     });
 
     router.push(`/tasks/${id}`);

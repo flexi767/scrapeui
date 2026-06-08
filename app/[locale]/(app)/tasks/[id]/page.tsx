@@ -13,6 +13,7 @@ import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { TiptapViewer } from '@/components/editor/TiptapViewer';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { formatDateInputValue, formatDateOnly } from '@/lib/date-format';
+import { apiRequest } from '@/lib/utils';
 
 interface TaskDetail {
   id: number;
@@ -63,15 +64,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [timeDate, setTimeDate] = useState(formatDateInputValue());
 
   const loadTask = useCallback(() => {
-    fetch(`/api/tasks/${id}`).then(r => r.json()).then(setTask);
+    apiRequest<TaskDetail>(`/api/tasks/${id}`, 'Failed to load task').then(setTask);
   }, [id]);
 
   const loadComments = useCallback(() => {
-    fetch(`/api/tasks/${id}/comments`).then(r => r.json()).then(setComments);
+    apiRequest<CommentItem[]>(`/api/tasks/${id}/comments`, 'Failed to load comments').then(setComments);
   }, [id]);
 
   const loadTimeEntries = useCallback(() => {
-    fetch(`/api/tasks/${id}/time`).then(r => r.json()).then(setTimeEntries);
+    apiRequest<TimeEntryItem[]>(`/api/tasks/${id}/time`, 'Failed to load time entries').then(setTimeEntries);
   }, [id]);
 
   useEffect(() => {
@@ -81,20 +82,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   }, [loadComments, loadTask, loadTimeEntries]);
 
   async function handleStatusChange(newStatus: string) {
-    await fetch(`/api/tasks/${id}`, {
+    await apiRequest<unknown>(`/api/tasks/${id}`, 'Failed to update task status', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
+      json: { status: newStatus },
     });
     loadTask();
   }
 
   async function addComment() {
     if (!commentBody.trim()) return;
-    await fetch(`/api/tasks/${id}/comments`, {
+    await apiRequest<unknown>(`/api/tasks/${id}/comments`, 'Failed to add comment', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: commentBody }),
+      json: { body: commentBody },
     });
     setCommentBody('');
     loadComments();
@@ -102,14 +101,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
   async function addTimeEntry() {
     if (!timeDuration || !timeDate) return;
-    await fetch(`/api/tasks/${id}/time`, {
+    await apiRequest<unknown>(`/api/tasks/${id}/time`, 'Failed to log time', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      json: {
         description: timeDesc || null,
         durationMinutes: Number(timeDuration),
         date: timeDate,
-      }),
+      },
     });
     setTimeDuration('');
     setTimeDesc('');
@@ -118,7 +116,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
   async function deleteTask() {
     if (!confirm(t('delete_this_task'))) return;
-    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    await apiRequest<unknown>(`/api/tasks/${id}`, 'Failed to delete task', { method: 'DELETE' });
     router.push('/tasks');
   }
 

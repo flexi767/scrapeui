@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow, UserRow } from '@/lib/queries';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 
 export default function NewTaskPage() {
   const t = useTranslations('ui');
@@ -29,8 +29,8 @@ export default function NewTaskPage() {
   const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
-    fetch('/api/users').then(r => r.json()).then(setUsers);
-    fetch('/api/labels').then(r => r.json()).then(setLabels);
+    apiRequest<UserRow[]>('/api/users', 'Failed to load users').then(setUsers).catch(() => {});
+    apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels').then(setLabels).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -38,18 +38,16 @@ export default function NewTaskPage() {
     setSaving(true);
 
     try {
-      const res = await fetch('/api/tasks', {
+      const { id } = await apiRequest<{ id: number }>('/api/tasks', 'Failed to create task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        json: {
           title, description: description || null, status, priority,
           assigneeId: assigneeId ? Number(assigneeId) : null,
           deadline: deadline || null,
           listingIds: selectedListings,
           labelIds: selectedLabels,
-        }),
+        },
       });
-      const { id } = await parseApiResponse<{ id: number }>(res, 'Failed to create task');
       router.push(`/tasks/${id}`);
     } catch {
       setSaving(false);

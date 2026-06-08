@@ -154,6 +154,24 @@ export interface ArticleRow {
   author_name: string;
 }
 
+export type ArticleDetailRow = ArticleRow & {
+  labels: LabelRow[];
+  listings: ListingSummary[];
+  uploads: UploadSummary[];
+};
+
+export interface UploadSummary {
+  id: number;
+  filename: string;
+  stored_name: string;
+  mime_type: string;
+  size_bytes: number;
+  entity_type: string | null;
+  entity_id: number | null;
+  uploaded_by_id: number | null;
+  created_at: string;
+}
+
 export interface ArticleFilters {
   search?: string;
   labelId?: number;
@@ -202,4 +220,53 @@ export function getArticles(filters: ArticleFilters = {}) {
     .get(...params) as { count: number };
 
   return { data: rows, total: count, page, limit };
+}
+
+export function getArticleById(id: number): ArticleDetailRow | null {
+  const article = raw
+    .prepare(
+      `
+    SELECT a.*, u.name as author_name
+    FROM articles a
+    LEFT JOIN users u ON u.id = a.author_id
+    WHERE a.id = ?
+  `,
+    )
+    .get(id) as ArticleRow | undefined;
+
+  if (!article) return null;
+
+  const listings = raw
+    .prepare(
+      `
+    SELECT l.id, l.mobile_id, l.title, l.make, l.model, l.reg_year, l.current_price
+    FROM article_listings al
+    JOIN listings l ON l.id = al.listing_id
+    WHERE al.article_id = ?
+  `,
+    )
+    .all(id) as ListingSummary[];
+
+  const labels = raw
+    .prepare(
+      `
+    SELECT lb.id, lb.name, lb.color
+    FROM article_labels al
+    JOIN labels lb ON lb.id = al.label_id
+    WHERE al.article_id = ?
+  `,
+    )
+    .all(id) as LabelRow[];
+
+  const uploads = raw
+    .prepare(
+      `
+    SELECT * FROM uploads
+    WHERE entity_type = 'article' AND entity_id = ?
+    ORDER BY created_at DESC
+  `,
+    )
+    .all(id) as UploadSummary[];
+
+  return { ...article, labels, listings, uploads };
 }

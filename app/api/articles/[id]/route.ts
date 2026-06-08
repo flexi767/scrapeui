@@ -3,6 +3,23 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
+import { getArticleById } from '@/lib/queries';
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
+  const { id } = await params;
+  const articleId = parsePositiveIntParam(id);
+  if (!articleId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  const article = getArticleById(articleId);
+  if (!article) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  return NextResponse.json(article);
+}
 
 export async function PATCH(
   request: NextRequest,

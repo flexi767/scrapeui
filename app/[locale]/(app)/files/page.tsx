@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDateOnly } from '@/lib/date-format';
-import { errorMessage, parseApiResponse } from '@/lib/utils';
+import { apiRequest, errorMessage } from '@/lib/utils';
 
 interface UploadRow {
   id: number;
@@ -27,8 +27,7 @@ export default function FilesPage() {
 
   function loadFiles() {
     setLoading(true);
-    return fetch('/api/uploads')
-      .then((r) => parseApiResponse<UploadRow[]>(r, 'Failed to load files'))
+    return apiRequest<UploadRow[]>('/api/uploads', 'Failed to load files')
       .then(setFiles)
       .finally(() => setLoading(false));
   }
@@ -50,11 +49,10 @@ export default function FilesPage() {
     setUploading(true);
     setError('');
     try {
-      const response = await fetch('/api/uploads', {
+      await apiRequest<unknown>('/api/uploads', 'Failed to upload files', {
         method: 'POST',
         body: formData,
       });
-      await parseApiResponse<unknown>(response, 'Failed to upload files');
       await loadFiles();
     } catch (uploadError) {
       setError(errorMessage(uploadError, 'Failed to upload files'));

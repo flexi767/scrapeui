@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { apiRequest } from '@/lib/utils';
+import type { ArticleDetailRow, ArticleRow, LabelRow } from '@/lib/queries';
+
+interface ArticlesResponse {
+  data?: ArticleRow[];
+}
 
 export default function EditArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -20,18 +26,20 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const [labels, setLabels] = useState<{ id: number; name: string; color: string }[]>([]);
+  const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/articles?search=${encodeURIComponent(slug)}&limit=1`).then(r => r.json()),
-      fetch('/api/labels').then(r => r.json()),
-    ]).then(([articlesData, labelsData]) => {
-      const article = articlesData.data?.find((a: { slug: string }) => a.slug === slug);
+      apiRequest<ArticlesResponse>(`/api/articles?search=${encodeURIComponent(slug)}&limit=1`, 'Failed to load article'),
+      apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels'),
+    ]).then(async ([articlesData, labelsData]) => {
+      const article = articlesData.data?.find((a) => a.slug === slug);
       if (article) {
-        setArticleId(article.id);
-        setTitle(article.title);
-        setContent(article.body || '');
+        const detail = await apiRequest<ArticleDetailRow>(`/api/articles/${article.id}`, 'Failed to load article details');
+        setArticleId(detail.id);
+        setTitle(detail.title);
+        setContent(detail.body || '');
+        setSelectedLabels(detail.labels.map((label) => label.id));
       }
       setLabels(labelsData);
       setLoaded(true);
@@ -43,12 +51,11 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
     if (!articleId) return;
     setSaving(true);
 
-    await fetch(`/api/articles/${articleId}`, {
+    await apiRequest<unknown>(`/api/articles/${articleId}`, 'Failed to save article', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      json: {
         title, content, labelIds: selectedLabels,
-      }),
+      },
     });
 
     router.push(`/kb/${slug}`);

@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 
 export default function NewArticlePage() {
   const t = useTranslations('ui');
@@ -24,7 +24,7 @@ export default function NewArticlePage() {
   const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
-    fetch('/api/labels').then(r => r.json()).then(setLabels);
+    apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels').then(setLabels).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,14 +32,12 @@ export default function NewArticlePage() {
     setSaving(true);
 
     try {
-      const res = await fetch('/api/articles', {
+      const { slug } = await apiRequest<{ slug: string }>('/api/articles', 'Failed to create article', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        json: {
           title, content, labelIds: selectedLabels, listingIds: selectedListings,
-        }),
+        },
       });
-      const { slug } = await parseApiResponse<{ slug: string }>(res, 'Failed to create article');
       router.push(`/kb/${slug}`);
     } catch {
       setSaving(false);

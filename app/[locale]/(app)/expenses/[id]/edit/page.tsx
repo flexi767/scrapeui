@@ -9,6 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
+import { apiRequest } from '@/lib/utils';
+import type { ExpenseRow, LabelRow } from '@/lib/queries';
+
+type ExpenseDetails = ExpenseRow & {
+  listings?: { id: number }[];
+  labels?: { id: number }[];
+};
 
 export default function EditExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations('ui');
@@ -25,12 +32,12 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const [labels, setLabels] = useState<{ id: number; name: string; color: string }[]>([]);
+  const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/expenses/${id}`).then(r => r.json()),
-      fetch('/api/labels').then(r => r.json()),
+      apiRequest<ExpenseDetails>(`/api/expenses/${id}`, 'Failed to load expense'),
+      apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels'),
     ]).then(([exp, labelsData]) => {
       setTitle(exp.title);
       setAmount((exp.amount / 100).toFixed(2));
@@ -50,15 +57,14 @@ export default function EditExpensePage({ params }: { params: Promise<{ id: stri
     setSaving(true);
     const amountCents = Math.round(parseFloat(amount) * 100);
 
-    await fetch(`/api/expenses/${id}`, {
+    await apiRequest<unknown>(`/api/expenses/${id}`, 'Failed to save expense', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      json: {
         title, amount: amountCents, currency, date, category,
         notes: notes || null,
         listingIds: selectedListings,
         labelIds: selectedLabels,
-      }),
+      },
     });
     router.push(`/expenses/${id}`);
   }

@@ -8,18 +8,17 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TiptapViewer } from '@/components/editor/TiptapViewer';
 import { formatDateOnly } from '@/lib/date-format';
+import { apiRequest } from '@/lib/utils';
+import type { ArticleDetailRow, ArticleRow } from '@/lib/queries';
 
-interface ArticleDetail {
-  id: number;
-  title: string;
-  slug: string;
-  body: string;
-  author_name: string;
-  created_at: string;
-  updated_at: string;
-  labels: { id: number; name: string; color: string }[];
-  listings: { id: number; mobile_id: string; title: string; make: string; model: string }[];
-  uploads: { id: number; filename: string; stored_name: string }[];
+type ArticleDetail = ArticleDetailRow & {
+  labels?: { id: number; name: string; color: string }[];
+  listings?: { id: number; mobile_id: string; title: string; make: string; model: string }[];
+  uploads?: { id: number; filename: string; stored_name: string }[];
+};
+
+interface ArticlesResponse {
+  data?: ArticleRow[];
 }
 
 export default function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -30,24 +29,19 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
 
   useEffect(() => {
     // We use slug to fetch from a custom endpoint
-    fetch(`/api/articles?search=${encodeURIComponent(slug)}&limit=1`)
-      .then(r => r.json())
-      .then(data => {
-        const match = data.data?.find((a: { slug: string }) => a.slug === slug);
+    apiRequest<ArticlesResponse>(`/api/articles?search=${encodeURIComponent(slug)}&limit=1`, 'Failed to load article')
+      .then(async data => {
+        const match = data.data?.find((a) => a.slug === slug);
         if (match) {
-          // Fetch full detail by id
-          fetch(`/api/articles/${match.id}`).then(r => {
-            if (r.ok) return r.json();
-            // If no detail endpoint returns article, use the list data
-            return match;
-          }).then(setArticle).catch(() => setArticle(match));
+          const detail = await apiRequest<ArticleDetail>(`/api/articles/${match.id}`, 'Failed to load article details');
+          setArticle(detail);
         }
       });
   }, [slug]);
 
   async function deleteArticle() {
     if (!article || !confirm(t('delete_article_confirm'))) return;
-    await fetch(`/api/articles/${article.id}`, { method: 'DELETE' });
+    await apiRequest<unknown>(`/api/articles/${article.id}`, 'Failed to delete article', { method: 'DELETE' });
     router.push('/kb');
   }
 

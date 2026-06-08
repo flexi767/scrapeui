@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDateOnly } from '@/lib/date-format';
+import { apiRequest } from '@/lib/utils';
 
 interface ArticleRow {
   id: number;
@@ -14,6 +15,11 @@ interface ArticleRow {
   slug: string;
   author_name: string;
   updated_at: string;
+}
+
+interface ArticlesResponse {
+  data: ArticleRow[];
+  total: number;
 }
 
 export default function KBPage() {
@@ -27,8 +33,7 @@ export default function KBPage() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
 
-    fetch(`/api/articles?${params}`)
-      .then((r) => r.json())
+    apiRequest<ArticlesResponse>(`/api/articles?${params}`, 'Failed to load articles')
       .then((data) => {
         setArticles(data.data);
         setTotal(data.total);

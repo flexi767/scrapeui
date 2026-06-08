@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
+import { apiRequest } from '@/lib/utils';
 
 interface TaskRow {
   id: number;
@@ -17,6 +18,11 @@ interface TaskRow {
   deadline: string | null;
   assignee_name: string | null;
   created_at: string;
+}
+
+interface TasksResponse {
+  data: TaskRow[];
+  total: number;
 }
 
 const STATUS_OPTIONS = ['', 'backlog', 'in_progress', 'done', 'cancelled'];
@@ -37,8 +43,7 @@ export default function TasksPage() {
     if (priority) params.set('priority', priority);
     if (search) params.set('search', search);
 
-    fetch(`/api/tasks?${params}`)
-      .then((r) => r.json())
+    apiRequest<TasksResponse>(`/api/tasks?${params}`, 'Failed to load tasks')
       .then((data) => {
         setTasks(data.data);
         setTotal(data.total);

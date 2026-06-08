@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { slugifyDealerName } from '@/components/dealers/utils';
-import { errorMessage, parseApiResponse } from '@/lib/utils';
+import { apiRequest, errorMessage } from '@/lib/utils';
 
 export default function DealerRegisterPage() {
   const t = useTranslations('ui');
@@ -53,12 +53,10 @@ export default function DealerRegisterPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/dealers/register', {
+      const data = await apiRequest<{ id?: number }>('/api/dealers/register', 'Failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        json: form,
       });
-      const data = await parseApiResponse<{ id?: number }>(res, 'Failed');
       if (!data.id) {
         toast.error(t('failed'));
         return;

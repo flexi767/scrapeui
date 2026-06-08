@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/shared/CategoryBadge';
+import { apiRequest } from '@/lib/utils';
 
 interface ExpenseDetail {
   id: number;
@@ -31,12 +32,12 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
   const [expense, setExpense] = useState<ExpenseDetail | null>(null);
 
   useEffect(() => {
-    fetch(`/api/expenses/${id}`).then(r => r.json()).then(setExpense);
+    apiRequest<ExpenseDetail>(`/api/expenses/${id}`, 'Failed to load expense').then(setExpense);
   }, [id]);
 
   async function deleteExpense() {
     if (!confirm(t('confirm_delete_expense'))) return;
-    await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
+    await apiRequest<unknown>(`/api/expenses/${id}`, 'Failed to delete expense', { method: 'DELETE' });
     router.push('/expenses');
   }
 

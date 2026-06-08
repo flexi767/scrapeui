@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CategoryBadge, EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
+import { apiRequest } from '@/lib/utils';
 
 interface ExpenseRow {
   id: number;
@@ -16,6 +17,12 @@ interface ExpenseRow {
   date: string;
   category: string;
   creator_name: string | null;
+}
+
+interface ExpensesResponse {
+  data: ExpenseRow[];
+  total: number;
+  totalAmount: number;
 }
 
 export default function ExpensesPage() {
@@ -36,8 +43,7 @@ export default function ExpensesPage() {
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
 
-    fetch(`/api/expenses?${params}`)
-      .then((r) => r.json())
+    apiRequest<ExpensesResponse>(`/api/expenses?${params}`, 'Failed to load expenses')
       .then((data) => {
         setExpenses(data.data);
         setTotal(data.total);

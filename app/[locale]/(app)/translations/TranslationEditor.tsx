@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { apiRequest } from '@/lib/utils';
 
 interface TranslationRow {
   key: string;
@@ -15,6 +16,10 @@ interface TranslationRow {
 
 type AutoTranslatedValues = Partial<Pick<TranslationRow, 'bg' | 'de' | 'ru'>>;
 
+interface AutoTranslateResponse {
+  translations?: AutoTranslatedValues;
+}
+
 export function TranslationEditor() {
   const t = useTranslations('ui');
   const [rows, setRows] = useState<TranslationRow[]>([]);
@@ -25,8 +30,7 @@ export function TranslationEditor() {
 
   useEffect(() => {
     // Fetch all translation keys and their translations
-    fetch('/api/translations')
-      .then((res) => res.json())
+    apiRequest<TranslationRow[]>('/api/translations', 'Failed to load translations')
       .then((data) => {
         setRows(data);
         setLoading(false);
@@ -39,20 +43,17 @@ export function TranslationEditor() {
 
   const handleUpdate = async (key: string, locale: string, value: string) => {
     // Update translation in database via API
-    const response = await fetch('/api/translations', {
+    await apiRequest<unknown>('/api/translations', 'Failed to update translation', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, locale, value }),
+      json: { key, locale, value },
     });
 
-    if (response.ok) {
-      // Update local state
-      setRows((prev) =>
-        prev.map((row) =>
-          row.key === key ? { ...row, [locale]: value } : row,
-        ),
-      );
-    }
+    // Update local state
+    setRows((prev) =>
+      prev.map((row) =>
+        row.key === key ? { ...row, [locale]: value } : row,
+      ),
+    );
   };
 
   const handleAutoTranslate = async (key: string) => {
@@ -60,19 +61,10 @@ export function TranslationEditor() {
     setError(null);
 
     try {
-      const response = await fetch('/api/translations/translate', {
+      const data = await apiRequest<AutoTranslateResponse>('/api/translations/translate', 'Auto-translation failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key }),
+        json: { key },
       });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      const data = (await response.json()) as {
-        translations?: AutoTranslatedValues;
-      };
 
       setRows((prev) =>
         prev.map((row) =>

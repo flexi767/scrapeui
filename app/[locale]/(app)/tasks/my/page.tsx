@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
+import { apiRequest } from '@/lib/utils';
 
 interface TaskRow {
   id: number;
@@ -17,6 +18,10 @@ interface TaskRow {
   assignee_name: string | null;
 }
 
+interface TasksResponse {
+  data: TaskRow[];
+}
+
 export default function MyTasksPage() {
   const t = useTranslations('ui');
   const { data: session } = useSession();
@@ -25,8 +30,7 @@ export default function MyTasksPage() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    fetch(`/api/tasks?assigneeId=${session.user.id}`)
-      .then((r) => r.json())
+    apiRequest<TasksResponse>(`/api/tasks?assigneeId=${session.user.id}`, 'Failed to load tasks')
       .then((data) => setTasks(data.data))
       .finally(() => setLoading(false));
   }, [session?.user?.id]);

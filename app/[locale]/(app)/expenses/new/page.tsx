@@ -11,7 +11,7 @@ import { EXPENSE_CATEGORIES } from '@/components/shared/CategoryBadge';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
 import { formatDateInputValue } from '@/lib/date-format';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 
 export default function NewExpensePage() {
   const t = useTranslations('ui');
@@ -30,7 +30,7 @@ export default function NewExpensePage() {
   const [labels, setLabels] = useState<LabelRow[]>([]);
 
   useEffect(() => {
-    fetch('/api/labels').then(r => r.json()).then(setLabels);
+    apiRequest<LabelRow[]>('/api/labels', 'Failed to load labels').then(setLabels).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,17 +40,15 @@ export default function NewExpensePage() {
     const amountCents = Math.round(parseFloat(amount) * 100);
 
     try {
-      const res = await fetch('/api/expenses', {
+      const { id: expenseId } = await apiRequest<{ id: number }>('/api/expenses', 'Failed to create expense', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        json: {
           title, amount: amountCents, currency, date, category,
           notes: notes || null,
           listingIds: selectedListings,
           labelIds: selectedLabels,
-        }),
+        },
       });
-      const { id: expenseId } = await parseApiResponse<{ id: number }>(res, 'Failed to create expense');
 
       // Upload invoice/receipt files if provided
       if (invoiceFiles.length > 0) {
@@ -60,7 +58,7 @@ export default function NewExpensePage() {
         }
         form.append('entityType', 'expense');
         form.append('entityId', String(expenseId));
-        await fetch('/api/uploads', { method: 'POST', body: form });
+        await apiRequest<unknown>('/api/uploads', 'Failed to upload files', { method: 'POST', body: form });
       }
 
       router.push(`/expenses/${expenseId}`);
