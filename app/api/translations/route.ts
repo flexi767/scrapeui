@@ -18,20 +18,25 @@ export async function GET() {
     // Fetch all translation keys with their translations for all locales
     const keys = db.select().from(translationKeys).all();
     const allTranslations = db.select().from(translations).all();
+    const translationsByKey = new Map<string, Partial<Record<typeof ALL_LOCALES[number], string>>>();
+
+    for (const translation of allTranslations) {
+      if (!ALL_LOCALES.includes(translation.localeCode as typeof ALL_LOCALES[number])) continue;
+      const values = translationsByKey.get(translation.translationKeyId) ?? {};
+      values[translation.localeCode as typeof ALL_LOCALES[number]] = translation.value;
+      translationsByKey.set(translation.translationKeyId, values);
+    }
 
     const result = keys.map((key) => {
-      const transForKey = allTranslations.filter(
-        (t) => t.translationKeyId === key.id,
-      );
-
+      const values = translationsByKey.get(key.id);
       return {
         key: key.id,
         context: key.context,
         description: key.description,
-        bg: transForKey.find((t) => t.localeCode === 'bg')?.value || '',
-        en: transForKey.find((t) => t.localeCode === 'en')?.value || '',
-        de: transForKey.find((t) => t.localeCode === 'de')?.value || '',
-        ru: transForKey.find((t) => t.localeCode === 'ru')?.value || '',
+        bg: values?.bg || '',
+        en: values?.en || '',
+        de: values?.de || '',
+        ru: values?.ru || '',
       };
     });
 
