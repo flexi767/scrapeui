@@ -1,3 +1,5 @@
+'use client';
+
 import {
   ExternalLink,
   Loader2,
@@ -7,6 +9,7 @@ import {
   SearchIcon,
   Trash2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SavedSearchEditorListingSummary } from "@/components/saved-searches/SavedSearchEditorListingSummary";
 import { Button } from "@/components/ui/button";
 import type { SearchPrefillData } from "@/lib/mobile-bg/search-prefill";
@@ -81,19 +84,20 @@ export function SavedSearchEditorHeader({
   onSaveAsNew: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('ui');
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
       <SavedSearchEditorListingSummary listing={listing} />
       <div className="flex flex-wrap justify-end gap-2">
         <HeaderActionButton
-          label="First 7"
+          label={t('first_7')}
           icon={SearchIcon}
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={onShowFirst}
           disabled={resultsLoading || browserResultsLoading}
         />
         <HeaderActionButton
-          label="Search on Server"
+          label={t('search_on_server')}
           icon={SearchIcon}
           busy={resultsLoading}
           className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
@@ -101,7 +105,7 @@ export function SavedSearchEditorHeader({
           disabled={resultsLoading || browserResultsLoading}
         />
         <HeaderActionButton
-          label="Open Browser Search"
+          label={t('open_browser_search')}
           icon={SearchIcon}
           busy={browserResultsLoading}
           className="border-cyan-700 bg-cyan-950/80 text-cyan-200 hover:bg-cyan-900 hover:text-white"
@@ -109,13 +113,13 @@ export function SavedSearchEditorHeader({
           disabled={resultsLoading || browserResultsLoading}
         />
         <HeaderActionButton
-          label="Open mobile.bg"
+          label={t('open_mobile_bg')}
           icon={ExternalLink}
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={onOpenMobileBg}
         />
         <HeaderActionButton
-          label="Save Ad"
+          label={t('save_ad')}
           icon={Plus}
           busy={resultsLoading && saveAdMode}
           className={
@@ -128,7 +132,7 @@ export function SavedSearchEditorHeader({
         />
         {!makeOrModelChanged && (
           <HeaderActionButton
-            label="Save"
+            label={t('save')}
             icon={Save}
             busy={saveBusy}
             className="border-emerald-700 bg-emerald-950/80 text-emerald-200 hover:bg-emerald-900 hover:text-white"
@@ -137,7 +141,7 @@ export function SavedSearchEditorHeader({
           />
         )}
         <HeaderActionButton
-          label="Save As New"
+          label={t('save_as_new')}
           icon={Plus}
           busy={cloneBusy}
           className="border-amber-700 bg-amber-950/80 text-amber-200 hover:bg-amber-900 hover:text-white"
@@ -145,7 +149,7 @@ export function SavedSearchEditorHeader({
           disabled={cloneBusy}
         />
         <HeaderActionButton
-          label="Delete"
+          label={t('delete')}
           icon={Trash2}
           busy={deleteBusy}
           className="border-red-700 bg-red-950/80 text-red-200 hover:bg-red-900 hover:text-white"
