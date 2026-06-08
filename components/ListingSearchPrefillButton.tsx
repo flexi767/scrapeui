@@ -70,7 +70,7 @@ export default function ListingSearchPrefillButton({
           size="icon-xs"
           className="border-gray-600 bg-gray-900/80 text-gray-200 hover:bg-gray-800 hover:text-white"
           onClick={() => openAndLoad('open')}
-          aria-label="Show prefilled mobile.bg search fields"
+          aria-label={t('show_prefilled_search_fields')}
         >
           <SearchIcon />
         </Button>
@@ -81,7 +81,7 @@ export default function ListingSearchPrefillButton({
             size="icon-xs"
             className="border-sky-700 bg-sky-950/80 text-sky-200 hover:bg-sky-900 hover:text-white"
             onClick={() => openAndLoad('show-first-7')}
-            aria-label="Show mobile.bg results for first 7 filters"
+            aria-label={t('show_quick_results')}
           >
             <SearchCheckIcon />
           </Button>

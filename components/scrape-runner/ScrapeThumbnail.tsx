@@ -15,7 +15,7 @@ export function ScrapeThumbnail({ src, href }: ScrapeThumbnailProps) {
       src={src}
       alt=""
       className="h-[45px] w-[60px] rounded bg-gray-800 object-cover hover:opacity-80"
-      fallbackLabel="No image"
+      fallbackLabel=""
       style={{ aspectRatio: '4/3' }}
     />
   );
