@@ -6,10 +6,14 @@ import {
 import { readJsonBody } from '@/lib/api/json-body';
 import { getIgnoredSearchResultMobileIds } from '@/lib/mobile-bg/search-ignores';
 import { errorMessage } from '@/lib/utils';
+import { requireAuth } from '@/lib/api/auth-helpers';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const payload = await readJsonBody<{
       action?: string;
