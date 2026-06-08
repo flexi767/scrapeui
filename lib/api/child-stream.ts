@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
+import { requireAuth } from '@/lib/api/auth-helpers';
 
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
@@ -209,6 +210,9 @@ export function createChildJobRoute(definition: ChildJobRouteDefinition) {
 
   return {
     async POST(req: Request) {
+      const check = await requireAuth();
+      if ('error' in check) return check.error;
+
       state.clearStale();
 
       if (state.child) {
@@ -231,7 +235,10 @@ export function createChildJobRoute(definition: ChildJobRouteDefinition) {
       );
     },
 
-    DELETE() {
+    async DELETE() {
+      const check = await requireAuth();
+      if ('error' in check) return check.error;
+
       return createStopResponse(state, definition.stopMessages);
     },
   };

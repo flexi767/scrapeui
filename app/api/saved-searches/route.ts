@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api/auth-helpers";
 import {
   createSavedSearch,
   getSavedSearchDetail,
@@ -8,12 +9,18 @@ import { readJsonBody } from "@/lib/api/json-body";
 import { parseSearchFields } from "@/lib/mobile-bg/search-form-shared";
 
 export async function GET() {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   return NextResponse.json({
     searches: listSavedSearchSummaries(),
   });
 }
 
 export async function POST(request: Request) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const payload = await readJsonBody<{ fields?: unknown }>(request);
 
   const fields = parseSearchFields(payload?.fields);

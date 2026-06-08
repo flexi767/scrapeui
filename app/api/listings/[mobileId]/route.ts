@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { normalizeCarsBgShortTitle } from '@/lib/cars-bg/title';
 import { getOwnListingByMobileId } from '@/lib/queries';
 import { currentIsoTimestamp } from '@/lib/date-format';
@@ -8,6 +9,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ mobileId: string }> }
 ) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const mobileId = (await params).mobileId;
 

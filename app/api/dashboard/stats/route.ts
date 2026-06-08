@@ -1,4 +1,5 @@
 import { raw } from '@/db/client';
+import { requireAuth } from '@/lib/api/auth-helpers';
 
 interface DashboardStats {
   totalListings: number;
@@ -7,7 +8,10 @@ interface DashboardStats {
   totalDealers: number;
 }
 
-export function GET() {
+export async function GET() {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const stats: DashboardStats = {
     totalListings: 0,
     activeListings: 0,

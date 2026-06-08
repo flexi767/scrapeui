@@ -4,6 +4,16 @@ import { findSavedListingThumbPath, getContentTypeForThumbPath } from '@/lib/lis
 
 export const runtime = 'nodejs';
 
+function isAllowedFallbackUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return url.protocol === 'https:' && /(^|\.)mobile\.bg$/.test(url.hostname);
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ mobileId: string }> },
@@ -22,7 +32,7 @@ export async function GET(
   }
 
   const fallback = req.nextUrl.searchParams.get('fallback');
-  if (fallback) {
+  if (fallback && isAllowedFallbackUrl(fallback)) {
     return NextResponse.redirect(fallback);
   }
 

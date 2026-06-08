@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { runInsert } from '@/lib/listings/sql';
@@ -10,6 +11,9 @@ import {
 } from '@/app/api/editown/backups/[backupId]/helpers';
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const body = await req.json() as FullFormBody;
   const bodyType = body.body_type ?? body.bodyType ?? '';
   const productionYear = body.productionYear ?? '';

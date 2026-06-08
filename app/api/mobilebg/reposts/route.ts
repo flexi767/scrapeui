@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { repostBackupFromDb } from '@/lib/mobile-bg/repost';
@@ -8,6 +9,9 @@ import { errorMessage } from '@/lib/utils';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const { dealerSlug, backupId } = await req.json() as { dealerSlug?: string; backupId?: number };
     if (!dealerSlug || !backupId) {
