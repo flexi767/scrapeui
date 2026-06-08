@@ -91,6 +91,70 @@ function getUpdateDir(dealerSlug: string, backupId: number): string {
   return path.join(SCRAPED_ROOT, dealerSlug, 'updates', String(backupId));
 }
 
+function markMobileBgSyncSucceeded(
+  db: Database.Database,
+  backup: BackupRow,
+  effectiveAdStatus: string,
+  syncedAt: string,
+): void {
+  db.prepare(`
+    UPDATE mobilebg_backups
+    SET
+      draft_needs_sync = 0,
+      ad_status = ?,
+      last_mobile_sync_status = 'success',
+      last_mobile_sync_error = NULL,
+      last_mobile_sync_at = ?,
+      updated_at = ?
+    WHERE id = ?
+  `).run(effectiveAdStatus, syncedAt, syncedAt, backup.id);
+
+  if (backup.listing_id == null) return;
+
+  const listingState = db.prepare(`
+    SELECT
+      l.current_price,
+      l.price_change,
+      (
+        SELECT s.price
+        FROM listing_snapshots s
+        WHERE s.listing_id = l.id
+          AND s.price IS NOT NULL
+        ORDER BY s.recorded_at DESC, s.id DESC
+        LIMIT 1
+      ) as previous_price
+    FROM listings l
+    WHERE l.id = ?
+  `).get(backup.listing_id) as ListingSyncStateRow | undefined;
+  const syncedPrice = backup.price_amount ?? null;
+  const resolvedPriceChange =
+    syncedPrice != null &&
+    listingState?.previous_price != null &&
+    Number(syncedPrice) === Number(listingState.previous_price);
+
+  db.prepare(`
+    UPDATE listings
+    SET
+      title = ?,
+      current_price = ?,
+      vat = ?,
+      kaparo = ?,
+      ad_status = ?,
+      price_change = ?,
+      last_seen_at = ?
+    WHERE id = ?
+  `).run(
+    backup.title,
+    syncedPrice,
+    backup.listing_vat,
+    backup.kaparo,
+    effectiveAdStatus,
+    resolvedPriceChange ? null : (listingState?.price_change ?? null),
+    syncedAt,
+    backup.listing_id,
+  );
+}
+
 export async function updateBackupOnMobileBg(
   db: Database.Database,
   dealer: DealerBackupConfig,
@@ -226,62 +290,7 @@ export async function updateBackupOnMobileBg(
       : normalizePromoStatus(backup.ad_status);
 
     const now = currentIsoTimestamp();
-    db.prepare(`
-      UPDATE mobilebg_backups
-      SET
-        draft_needs_sync = 0,
-        ad_status = ?,
-        last_mobile_sync_status = 'success',
-        last_mobile_sync_error = NULL,
-        last_mobile_sync_at = ?,
-        updated_at = ?
-      WHERE id = ?
-    `).run(effectiveAdStatus, now, now, backup.id);
-
-    if (backup.listing_id != null) {
-      const listingState = db.prepare(`
-        SELECT
-          l.current_price,
-          l.price_change,
-          (
-            SELECT s.price
-            FROM listing_snapshots s
-            WHERE s.listing_id = l.id
-              AND s.price IS NOT NULL
-            ORDER BY s.recorded_at DESC, s.id DESC
-            LIMIT 1
-          ) as previous_price
-        FROM listings l
-        WHERE l.id = ?
-      `).get(backup.listing_id) as ListingSyncStateRow | undefined;
-      const syncedPrice = backup.price_amount ?? null;
-      const resolvedPriceChange =
-        syncedPrice != null &&
-        listingState?.previous_price != null &&
-        Number(syncedPrice) === Number(listingState.previous_price);
-
-      db.prepare(`
-        UPDATE listings
-        SET
-          title = ?,
-          current_price = ?,
-          vat = ?,
-          kaparo = ?,
-          ad_status = ?,
-          price_change = ?,
-          last_seen_at = ?
-        WHERE id = ?
-      `).run(
-        backup.title,
-        syncedPrice,
-        backup.listing_vat,
-        backup.kaparo,
-        effectiveAdStatus,
-        resolvedPriceChange ? null : (listingState?.price_change ?? null),
-        now,
-        backup.listing_id,
-      );
-    }
+    markMobileBgSyncSucceeded(db, backup, effectiveAdStatus, now);
 
     log(`Sync finished successfully for mobile.bg #${backup.mobile_id}`);
     return { mobileId: backup.mobile_id };
