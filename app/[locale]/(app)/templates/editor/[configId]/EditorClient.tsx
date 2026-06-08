@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Editor, Frame, useEditor } from '@craftjs/core';
 import { BLOCK_RESOLVER, BLOCK_PALETTE } from '@/components/editor-blocks';
 import type { DealerTemplateConfig } from '@/lib/queries';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 
 // ── Toolbar ──────────────────────────────────────────────────────────────────
 
@@ -39,12 +39,10 @@ function EditorToolbar({
     setSaving(true);
     try {
       const serialized = query.serialize();
-      const res = await fetch(`/api/dealer-templates/${configId}/save-page`, {
+      await apiRequest<unknown>(`/api/dealer-templates/${configId}/save-page`, 'Save failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageType, craftState: serialized, name: configName }),
+        json: { pageType, craftState: serialized, name: configName },
       });
-      await parseApiResponse<unknown>(res, 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -53,8 +51,7 @@ function EditorToolbar({
   const activate = useCallback(async () => {
     setActivating(true);
     try {
-      const res = await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
-      await parseApiResponse<unknown>(res, 'Activate failed');
+      await apiRequest<unknown>(`/api/dealer-templates/${configId}/activate`, 'Activate failed', { method: 'POST' });
       setActivated(true);
     } finally {
       setActivating(false);

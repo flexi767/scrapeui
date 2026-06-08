@@ -1,4 +1,4 @@
-import { parseApiResponse } from "@/lib/utils";
+import { apiRequest } from "@/lib/utils";
 
 export async function setIgnoredSearchResult({
   sourceListingId,
@@ -9,21 +9,17 @@ export async function setIgnoredSearchResult({
   mobileId: string;
   ignored: boolean;
 }) {
-  const res = await fetch(`/api/listings/by-id/${sourceListingId}/ignored-search-results`, {
+  await apiRequest<unknown>(`/api/listings/by-id/${sourceListingId}/ignored-search-results`, "Failed to update ignored search result", {
     method: ignored ? "POST" : "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ignoredMobileId: mobileId }),
+    json: { ignoredMobileId: mobileId },
   });
-  await parseApiResponse<unknown>(res, "Failed to update ignored search result");
 }
 
 export async function saveAdAsCarbrosDraft(url: string) {
-  const res = await fetch("/api/editown/save-ad", {
+  const payload = await apiRequest<{ backupId?: number }>("/api/editown/save-ad", "Failed to save ad as draft", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, dealerSlug: "carbros" }),
+    json: { url, dealerSlug: "carbros" },
   });
-  const payload = await parseApiResponse<{ backupId?: number }>(res, "Failed to save ad as draft");
 
   if (typeof payload.backupId !== "number") {
     throw new Error("Failed to save ad as draft");

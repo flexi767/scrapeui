@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { errorMessage, parseApiResponse } from "@/lib/utils";
+import { apiRequest, errorMessage } from "@/lib/utils";
 
 export function usePublisherListing<T>(
   url: string,
@@ -14,8 +14,7 @@ export function usePublisherListing<T>(
 
   useEffect(() => {
     let cancelled = false;
-    fetch(url)
-      .then((res) => parseApiResponse<T>(res, fallbackError))
+    apiRequest<T>(url, fallbackError)
       .then((data) => {
         if (cancelled) return;
         setListing(data);

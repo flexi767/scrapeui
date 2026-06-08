@@ -1,5 +1,5 @@
 import { loadImage } from "@/lib/canvas-utils";
-import { parseApiResponse } from "@/lib/utils";
+import { apiRequest } from "@/lib/utils";
 import {
   DEFAULT_POSTER_VARIANT_PROMPTS,
   formatPosterPrice,
@@ -171,25 +171,23 @@ export async function generateAiPosters(
   collageSelections: CollageSelections,
   options: PosterGenerationOptions = {},
 ) {
-  const response = await fetch("/api/instagram/posters", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      backupId,
-      prompt,
-      variantPrompts,
-      collageSelections,
-      variantId: options.variantId,
-      force: Boolean(options.force),
-      cacheOnly: Boolean(options.cacheOnly),
-      imageProvider: options.imageProvider,
-      imageModel: options.imageModel,
-    }),
-  });
-
-  const data = await parseApiResponse<{ variants: PosterVariant[]; cached?: boolean; error?: string }>(
-    response,
+  const data = await apiRequest<{ variants: PosterVariant[]; cached?: boolean; error?: string }>(
+    "/api/instagram/posters",
     "Could not generate AI posters",
+    {
+      method: "POST",
+      json: {
+        backupId,
+        prompt,
+        variantPrompts,
+        collageSelections,
+        variantId: options.variantId,
+        force: Boolean(options.force),
+        cacheOnly: Boolean(options.cacheOnly),
+        imageProvider: options.imageProvider,
+        imageModel: options.imageModel,
+      },
+    },
   );
   if (data.error) throw new Error(data.error);
   if (data.variants.length === 0 && !options.cacheOnly) throw new Error("Image API returned no poster images");

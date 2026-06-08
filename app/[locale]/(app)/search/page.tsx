@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { parseApiResponse } from '@/lib/utils';
+import { apiRequest } from '@/lib/utils';
 
 interface SearchResult {
   type: 'task' | 'listing' | 'expense' | 'article';
@@ -31,8 +31,7 @@ export default function SearchPage() {
     setSearched(true);
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      setResults(await parseApiResponse<SearchResult[]>(res, 'Search failed'));
+      setResults(await apiRequest<SearchResult[]>(`/api/search?q=${encodeURIComponent(query)}`, 'Search failed'));
     } catch {
       setResults([]);
     } finally {

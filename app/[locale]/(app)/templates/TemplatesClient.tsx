@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { formatDateOnly } from '@/lib/date-format';
-import { errorMessage, parseApiResponse } from '@/lib/utils';
+import { apiRequest, errorMessage } from '@/lib/utils';
 import Link from 'next/link';
 
 interface Config {
@@ -50,15 +50,13 @@ function ForkModal({
     if (requiresDealer && !dealerId) { setError('Dealer is required'); return; }
     setBusy(true);
     try {
-      const res = await fetch(`/api/dealer-templates/${sourceId}/fork`, {
+      await apiRequest<unknown>(`/api/dealer-templates/${sourceId}/fork`, 'Fork failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        json: {
           name: name.trim(),
           ...(requiresDealer ? { dealerId: Number(dealerId) } : {}),
-        }),
+        },
       });
-      await parseApiResponse<unknown>(res, 'Fork failed');
       router.refresh();
       onClose();
     } catch (error) {
@@ -118,8 +116,7 @@ function ActivateButton({ configId }: { configId: number }) {
   const activate = async () => {
     setBusy(true);
     try {
-      const res = await fetch(`/api/dealer-templates/${configId}/activate`, { method: 'POST' });
-      await parseApiResponse<unknown>(res, 'Activate failed');
+      await apiRequest<unknown>(`/api/dealer-templates/${configId}/activate`, 'Activate failed', { method: 'POST' });
       router.refresh();
     } finally {
       setBusy(false);
@@ -140,8 +137,7 @@ function DeleteButton({ configId }: { configId: number }) {
     if (!confirm('Delete this config?')) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/dealer-templates/${configId}/delete`, { method: 'POST' });
-      await parseApiResponse<unknown>(res, 'Delete failed');
+      await apiRequest<unknown>(`/api/dealer-templates/${configId}/delete`, 'Delete failed', { method: 'POST' });
       router.refresh();
     } finally {
       setBusy(false);

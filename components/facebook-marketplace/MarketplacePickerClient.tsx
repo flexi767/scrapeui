@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { errorMessage, parseApiResponse } from "@/lib/utils";
+import { apiRequest, errorMessage } from "@/lib/utils";
 
 interface MarketplaceListing {
   backupId: number;
@@ -40,11 +40,10 @@ export function MarketplacePickerClient() {
 
         setIsLoading(true);
         setStatus(t('loading_listings'));
-        const response = await fetch(`/api/facebook-marketplace/listings?${params}`, {
+        const data = await apiRequest<MarketplaceListingsResponse>(`/api/facebook-marketplace/listings?${params}`, "Could not load listings", {
           credentials: "same-origin",
           signal: controller.signal,
         });
-        const data = await parseApiResponse<MarketplaceListingsResponse>(response, "Could not load listings");
         setListings(data.listings || []);
         setStatus(`Loaded ${(data.listings || []).length} listings`);
       } catch (error) {
@@ -59,7 +58,7 @@ export function MarketplacePickerClient() {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [query]);
+  }, [query, t]);
 
   function chooseListing(listing: MarketplaceListing) {
     const openerOrigin = getFacebookOpenerOrigin();

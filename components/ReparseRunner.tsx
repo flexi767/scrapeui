@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { errorMessage, parseApiResponse } from '@/lib/utils';
+import { apiRequest, errorMessage } from '@/lib/utils';
 
 interface Dealer { id: number; slug: string; name: string; }
 
@@ -35,12 +35,10 @@ export default function ReparseRunner({ dealers }: { dealers: Dealer[] }) {
     setResult(null);
     setError('');
     try {
-      const res = await fetch('/api/listings/reparse', {
+      const data = await apiRequest<Result>('/api/listings/reparse', 'Reparse failed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealer: dealer || undefined, missingOnly, dryRun }),
+        json: { dealer: dealer || undefined, missingOnly, dryRun },
       });
-      const data = await parseApiResponse<Result>(res, 'Reparse failed');
       setResult(data);
     } catch (e) {
       setError(errorMessage(e, 'Reparse failed'));
