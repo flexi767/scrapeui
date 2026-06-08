@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import path from "path";
 import type { PosterVariantPrompt } from "@/lib/instagram/poster-variants";
-import type { PosterImageModelConfig } from "./model-config";
+import type { PosterImageModelConfig, PosterImageProvider } from "./model-config";
 import {
   mimeFromFilename,
   mimeFromOutputFilename,
@@ -41,8 +41,14 @@ interface ComfyOutputImage {
   type?: string;
 }
 
-function getComfyBaseUrl() {
-  return (process.env.COMFYUI_BASE_URL ?? "http://127.0.0.1:8188").replace(/\/+$/, "");
+type ComfyProviderMode = Extract<PosterImageProvider, "comfy-local" | "comfy-api">;
+
+function getComfyBaseUrl(mode: ComfyProviderMode) {
+  const baseUrl = mode === "comfy-api"
+    ? process.env.COMFYUI_API_BASE_URL
+    : process.env.COMFYUI_LOCAL_BASE_URL ?? process.env.COMFYUI_BASE_URL ?? "http://127.0.0.1:8188";
+  if (!baseUrl) throw new Error("COMFYUI_API_BASE_URL is not configured");
+  return baseUrl.replace(/\/+$/, "");
 }
 
 function getComfyTimeoutMs() {
@@ -53,10 +59,26 @@ function getComfyPollMs() {
   return Number(process.env.COMFYUI_POLL_MS ?? 1000);
 }
 
-function getComfyWorkflowPath(model: PosterImageModelConfig) {
-  const workflowPath = model.workflowPath ?? process.env.COMFYUI_WORKFLOW_PATH;
-  if (!workflowPath) throw new Error("COMFYUI_WORKFLOW_PATH is not configured");
+function getComfyWorkflowPath(model: PosterImageModelConfig, mode: ComfyProviderMode) {
+  const workflowPath = model.workflowPath
+    ?? (mode === "comfy-api" ? process.env.COMFYUI_API_WORKFLOW_PATH : process.env.COMFYUI_LOCAL_WORKFLOW_PATH)
+    ?? process.env.COMFYUI_WORKFLOW_PATH;
+  if (!workflowPath) {
+    throw new Error(
+      mode === "comfy-api"
+        ? "COMFYUI_API_WORKFLOW_PATH or COMFYUI_WORKFLOW_PATH is not configured"
+        : "COMFYUI_LOCAL_WORKFLOW_PATH or COMFYUI_WORKFLOW_PATH is not configured",
+    );
+  }
   return path.isAbsolute(workflowPath) ? workflowPath : path.join(process.cwd(), workflowPath);
+}
+
+function getComfyHeaders(mode: ComfyProviderMode, headers?: HeadersInit): Headers {
+  const nextHeaders = new Headers(headers);
+  if (mode === "comfy-api" && process.env.COMFYUI_API_KEY) {
+    nextHeaders.set("Authorization", `Bearer ${process.env.COMFYUI_API_KEY}`);
+  }
+  return nextHeaders;
 }
 
 function parseComfyReferenceNodeIds() {
@@ -115,7 +137,7 @@ function applyComfyWorkflowInputs(
   return patched;
 }
 
-async function uploadComfyImage(baseUrl: string, image: ReferenceImageRow, variantId: string, index: number) {
+async function uploadComfyImage(baseUrl: string, mode: ComfyProviderMode, image: ReferenceImageRow, variantId: string, index: number) {
   if (!image.local_path) throw new Error("Reference image has no local path");
   const bytes = await readFile(image.local_path);
   const originalName = image.filename || path.basename(image.local_path);
@@ -127,7 +149,11 @@ async function uploadComfyImage(baseUrl: string, image: ReferenceImageRow, varia
   body.set("type", "input");
   body.set("overwrite", "true");
 
-  const response = await fetch(`${baseUrl}/upload/image`, { method: "POST", body });
+  const response = await fetch(`${baseUrl}/upload/image`, {
+    method: "POST",
+    headers: getComfyHeaders(mode),
+    body,
+  });
   const json = (await response.json().catch(() => null)) as ComfyUploadedImage | null;
   if (!response.ok || !json?.name) {
     throw new Error(`Could not upload reference image to ComfyUI: ${response.status}`);
@@ -135,10 +161,10 @@ async function uploadComfyImage(baseUrl: string, image: ReferenceImageRow, varia
   return json;
 }
 
-async function queueComfyPrompt(baseUrl: string, workflow: Record<string, unknown>) {
+async function queueComfyPrompt(baseUrl: string, mode: ComfyProviderMode, workflow: Record<string, unknown>) {
   const response = await fetch(`${baseUrl}/prompt`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getComfyHeaders(mode, { "Content-Type": "application/json" }),
     body: JSON.stringify({ client_id: randomUUID(), prompt: workflow }),
   });
   const json = (await response.json().catch(() => null)) as ComfyPromptResponse | null;
@@ -148,10 +174,12 @@ async function queueComfyPrompt(baseUrl: string, workflow: Record<string, unknow
   return json.prompt_id;
 }
 
-async function pollComfyHistory(baseUrl: string, promptId: string) {
+async function pollComfyHistory(baseUrl: string, mode: ComfyProviderMode, promptId: string) {
   const timeoutAt = Date.now() + getComfyTimeoutMs();
   while (Date.now() < timeoutAt) {
-    const response = await fetch(`${baseUrl}/history/${encodeURIComponent(promptId)}`);
+    const response = await fetch(`${baseUrl}/history/${encodeURIComponent(promptId)}`, {
+      headers: getComfyHeaders(mode),
+    });
     const json = (await response.json().catch(() => null)) as ComfyHistoryResponse | null;
     const history = json?.[promptId];
     if (history?.outputs) return history.outputs;
@@ -178,13 +206,15 @@ function getComfyOutputImage(
   return null;
 }
 
-async function readComfyOutputImage(baseUrl: string, output: ComfyOutputImage) {
+async function readComfyOutputImage(baseUrl: string, mode: ComfyProviderMode, output: ComfyOutputImage) {
   const params = new URLSearchParams({
     filename: output.filename,
     type: output.type ?? "output",
   });
   if (output.subfolder) params.set("subfolder", output.subfolder);
-  const response = await fetch(`${baseUrl}/view?${params.toString()}`);
+  const response = await fetch(`${baseUrl}/view?${params.toString()}`, {
+    headers: getComfyHeaders(mode),
+  });
   if (!response.ok) throw new Error(`Could not read ComfyUI output image: ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
   return `data:${mimeFromOutputFilename(output.filename)};base64,${bytes.toString("base64")}`;
@@ -193,23 +223,25 @@ async function readComfyOutputImage(baseUrl: string, output: ComfyOutputImage) {
 export async function generateComfyPosterVariant({
   imagePrompt,
   model,
+  mode,
   referenceImages,
   variant,
 }: {
   imagePrompt: string;
   model: PosterImageModelConfig;
+  mode: ComfyProviderMode;
   referenceImages: ReferenceImageRow[];
   variant: PosterVariantPrompt;
 }) {
-  const baseUrl = getComfyBaseUrl();
+  const baseUrl = getComfyBaseUrl(mode);
   const uploadedImages = await Promise.all(
-    referenceImages.map((image, index) => uploadComfyImage(baseUrl, image, variant.id, index)),
+    referenceImages.map((image, index) => uploadComfyImage(baseUrl, mode, image, variant.id, index)),
   );
-  const workflow = JSON.parse(await readFile(getComfyWorkflowPath(model), "utf8")) as Record<string, unknown>;
+  const workflow = JSON.parse(await readFile(getComfyWorkflowPath(model, mode), "utf8")) as Record<string, unknown>;
   const patchedWorkflow = applyComfyWorkflowInputs(workflow, imagePrompt, uploadedImages);
-  const promptId = await queueComfyPrompt(baseUrl, patchedWorkflow);
-  const outputs = await pollComfyHistory(baseUrl, promptId);
+  const promptId = await queueComfyPrompt(baseUrl, mode, patchedWorkflow);
+  const outputs = await pollComfyHistory(baseUrl, mode, promptId);
   const output = getComfyOutputImage(outputs);
   if (!output) throw new Error(`${variant.name} returned no ComfyUI output image`);
-  return readComfyOutputImage(baseUrl, output);
+  return readComfyOutputImage(baseUrl, mode, output);
 }

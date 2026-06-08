@@ -8,7 +8,7 @@ import {
 } from "@/components/publisher/local-storage";
 import { apiRequest, errorMessage } from "@/lib/utils";
 
-export type PosterImageProviderId = "openai" | "comfyui";
+export type PosterImageProviderId = "openai" | "comfy-local" | "comfy-api";
 
 export interface PosterImageModelOption {
   id: string;
@@ -32,7 +32,8 @@ const IMAGE_MODEL_STORAGE_PREFIX = "scrapeui:instagram-poster-image-model:";
 
 const FALLBACK_IMAGE_PROVIDER_OPTIONS: PosterImageProviderOption[] = [
   { id: "openai", label: "OpenAI", defaultModel: "gpt-image-2", models: [{ id: "gpt-image-2", label: "gpt-image-2" }] },
-  { id: "comfyui", label: "ComfyUI", defaultModel: "default", models: [{ id: "default", label: "Default workflow" }] },
+  { id: "comfy-local", label: "ComfyUI Local", defaultModel: "default", models: [{ id: "default", label: "Default workflow" }] },
+  { id: "comfy-api", label: "ComfyUI API", defaultModel: "default", models: [{ id: "default", label: "Default workflow" }] },
 ];
 
 export function usePosterImageOptions() {

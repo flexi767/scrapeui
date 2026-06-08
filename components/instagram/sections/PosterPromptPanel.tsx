@@ -95,7 +95,7 @@ export function PosterPromptPanel({
         </label>
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            {imageProvider === "comfyui" ? "ComfyUI model" : "OpenAI model"}
+            {imageProvider === "openai" ? "OpenAI model" : "ComfyUI model"}
           </span>
           <select
             value={imageModel}

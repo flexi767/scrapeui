@@ -140,8 +140,8 @@ export async function generatePosterVariants({
       const imagePrompt = buildImagePrompt(listing, prompt, variant);
       const referenceImages = getReferenceImages(getVariantPhotoIds(listing, variant.id, collageSelections));
       const dataUrl =
-        provider === "comfyui"
-          ? await generateComfyPosterVariant({ imagePrompt, model, referenceImages, variant })
+        provider === "comfy-local" || provider === "comfy-api"
+          ? await generateComfyPosterVariant({ imagePrompt, model, mode: provider, referenceImages, variant })
           : await generateOpenAiPosterVariant({ imagePrompt, model: model.id, apiKey, referenceImages, variant });
 
       return {
