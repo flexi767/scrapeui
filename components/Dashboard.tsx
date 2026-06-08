@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
@@ -140,8 +140,11 @@ export function Dashboard() {
     };
   }, [isAdmin, sessionStatus]);
 
-  const activeDealers = dealers.filter(d => d.active);
-  const ownDealers = activeDealers.filter(d => d.own);
+  const activeDealers = useMemo(() => dealers.filter(d => d.active), [dealers]);
+  const ownDealers = useMemo(() => activeDealers.filter(d => d.own), [activeDealers]);
+  const activeListingsPercent = stats?.totalListings
+    ? ((stats.activeListings / stats.totalListings) * 100).toFixed(0)
+    : '0';
 
   return (
     <main className="flex-1 overflow-y-auto">
@@ -183,7 +186,7 @@ export function Dashboard() {
                     <p className="text-3xl font-bold text-white">{stats?.activeListings ?? 0}</p>
                     {stats && (
                       <p className="text-xs text-gray-500">
-                        {((stats.activeListings / stats.totalListings) * 100).toFixed(0)}% {t('of_total')}
+                        {activeListingsPercent}% {t('of_total')}
                       </p>
                     )}
                   </>

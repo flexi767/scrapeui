@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { apiRequest } from '@/lib/utils';
 
@@ -82,20 +82,22 @@ export function TranslationEditor() {
     }
   };
 
-  const normalizedFilter = filter.trim().toLowerCase();
-  const filteredRows = normalizedFilter
-    ? rows.filter((row) =>
-        [
-          row.key,
-          row.context,
-          row.description,
-          row.bg,
-          row.en,
-          row.de,
-          row.ru,
-        ].some((value) => value?.toLowerCase().includes(normalizedFilter)),
-      )
-    : rows;
+  const filteredRows = useMemo(() => {
+    const normalizedFilter = filter.trim().toLowerCase();
+    if (!normalizedFilter) return rows;
+
+    return rows.filter((row) =>
+      [
+        row.key,
+        row.context,
+        row.description,
+        row.bg,
+        row.en,
+        row.de,
+        row.ru,
+      ].some((value) => value?.toLowerCase().includes(normalizedFilter)),
+    );
+  }, [filter, rows]);
 
   if (loading) return <div>{t('loading')}</div>;
 

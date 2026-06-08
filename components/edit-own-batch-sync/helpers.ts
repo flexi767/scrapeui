@@ -95,11 +95,15 @@ export function streamEventMessageKind(event: StreamEntry) {
 }
 
 export function countBatchRows(rows: BatchRow[]) {
-  return {
-    pending: rows.filter((row) => row.needs_sync === 1).length,
-    success: rows.filter((row) => row.runStatus === 'success').length,
-    failed: rows.filter((row) => row.runStatus === 'failed').length,
-  };
+  return rows.reduce(
+    (counts, row) => {
+      if (row.needs_sync === 1) counts.pending += 1;
+      if (row.runStatus === 'success') counts.success += 1;
+      if (row.runStatus === 'failed') counts.failed += 1;
+      return counts;
+    },
+    { pending: 0, success: 0, failed: 0 },
+  );
 }
 
 export function recentCompletedRows(rows: BatchRow[], limit = 12) {
