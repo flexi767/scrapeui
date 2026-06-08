@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL ?? 'http://localhost:1234/v1/chat/completions';
 const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL ?? 'gpt-4o';
@@ -31,6 +32,9 @@ function streamResponse(upstream: Response): Response {
 }
 
 export async function POST(req: NextRequest) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   const { messages, model } = await req.json();
 
   // Check if the last user message starts with "local:"
