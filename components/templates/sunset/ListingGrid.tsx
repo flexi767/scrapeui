@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import type { ListingGridProps } from "../types";
@@ -9,6 +10,7 @@ import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
+  const t = useTranslations("ui");
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
 
@@ -18,7 +20,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
         <div className={s.heroBg} style={{ backgroundImage: "url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=1400&h=500&fit=crop')" }} />
         <div className={s.heroOverlay} />
         <div className={s.heroContent}>
-          <div className={s.heroBadge}>{total} vehicles available</div>
+          <div className={s.heroBadge}>{total} {t("vehicles_available")}</div>
           <h1 className={s.heroTitle}>{dealer.name}</h1>
         </div>
       </div>
@@ -26,13 +28,13 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
       <div className={s.body}>
         <div className={s.searchStrip}>
           <MakeSelect base={base} filters={filters} makes={makes} className={s.searchSelect} />
-          <FuelSelect base={base} filters={filters} className={s.searchSelect} allLabel="Any Fuel" />
+          <FuelSelect base={base} filters={filters} className={s.searchSelect} allLabel={t("any_fuel")} />
           <SortSelect base={base} filters={filters} className={s.searchSelect} />
         </div>
 
         <div className={s.sectionHead}>
-          <div className={s.sectionTitle}>Available Vehicles</div>
-          <div className={s.sectionCount}>{total} results</div>
+          <div className={s.sectionTitle}>{t("available_vehicles")}</div>
+          <div className={s.sectionCount}>{total} {t("vehicles")}</div>
         </div>
 
         <div className={s.grid}>
@@ -41,8 +43,8 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
             return (
               <Link key={l.mobileId ?? i} href={`${base}/${l.mobileId}`} className={s.card}>
                 <div className={s.cardImg}>
-                  {thumb ? <ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /> : <div className={s.cardImgPlaceholder}>🚗</div>}
-                  {l.isNew === 1 && <span className={s.cardTag}>New</span>}
+                  {thumb ? <ImageWithFallback src={thumb} alt={t("vehicle_photo")} fallbackLabel={t("no_image")} /> : <div className={s.cardImgPlaceholder}>🚗</div>}
+                  {l.isNew === 1 && <span className={s.cardTag}>{t("new")}</span>}
                 </div>
                 <div className={s.cardBody}>
                   <div className={s.carName}>{l.make} {l.model}</div>
@@ -70,17 +72,17 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
           <div className={s.trustItem}>
             <div className={s.trustIcon}>🚗</div>
             <div className={s.trustVal}>{total}+</div>
-            <div className={s.trustLbl}>Vehicles</div>
+            <div className={s.trustLbl}>{t("vehicles")}</div>
           </div>
           <div className={s.trustItem}>
             <div className={s.trustIcon}>✅</div>
-            <div className={s.trustVal}>Inspected</div>
-            <div className={s.trustLbl}>All cars checked</div>
+            <div className={s.trustVal}>{t("inspected")}</div>
+            <div className={s.trustLbl}>{t("all_cars_checked")}</div>
           </div>
           <div className={s.trustItem}>
             <div className={s.trustIcon}>📞</div>
-            <div className={s.trustVal}>Support</div>
-            <div className={s.trustLbl}>Here to help</div>
+            <div className={s.trustVal}>{t("support")}</div>
+            <div className={s.trustLbl}>{t("here_to_help")}</div>
           </div>
         </div>
       </div>

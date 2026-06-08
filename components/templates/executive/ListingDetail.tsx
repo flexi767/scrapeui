@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { getPublicThumbSrc } from "../utils";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
@@ -6,7 +7,8 @@ import { fmt } from "../utils";
 import { Shell } from "./Shell";
 import s from "./ListingDetail.module.css";
 
-export function ListingDetail({ dealer, listing }: ListingDetailProps) {
+export async function ListingDetail({ dealer, listing }: ListingDetailProps) {
+  const t = await getTranslations("ui");
   const base = `/d/${dealer.slug}`;
   const thumb = getPublicThumbSrc(listing);
 
@@ -14,9 +16,9 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
     <Shell dealer={dealer}>
       <div className={s.main}>
         <div>
-          <Link href={base} className={s.back}>← Back</Link>
+          <Link href={base} className={s.back}>{t("back")}</Link>
           {thumb
-            ? <div className={s.imageWrap}><ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /></div>
+            ? <div className={s.imageWrap}><ImageWithFallback src={thumb} alt={t("vehicle_photo")} fallbackLabel={t("no_image")} /></div>
             : <div className={s.imagePlaceholder}>🚗</div>}
           {listing.description && <div className={s.description}>{listing.description}</div>}
         </div>
@@ -26,13 +28,13 @@ export function ListingDetail({ dealer, listing }: ListingDetailProps) {
           <div className={s.carSub}>{listing.regYear} · {listing.fuel ?? ""}</div>
           <div className={s.price}>{fmt(listing.currentPrice)} €</div>
           <div className={s.specs}>
-            {listing.mileage != null && <div className={s.specItem}><div className={s.specLbl}>Mileage</div><div className={s.specVal}>{fmt(listing.mileage)} km</div></div>}
-            {listing.fuel && <div className={s.specItem}><div className={s.specLbl}>Fuel</div><div className={s.specVal}>{listing.fuel}</div></div>}
-            {listing.transmission && <div className={s.specItem}><div className={s.specLbl}>Gearbox</div><div className={s.specVal}>{listing.transmission}</div></div>}
-            {listing.power != null && <div className={s.specItem}><div className={s.specLbl}>Power</div><div className={s.specVal}>{listing.power} hp</div></div>}
-            {listing.color && <div className={s.specItem}><div className={s.specLbl}>Color</div><div className={s.specVal}>{listing.color}</div></div>}
+            {listing.mileage != null && <div className={s.specItem}><div className={s.specLbl}>{t("mileage")}</div><div className={s.specVal}>{fmt(listing.mileage)} km</div></div>}
+            {listing.fuel && <div className={s.specItem}><div className={s.specLbl}>{t("fuel")}</div><div className={s.specVal}>{listing.fuel}</div></div>}
+            {listing.transmission && <div className={s.specItem}><div className={s.specLbl}>{t("transmission")}</div><div className={s.specVal}>{listing.transmission}</div></div>}
+            {listing.power != null && <div className={s.specItem}><div className={s.specLbl}>{t("power")}</div><div className={s.specVal}>{listing.power} {t("hp")}</div></div>}
+            {listing.color && <div className={s.specItem}><div className={s.specLbl}>{t("color")}</div><div className={s.specVal}>{listing.color}</div></div>}
           </div>
-          <a href={dealer.mobileUrl ?? `${base}/contact`} target={dealer.mobileUrl ? "_blank" : undefined} rel="noopener noreferrer" className={s.cta}>Enquire Now</a>
+          <a href={dealer.mobileUrl ?? `${base}/contact`} target={dealer.mobileUrl ? "_blank" : undefined} rel="noopener noreferrer" className={s.cta}>{t("enquire_now")}</a>
         </div>
       </div>
     </Shell>

@@ -19,7 +19,7 @@ function fuelBadgeClass(fuel: string | null): string {
 }
 
 export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
-  const t = useTranslations('ui');
+  const t = useTranslations("ui");
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
   const startItem = (page - 1) * limit + 1;
@@ -29,25 +29,25 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
     <Shell dealer={dealer} current="cars">
       <div className={s.toolbar}>
         <MakeSelect base={base} filters={filters} makes={makes} className={s.toolbarSelect} />
-        <FuelSelect base={base} filters={filters} className={s.toolbarSelect} allLabel="Any Fuel" />
+        <FuelSelect base={base} filters={filters} className={s.toolbarSelect} allLabel={t("any_fuel")} />
         <SortSelect base={base} filters={filters} className={s.toolbarSelect} includeMileage />
         <div className={s.toolbarSpacer} />
-        <div className={s.toolbarCount}>{total} vehicles</div>
+        <div className={s.toolbarCount}>{total} {t("vehicles")}</div>
       </div>
 
       <div className={s.main}>
         <aside className={s.sidebar}>
-          <div className={s.sbTitle}>{t('filters')}</div>
+          <div className={s.sbTitle}>{t("filters")}</div>
           <div className={s.sbSection}>
-            <label>{t('make')}</label>
-            <MakeSelect base={base} filters={filters} makes={makes} className={s.sbSelect} allLabel="All" />
+            <label>{t("make")}</label>
+            <MakeSelect base={base} filters={filters} makes={makes} className={s.sbSelect} allLabel={t("all_makes")} />
           </div>
           <div className={s.sbSection}>
-            <label>{t('max_price')}</label>
+            <label>{t("max_price")}</label>
             <PriceMaxInput base={base} filters={filters} className={s.sbInput} />
           </div>
           <div className={s.sbSection}>
-            <label>{t('year_from')}</label>
+            <label>{t("year_from")}</label>
             <input className={s.sbInput} placeholder="e.g. 2018" defaultValue={filters.yearFrom ?? ""}
               onBlur={(e) => { if (e.target.value) window.location.href = filterHref(base, filters, { yearFrom: e.target.value, page: 1 }); }} />
           </div>
@@ -56,11 +56,11 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
         <div>
           <div className={s.table}>
             <div className={s.thead}>
-              <div className={s.th}>Vehicle</div>
-              <div className={s.th}>Details</div>
-              <div className={s.th}>Price</div>
-              <div className={s.th}>Mileage</div>
-              <div className={s.th}>Fuel</div>
+              <div className={s.th}>{t("vehicle")}</div>
+              <div className={s.th}>{t("transmission")}</div>
+              <div className={s.th}>{t("price")}</div>
+              <div className={s.th}>{t("mileage")}</div>
+              <div className={s.th}>{t("fuel")}</div>
               <div className={s.th}></div>
             </div>
             {listings.map((l, i) => {
@@ -69,7 +69,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
                 <Link key={l.mobileId ?? i} href={`${base}/${l.mobileId}`} className={s.row}>
                   <div className={s.rowCarCol}>
                     <div className={s.thumb}>
-                      {thumb ? <ImageWithFallback src={thumb} alt="Vehicle photo" fallbackLabel="No image" /> : <div className={s.thumbPlaceholder}>🚗</div>}
+                      {thumb ? <ImageWithFallback src={thumb} alt={t("vehicle_photo")} fallbackLabel={t("no_image")} /> : <div className={s.thumbPlaceholder}>🚗</div>}
                     </div>
                     <div>
                       <div className={s.carName}>{l.make} {l.model}</div>
@@ -82,7 +82,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
                   <div>
                     {l.fuel && <span className={`${s.fuelBadge} ${fuelBadgeClass(l.fuel)}`}>{l.fuel}</span>}
                   </div>
-                  <div><span className={s.viewBtn}>View →</span></div>
+                  <div><span className={s.viewBtn}>{t("view")} →</span></div>
                 </Link>
               );
             })}
@@ -90,7 +90,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
 
           {totalPages > 1 && (
             <div className={s.pagination}>
-              <div className={s.pageInfo}>Showing {startItem}–{endItem} of {total} vehicles</div>
+              <div className={s.pageInfo}>{t("showing")} {startItem}–{endItem} {t("of_total")} {total} {t("vehicles")}</div>
               <Pagination
                 page={page} totalPages={totalPages} base={base} filters={filters}
                 wrapperClassName={s.pageBtns} btnClassName={s.pageBtn} btnActiveClassName={s.pageBtnActive}
