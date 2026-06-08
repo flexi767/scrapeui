@@ -10,7 +10,7 @@ import { SortLink } from '@/components/listings/SortLink';
 import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import { ListingsPagination } from '@/components/listings/ListingsPagination';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceRanges } from '@/lib/queries';
 import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
 import {
   buildListingParams,
@@ -77,6 +77,7 @@ export default async function DeletedListingsPage({
   const makeModels = getMakeModels();
   const allDealers = getAllDealers();
   const makes = Object.keys(makeModels).sort();
+  const { priceRange, priceChangeRange } = getPriceRanges();
   const currentParams = buildListingParams({
     statuses,
     vatValues,
@@ -109,8 +110,8 @@ export default async function DeletedListingsPage({
               allFuels={getDistinctFuels()}
               allExtras={LISTING_EXTRA_OPTIONS}
               total={total}
-              priceChangeRange={getPriceChangeRange()}
-              priceRange={getPriceRange()}
+              priceChangeRange={priceChangeRange}
+              priceRange={priceRange}
               basePath={BASE_PATH}
               showPageLinks={false}
             />

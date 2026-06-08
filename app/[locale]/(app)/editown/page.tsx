@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import FilterBar from '@/components/FilterBar';
-import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getEditOwnSyncRows, getOwnListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { countPendingEditOwnSyncRows, getDistinctCategories, getDistinctFuels, getDistinctYears, getOwnDealers, getOwnListings, getMakeModels, getPriceRanges } from '@/lib/queries';
 import { parseOptionalNum, toParamArray } from '@/lib/listing-url';
 import OwnListingsTable from '@/components/OwnListingsTable';
 import { getTranslations } from 'next-intl/server';
@@ -72,9 +72,10 @@ export default async function EditOwnPage({
   });
 
   const makeModels = getMakeModels();
-  const allOwnDealers = getAllDealers().filter(d => d.own);
+  const allOwnDealers = getOwnDealers();
   const makes = Object.keys(makeModels).sort();
-  const dirtyCount = getEditOwnSyncRows().filter((row) => row.needs_sync === 1).length;
+  const { priceRange, priceChangeRange } = getPriceRanges();
+  const dirtyCount = countPendingEditOwnSyncRows();
 
   // Build URL params object for sort links
   const currentParams = new URLSearchParams();
@@ -112,8 +113,8 @@ export default async function EditOwnPage({
               allCategories={getDistinctCategories()}
               allFuels={getDistinctFuels()}
               total={total}
-              priceChangeRange={getPriceChangeRange()}
-              priceRange={getPriceRange()}
+              priceChangeRange={priceChangeRange}
+              priceRange={priceRange}
               basePath="/editown"
               showPageLinks={false}
               syncHref={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}

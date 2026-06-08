@@ -1,6 +1,6 @@
 
 import Link from 'next/link';
-import { getAllDealers, getMobileBgCrawlRuns, getMobileBgDashboardSummary, getMobileBgEditForms, getMobileBgRepostJobs } from '@/lib/queries';
+import { getMobileBgCrawlRuns, getMobileBgDashboardSummary, getMobileBgDealers, getMobileBgEditForms, getMobileBgRepostJobs } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
 import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 import { getTranslations } from 'next-intl/server';
@@ -11,7 +11,7 @@ export default async function MobileBgPage() {
   const runs = getMobileBgCrawlRuns(8);
   const editForms = getMobileBgEditForms(8);
   const reposts = getMobileBgRepostJobs(8);
-  const dealers = getAllDealers().filter((dealer) => dealer.active && dealer.mobile_url);
+  const dealers = getMobileBgDealers();
 
   const cards = [
     { label: t('crawl_runs'), value: summary.crawlRuns },

@@ -1,8 +1,8 @@
 import CarsBgSyncRunner from '@/components/CarsBgSyncRunner';
-import { getAllDealers } from '@/lib/queries';
+import { getOwnDealers } from '@/lib/queries';
 
 export default async function EditOwnCarsBgSyncPage() {
-  const dealers = getAllDealers().filter((dealer) => dealer.own === 1 && dealer.active === 1);
+  const dealers = getOwnDealers({ activeOnly: true });
 
   return (
     <div className="min-h-screen bg-[#111827]">

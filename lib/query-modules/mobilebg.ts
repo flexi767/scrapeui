@@ -153,10 +153,8 @@ export function updateCrawlRun(
     );
 }
 
-export function getEditOwnSyncRows(): EditOwnSyncRow[] {
-  return raw
-    .prepare(
-      `
+function editOwnSyncRowsQuery(extraWhere = '') {
+  return `
     ${rankedBackupsCte}
     SELECT
       b.id as backup_id,
@@ -186,14 +184,41 @@ export function getEditOwnSyncRows(): EditOwnSyncRow[] {
     FROM ranked_backups b
     JOIN listings l ON l.id = b.listing_id
     JOIN dealers d ON d.id = b.dealer_id
-    WHERE b.row_num = 1 AND d.own = 1 AND d.active = 1
+    WHERE b.row_num = 1 AND d.own = 1 AND d.active = 1${extraWhere}
     ORDER BY
       CASE WHEN ${ownNeedsSyncExpr} = 1 THEN 0 ELSE 1 END,
       COALESCE(b.updated_at, b.created_at) DESC,
       b.id DESC
+  `;
+}
+
+export function getEditOwnSyncRows(): EditOwnSyncRow[] {
+  return raw
+    .prepare(editOwnSyncRowsQuery())
+    .all() as EditOwnSyncRow[];
+}
+
+export function getPendingEditOwnSyncRows(): EditOwnSyncRow[] {
+  return raw
+    .prepare(editOwnSyncRowsQuery(` AND ${ownNeedsSyncExpr} = 1`))
+    .all() as EditOwnSyncRow[];
+}
+
+export function countPendingEditOwnSyncRows(): number {
+  const row = raw
+    .prepare(
+      `
+    ${rankedBackupsCte}
+    SELECT COUNT(*) as count
+    FROM ranked_backups b
+    JOIN listings l ON l.id = b.listing_id
+    JOIN dealers d ON d.id = b.dealer_id
+    WHERE b.row_num = 1 AND d.own = 1 AND d.active = 1 AND ${ownNeedsSyncExpr} = 1
   `,
     )
-    .all() as EditOwnSyncRow[];
+    .get() as { count: number };
+
+  return row.count;
 }
 
 export function getMobileBgEditForms(limit = 100): MobileBgEditFormRow[] {

@@ -50,6 +50,28 @@ export function getAllDealers(): DealerRow[] {
     .all() as DealerRow[];
 }
 
+export function getOwnDealers({ activeOnly = false }: { activeOnly?: boolean } = {}): DealerRow[] {
+  return raw
+    .prepare(
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
+       FROM dealers
+       WHERE own = 1${activeOnly ? ' AND active = 1' : ''}
+       ORDER BY priority DESC, name`,
+    )
+    .all() as DealerRow[];
+}
+
+export function getMobileBgDealers(): DealerRow[] {
+  return raw
+    .prepare(
+      `SELECT id, slug, name, own, active, priority, ${PLATFORM_URL_COLUMNS}
+       FROM dealers
+       WHERE active = 1 AND mobile_url IS NOT NULL AND mobile_url != ''
+       ORDER BY priority DESC, name`,
+    )
+    .all() as DealerRow[];
+}
+
 export function getDealerBySlug(slug: string): DealerRowFull | undefined {
   return raw
     .prepare(
@@ -70,23 +92,44 @@ export function getDistinctYears(): string[] {
 }
 
 export function getPriceRange(): { min: number; max: number } | null {
-  const row = raw
-    .prepare(
-      `SELECT MIN(current_price) as min, MAX(current_price) as max FROM listings WHERE is_active = 1 AND current_price IS NOT NULL AND ${notDuplicateExpr}`,
-    )
-    .get() as { min: number | null; max: number | null };
-  if (row.min == null || row.max == null) return null;
-  return { min: row.min, max: row.max };
+  return getPriceRanges().priceRange;
 }
 
 export function getPriceChangeRange(): { min: number; max: number } | null {
+  return getPriceRanges().priceChangeRange;
+}
+
+export function getPriceRanges(): {
+  priceRange: { min: number; max: number } | null;
+  priceChangeRange: { min: number; max: number } | null;
+} {
   const row = raw
     .prepare(
-      `SELECT MIN(price_change) as min, MAX(price_change) as max FROM listings WHERE price_change IS NOT NULL AND ${notDuplicateExpr}`,
+      `
+      SELECT
+        MIN(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_min,
+        MAX(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_max,
+        MIN(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_min,
+        MAX(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_max
+      FROM listings
+      WHERE ${notDuplicateExpr}
+    `,
     )
-    .get() as { min: number | null; max: number | null };
-  if (row.min == null || row.max == null) return null;
-  return { min: row.min, max: row.max };
+    .get() as {
+      price_min: number | null;
+      price_max: number | null;
+      price_change_min: number | null;
+      price_change_max: number | null;
+    };
+
+  return {
+    priceRange: row.price_min == null || row.price_max == null
+      ? null
+      : { min: row.price_min, max: row.price_max },
+    priceChangeRange: row.price_change_min == null || row.price_change_max == null
+      ? null
+      : { min: row.price_change_min, max: row.price_change_max },
+  };
 }
 
 export function getDistinctFuels(): string[] {

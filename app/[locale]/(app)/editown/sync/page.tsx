@@ -1,6 +1,6 @@
 
 import EditOwnBatchSync from '@/components/EditOwnBatchSync';
-import { getAllDealers, getEditOwnSyncRows } from '@/lib/queries';
+import { getOwnDealers, getPendingEditOwnSyncRows } from '@/lib/queries';
 
 interface SearchParams {
   autorun?: string;
@@ -12,9 +12,8 @@ export default async function EditOwnSyncPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const rows = getEditOwnSyncRows().filter((row) => row.needs_sync === 1);
-  const ownDealers = getAllDealers()
-    .filter((d) => d.own && d.active)
+  const rows = getPendingEditOwnSyncRows();
+  const ownDealers = getOwnDealers({ activeOnly: true })
     .map((d) => ({ slug: d.slug, name: d.name }));
 
   return (

@@ -5,7 +5,7 @@ import FilterBar from '@/components/FilterBar';
 import { SortLink } from '@/components/listings/SortLink';
 import { ListingTableRow } from '@/components/listings/ListingTableRow';
 import { ListingsPagination } from '@/components/listings/ListingsPagination';
-import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceChangeRange, getPriceRange } from '@/lib/queries';
+import { getAllDealers, getDistinctCategories, getDistinctFuels, getDistinctYears, getListings, getMakeModels, getPriceRanges } from '@/lib/queries';
 import {
   buildListingParams,
   LISTING_EXTRA_OPTIONS,
@@ -36,6 +36,7 @@ export default async function ListingsPage({
   const makeModels = getMakeModels();
   const allDealers = getAllDealers();
   const makes = Object.keys(makeModels).sort();
+  const { priceRange, priceChangeRange } = getPriceRanges();
 
   const currentParams = buildListingParams({
     statuses, vatValues, categories, fuels, extras, kaparo,
@@ -58,8 +59,8 @@ export default async function ListingsPage({
               allFuels={getDistinctFuels()}
               allExtras={LISTING_EXTRA_OPTIONS}
               total={total}
-              priceChangeRange={getPriceChangeRange()}
-              priceRange={getPriceRange()}
+              priceChangeRange={priceChangeRange}
+              priceRange={priceRange}
               showPageLinks={false}
             />
           </Suspense>
