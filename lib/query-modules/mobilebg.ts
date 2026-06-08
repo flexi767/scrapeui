@@ -63,33 +63,24 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
 }
 
 export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {
-  const crawlRuns = raw
-    .prepare(`SELECT COUNT(*) as count FROM mobilebg_crawl_runs`)
-    .get() as { count: number };
-  const backups = raw
+  return raw
     .prepare(
       `
-    SELECT COUNT(*) as count
-    FROM (
-      SELECT 1
-      FROM mobilebg_backups
-      GROUP BY dealer_id, mobile_id
-    )
+    SELECT
+      (SELECT COUNT(*) FROM mobilebg_crawl_runs) as crawlRuns,
+      (
+        SELECT COUNT(*)
+        FROM (
+          SELECT 1
+          FROM mobilebg_backups
+          GROUP BY dealer_id, mobile_id
+        )
+      ) as backups,
+      (SELECT COUNT(*) FROM mobilebg_edit_form_snapshots) as editForms,
+      (SELECT COUNT(*) FROM mobilebg_repost_jobs) as repostJobs
   `,
     )
-    .get() as { count: number };
-  const editForms = raw
-    .prepare(`SELECT COUNT(*) as count FROM mobilebg_edit_form_snapshots`)
-    .get() as { count: number };
-  const repostJobs = raw
-    .prepare(`SELECT COUNT(*) as count FROM mobilebg_repost_jobs`)
-    .get() as { count: number };
-  return {
-    crawlRuns: crawlRuns.count,
-    backups: backups.count,
-    editForms: editForms.count,
-    repostJobs: repostJobs.count,
-  };
+    .get() as MobileBgDashboardSummary;
 }
 
 export function getMobileBgCrawlRuns(limit = 20): MobileBgCrawlRunRow[] {
