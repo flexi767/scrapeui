@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ShellProps } from "../types";
 import s from "./ListingGrid.module.css";
 
 const NAV = [
-  { key: "cars", label: "Cars", href: "" },
-  { key: "finance", label: "Finance", href: "/finance" },
-  { key: "about", label: "About", href: "/about" },
+  { key: "cars", href: "" },
+  { key: "finance", href: "/finance" },
+  { key: "about", href: "/about" },
 ] as const;
 
 export function Shell({ dealer, current, children }: ShellProps) {
+  const t = useTranslations("ui");
   const base = `/d/${dealer.slug}`;
   const initial = dealer.name.charAt(0);
   const rest = dealer.name.slice(1);
@@ -27,10 +29,10 @@ export function Shell({ dealer, current, children }: ShellProps) {
               href={`${base}${n.href}`}
               className={current === n.key ? s.navLinkActive : s.navLink}
             >
-              {n.label}
+              {t(n.key)}
             </Link>
           ))}
-          <Link href={`${base}/contact`} className={s.headerCta}>Contact Us</Link>
+          <Link href={`${base}/contact`} className={s.headerCta}>{t("contact_us")}</Link>
         </nav>
       </header>
 
@@ -42,8 +44,8 @@ export function Shell({ dealer, current, children }: ShellProps) {
           {dealer.publicDomain && ` · ${dealer.publicDomain}`}
         </div>
         <div className={s.footerLinks}>
-          <Link href={`${base}/privacy`} className={s.footerLink}>Privacy</Link>
-          <Link href={`${base}/terms`} className={s.footerLink}>Terms</Link>
+          <Link href={`${base}/privacy`} className={s.footerLink}>{t("privacy")}</Link>
+          <Link href={`${base}/terms`} className={s.footerLink}>{t("terms")}</Link>
         </div>
       </footer>
     </div>

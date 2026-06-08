@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getPublicDealer, getPublicListings, getDealerTemplateConfig } from "@/lib/queries";
 import { TEMPLATE_REGISTRY } from "@/components/templates";
 import { renderCraftPage } from "@/lib/template-renderer";
@@ -79,8 +80,9 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const dealer = getPublicDealer(slug);
   if (!dealer) return {};
+  const t = await getTranslations("ui");
   return {
-    title: `${dealer.name} — Car Listings`,
-    description: `Browse all available cars from ${dealer.name}`,
+    title: `${dealer.name} — ${t("meta_dealer_listings_title_suffix")}`,
+    description: `${t("meta_browse_cars_from_prefix")} ${dealer.name}`,
   };
 }

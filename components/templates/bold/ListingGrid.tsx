@@ -18,7 +18,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
     <Shell dealer={dealer} current="cars">
       <div className={s.hero}>
         <div className={s.heroInner}>
-          <h1 className={s.heroTitle}>Find Your Perfect <span className={s.heroAccent}>Ride.</span></h1>
+          <h1 className={s.heroTitle}>{t("bold_hero_title_prefix")} <span className={s.heroAccent}>{t("bold_hero_title_accent")}</span></h1>
           <p className={s.heroSub}>{total} {t("vehicles_available")} {dealer.name}</p>
         </div>
       </div>
