@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { type PageKey } from '@/lib/page-permissions';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -31,16 +32,26 @@ export function AppSidebar() {
   const pathname = stripLocalePrefix(usePathname());
   const { data: session } = useSession();
 
+  const role = session?.user?.role;
+  const pageKeys = session?.user?.pageKeys;
+
+  function isVisible(key: PageKey | null): boolean {
+    if (key === null) return true;
+    if (role === 'admin') return true;
+    if (!pageKeys) return false;
+    return (pageKeys as string[]).includes(key);
+  }
+
   const navItems = [
-    { href: '/dashboard', label: t('dashboard'), icon: DashboardIcon, match: ['/dashboard'] },
-    { href: '/listings', label: t('listings'), icon: CarIcon, match: ['/listings'] },
-    { href: '/editown', label: t('edit_own'), icon: EditIcon, match: ['/editown', '/facebook-marketplace'] },
-    { href: '/mobilebg', label: t('mobile_bg'), icon: ArchiveIcon, match: ['/mobilebg'] },
-    { href: '/tasks', label: t('tasks'), icon: TaskIcon, match: ['/tasks'] },
-    { href: '/expenses', label: t('expenses'), icon: ExpenseIcon, match: ['/expenses'] },
-    { href: '/templates', label: t('templates'), icon: TemplateIcon, match: ['/templates'] },
-    { href: '/translations', label: 'Translations', icon: TranslateIcon, match: ['/translations'] },
-    { href: '/config', label: t('config'), icon: GearIcon, match: ['/config', '/dealers'] },
+    { href: '/dashboard', label: t('dashboard'), icon: DashboardIcon, match: ['/dashboard'], pageKey: null },
+    { href: '/listings', label: t('listings'), icon: CarIcon, match: ['/listings'], pageKey: 'listings' as PageKey },
+    { href: '/editown', label: t('edit_own'), icon: EditIcon, match: ['/editown', '/facebook-marketplace'], pageKey: 'editown' as PageKey },
+    { href: '/mobilebg', label: t('mobile_bg'), icon: ArchiveIcon, match: ['/mobilebg'], pageKey: 'mobilebg' as PageKey },
+    { href: '/tasks', label: t('tasks'), icon: TaskIcon, match: ['/tasks'], pageKey: 'tasks' as PageKey },
+    { href: '/expenses', label: t('expenses'), icon: ExpenseIcon, match: ['/expenses'], pageKey: 'expenses' as PageKey },
+    { href: '/templates', label: t('templates'), icon: TemplateIcon, match: ['/templates'], pageKey: 'templates' as PageKey },
+    { href: '/translations', label: 'Translations', icon: TranslateIcon, match: ['/translations'], pageKey: 'translations' as PageKey },
+    { href: '/config', label: t('config'), icon: GearIcon, match: ['/config', '/dealers'], pageKey: 'config' as PageKey },
   ];
 
   const sectionItems = [
@@ -48,60 +59,63 @@ export function AppSidebar() {
       id: 'listings',
       match: ['/listings'],
       links: [
-        { href: '/listings', label: t('all_listings'), icon: CarIcon },
-        { href: '/listings/changes', label: t('changes'), icon: ClockIcon },
-        { href: '/listings/deleted', label: t('deleted'), icon: TrashIcon },
+        { href: '/listings', label: t('all_listings'), icon: CarIcon, pageKey: 'listings' as PageKey },
+        { href: '/listings/changes', label: t('changes'), icon: ClockIcon, pageKey: 'listings' as PageKey },
+        { href: '/listings/deleted', label: t('deleted'), icon: TrashIcon, pageKey: 'listings' as PageKey },
       ],
     },
     {
       id: 'editown',
       match: ['/editown', '/facebook-marketplace'],
       links: [
-        { href: '/editown', label: t('own_listings'), icon: EditIcon },
-        { href: '/editown/sync', label: t('batch_sync'), icon: UploadIcon },
-        { href: '/editown/carsbg-sync', label: t('cars_bg_sync'), icon: UploadIcon },
-        { href: '/editown/new', label: t('new_listing'), icon: PlusIcon },
-        { href: '/editown/saved-searches', label: t('saved_searches'), icon: SearchIcon },
-        { href: '/editown/search-positions', label: t('search_positions'), icon: SearchIcon },
-        { href: '/facebook-marketplace/bookmarklet', label: t('fb_bookmarklet'), icon: UploadIcon },
+        { href: '/editown', label: t('own_listings'), icon: EditIcon, pageKey: 'editown' as PageKey },
+        { href: '/editown/sync', label: t('batch_sync'), icon: UploadIcon, pageKey: 'editown' as PageKey },
+        { href: '/editown/carsbg-sync', label: t('cars_bg_sync'), icon: UploadIcon, pageKey: 'editown' as PageKey },
+        { href: '/editown/new', label: t('new_listing'), icon: PlusIcon, pageKey: 'editown' as PageKey },
+        { href: '/editown/saved-searches', label: t('saved_searches'), icon: SearchIcon, pageKey: 'editown' as PageKey },
+        { href: '/editown/search-positions', label: t('search_positions'), icon: SearchIcon, pageKey: 'editown' as PageKey },
+        { href: '/facebook-marketplace/bookmarklet', label: t('fb_bookmarklet'), icon: UploadIcon, pageKey: 'editown' as PageKey },
       ],
     },
     {
       id: 'mobilebg',
       match: ['/mobilebg'],
       links: [
-        { href: '/mobilebg', label: t('overview'), icon: ArchiveIcon },
-        { href: '/mobilebg/edit-forms', label: t('edit_forms'), icon: FormIcon },
-        { href: '/mobilebg/reposts', label: t('reposts'), icon: UploadIcon },
+        { href: '/mobilebg', label: t('overview'), icon: ArchiveIcon, pageKey: 'mobilebg' as PageKey },
+        { href: '/mobilebg/edit-forms', label: t('edit_forms'), icon: FormIcon, pageKey: 'mobilebg' as PageKey },
+        { href: '/mobilebg/reposts', label: t('reposts'), icon: UploadIcon, pageKey: 'mobilebg' as PageKey },
       ],
     },
     {
       id: 'tasks',
       match: ['/tasks'],
       links: [
-        { href: '/tasks', label: t('all_tasks'), icon: TaskIcon },
-        { href: '/tasks/my', label: t('my_tasks'), icon: UserTaskIcon },
+        { href: '/tasks', label: t('all_tasks'), icon: TaskIcon, pageKey: 'tasks' as PageKey },
+        { href: '/tasks/my', label: t('my_tasks'), icon: UserTaskIcon, pageKey: 'tasks' as PageKey },
       ],
     },
     {
       id: 'workspace',
       match: ['/mapping', '/kb', '/files'],
       links: [
-        { href: '/mapping', label: t('mapping'), icon: MapIcon },
-        { href: '/kb', label: t('knowledge_base'), icon: BookIcon },
-        { href: '/files', label: t('files'), icon: FileIcon },
+        { href: '/mapping', label: t('mapping'), icon: MapIcon, pageKey: 'mapping' as PageKey },
+        { href: '/kb', label: t('knowledge_base'), icon: BookIcon, pageKey: 'kb' as PageKey },
+        { href: '/files', label: t('files'), icon: FileIcon, pageKey: 'files' as PageKey },
       ],
     },
   ];
 
   const dealerId = session?.user?.dealerId;
-  const activeSection = sectionItems.find((section) => pathMatchesAny(pathname, section.match));
+  const visibleSectionItems = sectionItems.filter((section) =>
+    section.links.some((l) => isVisible(l.pageKey))
+  );
+  const activeSection = visibleSectionItems.find((section) => pathMatchesAny(pathname, section.match));
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-700 bg-gray-950/95 shadow-lg shadow-black/10 backdrop-blur">
       <div className="flex min-h-10 items-center gap-2 px-3">
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1">
-          {navItems.map((item) => {
+          {navItems.filter((item) => isVisible(item.pageKey)).map((item) => {
             const active = pathMatchesAny(pathname, item.match);
 
             return (
@@ -158,7 +172,7 @@ export function AppSidebar() {
       {activeSection && (
         <div className="flex min-h-7 items-center gap-1.5 border-t border-gray-800 px-3">
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5">
-            {activeSection.links.map((item) => {
+            {activeSection.links.filter((link) => isVisible(link.pageKey)).map((item) => {
               const active = pathMatches(pathname, item.href);
 
               return (
