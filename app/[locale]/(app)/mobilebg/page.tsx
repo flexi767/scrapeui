@@ -1,11 +1,16 @@
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { requirePagePermission } from '@/lib/api/auth-helpers';
 import { getMobileBgCrawlRuns, getMobileBgDashboardSummary, getMobileBgDealers, getMobileBgEditForms, getMobileBgRepostJobs } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
 import { MobileBgActionPanel } from '@/components/MobileBgActionPanel';
 import { getTranslations } from 'next-intl/server';
 
 export default async function MobileBgPage() {
+  const pageAccess = await requirePagePermission('mobilebg');
+  if ('redirect' in pageAccess) redirect(pageAccess.redirect);
+
   const t = await getTranslations('ui');
   const summary = getMobileBgDashboardSummary();
   const runs = getMobileBgCrawlRuns(8);

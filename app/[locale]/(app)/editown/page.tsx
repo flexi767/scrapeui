@@ -1,6 +1,8 @@
 
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
+import { requirePagePermission } from '@/lib/api/auth-helpers';
 import FilterBar from '@/components/FilterBar';
 import { countPendingEditOwnSyncRows, getDistinctCategories, getDistinctFuels, getDistinctYears, getOwnDealers, getOwnListings, getMakeModels, getPriceRanges } from '@/lib/queries';
 import { parseOptionalNum, toParamArray } from '@/lib/listing-url';
@@ -31,6 +33,9 @@ export default async function EditOwnPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const pageAccess = await requirePagePermission('editown');
+  if ('redirect' in pageAccess) redirect(pageAccess.redirect);
+
   const t = await getTranslations('ui');
   const sp = await searchParams;
 

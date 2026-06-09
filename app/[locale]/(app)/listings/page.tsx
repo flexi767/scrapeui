@@ -1,6 +1,8 @@
 
 import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { requirePagePermission } from '@/lib/api/auth-helpers';
 import FilterBar from '@/components/FilterBar';
 import { SortLink } from '@/components/listings/SortLink';
 import { ListingTableRow } from '@/components/listings/ListingTableRow';
@@ -20,6 +22,9 @@ export default async function ListingsPage({
 }: {
   searchParams: Promise<ListingSearchParams>;
 }) {
+  const pageAccess = await requirePagePermission('listings');
+  if ('redirect' in pageAccess) redirect(pageAccess.redirect);
+
   const t = await getTranslations('ui');
   const sp = await searchParams;
   const {
