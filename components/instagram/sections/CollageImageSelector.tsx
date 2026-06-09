@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { RefreshCwIcon } from "lucide-react";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import {
   type CollageSelections,
   type InstagramListingPayload,
@@ -73,8 +74,7 @@ export function CollageImageSelector({
                 }
                 className="group relative block w-full"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.url} alt={`Listing photo ${index + 1}`} className="aspect-square w-full object-cover" />
+                <ImageWithFallback src={photo.url} alt={`Listing photo ${index + 1}`} className="aspect-square w-full object-cover" />
                 <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs font-semibold text-white">
                   {index + 1}
                 </span>

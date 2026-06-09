@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { RefreshCwIcon, ZoomInIcon } from "lucide-react";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { type PosterVariant, type PosterVariantPrompt } from "../poster";
 import { StepHeader, type ZoomImage } from "./shared";
 
@@ -54,8 +55,7 @@ export function GeneratedImageSections({
       >
         {variant ? (
           <span className="group relative block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={variant.dataUrl} alt={variant.name} className="aspect-square w-full object-cover" />
+            <ImageWithFallback src={variant.dataUrl} alt={variant.name} className="aspect-square w-full object-cover" />
             <button
               type="button"
               onClick={(event) => {

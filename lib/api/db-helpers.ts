@@ -104,3 +104,19 @@ export function replaceJoinRows(
     insert.run(ownerId, relatedId);
   }
 }
+
+export function copyJoinRows(
+  db: Database.Database,
+  table: string,
+  ownerColumn: string,
+  relatedColumn: string,
+  fromOwnerId: number,
+  toOwnerId: number,
+) {
+  db.prepare(`
+    INSERT INTO ${table} (${ownerColumn}, ${relatedColumn})
+    SELECT ?, ${relatedColumn}
+    FROM ${table}
+    WHERE ${ownerColumn} = ?
+  `).run(toOwnerId, fromOwnerId);
+}

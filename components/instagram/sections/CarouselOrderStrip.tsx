@@ -1,3 +1,4 @@
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { type InstagramListingPayload, type PosterVariant } from "../poster";
 import { ZoomBadge, type ZoomImage } from "./shared";
 
@@ -27,8 +28,7 @@ export function CarouselOrderStrip({
             className="group w-36 shrink-0 overflow-hidden rounded-lg border border-pink-400 bg-gray-900 text-left"
           >
             <span className="relative block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={selectedVariant.dataUrl} alt="Selected cover" className="aspect-square w-full object-cover" />
+              <ImageWithFallback src={selectedVariant.dataUrl} alt="Selected cover" className="aspect-square w-full object-cover" />
               <ZoomBadge />
             </span>
             <div className="px-2 py-1 text-xs text-pink-100">1. Cover</div>
@@ -48,8 +48,7 @@ export function CarouselOrderStrip({
             className="group w-36 shrink-0 overflow-hidden rounded-lg border border-purple-400/70 bg-gray-900 text-left hover:border-purple-300"
           >
             <span className="relative block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={variant.dataUrl} alt={variant.name} className="aspect-square w-full object-cover" />
+              <ImageWithFallback src={variant.dataUrl} alt={variant.name} className="aspect-square w-full object-cover" />
               <ZoomBadge />
             </span>
             <div className="px-2 py-1 text-xs text-purple-100">{index + 2}. {variant.name}</div>
@@ -69,8 +68,7 @@ export function CarouselOrderStrip({
             className="group w-36 shrink-0 overflow-hidden rounded-lg border border-gray-800 bg-gray-900 text-left hover:border-gray-600"
           >
             <span className="relative block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt={`Listing photo ${index + 1}`} className="aspect-square w-full object-cover" />
+              <ImageWithFallback src={photo.url} alt={`Listing photo ${index + 1}`} className="aspect-square w-full object-cover" />
               <ZoomBadge />
             </span>
             <div className="px-2 py-1 text-xs text-gray-300">{index + collageVariants.length + 2}. Listing {index + 1}</div>

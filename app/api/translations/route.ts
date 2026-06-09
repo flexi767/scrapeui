@@ -1,16 +1,14 @@
-import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
 import { invalidateTranslationCache } from '@/lib/translation-cache';
 import { getTranslationsFromDb } from '@/i18n/db';
 import { isLocale, locales, type Locale } from '@/i18n/routing';
 import { upsertTranslation } from '@/lib/translations/upsert';
+import { requireAdmin } from '@/lib/api/auth-helpers';
 
 export async function GET() {
-  const session = await auth();
-  if (!session || session.user?.role !== 'admin') {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   try {
     // Fetch all translation keys with their translations for all locales
@@ -46,10 +44,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const session = await auth();
-  if (!session || session.user?.role !== 'admin') {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   try {
     const { key, locale, value } = await request.json();

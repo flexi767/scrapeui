@@ -4,7 +4,20 @@ import { raw } from '@/db/client';
 import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
 import { runInsert } from '@/lib/listings/sql';
 import { getTaskById } from '@/lib/queries';
-import { logActivity, parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+import { copyJoinRows, logActivity, parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
+
+interface CurrentTaskRow {
+  id: number;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assignee_id: number | null;
+  created_by_id: number | null;
+  deadline: string | null;
+  is_recurring: number;
+  recur_rule: string | null;
+}
 
 export async function GET(
   _request: NextRequest,
@@ -37,7 +50,12 @@ export async function PATCH(
   const now = currentIsoTimestamp();
 
   // Get current task for activity log
-  const current = raw.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as Record<string, unknown> | undefined;
+  const current = raw.prepare(`
+    SELECT id, title, description, status, priority, assignee_id, created_by_id,
+      deadline, is_recurring, recur_rule
+    FROM tasks
+    WHERE id = ?
+  `).get(taskId) as CurrentTaskRow | undefined;
   if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const bodyMap: Record<string, string> = {
@@ -88,14 +106,14 @@ export async function DELETE(
   return NextResponse.json({ ok: true });
 }
 
-function createNextRecurring(parentTaskId: number, parentTask: Record<string, unknown>) {
+function createNextRecurring(parentTaskId: number, parentTask: CurrentTaskRow) {
   const now = currentIsoTimestamp();
   let nextDeadline: string | null = null;
 
   if (parentTask.deadline && parentTask.recur_rule) {
     try {
-      const rule = JSON.parse(parentTask.recur_rule as string);
-      const current = new Date(parentTask.deadline as string);
+      const rule = JSON.parse(parentTask.recur_rule) as { interval?: string; every?: number };
+      const current = new Date(parentTask.deadline);
       const every = rule.every || 1;
 
       if (rule.interval === 'daily') current.setDate(current.getDate() + every);
@@ -123,13 +141,6 @@ function createNextRecurring(parentTaskId: number, parentTask: Record<string, un
 
   const newTaskId = result.lastInsertRowid as number;
 
-  // Copy labels
-  const labels = raw.prepare('SELECT label_id FROM task_labels WHERE task_id = ?').all(parentTaskId) as { label_id: number }[];
-  const linkLabel = raw.prepare('INSERT INTO task_labels (task_id, label_id) VALUES (?, ?)');
-  for (const l of labels) linkLabel.run(newTaskId, l.label_id);
-
-  // Copy listings
-  const listings = raw.prepare('SELECT listing_id FROM task_listings WHERE task_id = ?').all(parentTaskId) as { listing_id: number }[];
-  const linkListing = raw.prepare('INSERT INTO task_listings (task_id, listing_id) VALUES (?, ?)');
-  for (const l of listings) linkListing.run(newTaskId, l.listing_id);
+  copyJoinRows(raw, 'task_labels', 'task_id', 'label_id', parentTaskId, newTaskId);
+  copyJoinRows(raw, 'task_listings', 'task_id', 'listing_id', parentTaskId, newTaskId);
 }

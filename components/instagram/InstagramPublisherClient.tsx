@@ -6,6 +6,7 @@ import { errorMessage } from "@/lib/utils";
 import Link from "next/link";
 import { CopyIcon, DownloadIcon, SendIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { downloadBrowserUrl, shareFilesOrThrow } from "@/components/publisher/browser-file-actions";
 import { usePublisherListing } from "@/components/publisher/usePublisherListing";
 import {
@@ -140,8 +141,7 @@ export function InstagramPublisherClient({ backupId }: Props) {
         <XIcon className="h-5 w-5" />
       </button>
       <div className="flex max-h-full max-w-full flex-col gap-3" onClick={(event) => event.stopPropagation()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={zoomImage.src} alt={zoomImage.alt} className="max-h-[82vh] max-w-[92vw] object-contain" />
+        <ImageWithFallback src={zoomImage.src} alt={zoomImage.alt} className="max-h-[82vh] max-w-[92vw] object-contain" />
         <div className="text-center text-sm font-medium text-white">{zoomImage.label}</div>
       </div>
     </div>

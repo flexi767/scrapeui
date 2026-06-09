@@ -1,4 +1,3 @@
-import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -9,16 +8,15 @@ import {
 } from '@/i18n/routing';
 import { translateText } from '@/lib/translations/google-translate';
 import { upsertTranslation } from '@/lib/translations/upsert';
+import { requireAdmin } from '@/lib/api/auth-helpers';
 
 interface TranslateRequestBody {
   key?: unknown;
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.user?.role !== 'admin') {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
 
   try {
     const body = (await request.json()) as TranslateRequestBody;

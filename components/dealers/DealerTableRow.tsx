@@ -1,15 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslations } from 'next-intl';
 import { CARS_BG_CREDENTIAL_SECTION, MOBILE_BG_CREDENTIAL_SECTION } from '@/lib/dealers/platformCredentials';
 import { SOCIAL_CREDENTIAL_SECTIONS, type SocialCredentialSection } from '@/lib/dealers/socialCredentials';
 import { DealerPlatformFields } from './DealerPlatformFields';
+import { DealerPublicTemplateCell } from './DealerPublicTemplateCell';
 import { DealerSocialFields } from './DealerSocialFields';
 import { DealerTextInput } from './DealerTextInput';
 import { LoginBadge } from './LoginBadge';
-import { DEALER_TEMPLATES, type Dealer, type DealerEditForm, type DealerLoginResult, type TemplateName } from './types';
+import { type Dealer, type DealerEditForm, type DealerLoginResult } from './types';
 import { slugifyDealerName } from './utils';
 
 const EDIT_INPUT_CLASS_NAME =
@@ -190,45 +190,14 @@ export function DealerTableRow({
         )}
       </td>
       <td className="px-4 py-2 text-center align-top">
-        {editing ? (
-          <div className="flex flex-col gap-1.5 items-start min-w-[160px]">
-            <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
-              <input type="checkbox" checked={editForm.public_enabled} onChange={e => setEditForm(f => ({ ...f, public_enabled: e.target.checked }))} />
-              {t('enabled')}
-            </label>
-            <select value={editForm.template} onChange={e => setEditForm(f => ({ ...f, template: e.target.value as TemplateName }))} className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
-              {DEALER_TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <DealerTextInput
-              value={editForm.public_domain}
-              onValueChange={(value) =>
-                setEditForm((current) => ({ ...current, public_domain: value }))
-              }
-              placeholder="www.example.com"
-              className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none font-mono"
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-0.5">
-            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealer.public_enabled === 1 ? 'bg-purple-800/70 text-purple-200' : 'bg-gray-700 text-gray-500'}`}>
-              {dealer.public_enabled === 1 ? dealer.template : 'off'}
-            </span>
-            {dealer.public_enabled === 1 && (
-              <a href={`/d/${dealer.slug}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-400 hover:underline font-mono">
-                /d/{dealer.slug}
-              </a>
-            )}
-            {dealer.active_template_config_id != null ? (
-              <a href={`/templates/editor/${dealer.active_template_config_id}`} className="text-[10px] text-blue-400 hover:underline">
-                custom tmpl #{dealer.active_template_config_id}
-              </a>
-            ) : dealer.public_enabled === 1 ? (
-              <Link href="/templates" className="text-[10px] text-gray-500 hover:text-gray-300">
-                {t('add_template')}
-              </Link>
-            ) : null}
-          </div>
-        )}
+        <DealerPublicTemplateCell
+          dealer={dealer}
+          editForm={editForm}
+          editing={editing}
+          enabledLabel={t('enabled')}
+          addTemplateLabel={t('add_template')}
+          setEditForm={setEditForm}
+        />
       </td>
       <td className="px-4 py-2 text-center">
         <div className="flex items-center justify-center gap-1.5">

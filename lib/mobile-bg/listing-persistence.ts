@@ -75,6 +75,12 @@ interface ExistingListingRow {
   is_new: number | null;
 }
 
+const EXISTING_LISTING_SELECT = `
+  id, url, title, description, current_price, price_change, vat, last_edit, views,
+  ad_status, kaparo, thumb_saved, reg_month, reg_year, fuel, body_type,
+  transmission, color, vin, euronorm, power, mileage, extras_json, is_new
+`;
+
 export interface MobileBgChangeEvent {
   type: 'change';
   mobileId: string;
@@ -197,7 +203,7 @@ export async function upsertMobileBgListing(
   );
 
   const existing = db
-    .prepare('SELECT * FROM listings WHERE mobile_id = ?')
+    .prepare(`SELECT ${EXISTING_LISTING_SELECT} FROM listings WHERE mobile_id = ?`)
     .get(mobileId) as ExistingListingRow | undefined;
   let thumbSaved = existing?.thumb_saved === 1;
   if (!thumbSaved && listing.thumb) {

@@ -23,3 +23,11 @@ export async function requireAdmin(): Promise<AuthOk | AuthErr> {
   }
   return { session: session as Session };
 }
+
+export function canAccessDealer(session: Session, dealerId: number): boolean {
+  return session.user.role === 'admin' || session.user.dealerId === dealerId;
+}
+
+export function forbiddenResponse(message = 'Forbidden'): NextResponse {
+  return NextResponse.json({ error: message }, { status: 403 });
+}

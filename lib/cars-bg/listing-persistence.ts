@@ -79,6 +79,13 @@ interface ExistingCarsListing {
   last_edit: string | null;
 }
 
+const EXISTING_CARS_LISTING_SELECT = `
+  id, url, title, make, model, reg_year, mileage, fuel, body_type, transmission,
+  color, power, current_price, price_change, ad_status, kaparo, carsbg_title,
+  carsbg_created_date, carsbg_edited_date, cars_total_views, image_count,
+  full_keys, last_edit
+`;
+
 export interface CarsBgOwnerUpdateResult {
   viewsChanged: boolean;
   oldViews: number | null;
@@ -112,7 +119,7 @@ export function applyCarsBgOwnerDetails(
   details: CarsBgOwnerDetails,
 ): CarsBgOwnerUpdateResult {
   const existingCars = db.prepare(`
-    SELECT *
+    SELECT ${EXISTING_CARS_LISTING_SELECT}
     FROM listings
     WHERE cars_id = ? AND source = 'c'
   `).get(carsId) as ExistingCarsListing | undefined;
@@ -285,7 +292,11 @@ export function upsertCarsBgListing(
     );
   }
 
-  const existing = db.prepare('SELECT * FROM listings WHERE cars_id = ? AND source = ?').get(carsId, 'c') as ExistingCarsListing | undefined;
+  const existing = db.prepare(`
+    SELECT ${EXISTING_CARS_LISTING_SELECT}
+    FROM listings
+    WHERE cars_id = ? AND source = ?
+  `).get(carsId, 'c') as ExistingCarsListing | undefined;
 
   if (existing) {
     const priceChanged = hasPriceChanged(price, existing.current_price);

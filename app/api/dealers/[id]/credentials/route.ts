@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { canAccessDealer, requireAuth } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES } from '@/lib/dealer-config';
 import {
@@ -23,9 +23,7 @@ export async function GET(
   const dealerId = parsePositiveIntParam(id);
   if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
-  const isAdmin = session.user.role === 'admin';
-  const isOwn = session.user.dealerId === dealerId;
-  if (!isAdmin && !isOwn) {
+  if (!canAccessDealer(session, dealerId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -55,8 +53,7 @@ export async function PATCH(
   if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
   const isAdmin = session.user.role === 'admin';
-  const isOwn = session.user.dealerId === dealerId;
-  if (!isAdmin && !isOwn) {
+  if (!canAccessDealer(session, dealerId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

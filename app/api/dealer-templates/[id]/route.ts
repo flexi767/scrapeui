@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-helpers";
+import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import {
   getDealerTemplateConfig,
@@ -18,13 +18,8 @@ export async function PATCH(request: Request, { params }: Params) {
   const config = getDealerTemplateConfig(configId);
   if (!config) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const isAdmin = session.user.role === "admin";
-  const sessionDealerId = session.user.dealerId;
-  if (!isAdmin && (config.dealerId === null || sessionDealerId !== config.dealerId)) {
+  if (config.dealerId === null || !canAccessDealer(session, config.dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
-  if (config.dealerId === null) {
-    return Response.json({ error: "Base templates are read-only" }, { status: 403 });
   }
 
   const body = await request.json() as { name?: string; configJson?: string };

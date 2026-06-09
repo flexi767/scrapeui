@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-helpers";
+import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import {
   listDealerTemplateConfigs,
@@ -26,8 +26,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "dealerId required" }, { status: 400 });
   }
 
-  const sessionDealerId = session.user.dealerId;
-  if (!isAdmin && sessionDealerId !== dealerId) {
+  if (!canAccessDealer(session, dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
   if ('error' in check) return check.error;
   const session = check.session;
 
-  const isAdmin = session.user.role === "admin";
   const body = await request.json() as { dealerId: number; baseTemplateId: number; name: string };
 
   const { dealerId, baseTemplateId, name } = body;
@@ -47,8 +45,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "dealerId, baseTemplateId, and name are required" }, { status: 400 });
   }
 
-  const sessionDealerId = session.user.dealerId;
-  if (!isAdmin && sessionDealerId !== dealerId) {
+  if (!canAccessDealer(session, dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 

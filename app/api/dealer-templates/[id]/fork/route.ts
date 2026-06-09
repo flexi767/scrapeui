@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-helpers";
+import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import { getDealerTemplateConfig, forkDealerTemplateConfig, createDealerTemplateConfig } from "@/lib/queries";
 
@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: Params) {
   if (source.dealerId === null) {
     const targetDealerId = isAdmin ? body.dealerId : sessionDealerId;
     if (!targetDealerId) return Response.json({ error: "dealerId required" }, { status: 400 });
-    if (!isAdmin && sessionDealerId !== targetDealerId) {
+    if (!canAccessDealer(session, targetDealerId)) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
     const newId = createDealerTemplateConfig({
@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   // Forking a dealer config
-  if (!isAdmin && sessionDealerId !== source.dealerId) {
+  if (!canAccessDealer(session, source.dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   const newId = forkDealerTemplateConfig(sourceId, body.name.trim(), source.dealerId);

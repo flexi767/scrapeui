@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-helpers";
+import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import { getDealerTemplateConfig, updateDealerTemplateConfig } from "@/lib/queries";
 
@@ -19,9 +19,7 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ error: "Base templates are read-only" }, { status: 403 });
   }
 
-  const isAdmin = session.user.role === "admin";
-  const sessionDealerId = session.user.dealerId;
-  if (!isAdmin && sessionDealerId !== config.dealerId) {
+  if (!canAccessDealer(session, config.dealerId)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 

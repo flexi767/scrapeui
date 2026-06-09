@@ -14,6 +14,7 @@ import {
   SendIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { downloadBrowserUrl, shareFilesOrThrow } from "@/components/publisher/browser-file-actions";
 import { usePublisherListing } from "@/components/publisher/usePublisherListing";
 import { TikTokIcon } from "@/components/tiktok/TikTokIcon";
@@ -160,8 +161,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
               {video ? (
                 <video src={video.url} controls playsInline className="aspect-[9/16] w-full bg-black object-cover" />
               ) : previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewUrl} alt="Video preview" className="aspect-[9/16] w-full bg-black object-cover" />
+                <ImageWithFallback src={previewUrl} alt="Video preview" className="aspect-[9/16] w-full bg-black object-cover" />
               ) : (
                 <div className="flex aspect-[9/16] w-full items-center justify-center bg-gray-950 text-gray-500">
                   <PlayIcon className="h-10 w-10" />
@@ -192,8 +192,7 @@ export function TikTokPublisherClient({ backupId }: Props) {
                   } ${draggedPhotoId === photo.id ? "cursor-grabbing opacity-60" : "cursor-grab"}`}
                 >
                   <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ImageWithFallback
                       src={photo.url}
                       alt={`Source photo ${index + 1}`}
                       className={`aspect-[9/12] w-full object-cover ${photo.usable ? "" : "grayscale"}`}
