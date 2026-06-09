@@ -14,7 +14,7 @@ import {
   applyConsistentTextToVariants,
   buildDefaultCollageSelections,
   generateAiPosters,
-  loadPosterImages,
+  generateFallbackPosters,
   normalizeCollageSelections,
   normalizeVariantPrompts,
 } from "./publisher-workflow";
@@ -24,7 +24,6 @@ import {
   DEFAULT_POSTER_VARIANT_PROMPTS,
   GLOBAL_PROMPT_TEMPLATE_STORAGE_KEY,
   GLOBAL_VARIANT_PROMPTS_STORAGE_KEY,
-  makePoster,
   PROMPT_STORAGE_PREFIX,
   VARIANT_PROMPT_STORAGE_PREFIX,
   type CollageSelections,
@@ -197,15 +196,7 @@ export function useInstagramPosterWorkflow(listing: InstagramListingPayload | nu
       }
       toast.warning(`${aiError}. Using quick local posters instead.`);
       try {
-        const { images: loaded, failedCount } = await loadPosterImages(listing.photos);
-        if (canvasSeedRef.current !== seed) return;
-        const fallbackVariants: PosterVariant[] = [
-          { id: "hero", name: "Hero poster", role: "cover", dataUrl: makePoster(listing, loaded, "hero", prompt, seed * 3 + 1) },
-          { id: "grid", name: "Triple shot", role: "cover", dataUrl: makePoster(listing, loaded, "grid", prompt, seed * 3 + 2) },
-          { id: "editorial", name: "Clean gallery", role: "cover", dataUrl: makePoster(listing, loaded, "editorial", prompt, seed * 3 + 3) },
-        ];
-        if (canvasSeedRef.current !== seed) return;
-        const textFallbackVariants = await applyConsistentTextToVariants(listing, fallbackVariants);
+        const { variants: textFallbackVariants, failedCount } = await generateFallbackPosters(listing, prompt, seed);
         if (canvasSeedRef.current !== seed) return;
         setVariants(textFallbackVariants);
         setSelectedVariantId("hero");

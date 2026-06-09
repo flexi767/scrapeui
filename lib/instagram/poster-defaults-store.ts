@@ -4,6 +4,7 @@ import {
   parsePosterVariantPrompts,
   type PosterVariantPrompt,
 } from "@/lib/instagram/poster-variants";
+import { currentIsoTimestamp } from "@/lib/date-format";
 
 export interface InstagramPosterDefaults {
   promptTemplate: string;
@@ -55,7 +56,7 @@ export function getInstagramPosterDefaults(scopeKey: string): InstagramPosterDef
 
 export function saveInstagramPosterDefaults(scopeKey: string, defaults: InstagramPosterDefaults) {
   ensureInstagramPosterDefaultsTable();
-  const now = new Date().toISOString();
+  const now = currentIsoTimestamp();
   raw
     .prepare(
       `INSERT INTO instagram_poster_defaults (

@@ -3,6 +3,7 @@ import { apiRequest } from "@/lib/utils";
 import {
   DEFAULT_POSTER_VARIANT_PROMPTS,
   formatPosterPrice,
+  makePoster,
   type CollageSelections,
   type InstagramListingPayload,
   type PosterVariant,
@@ -162,6 +163,24 @@ async function applyConsistentPosterText(listing: InstagramListingPayload, varia
 
 export async function applyConsistentTextToVariants(listing: InstagramListingPayload, variants: PosterVariant[]) {
   return Promise.all(variants.map((variant) => applyConsistentPosterText(listing, variant)));
+}
+
+export async function generateFallbackPosters(
+  listing: InstagramListingPayload,
+  prompt: string,
+  seed: number,
+) {
+  const { images, failedCount } = await loadPosterImages(listing.photos);
+  const variants: PosterVariant[] = [
+    { id: "hero", name: "Hero poster", role: "cover", dataUrl: makePoster(listing, images, "hero", prompt, seed * 3 + 1) },
+    { id: "grid", name: "Triple shot", role: "cover", dataUrl: makePoster(listing, images, "grid", prompt, seed * 3 + 2) },
+    { id: "editorial", name: "Clean gallery", role: "cover", dataUrl: makePoster(listing, images, "editorial", prompt, seed * 3 + 3) },
+  ];
+
+  return {
+    variants: await applyConsistentTextToVariants(listing, variants),
+    failedCount,
+  };
 }
 
 export async function generateAiPosters(
