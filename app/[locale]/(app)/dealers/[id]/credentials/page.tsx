@@ -174,6 +174,7 @@ export default function DealerCredentialsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({});
   const [testReason, setTestReason] = useState<Record<string, string>>({});
+  const [dealerUser, setDealerUser] = useState<{ id: number; username: string } | null>(null);
 
   const isAdmin = session?.user.role === 'admin';
 
@@ -192,6 +193,15 @@ export default function DealerCredentialsPage() {
   }, [dealerId]);
 
   useEffect(() => { if (sessionStatus !== 'loading') load(); }, [load, sessionStatus]);
+
+  useEffect(() => {
+    if (sessionStatus !== 'loading' && session?.user.role === 'admin') {
+      fetch(`/api/dealers/${dealerId}/user`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { if (data) setDealerUser(data as { id: number; username: string }); })
+        .catch(() => { /* no user linked — silently ignore */ });
+    }
+  }, [dealerId, sessionStatus, session?.user.role]);
 
   if (sessionStatus === 'loading' || loading) {
     return (
@@ -292,6 +302,14 @@ export default function DealerCredentialsPage() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+        {isAdmin && dealerUser && (
+          <Link
+            href={`/dealers/${dealerId}/users/${dealerUser.id}/permissions`}
+            className="text-sm text-blue-400 hover:text-blue-300 underline"
+          >
+            Manage page permissions for {dealerUser.username}
+          </Link>
+        )}
 
         {PLATFORM_CREDENTIAL_SECTIONS.map((section) => (
           <CredentialSectionWithSave

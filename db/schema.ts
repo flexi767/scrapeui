@@ -108,6 +108,7 @@ export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
   name: text("name").notNull(),
+  email: text("email"),
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("user"),
   createdAt: text("created_at"),
@@ -123,6 +124,19 @@ export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const userPagePermissions = sqliteTable(
+  "user_page_permissions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id),
+    pageKey: text("page_key").notNull(),
+    createdAt: text("created_at"),
+  },
+  (table) => ({
+    uniqueUserPage: unique().on(table.userId, table.pageKey),
+  }),
+);
 
 export const instagramPosterDefaults = sqliteTable("instagram_poster_defaults", {
   scopeKey: text("scope_key").primaryKey(),
@@ -585,6 +599,7 @@ export type Dealer = typeof dealers.$inferSelect;
 export type Listing = typeof listings.$inferSelect;
 export type ListingSnapshot = typeof listingSnapshots.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type UserPagePermission = typeof userPagePermissions.$inferSelect;
 export type Label = typeof labels.$inferSelect;
 export type MobileBgCrawlRun = typeof mobileBgCrawlRuns.$inferSelect;
 export type MobileBgBackup = typeof mobileBgBackups.$inferSelect;

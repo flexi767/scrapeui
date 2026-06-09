@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireApiPagePermission } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { getArticles } from '@/lib/queries';
 import { insertJoinRows, logActivity } from '@/lib/api/db-helpers';
@@ -7,7 +7,7 @@ import { currentIsoTimestamp } from '@/lib/date-format';
 import { runInsert } from '@/lib/listings/sql';
 
 export async function GET(request: NextRequest) {
-  const check = await requireAuth();
+  const check = await requireApiPagePermission('kb');
   if ('error' in check) return check.error;
 
   const sp = request.nextUrl.searchParams;
@@ -31,7 +31,7 @@ function slugify(text: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  const check = await requireAuth();
+  const check = await requireApiPagePermission('kb');
   if ('error' in check) return check.error;
   const session = check.session;
 

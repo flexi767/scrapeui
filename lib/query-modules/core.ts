@@ -152,6 +152,47 @@ export function getAllUsers(): UserRow[] {
     .all() as UserRow[];
 }
 
+export interface UserPermissionsRow {
+  id: number;
+  username: string;
+  name: string;
+  role: string;
+  email: string | null;
+  dealerId: number | null;
+  grantedPageKeys: string[];
+}
+
+export function getUserWithPermissions(userId: number): UserPermissionsRow | null {
+  const user = raw
+    .prepare('SELECT id, username, name, role, email, dealer_id AS dealerId FROM users WHERE id = ?')
+    .get(userId) as { id: number; username: string; name: string; role: string; email: string | null; dealerId: number | null } | undefined;
+  if (!user) return null;
+
+  const rows = raw
+    .prepare('SELECT page_key FROM user_page_permissions WHERE user_id = ?')
+    .all(userId) as { page_key: string }[];
+
+  return { ...user, grantedPageKeys: rows.map((r) => r.page_key) };
+}
+
+export function setUserPagePermissions(userId: number, pageKeys: string[]): void {
+  const now = new Date().toISOString();
+  const replace = raw.transaction(() => {
+    raw.prepare('DELETE FROM user_page_permissions WHERE user_id = ?').run(userId);
+    const insert = raw.prepare(
+      'INSERT INTO user_page_permissions (user_id, page_key, created_at) VALUES (?, ?, ?)',
+    );
+    for (const key of pageKeys) insert.run(userId, key, now);
+  });
+  replace();
+}
+
+export function getUserByDealerId(dealerId: number): { id: number; username: string } | null {
+  return raw
+    .prepare('SELECT id, username FROM users WHERE dealer_id = ? LIMIT 1')
+    .get(dealerId) as { id: number; username: string } | null;
+}
+
 // ─── Labels ───────────────────────────────────────────────────────
 
 export interface LabelRow {

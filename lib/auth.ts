@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { raw } from '@/db/client';
+import { getUserPageKeys } from '@/lib/page-permissions';
 import { authConfig } from './auth.config';
 
 declare module 'next-auth' {
@@ -9,6 +10,7 @@ declare module 'next-auth' {
     role?: string;
     username?: string;
     dealerId?: number | null;
+    pageKeys?: string[];
   }
   interface Session {
     user: {
@@ -17,6 +19,7 @@ declare module 'next-auth' {
       username: string;
       role: string;
       dealerId: number | null;
+      pageKeys: string[];
     };
   }
 }
@@ -27,6 +30,7 @@ declare module '@auth/core/jwt' {
     role: string;
     username: string;
     dealerId: number | null;
+    pageKeys: string[];
   }
 }
 
@@ -78,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           username: user.username,
           role: user.role,
           dealerId: user.dealer_id ?? null,
+          pageKeys: getUserPageKeys(user.id, user.role),
         };
       },
     }),

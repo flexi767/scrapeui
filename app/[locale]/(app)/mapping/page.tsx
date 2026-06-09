@@ -1,6 +1,8 @@
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { requirePagePermission } from '@/lib/api/auth-helpers';
 import ReparseRunner from '@/components/ReparseRunner';
 import MobileBgMakeModelSyncRunner from '@/components/MobileBgMakeModelSyncRunner';
 import { getActiveDealers, getMakeModelMappings } from '@/lib/queries';
@@ -20,6 +22,9 @@ function mappingStatus(row: {
 }
 
 export default async function MappingPage() {
+  const pageAccess = await requirePagePermission('mapping');
+  if ('redirect' in pageAccess) redirect(pageAccess.redirect);
+
   const t = await getTranslations('ui');
   const dealers = getActiveDealers();
   const rows = getMakeModelMappings(1000);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import path from 'path';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireApiPagePermission } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { UPLOADS_DIR } from '@/lib/storage-paths';
@@ -11,7 +11,7 @@ const UPLOAD_DIR = UPLOADS_DIR;
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 export async function POST(request: NextRequest) {
-  const check = await requireAuth();
+  const check = await requireApiPagePermission('files');
   if ('error' in check) return check.error;
   const session = check.session;
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const check = await requireAuth();
+  const check = await requireApiPagePermission('files');
   if ('error' in check) return check.error;
 
   const uploads = raw
