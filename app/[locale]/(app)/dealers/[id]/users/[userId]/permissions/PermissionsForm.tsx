@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiRequest, errorMessage } from '@/lib/utils';
-import { PAGE_KEYS, type PageKey } from '@/lib/page-permissions';
+import { PAGE_KEYS, type PageKey } from '@/lib/page-keys';
 
 const PAGE_LABELS: Record<PageKey, string> = {
   listings: 'Listings',

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { type PageKey } from '@/lib/page-permissions';
+import { type PageKey } from '@/lib/page-keys';
 import { QuickAdd } from '@/components/QuickAdd';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LanguageSelector } from '@/components/LanguageSelector';
