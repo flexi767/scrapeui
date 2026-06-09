@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,6 +91,13 @@ export default function LoginPage() {
             {loading ? t('signing_in') : t('sign_in')}
           </Button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-400">
+          New dealer?{' '}
+          <Link href="/register" className="text-blue-400 hover:text-blue-300 underline">
+            Register as a dealer
+          </Link>
+        </p>
       </div>
     </div>
   );
