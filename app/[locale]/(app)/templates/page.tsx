@@ -10,6 +10,7 @@ export default async function TemplatesPage() {
   if ('redirect' in pageAccess) redirect(pageAccess.redirect);
 
   const session = await auth();
+  if (!session) return null;
 
   const user = session.user as { role: string; dealerId: number | null };
   const configs = listDealerTemplateConfigRowsForSession(user);
