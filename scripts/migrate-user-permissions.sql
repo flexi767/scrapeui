@@ -1,4 +1,6 @@
 -- scripts/migrate-user-permissions.sql
+-- NOTE: The ALTER TABLE statement below is NOT idempotent.
+-- Apply this migration exactly once. Re-running it will fail with "duplicate column name: email".
 
 -- Add email to users (nullable; existing accounts won't have one)
 ALTER TABLE users ADD COLUMN email TEXT;

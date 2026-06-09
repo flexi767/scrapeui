@@ -125,12 +125,18 @@ export const dealerTemplateConfigs = sqliteTable("dealer_template_configs", {
   updatedAt: text("updated_at").notNull(),
 });
 
-export const userPagePermissions = sqliteTable("user_page_permissions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id").notNull().references(() => users.id),
-  pageKey: text("page_key").notNull(),
-  createdAt: text("created_at"),
-});
+export const userPagePermissions = sqliteTable(
+  "user_page_permissions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id),
+    pageKey: text("page_key").notNull(),
+    createdAt: text("created_at"),
+  },
+  (table) => ({
+    uniqueUserPage: unique().on(table.userId, table.pageKey),
+  }),
+);
 
 export const instagramPosterDefaults = sqliteTable("instagram_poster_defaults", {
   scopeKey: text("scope_key").primaryKey(),
