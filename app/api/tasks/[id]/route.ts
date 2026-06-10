@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { currentIsoTimestamp, formatDateInputValue } from '@/lib/date-format';
@@ -18,6 +19,20 @@ interface CurrentTaskRow {
   is_recurring: number;
   recur_rule: string | null;
 }
+
+const PatchTaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  assigneeId: z.number().int().optional().nullable(),
+  parentId: z.number().int().optional().nullable(),
+  deadline: z.string().optional().nullable(),
+  isRecurring: z.union([z.literal(0), z.literal(1), z.boolean()]).optional(),
+  recurRule: z.string().optional().nullable(),
+  listingIds: z.array(z.number().int()).optional(),
+  labelIds: z.array(z.number().int()).optional(),
+}).passthrough();
 
 export async function GET(
   _request: NextRequest,
@@ -46,7 +61,12 @@ export async function PATCH(
   const { id } = await params;
   const taskId = parsePositiveIntParam(id);
   if (!taskId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
-  const body = await request.json();
+
+  const parsed = PatchTaskSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data;
   const now = currentIsoTimestamp();
 
   // Get current task for activity log
@@ -69,25 +89,28 @@ export async function PATCH(
     return NextResponse.json({ error: 'No updates' }, { status: 400 });
   }
 
-  runMappedUpdate(raw, 'tasks', 'id', taskId, body, bodyMap, { updated_at: now });
+  const tx = raw.transaction(() => {
+    runMappedUpdate(raw, 'tasks', 'id', taskId, body, bodyMap, { updated_at: now });
 
-  replaceJoinRows(raw, 'task_listings', 'task_id', 'listing_id', taskId, body.listingIds);
-  replaceJoinRows(raw, 'task_labels', 'task_id', 'label_id', taskId, body.labelIds);
+    replaceJoinRows(raw, 'task_listings', 'task_id', 'listing_id', taskId, body.listingIds);
+    replaceJoinRows(raw, 'task_labels', 'task_id', 'label_id', taskId, body.labelIds);
 
-  // Log status changes
-  if (body.status && body.status !== current.status) {
-    logActivity(raw, 'task', taskId, 'status_changed', JSON.stringify({ from: current.status, to: body.status }), Number(session.user.id), now);
+    // Log status changes
+    if (body.status && body.status !== current.status) {
+      logActivity(raw, 'task', taskId, 'status_changed', JSON.stringify({ from: current.status, to: body.status }), Number(session.user.id), now);
 
-    // Handle recurring task completion
-    if (body.status === 'done' && current.is_recurring === 1 && current.recur_rule) {
-      createNextRecurring(taskId, current);
+      // Handle recurring task completion
+      if (body.status === 'done' && current.is_recurring === 1 && current.recur_rule) {
+        createNextRecurring(taskId, current);
+      }
     }
-  }
 
-  // Log assignment changes
-  if ('assigneeId' in body && body.assigneeId !== current.assignee_id) {
-    logActivity(raw, 'task', taskId, 'assigned', JSON.stringify({ from: current.assignee_id, to: body.assigneeId }), Number(session.user.id), now);
-  }
+    // Log assignment changes
+    if ('assigneeId' in body && body.assigneeId !== current.assignee_id) {
+      logActivity(raw, 'task', taskId, 'assigned', JSON.stringify({ from: current.assignee_id, to: body.assigneeId }), Number(session.user.id), now);
+    }
+  });
+  tx();
 
   return NextResponse.json({ ok: true });
 }

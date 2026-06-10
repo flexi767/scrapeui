@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam, replaceJoinRows, runMappedUpdate } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { getArticleById } from '@/lib/queries';
+
+const PatchArticleSchema = z.object({
+  title: z.string().min(1).optional(),
+  content: z.string().min(1).optional(),
+  labelIds: z.array(z.number().int()).optional(),
+  listingIds: z.array(z.number().int()).optional(),
+});
 
 export async function GET(
   _request: NextRequest,
@@ -31,17 +39,25 @@ export async function PATCH(
   const { id } = await params;
   const articleId = parsePositiveIntParam(id);
   if (!articleId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
-  const body = await request.json() as Record<string, unknown>;
+
+  const parsed = PatchArticleSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data;
   const now = currentIsoTimestamp();
 
   const toUpdate: Record<string, unknown> = {};
-  if (body.title) toUpdate.title = (body.title as string).trim();
+  if (body.title) toUpdate.title = body.title.trim();
   if (body.content) toUpdate.content = body.content;
 
-  runMappedUpdate(raw, 'articles', 'id', articleId, toUpdate, { title: 'title', content: 'body' }, { updated_at: now });
+  const tx = raw.transaction(() => {
+    runMappedUpdate(raw, 'articles', 'id', articleId, toUpdate, { title: 'title', content: 'body' }, { updated_at: now });
 
-  replaceJoinRows(raw, 'article_labels', 'article_id', 'label_id', articleId, body.labelIds);
-  replaceJoinRows(raw, 'article_listings', 'article_id', 'listing_id', articleId, body.listingIds);
+    replaceJoinRows(raw, 'article_labels', 'article_id', 'label_id', articleId, body.labelIds);
+    replaceJoinRows(raw, 'article_listings', 'article_id', 'listing_id', articleId, body.listingIds);
+  });
+  tx();
 
   return NextResponse.json({ ok: true });
 }
