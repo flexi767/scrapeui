@@ -29,13 +29,13 @@ export default async function ListingsPage({
   const sp = await searchParams;
   const {
     make, model, dealerSlugs, years, categories, statuses, vatValues, fuels, extras,
-    priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page,
+    priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, cursor,
   } = parseListingSearchParams(sp, 'price');
 
-  const { data: rows, total } = getListings({
+  const { data: rows, total, nextCursor } = getListings({
     make, model, dealerSlugs, years, categories, statuses, vatValues, fuels, extras,
     priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search,
-    page, limit: 50,
+    page, cursor, limit: 50,
   });
 
   const makeModels = getMakeModels();
@@ -146,6 +146,8 @@ export default async function ListingsPage({
         <ListingsPagination
           page={page}
           totalPages={totalPages}
+          nextCursor={nextCursor}
+          cursorActive={Boolean(cursor)}
           currentParams={currentParams}
           basePath={BASE_PATH}
         />

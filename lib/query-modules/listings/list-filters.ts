@@ -9,7 +9,6 @@ import {
   ownMileageExpr,
   ownModelExpr,
   ownPriceExpr,
-  ownTitleExpr,
   ownViewsExpr,
 } from '../types';
 
@@ -104,6 +103,17 @@ function addMinMaxFilter(
   }
 }
 
+export function toListingFtsQuery(value: string): string {
+  const terms = value
+    .normalize('NFKC')
+    .match(/[\p{L}\p{N}]+/gu)
+    ?.map((term) => term.toLowerCase())
+    .filter((term) => term.length > 0)
+    .slice(0, 8) ?? [];
+
+  return terms.map((term) => `${term}*`).join(' ');
+}
+
 export function buildListingFilters(
   filters: ListingFilters,
   initialWheres: string[],
@@ -145,8 +155,16 @@ export function buildListingFilters(
   if (kaparo) { wheres.push('l.kaparo = ?'); params.push(kaparo === 'yes' ? 1 : 0); }
   addInFilter(wheres, params, 'l.reg_year', years);
   if (search) {
-    wheres.push('(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    const ftsQuery = toListingFtsQuery(search);
+    if (ftsQuery) {
+      wheres.push(`EXISTS (
+        SELECT 1
+        FROM listings_search_fts
+        WHERE listings_search_fts.rowid = l.id
+          AND listings_search_fts MATCH ?
+      )`);
+      params.push(ftsQuery);
+    }
   }
   addInFilter(wheres, params, 'd.slug', dealerSlugs);
   if (source) { wheres.push('l.source = ?'); params.push(source); }
@@ -201,10 +219,16 @@ export function buildOwnListingFilters(
   }
   addInFilter(wheres, params, 'l.reg_year', years);
   if (search) {
-    wheres.push(
-      `(${ownTitleExpr} LIKE ? OR ${ownMakeExpr} LIKE ? OR ${ownModelExpr} LIKE ?)`,
-    );
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    const ftsQuery = toListingFtsQuery(search);
+    if (ftsQuery) {
+      wheres.push(`EXISTS (
+        SELECT 1
+        FROM listings_search_fts
+        WHERE listings_search_fts.rowid = l.id
+          AND listings_search_fts MATCH ?
+      )`);
+      params.push(ftsQuery);
+    }
   }
   addInFilter(wheres, params, 'd.slug', dealerSlugs);
 

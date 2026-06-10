@@ -245,6 +245,7 @@ export interface ListingFilters {
   search?: string;
   page?: number;
   limit?: number;
+  cursor?: string;
 }
 
 export const notDuplicateExpr = `(duplicate = 0 OR duplicate IS NULL)`;

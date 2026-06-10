@@ -25,6 +25,7 @@ import {
   OWN_LISTING_SORT_COLUMNS,
 } from './list-filters';
 import { getWindowTotal, omitQueryFields } from '../query-utils';
+import { decodeListingCursor, encodeListingCursor } from '@/lib/listing-url';
 
 const ownListingFromClause = `
   FROM ranked_backups b
@@ -82,6 +83,68 @@ const ownListingSelectColumns = `
   d.slug as dealer_slug
 `;
 
+const LISTING_CURSOR_COLUMNS: Record<string, string> = {
+  price: 'l.current_price',
+  last_edit: 'l.last_edit',
+  carsbg_created_date: 'l.carsbg_created_date',
+  views: 'l.views',
+  mileage: 'l.mileage',
+  fuel: 'l.fuel',
+  ad_status: 'l.ad_status',
+  kaparo: 'l.kaparo',
+  reg_year: 'l.reg_year',
+};
+
+function addListingCursorFilter({
+  wheres,
+  params,
+  sort,
+  order,
+  cursor,
+}: {
+  wheres: string[];
+  params: (string | number)[];
+  sort: string;
+  order: string;
+  cursor?: string;
+}): boolean {
+  const decoded = decodeListingCursor(cursor);
+  const sortCol = LISTING_CURSOR_COLUMNS[sort];
+  if (!decoded || !sortCol || decoded.sort !== sort || decoded.order !== order || decoded.value == null) {
+    return false;
+  }
+
+  const operator = order === 'asc' ? '>' : '<';
+  wheres.push(`(${sortCol} ${operator} ? OR (${sortCol} = ? AND l.id ${operator} ?))`);
+  params.push(decoded.value, decoded.value, decoded.id);
+  return true;
+}
+
+function getListingCursor(
+  row: ListingRow | undefined,
+  sort: string,
+  order: string,
+): string | null {
+  if (!row || !LISTING_CURSOR_COLUMNS[sort]) return null;
+
+  const keyBySort: Record<string, keyof ListingRow> = {
+    price: 'current_price',
+    last_edit: 'last_edit',
+    carsbg_created_date: 'carsbg_created_date',
+    views: 'views',
+    mileage: 'mileage',
+    fuel: 'fuel',
+    ad_status: 'ad_status',
+    kaparo: 'kaparo',
+    reg_year: 'reg_year',
+  };
+  const key = keyBySort[sort];
+  const value = key ? row[key] : null;
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+
+  return encodeListingCursor({ sort, order, value, id: row.id });
+}
+
 function getListingPage(
   filters: ListingFilters,
   options: {
@@ -91,15 +154,17 @@ function getListingPage(
     includeDeletedAt?: boolean;
   },
 ) {
-  const { sort = options.defaultSort, order = "desc", page = 1, limit = options.defaultLimit } = filters;
+  const { sort = options.defaultSort, order = "desc", page = 1, limit = options.defaultLimit, cursor } = filters;
   const { wheres, params } = buildListingFilters(filters, [
     ...options.initialWheres,
   ]);
 
+  const usesCursor = addListingCursorFilter({ wheres, params, sort, order, cursor });
   const where = `WHERE ${wheres.join(" AND ")}`;
   const sortCol = LISTING_SORT_COLUMNS[sort] ?? "l.last_edit";
   const sortDir = order === "asc" ? "ASC" : "DESC";
-  const offset = (page - 1) * limit;
+  const offset = usesCursor ? 0 : (page - 1) * limit;
+  const queryLimit = limit + 1;
   const deletedAtSelect = options.includeDeletedAt ? ", l.deleted_at" : "";
 
   const rows = raw
@@ -120,11 +185,11 @@ function getListingPage(
     FROM listings l
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
-    ORDER BY ${sortCol} ${sortDir}
+    ORDER BY ${sortCol} ${sortDir}, l.id ${sortDir}
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as Array<ListingRow & { total_count: number }>;
+    .all(...params, queryLimit, offset) as Array<ListingRow & { total_count: number }>;
 
   const countListings = () => {
     const { count } = raw
@@ -141,9 +206,14 @@ function getListingPage(
   };
 
   const total = getWindowTotal(rows, page, countListings, 'total_count');
-  const data = rows.map((row) => omitQueryFields(row, ['total_count']));
+  const pageRows = rows.slice(0, limit);
+  const hasNextPage = rows.length > limit;
+  const data = pageRows.map((row) => omitQueryFields(row, ['total_count']));
+  const nextCursor = hasNextPage
+    ? getListingCursor(pageRows[pageRows.length - 1], sort, order)
+    : null;
 
-  return { data, total, page, limit };
+  return { data, total, page, limit, nextCursor };
 }
 
 export function getListings(filters: ListingFilters = {}) {

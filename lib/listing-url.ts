@@ -17,6 +17,7 @@ export interface ListingSearchParams {
   order?: string;
   search?: string;
   page?: string;
+  cursor?: string;
 }
 
 export function parseListingSearchParams(sp: ListingSearchParams, defaultSort = 'last_edit') {
@@ -39,6 +40,7 @@ export function parseListingSearchParams(sp: ListingSearchParams, defaultSort = 
     order: sp.order ?? 'desc',
     search: sp.search ?? '',
     page: parseInt(sp.page ?? '1', 10),
+    cursor: sp.cursor ?? '',
   };
 }
 
@@ -127,7 +129,19 @@ export function listingPageHref(
   page: number,
 ) {
   const params = new URLSearchParams(currentParams.toString());
+  params.delete("cursor");
   params.set("page", String(page));
+  return `${basePath}?${params.toString()}`;
+}
+
+export function listingCursorHref(
+  basePath: string,
+  currentParams: URLSearchParams,
+  cursor: string,
+) {
+  const params = new URLSearchParams(currentParams.toString());
+  params.delete("page");
+  params.set("cursor", cursor);
   return `${basePath}?${params.toString()}`;
 }
 
@@ -146,6 +160,7 @@ export function listingSortHref({
 }) {
   const params = new URLSearchParams(currentParams.toString());
   params.delete("page");
+  params.delete("cursor");
   if (currentSort === sortKey) {
     params.set("order", currentOrder === "asc" ? "desc" : "asc");
   } else {
@@ -157,4 +172,37 @@ export function listingSortHref({
 
 export function sortArrow(sortKey: string, currentSort: string, currentOrder: string) {
   return currentSort === sortKey ? (currentOrder === "asc" ? " ↑" : " ↓") : "";
+}
+
+export interface ListingCursor {
+  sort: string;
+  order: string;
+  value: string | number | null;
+  id: number;
+}
+
+export function encodeListingCursor(cursor: ListingCursor): string {
+  return encodeURIComponent(JSON.stringify(cursor));
+}
+
+export function decodeListingCursor(value: string | null | undefined): ListingCursor | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(value)) as Partial<ListingCursor>;
+    if (
+      typeof parsed.sort !== "string"
+      || typeof parsed.order !== "string"
+      || typeof parsed.id !== "number"
+    ) {
+      return null;
+    }
+    return {
+      sort: parsed.sort,
+      order: parsed.order === "asc" ? "asc" : "desc",
+      value: typeof parsed.value === "number" || typeof parsed.value === "string" ? parsed.value : null,
+      id: parsed.id,
+    };
+  } catch {
+    return null;
+  }
 }
