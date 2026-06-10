@@ -42,6 +42,47 @@ export interface ListingRow {
   source: string;
 }
 
+export type ListingListRow = Pick<
+  ListingRow,
+  | 'id'
+  | 'mobile_id'
+  | 'cars_id'
+  | 'title'
+  | 'make'
+  | 'model'
+  | 'reg_month'
+  | 'reg_year'
+  | 'mileage'
+  | 'fuel'
+  | 'body_type'
+  | 'vin'
+  | 'current_price'
+  | 'cars_price'
+  | 'price_change'
+  | 'vat'
+  | 'kaparo'
+  | 'ad_status'
+  | 'last_edit'
+  | 'carsbg_title'
+  | 'carsbg_created_date'
+  | 'carsbg_edited_date'
+  | 'views'
+  | 'cars_total_views'
+  | 'is_new'
+  | 'first_thumb_key'
+  | 'first_full_key'
+  | 'image_cdn'
+  | 'image_shard'
+  | 'images_downloaded'
+  | 'thumb_saved'
+  | 'first_backup_image_id'
+  | 'dealer_name'
+  | 'dealer_slug'
+  | 'is_active'
+  | 'deleted_at'
+  | 'source'
+>;
+
 export interface OwnListingRow extends ListingRow {
   watching: number | null;
   needs_sync: number;

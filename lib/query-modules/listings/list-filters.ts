@@ -117,7 +117,9 @@ export function toListingFtsQuery(value: string): string {
 export function buildListingFilters(
   filters: ListingFilters,
   initialWheres: string[],
+  options: { includeSearch?: boolean } = {},
 ): { wheres: string[]; params: (string | number)[] } {
+  const { includeSearch = true } = options;
   const {
     make = '',
     model = '',
@@ -154,7 +156,7 @@ export function buildListingFilters(
   }
   if (kaparo) { wheres.push('l.kaparo = ?'); params.push(kaparo === 'yes' ? 1 : 0); }
   addInFilter(wheres, params, 'l.reg_year', years);
-  if (search) {
+  if (includeSearch && search) {
     const ftsQuery = toListingFtsQuery(search);
     if (ftsQuery) {
       wheres.push(`EXISTS (

@@ -8,10 +8,10 @@ import { getListingThumbAlt, getListingThumbSrcFromParts } from '@/lib/listing-t
 import { formatDateOnly } from '@/lib/date-format';
 import { listingHref } from '@/lib/listing-url';
 import { formatCount, formatDate } from '@/lib/utils';
-import type { ListingRow } from '@/lib/query-modules/types';
+import type { ListingListRow } from '@/lib/query-modules/types';
 
 interface Props {
-  row: ListingRow;
+  row: ListingListRow;
   currentParams: URLSearchParams;
   statuses: string[];
   basePath: string;

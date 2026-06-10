@@ -2,25 +2,46 @@ import { raw } from '@/db/client';
 import { PLATFORM_ACCOUNT_COLUMNS, PLATFORM_URL_COLUMNS } from '@/lib/dealers/platformCredentials';
 import { notDuplicateExpr, notDuplicateLExpr } from './types';
 
+const FACET_CACHE_TTL_MS = 30_000;
+
+interface CacheEntry<T> {
+  expiresAt: number;
+  value: T;
+}
+
+const facetCache = new Map<string, CacheEntry<unknown>>();
+
+function cachedFacet<T>(key: string, load: () => T): T {
+  const now = Date.now();
+  const cached = facetCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.value as T;
+
+  const value = load();
+  facetCache.set(key, { value, expiresAt: now + FACET_CACHE_TTL_MS });
+  return value;
+}
+
 export interface MakeModel {
   make: string;
   model: string;
 }
 
 export function getMakeModels(): Record<string, string[]> {
-  const rows = raw
-    .prepare(
-      `
-    SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND ${notDuplicateExpr} ORDER BY make, model
-  `,
-    )
-    .all() as MakeModel[];
-  const result: Record<string, string[]> = {};
-  for (const r of rows) {
-    if (!result[r.make]) result[r.make] = [];
-    result[r.make].push(r.model);
-  }
-  return result;
+  return cachedFacet('make-models', () => {
+    const rows = raw
+      .prepare(
+        `
+      SELECT DISTINCT make, model FROM listings WHERE is_active = 1 AND make IS NOT NULL AND ${notDuplicateExpr} ORDER BY make, model
+    `,
+      )
+      .all() as MakeModel[];
+    const result: Record<string, string[]> = {};
+    for (const r of rows) {
+      if (!result[r.make]) result[r.make] = [];
+      result[r.make].push(r.model);
+    }
+    return result;
+  });
 }
 
 export interface DealerRow {
@@ -54,7 +75,7 @@ function getDealerRows(where = ''): DealerRow[] {
 
 export function getAllDealers(): DealerRow[] {
   // Credentials are excluded here; config and auth-sensitive routes use narrower queries.
-  return getDealerRows();
+  return cachedFacet('dealers:all', () => getDealerRows());
 }
 
 export function getOwnDealers({ activeOnly = false }: { activeOnly?: boolean } = {}): DealerRow[] {
@@ -62,7 +83,7 @@ export function getOwnDealers({ activeOnly = false }: { activeOnly?: boolean } =
 }
 
 export function getActiveDealers(): DealerRow[] {
-  return getDealerRows('WHERE active = 1');
+  return cachedFacet('dealers:active', () => getDealerRows('WHERE active = 1'));
 }
 
 export function getMobileBgDealers(): DealerRow[] {
@@ -78,10 +99,11 @@ export function getDealerBySlug(slug: string): DealerRowFull | undefined {
 }
 
 function distinctListingStrings(col: string, order: 'ASC' | 'DESC' = 'ASC'): string[] {
-  return (raw
-    .prepare(`SELECT DISTINCT ${col} FROM listings WHERE is_active = 1 AND ${col} IS NOT NULL AND ${notDuplicateExpr} ORDER BY ${col} ${order}`)
-    .all() as Record<string, string>[])
-    .map((r) => r[col]);
+  return cachedFacet(`listing-distinct:${col}:${order}`, () => (
+    raw
+      .prepare(`SELECT DISTINCT ${col} FROM listings WHERE is_active = 1 AND ${col} IS NOT NULL AND ${notDuplicateExpr} ORDER BY ${col} ${order}`)
+      .all() as Record<string, string>[]
+  ).map((r) => r[col]));
 }
 
 export function getDistinctYears(): string[] {
@@ -100,33 +122,35 @@ export function getPriceRanges(): {
   priceRange: { min: number; max: number } | null;
   priceChangeRange: { min: number; max: number } | null;
 } {
-  const row = raw
-    .prepare(
-      `
-      SELECT
-        MIN(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_min,
-        MAX(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_max,
-        MIN(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_min,
-        MAX(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_max
-      FROM listings
-      WHERE ${notDuplicateExpr}
-    `,
-    )
-    .get() as {
-      price_min: number | null;
-      price_max: number | null;
-      price_change_min: number | null;
-      price_change_max: number | null;
-    };
+  return cachedFacet('listing-price-ranges', () => {
+    const row = raw
+      .prepare(
+        `
+        SELECT
+          MIN(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_min,
+          MAX(CASE WHEN is_active = 1 AND current_price IS NOT NULL THEN current_price END) as price_max,
+          MIN(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_min,
+          MAX(CASE WHEN price_change IS NOT NULL THEN price_change END) as price_change_max
+        FROM listings
+        WHERE ${notDuplicateExpr}
+      `,
+      )
+      .get() as {
+        price_min: number | null;
+        price_max: number | null;
+        price_change_min: number | null;
+        price_change_max: number | null;
+      };
 
-  return {
-    priceRange: row.price_min == null || row.price_max == null
-      ? null
-      : { min: row.price_min, max: row.price_max },
-    priceChangeRange: row.price_change_min == null || row.price_change_max == null
-      ? null
-      : { min: row.price_change_min, max: row.price_change_max },
-  };
+    return {
+      priceRange: row.price_min == null || row.price_max == null
+        ? null
+        : { min: row.price_min, max: row.price_max },
+      priceChangeRange: row.price_change_min == null || row.price_change_max == null
+        ? null
+        : { min: row.price_change_min, max: row.price_change_max },
+    };
+  });
 }
 
 export function getDistinctFuels(): string[] {

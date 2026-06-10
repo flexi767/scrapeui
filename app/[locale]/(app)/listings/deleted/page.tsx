@@ -39,6 +39,7 @@ interface SearchParams {
   order?: string;
   search?: string;
   page?: string;
+  cursor?: string;
 }
 
 const BASE_PATH = '/listings/deleted';
@@ -68,10 +69,11 @@ export default async function DeletedListingsPage({
   const order = sp.order ?? 'desc';
   const search = sp.search ?? '';
   const page = parseInt(sp.page ?? '1', 10);
+  const cursor = sp.cursor ?? '';
 
-  const { data: rows, total } = getDeletedListings({
+  const { data: rows, total, nextCursor } = getDeletedListings({
     make, model, dealerSlugs, years, categories, statuses, vatValues, fuels,
-    extras, priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, limit: 50,
+    extras, priceMin, priceMax, priceChangeMin, priceChangeMax, kaparo, sort, order, search, page, cursor, limit: 50,
   });
 
   const makeModels = getMakeModels();
@@ -199,6 +201,8 @@ export default async function DeletedListingsPage({
         <ListingsPagination
           page={page}
           totalPages={totalPages}
+          nextCursor={nextCursor}
+          cursorActive={Boolean(cursor)}
           currentParams={currentParams}
           basePath={BASE_PATH}
         />

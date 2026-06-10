@@ -24,16 +24,13 @@ const rows = raw
     EXPLAIN QUERY PLAN
     SELECT l.id
     FROM listings l
+    JOIN listings_search_fts fts
+      ON fts.rowid = l.id
+      AND listings_search_fts MATCH ?
     LEFT JOIN dealers d ON l.dealer_id = d.id
     WHERE l.is_active = 1
       AND d.active = 1
       AND (l.duplicate = 0 OR l.duplicate IS NULL)
-      AND EXISTS (
-        SELECT 1
-        FROM listings_search_fts
-        WHERE listings_search_fts.rowid = l.id
-          AND listings_search_fts MATCH ?
-      )
     ORDER BY l.${sort} ${order}, l.id ${order}
     LIMIT 51
   `,

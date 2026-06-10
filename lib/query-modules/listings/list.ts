@@ -1,5 +1,5 @@
 import { raw } from '@/db/client';
-import type { ListingFilters, ListingRow, OwnListingRow } from '../types';
+import type { ListingFilters, ListingListRow, OwnListingRow } from '../types';
 import {
   firstBackupImageIdExpr,
   firstBackupImageIdFromBackupExpr,
@@ -23,6 +23,7 @@ import {
   buildOwnListingFilters,
   LISTING_SORT_COLUMNS,
   OWN_LISTING_SORT_COLUMNS,
+  toListingFtsQuery,
 } from './list-filters';
 import { getWindowTotal, omitQueryFields } from '../query-utils';
 import { decodeListingCursor, encodeListingCursor } from '@/lib/listing-url';
@@ -121,13 +122,13 @@ function addListingCursorFilter({
 }
 
 function getListingCursor(
-  row: ListingRow | undefined,
+  row: ListingListRow | undefined,
   sort: string,
   order: string,
 ): string | null {
   if (!row || !LISTING_CURSOR_COLUMNS[sort]) return null;
 
-  const keyBySort: Record<string, keyof ListingRow> = {
+  const keyBySort: Record<string, keyof ListingListRow> = {
     price: 'current_price',
     last_edit: 'last_edit',
     carsbg_created_date: 'carsbg_created_date',
@@ -157,9 +158,14 @@ function getListingPage(
   const { sort = options.defaultSort, order = "desc", page = 1, limit = options.defaultLimit, cursor } = filters;
   const { wheres, params } = buildListingFilters(filters, [
     ...options.initialWheres,
-  ]);
+  ], { includeSearch: false });
+  const ftsQuery = filters.search ? toListingFtsQuery(filters.search) : "";
+  const ftsJoin = ftsQuery
+    ? `JOIN listings_search_fts fts ON fts.rowid = l.id AND listings_search_fts MATCH ?`
+    : "";
 
   const usesCursor = addListingCursorFilter({ wheres, params, sort, order, cursor });
+  const queryParams = ftsQuery ? [ftsQuery, ...params] : params;
   const where = `WHERE ${wheres.join(" AND ")}`;
   const sortCol = LISTING_SORT_COLUMNS[sort] ?? "l.last_edit";
   const sortDir = order === "asc" ? "ASC" : "DESC";
@@ -183,13 +189,14 @@ function getListingPage(
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
     FROM listings l
+    ${ftsJoin}
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
     ORDER BY ${sortCol} ${sortDir}, l.id ${sortDir}
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, queryLimit, offset) as Array<ListingRow & { total_count: number }>;
+    .all(...queryParams, queryLimit, offset) as Array<ListingListRow & { total_count: number }>;
 
   const countListings = () => {
     const { count } = raw
@@ -197,11 +204,12 @@ function getListingPage(
         `
     SELECT COUNT(*) as count
     FROM listings l
+    ${ftsJoin}
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
   `,
       )
-      .get(...params) as { count: number };
+      .get(...queryParams) as { count: number };
     return count;
   };
 
