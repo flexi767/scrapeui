@@ -1,6 +1,17 @@
 import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import { getDealerTemplateConfig, updateDealerTemplateConfig } from "@/lib/queries";
+import { z } from "zod";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("dealer-templates:save-page");
+
+// craftState is an opaque JSON string produced by the page builder.
+const SavePageSchema = z.object({
+  pageType: z.enum(["listingGrid", "listingDetail"]),
+  craftState: z.string(),
+  name: z.string().optional(),
+});
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -23,16 +34,11 @@ export async function POST(request: Request, { params }: Params) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json() as {
-    pageType: 'listingGrid' | 'listingDetail';
-    craftState: string;
-    name?: string;
-  };
+  const parsed = SavePageSchema.safeParse(await request.json());
+  if (!parsed.success) return Response.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data;
 
-  if (!body.pageType || !body.craftState) {
-    return Response.json({ error: "pageType and craftState required" }, { status: 400 });
-  }
-
+  log.info("Saving page to template config", { configId, pageType: body.pageType });
   const existing = JSON.parse(config.configJson) as Record<string, unknown>;
   existing[body.pageType] = JSON.parse(body.craftState);
   const newConfigJson = JSON.stringify(existing);

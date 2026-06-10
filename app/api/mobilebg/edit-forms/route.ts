@@ -4,6 +4,12 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { captureEditFormSnapshot } from '@/lib/mobile-bg/edit-form';
 import { getDealerBySlug } from '@/lib/queries';
+import { z } from 'zod';
+
+const editFormsBodySchema = z.object({
+  dealerSlug: z.string().min(1),
+  mobileId: z.string().min(1),
+});
 
 export const runtime = 'nodejs';
 
@@ -11,10 +17,15 @@ export async function POST(req: NextRequest) {
   const check = await requireAuth();
   if ('error' in check) return check.error;
 
-  const { dealerSlug, mobileId } = await req.json() as { dealerSlug?: string; mobileId?: string };
-  if (!dealerSlug || !mobileId) {
-    return NextResponse.json({ error: 'dealerSlug and mobileId are required' }, { status: 400 });
+  const rawBody: unknown = await req.json();
+  const parsed = editFormsBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request body', details: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
+  const { dealerSlug, mobileId } = parsed.data;
 
   const dealer = getDealerBySlug(dealerSlug);
   const mobileBgDealer = getMobileBgDealerConfig(dealer);

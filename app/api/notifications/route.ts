@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
@@ -14,6 +15,10 @@ interface NotificationQueryRow {
   created_at: string | null;
   unread_count: number;
 }
+
+const MarkReadSchema = z.object({
+  ids: z.array(z.unknown()).optional(),
+}).passthrough();
 
 export async function GET() {
   const check = await requireAuth();
@@ -65,7 +70,12 @@ export async function PATCH(request: NextRequest) {
   if ('error' in check) return check.error;
   const session = check.session;
 
-  const { ids } = await request.json();
+  const rawBody = await request.json();
+  const parsed = MarkReadSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { ids } = parsed.data;
   const now = currentIsoTimestamp();
 
   if (ids && Array.isArray(ids)) {

@@ -6,6 +6,16 @@ import {
   createDealerTemplateConfig,
   getDealerTemplateConfig,
 } from "@/lib/queries";
+import { z } from "zod";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("dealer-templates");
+
+const CreateTemplateSchema = z.object({
+  dealerId: z.number(),
+  baseTemplateId: z.number(),
+  name: z.string(),
+});
 
 export async function GET(request: Request) {
   const check = await requireAuth();
@@ -38,9 +48,9 @@ export async function POST(request: Request) {
   if ('error' in check) return check.error;
   const session = check.session;
 
-  const body = await request.json() as { dealerId: number; baseTemplateId: number; name: string };
-
-  const { dealerId, baseTemplateId, name } = body;
+  const parsed = CreateTemplateSchema.safeParse(await request.json());
+  if (!parsed.success) return Response.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  const { dealerId, baseTemplateId, name } = parsed.data;
   if (!dealerId || !baseTemplateId || !name?.trim()) {
     return Response.json({ error: "dealerId, baseTemplateId, and name are required" }, { status: 400 });
   }
@@ -50,7 +60,10 @@ export async function POST(request: Request) {
   }
 
   const base = getDealerTemplateConfig(baseTemplateId);
-  if (!base) return Response.json({ error: "Base template not found" }, { status: 404 });
+  if (!base) {
+    log.warn("Base template not found", { baseTemplateId });
+    return Response.json({ error: "Base template not found" }, { status: 404 });
+  }
 
   const id = createDealerTemplateConfig({ dealerId, baseTemplateId, name: name.trim(), configJson: base.configJson });
 

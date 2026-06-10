@@ -6,6 +6,20 @@ import { isValidDealerSlug } from '@/lib/dealer-config';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { runInsert } from '@/lib/listings/sql';
 import { errorMessage } from '@/lib/utils';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers:register');
+
+const RegisterDealerSchema = z.object({
+  name: z.string(),
+  slug: z.string(),
+  mobile_url: z.string().optional(),
+  own: z.unknown().optional(),
+  priority: z.unknown().optional(),
+  username: z.string(),
+  password: z.string(),
+});
 
 // POST /api/dealers/register
 // Admin creates a dealer + an associated user account in one step.
@@ -13,14 +27,15 @@ export async function POST(req: NextRequest) {
   const check = await requireAdmin();
   if ('error' in check) return check.error;
 
-  const body = await req.json() as Record<string, unknown>;
+  const parsed = RegisterDealerSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
   const {
     name, slug, mobile_url,
     own = false, priority = 0,
     username, password,
-  } = body as {
+  } = parsed.data as {
     name: string; slug: string; mobile_url?: string;
-    own?: boolean; priority?: number;
+    own?: unknown; priority?: unknown;
     username: string; password: string;
   };
 
@@ -70,6 +85,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes('UNIQUE')) {
       return NextResponse.json({ error: 'slug or username already exists' }, { status: 409 });
     }
+    log.error('Dealer registration failed', err);
     return NextResponse.json({ error: 'registration failed' }, { status: 500 });
   }
 }

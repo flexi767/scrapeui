@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -9,17 +10,25 @@ import {
 import { translateText } from '@/lib/translations/google-translate';
 import { upsertTranslation } from '@/lib/translations/upsert';
 import { requireAdmin } from '@/lib/api/auth-helpers';
+import { logger } from '@/lib/logger';
 
-interface TranslateRequestBody {
-  key?: unknown;
-}
+const log = logger.child('api:translations:translate');
+
+const TranslateBodySchema = z.object({
+  key: z.unknown().optional(),
+}).passthrough();
 
 export async function POST(request: Request) {
   const check = await requireAdmin();
   if ('error' in check) return check.error;
 
   try {
-    const body = (await request.json()) as TranslateRequestBody;
+    const rawBody = await request.json();
+    const parsed = TranslateBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return Response.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const body = parsed.data as { key?: unknown };
     const key = typeof body.key === 'string' ? body.key : '';
 
     if (!key) {
@@ -66,7 +75,7 @@ export async function POST(request: Request) {
 
     return Response.json({ key, sourceLocale: translationSourceLocale, translations: translatedValues });
   } catch (error) {
-    console.error('Error auto-translating string:', error);
+    log.error('Error auto-translating string:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
 }

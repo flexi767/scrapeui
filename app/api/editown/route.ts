@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiPagePermission } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
@@ -10,11 +11,51 @@ import {
   type FullFormBody,
 } from '@/app/api/editown/backups/[backupId]/helpers';
 
+const EditownBodySchema = z.object({
+  dealerId: z.unknown().optional(),
+  pubtype: z.unknown().optional(),
+  make: z.unknown().optional(),
+  model: z.unknown().optional(),
+  title: z.unknown().optional(),
+  condition: z.unknown().optional(),
+  body_type: z.unknown().optional(),
+  bodyType: z.unknown().optional(),
+  fuel: z.unknown().optional(),
+  transmission: z.unknown().optional(),
+  productionMonth: z.unknown().optional(),
+  productionYear: z.unknown().optional(),
+  mileage: z.unknown().optional(),
+  power: z.unknown().optional(),
+  engineCc: z.unknown().optional(),
+  euronorm: z.unknown().optional(),
+  batteryRange: z.unknown().optional(),
+  batteryCapacity: z.unknown().optional(),
+  color: z.unknown().optional(),
+  region: z.unknown().optional(),
+  city: z.unknown().optional(),
+  price: z.unknown().optional(),
+  priceOnRequest: z.unknown().optional(),
+  vat: z.unknown().optional(),
+  currency: z.unknown().optional(),
+  vin: z.unknown().optional(),
+  description: z.unknown().optional(),
+  phone: z.unknown().optional(),
+  email: z.unknown().optional(),
+  website: z.unknown().optional(),
+  extras: z.unknown().optional(),
+}).passthrough();
+
 export async function POST(req: NextRequest) {
   const check = await requireApiPagePermission('editown');
   if ('error' in check) return check.error;
 
-  const body = await req.json() as FullFormBody;
+  const rawBody = await req.json();
+  const parsed = EditownBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data as FullFormBody;
+
   const bodyType = body.body_type ?? body.bodyType ?? '';
   const productionYear = body.productionYear ?? '';
 

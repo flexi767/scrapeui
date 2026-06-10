@@ -10,6 +10,14 @@ import {
 import { PLATFORM_ACCOUNT_COLUMNS } from '@/lib/dealers/platformCredentials';
 import { SOCIAL_ACCOUNT_COLUMNS } from '@/lib/dealers/socialCredentials';
 import { decryptSecret, encryptSecret } from '@/lib/crypto-credentials';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers:credentials');
+
+// Permissive schema — all credential fields are optional strings or null;
+// we don't enumerate every field here to stay forward-compatible.
+const PatchCredentialsSchema = z.object({}).passthrough();
 
 /** Columns that hold third-party account passwords — values must be encrypted at rest. */
 const CREDENTIAL_PASSWORD_COLUMNS = new Set([
@@ -75,7 +83,9 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json() as Record<string, unknown>;
+  const parsed = PatchCredentialsSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data as Record<string, unknown>;
 
   const map = isAdmin ? DEALER_ADMIN_CREDENTIAL_FIELD_MAP : DEALER_SELF_SERVICE_CREDENTIAL_FIELD_MAP;
 
@@ -94,6 +104,9 @@ export async function PATCH(
   }
 
   const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, map);
-  if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
+  if (!updated) {
+    log.warn('Credentials patch had nothing to update', { dealerId });
+    return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
+  }
   return NextResponse.json({ ok: true });
 }

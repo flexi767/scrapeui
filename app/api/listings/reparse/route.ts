@@ -14,13 +14,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { raw } from '@/db/client';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { fetchMakesModels, parseMakeModelSync } from '@/lib/mobile-bg/makes-models';
+import { z } from 'zod';
 
-interface Body {
-  id?: number;
-  dealer?: string;
-  missingOnly?: boolean;
-  dryRun?: boolean;
-}
+const reparseBodySchema = z.object({
+  id: z.number().optional(),
+  dealer: z.string().optional(),
+  missingOnly: z.boolean().optional(),
+  dryRun: z.boolean().optional(),
+});
 
 interface Row {
   id: number;
@@ -100,8 +101,15 @@ export async function POST(req: NextRequest) {
   const check = await requireAuth();
   if ('error' in check) return check.error;
 
-  const body = await req.json() as Body;
-  const { id, dealer, missingOnly = false, dryRun = false } = body;
+  const rawBody: unknown = await req.json();
+  const parsed = reparseBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request body', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+  const { id, dealer, missingOnly = false, dryRun = false } = parsed.data;
 
   const makesMap = await fetchMakesModels();
 

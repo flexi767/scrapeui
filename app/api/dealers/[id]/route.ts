@@ -4,6 +4,12 @@ import { requireAdmin } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
 import { ALLOWED_TEMPLATES, isValidDealerSlug } from '@/lib/dealer-config';
 import { DEALER_ADMIN_FIELD_MAP } from '@/lib/dealers/fieldMaps';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers');
+
+const PatchDealerSchema = z.object({}).passthrough();
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const check = await requireAdmin();
@@ -12,7 +18,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const dealerId = parsePositiveIntParam(id);
   if (!dealerId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
-  const body = await req.json() as Record<string, unknown>;
+  const parsed = PatchDealerSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data as Record<string, unknown>;
 
   if (body.slug && !isValidDealerSlug(body.slug as string)) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
@@ -29,7 +37,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, DEALER_ADMIN_FIELD_MAP);
     if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    log.error('Failed to update dealer', err);
     return NextResponse.json({ error: 'update failed (maybe duplicate slug)' }, { status: 409 });
   }
 }

@@ -4,6 +4,19 @@ import { normalizeCarsBgShortTitle } from '@/lib/cars-bg/title';
 import { getOwnListingByMobileId } from '@/lib/queries';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('listings');
+
+const patchBodySchema = z.object({
+  title: z.string().refine(s => s.trim().length > 0, { message: 'Title is required' }),
+  carsbg_title: z.string(),
+  current_price: z.number().int().nonnegative(),
+  vat: z.enum(['', 'included', 'exempt', 'excluded']),
+  kaparo: z.union([z.literal(0), z.literal(1)]),
+  ad_status: z.enum(['none', 'TOP', 'VIP']),
+});
 
 export async function PATCH(
   request: Request,
@@ -15,9 +28,9 @@ export async function PATCH(
   try {
     const mobileId = (await params).mobileId;
 
-    let body: unknown;
+    let rawBody: unknown;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch {
       return NextResponse.json(
         { error: 'Invalid JSON' },
@@ -25,72 +38,20 @@ export async function PATCH(
       );
     }
 
-    // Type assertion for body fields
-    const bodyData = body as Record<string, unknown>;
-
-    // Validate title
-    const title = bodyData.title;
-    if (typeof title !== 'string' || !title.trim()) {
+    const parsed = patchBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Title is required' },
+        { error: 'Invalid request body', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { title, carsbg_title: carsbgTitleRaw, current_price: currentPrice, vat, kaparo, ad_status: adStatus } = parsed.data;
     const trimmedTitle = title.trim();
-
-    const carsbgTitleRaw = bodyData.carsbg_title;
-    if (typeof carsbgTitleRaw !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid cars.bg title value' },
-        { status: 400 }
-      );
-    }
     const trimmedCarsbgTitle = normalizeCarsBgShortTitle(carsbgTitleRaw);
     const carsbgTitleForDb = trimmedCarsbgTitle || null;
-
-    // Validate current_price
-    const currentPrice = bodyData.current_price;
-    if (
-      typeof currentPrice !== 'number' ||
-      !Number.isInteger(currentPrice) ||
-      currentPrice < 0
-    ) {
-      return NextResponse.json(
-        { error: 'Price must be a non-negative integer' },
-        { status: 400 }
-      );
-    }
-
-    // Validate vat
-    const vat = bodyData.vat;
-    const validVatValues = ['', 'included', 'exempt', 'excluded'];
-    if (typeof vat !== 'string' || !validVatValues.includes(vat)) {
-      return NextResponse.json(
-        { error: 'Invalid vat value' },
-        { status: 400 }
-      );
-    }
     // Store empty string as null in DB
     const vatForDb = vat === '' ? null : vat;
-
-    // Validate kaparo
-    const kaparo = bodyData.kaparo;
-    if (kaparo !== 0 && kaparo !== 1) {
-      return NextResponse.json(
-        { error: 'Invalid kaparo value' },
-        { status: 400 }
-      );
-    }
-
-    // Validate ad_status
-    const adStatus = bodyData.ad_status;
-    const validAdStatuses = ['none', 'TOP', 'VIP'];
-    if (typeof adStatus !== 'string' || !validAdStatuses.includes(adStatus)) {
-      return NextResponse.json(
-        { error: 'Invalid ad_status value' },
-        { status: 400 }
-      );
-    }
 
     // Fetch the listing
     const listing = getOwnListingByMobileId(mobileId);
@@ -218,7 +179,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedListing);
   } catch (error) {
-    console.error('PATCH /api/listings/[mobileId] error:', error);
+    log.error('PATCH /api/listings/[mobileId] error:', error);
     return NextResponse.json(
       { error: 'Internal error' },
       { status: 500 }

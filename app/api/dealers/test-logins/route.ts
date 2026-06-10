@@ -5,6 +5,14 @@ import { raw } from '@/db/client';
 import { requireAdmin } from '@/lib/api/auth-helpers';
 import { DB_PATH } from '@/lib/storage-paths';
 import { errorMessage } from '@/lib/utils';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers:test-logins');
+
+const TestLoginsSchema = z.object({
+  ids: z.array(z.number()),
+});
 
 interface TestResult {
   ok: boolean;
@@ -53,8 +61,10 @@ export async function POST(req: NextRequest) {
   const check = await requireAdmin();
   if ('error' in check) return check.error;
 
-  const { ids } = await req.json() as { ids: number[] };
-  if (!Array.isArray(ids) || ids.length === 0) {
+  const parsed = TestLoginsSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  const { ids } = parsed.data;
+  if (ids.length === 0) {
     return NextResponse.json({ error: 'ids required' }, { status: 400 });
   }
 
@@ -73,6 +83,7 @@ export async function POST(req: NextRequest) {
       try {
         results[d.id] = await runTest(d.slug);
       } catch (err) {
+        log.error(`Login test failed for dealer ${d.id}`, err);
         results[d.id] = { error: errorMessage(err, 'Login test failed') };
       }
     }),

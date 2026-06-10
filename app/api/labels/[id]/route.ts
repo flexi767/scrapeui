@@ -1,7 +1,13 @@
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { parsePositiveIntParam, runMappedUpdate } from '@/lib/api/db-helpers';
+
+const UpdateLabelSchema = z.object({
+  name: z.string().optional(),
+  color: z.string().optional(),
+}).passthrough();
 
 export async function PATCH(
   request: NextRequest,
@@ -13,7 +19,13 @@ export async function PATCH(
   const { id } = await params;
   const labelId = parsePositiveIntParam(id);
   if (!labelId) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
-  const body = await request.json() as { name?: string; color?: string };
+
+  const rawBody = await request.json();
+  const parsed = UpdateLabelSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data;
 
   const toUpdate: Record<string, unknown> = {};
   if (body.name) toUpdate.name = body.name.trim();

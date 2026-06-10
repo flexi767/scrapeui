@@ -15,6 +15,17 @@ import {
 } from '@/lib/dealers/socialCredentials';
 import { runInsert } from '@/lib/listings/sql';
 import { decryptSecret, encryptSecret } from '@/lib/crypto-credentials';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers');
+
+const CreateDealerSchema = z.object({
+  name: z.string(),
+  slug: z.string(),
+  own: z.unknown().optional(),
+  priority: z.unknown().optional(),
+}).passthrough();
 
 /** Columns that hold third-party account passwords — must be encrypted at rest. */
 const CREDENTIAL_PASSWORD_COLUMNS = [
@@ -70,7 +81,9 @@ export async function POST(req: NextRequest) {
   const check = await requireAdmin();
   if ('error' in check) return check.error;
 
-  const body = await req.json() as Record<string, unknown>;
+  const parsed = CreateDealerSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data as Record<string, unknown>;
   const {
     name,
     slug,
@@ -129,7 +142,8 @@ export async function POST(req: NextRequest) {
       public_domain: null,
       active_template_config_id: null,
     });
-  } catch {
+  } catch (err) {
+    log.error('Failed to insert dealer', err);
     return NextResponse.json({ error: 'slug already exists' }, { status: 409 });
   }
 }

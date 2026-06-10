@@ -1,6 +1,8 @@
+import { z } from "zod";
 import { NextRequest } from "next/server";
 import { raw } from "@/db/client";
 import { requireAuth } from "@/lib/api/auth-helpers";
+import { logger } from "@/lib/logger";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
 import {
   getPosterCacheDir,
@@ -24,11 +26,34 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+const log = logger.child("api:instagram:posters");
+
+const PosterBodySchema = z.object({
+  backupId: z.unknown().optional(),
+  prompt: z.unknown().optional(),
+  force: z.unknown().optional(),
+  cacheOnly: z.unknown().optional(),
+  variantId: z.unknown().optional(),
+  variantPrompts: z.unknown().optional(),
+  collageSelections: z.unknown().optional(),
+  imageProvider: z.unknown().optional(),
+  imageModel: z.unknown().optional(),
+}).passthrough();
+
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if ("error" in auth) return auth.error;
 
-  const body = (await request.json()) as PosterRequestBody;
+  const rawBody = await request.json();
+  const parsed = PosterBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+  const body = parsed.data as PosterRequestBody;
+
   const provider = parseImageProvider(body.imageProvider);
   const requestedModel = parseImageModel(body.imageModel);
   const providerError = validatePosterImageProvider(provider, requestedModel);
@@ -136,7 +161,7 @@ export async function POST(request: NextRequest) {
     const existing = await readCachedPosters(cacheDir);
     const variantsToCache = existing ? mergePosterVariants(existing.variants, imageResults) : imageResults;
     await writeCachedPosters(cacheDir, variantsToCache).catch((cacheError) => {
-      console.error("Could not cache Instagram posters", cacheError);
+      log.error("Could not cache Instagram posters", cacheError);
     });
 
     return Response.json(

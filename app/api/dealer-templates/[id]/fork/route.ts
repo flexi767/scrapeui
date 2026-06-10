@@ -1,6 +1,15 @@
 import { canAccessDealer, requireAuth } from "@/lib/api/auth-helpers";
 import { parsePositiveIntParam } from "@/lib/api/db-helpers";
 import { getDealerTemplateConfig, forkDealerTemplateConfig, createDealerTemplateConfig } from "@/lib/queries";
+import { z } from "zod";
+import { logger } from "@/lib/logger";
+
+const log = logger.child("dealer-templates:fork");
+
+const ForkTemplateSchema = z.object({
+  name: z.string(),
+  dealerId: z.number().optional(),
+});
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -18,8 +27,11 @@ export async function POST(request: Request, { params }: Params) {
   const isAdmin = session.user.role === "admin";
   const sessionDealerId = session.user.dealerId;
 
-  const body = await request.json() as { name: string; dealerId?: number };
+  const parsed = ForkTemplateSchema.safeParse(await request.json());
+  if (!parsed.success) return Response.json({ error: "Invalid request body", details: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data;
   if (!body.name?.trim()) return Response.json({ error: "name required" }, { status: 400 });
+  log.info("Forking template config", { sourceId });
 
   // Forking a base template = create new config from base
   if (source.dealerId === null) {

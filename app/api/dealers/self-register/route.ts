@@ -5,8 +5,23 @@ import { isValidDealerSlug } from '@/lib/dealer-config';
 import { currentIsoTimestamp } from '@/lib/date-format';
 import { runInsert } from '@/lib/listings/sql';
 import { errorMessage } from '@/lib/utils';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('dealers:self-register');
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const SelfRegisterSchema = z.object({
+  name: z.string(),
+  slug: z.string(),
+  mobile_url: z.string().optional(),
+  own: z.unknown().optional(),
+  priority: z.unknown().optional(),
+  username: z.string(),
+  password: z.string(),
+  email: z.string(),
+});
 
 const DEFAULT_GRANTED_PAGE_KEYS = ['editown'];
 
@@ -14,14 +29,15 @@ const DEFAULT_GRANTED_PAGE_KEYS = ['editown'];
 // Public, unauthenticated: a prospective dealer creates their own
 // dealer + user account and is signed in immediately afterwards.
 export async function POST(req: NextRequest) {
-  const body = await req.json() as Record<string, unknown>;
+  const parsed = SelfRegisterSchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
   const {
     name, slug, mobile_url,
     own = false, priority = 0,
     username, password, email,
-  } = body as {
+  } = parsed.data as {
     name: string; slug: string; mobile_url?: string;
-    own?: boolean; priority?: number;
+    own?: unknown; priority?: unknown;
     username: string; password: string; email: string;
   };
 
@@ -85,6 +101,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes('UNIQUE')) {
       return NextResponse.json({ error: 'slug, username or email already exists' }, { status: 409 });
     }
+    log.error('Self-registration failed', err);
     return NextResponse.json({ error: 'registration failed' }, { status: 500 });
   }
 }

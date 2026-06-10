@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { db } from '@/db/client';
 import { translations, translationKeys } from '@/db/schema';
 import { invalidateTranslationCache } from '@/lib/translation-cache';
@@ -5,6 +6,15 @@ import { getTranslationsFromDb } from '@/i18n/db';
 import { isLocale, locales, type Locale } from '@/i18n/routing';
 import { upsertTranslation } from '@/lib/translations/upsert';
 import { requireAdmin } from '@/lib/api/auth-helpers';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('api:translations');
+
+const UpdateTranslationSchema = z.object({
+  key: z.string(),
+  locale: z.string(),
+  value: z.string(),
+}).passthrough();
 
 export async function GET() {
   const check = await requireAdmin();
@@ -38,7 +48,7 @@ export async function GET() {
 
     return Response.json(result);
   } catch (error) {
-    console.error('Error fetching translations:', error);
+    log.error('Error fetching translations:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
 }
@@ -48,12 +58,17 @@ export async function PUT(request: Request) {
   if ('error' in check) return check.error;
 
   try {
-    const { key, locale, value } = await request.json();
+    const rawBody = await request.json();
+    const parsed = UpdateTranslationSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return Response.json({ error: 'Invalid request body', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { key, locale, value } = parsed.data;
 
     if (!key || !locale || value === undefined) {
       return new Response('Missing required fields', { status: 400 });
     }
-    if (typeof key !== 'string' || typeof locale !== 'string' || !isLocale(locale) || typeof value !== 'string') {
+    if (!isLocale(locale)) {
       return new Response('Invalid translation payload', { status: 400 });
     }
 
@@ -66,7 +81,7 @@ export async function PUT(request: Request) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Error updating translation:', error);
+    log.error('Error updating translation:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
 }

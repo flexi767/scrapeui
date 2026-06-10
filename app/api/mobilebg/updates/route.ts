@@ -5,6 +5,15 @@ import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
 import { updateBackupOnMobileBg } from '@/lib/mobile-bg/update';
 import { getDealerBySlug } from '@/lib/queries';
 import { errorMessage } from '@/lib/utils';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('mobilebg');
+
+const updatesBodySchema = z.object({
+  dealerSlug: z.string().min(1),
+  backupId: z.number().int().positive(),
+});
 
 export const runtime = 'nodejs';
 
@@ -13,10 +22,15 @@ export async function POST(req: NextRequest) {
   if ('error' in check) return check.error;
 
   try {
-    const { dealerSlug, backupId } = await req.json() as { dealerSlug?: string; backupId?: number };
-    if (!dealerSlug || !backupId) {
-      return NextResponse.json({ error: 'dealerSlug and backupId are required' }, { status: 400 });
+    const rawBody: unknown = await req.json();
+    const parsed = updatesBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
+    const { dealerSlug, backupId } = parsed.data;
 
     const dealer = getDealerBySlug(dealerSlug);
     const mobileBgDealer = getMobileBgDealerConfig(dealer);
@@ -28,6 +42,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    log.error('POST /api/mobilebg/updates error:', error);
     return NextResponse.json({ error: errorMessage(error, 'Sync failed') }, { status: 500 });
   }
 }
