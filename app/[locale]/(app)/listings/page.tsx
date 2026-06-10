@@ -47,6 +47,10 @@ export default async function ListingsPage({
     statuses, vatValues, categories, fuels, extras, kaparo,
     make, model, dealerSlugs, years, search, sort, order,
   });
+  const rowLabels = {
+    sourceCars: t('source_cars'),
+    listingNew: t('listing_new'),
+  };
 
   const totalPages = Math.ceil(total / 50);
 
@@ -132,6 +136,7 @@ export default async function ListingsPage({
                   currentParams={currentParams}
                   statuses={statuses}
                   basePath={BASE_PATH}
+                  labels={rowLabels}
                 />
               ))}
             </tbody>

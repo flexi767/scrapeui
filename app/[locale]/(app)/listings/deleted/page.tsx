@@ -11,7 +11,7 @@ import { KaparoBadge, VatBadge } from '@/components/listings/VatBadge';
 import { ListingsPagination } from '@/components/listings/ListingsPagination';
 import FilterBar from '@/components/FilterBar';
 import { getAllDealers, getDeletedListings, getDistinctCategories, getDistinctFuels, getDistinctYears, getMakeModels, getPriceRanges } from '@/lib/queries';
-import { getListingThumbAlt, getListingThumbSrc } from '@/lib/listing-thumb';
+import { getListingThumbAlt, getListingThumbSrcFromParts } from '@/lib/listing-thumb';
 import {
   buildListingParams,
   LISTING_EXTRA_OPTIONS,
@@ -148,7 +148,7 @@ export default async function DeletedListingsPage({
                 <tr><td colSpan={17} className="py-16 text-center text-gray-500">{t('no_deleted_listings_found')}</td></tr>
               )}
               {rows.map((row) => {
-                const thumb = getListingThumbSrc(row);
+                const thumb = getListingThumbSrcFromParts(row);
                 const thumbAlt = getListingThumbAlt(row);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.id);
                 return (

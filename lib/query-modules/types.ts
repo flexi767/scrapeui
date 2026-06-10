@@ -25,9 +25,13 @@ export interface ListingRow {
   views: number | null;
   cars_total_views?: number | null;
   is_new: number;
-  thumb_keys: string;
-  full_keys: string;
-  image_meta: string;
+  thumb_keys?: string | null;
+  full_keys?: string | null;
+  image_meta?: string | null;
+  first_thumb_key?: string | null;
+  first_full_key?: string | null;
+  image_cdn?: string | null;
+  image_shard?: string | null;
   images_downloaded: number;
   thumb_saved?: number;
   first_backup_image_id?: number | null;

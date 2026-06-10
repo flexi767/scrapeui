@@ -109,7 +109,11 @@ function getListingPage(
       COUNT(*) OVER() as total_count,
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
-      l.thumb_keys, l.full_keys, l.image_meta, l.images_downloaded, l.thumb_saved, l.is_active${deletedAtSelect},
+      json_extract(l.thumb_keys, '$[0]') as first_thumb_key,
+      json_extract(l.full_keys, '$[0]') as first_full_key,
+      json_extract(l.image_meta, '$.cdn') as image_cdn,
+      json_extract(l.image_meta, '$.shard') as image_shard,
+      l.images_downloaded, l.thumb_saved, l.is_active${deletedAtSelect},
       ${firstBackupImageIdExpr} as first_backup_image_id,
       COALESCE(l.source, 'm') as source,
       d.name as dealer_name, d.slug as dealer_slug
