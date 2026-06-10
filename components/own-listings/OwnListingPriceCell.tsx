@@ -37,12 +37,12 @@ export function OwnListingPriceCell({
     return (
       <td className="px-2 py-1.5 text-right whitespace-nowrap">
         <input
-          type="number"
-          min="0"
-          step="100"
+          type="text"
+          inputMode="numeric"
           value={editForm.current_price}
           onChange={(event) => {
-            const value = parseInt(event.target.value, 10);
+            const digits = event.target.value.replace(/[^0-9]/g, "");
+            const value = parseInt(digits, 10);
             const nextForm = {
               ...editForm,
               current_price: isNaN(value) ? 0 : value,

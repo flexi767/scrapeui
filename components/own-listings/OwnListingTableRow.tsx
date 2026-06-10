@@ -21,7 +21,9 @@ interface OwnListingTableRowProps {
   saving: boolean;
   syncing: boolean;
   publishingToFb: boolean;
-  onStartEdit: (row: OwnListingRow) => void;
+  /** True when this row's edit was started by clicking the status cell. */
+  adStatusAutoOpen: boolean;
+  onStartEdit: (row: OwnListingRow, openAdStatus?: boolean) => void;
   onEditFormChange: (form: OwnListingEditForm) => void;
   onSave: (options?: {
     closeAfterSave?: boolean;
@@ -44,6 +46,7 @@ export function OwnListingTableRow({
   saving,
   syncing,
   publishingToFb,
+  adStatusAutoOpen,
   onStartEdit,
   onEditFormChange,
   onSave,
@@ -107,9 +110,21 @@ export function OwnListingTableRow({
         )}
       </td>
 
-      <td className="px-2 py-1.5">
+      <td
+        className="px-2 py-1.5"
+        onClick={
+          !editing
+            ? (e) => {
+                e.stopPropagation();
+                onStartEdit(row, true);
+              }
+            : undefined
+        }
+        style={!editing ? { cursor: "pointer" } : undefined}
+      >
         <OwnListingAdStatusCell
           editing={editing}
+          autoOpen={adStatusAutoOpen}
           value={editing ? editForm.ad_status : row.ad_status ?? "none"}
           onSelect={(next) => {
             const nextForm = { ...editForm, ad_status: next };

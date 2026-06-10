@@ -31,6 +31,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<OwnListingRow[]>(initialRows);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [adStatusAutoOpen, setAdStatusAutoOpen] = useState(false);
   const [syncingIds, setSyncingIds] = useState<Record<number, boolean>>({});
   const [publishingToFbIds, setPublishingToFbIds] = useState<Record<number, boolean>>({});
   const [editForm, setEditForm] = useState<OwnListingEditForm>(EMPTY_OWN_LISTING_EDIT_FORM);
@@ -45,11 +46,12 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
-  function startEdit(row: OwnListingRow) {
+  function startEdit(row: OwnListingRow, openAdStatus = false) {
     if (saving) return;
     clearPriceSaveTimeout();
     setEditForm(getEditFormFromOwnListing(row));
     setEditingKey(getOwnListingRowKey(row));
+    setAdStatusAutoOpen(openAdStatus);
   }
 
   async function handleSave(options?: {
@@ -210,6 +212,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 row={row}
                 editing={editing}
                 editForm={editForm}
+                adStatusAutoOpen={editing && adStatusAutoOpen}
                 saving={saving}
                 syncing={Boolean(syncingIds[row.backup_id])}
                 publishingToFb={Boolean(publishingToFbIds[row.backup_id])}
