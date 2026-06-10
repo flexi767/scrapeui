@@ -25,7 +25,7 @@ import {
   OWN_LISTING_SORT_COLUMNS,
   toListingFtsQuery,
 } from './list-filters';
-import { getWindowTotal, omitQueryFields } from '../query-utils';
+import { getWindowTotal, omitQueryFields, timedQuery } from '../query-utils';
 import { decodeListingCursor, encodeListingCursor } from '@/lib/listing-url';
 
 const ownListingFromClause = `
@@ -173,9 +173,29 @@ function getListingPage(
   const queryLimit = limit + 1;
   const deletedAtSelect = options.includeDeletedAt ? ", l.deleted_at" : "";
 
-  const rows = raw
-    .prepare(
-      `
+  const queryDetails = {
+    sort,
+    order,
+    page,
+    limit,
+    cursor: Boolean(cursor),
+    search: Boolean(filters.search),
+    filters: {
+      make: Boolean(filters.make),
+      model: Boolean(filters.model),
+      dealers: filters.dealerSlugs?.length ?? 0,
+      years: filters.years?.length ?? 0,
+      categories: filters.categories?.length ?? 0,
+      statuses: filters.statuses?.length ?? 0,
+      vat: filters.vatValues?.length ?? 0,
+      fuels: filters.fuels?.length ?? 0,
+      extras: filters.extras?.length ?? 0,
+    },
+  };
+
+  const rows = timedQuery('listings.page', queryDetails, () => raw
+      .prepare(
+        `
     SELECT
       COUNT(*) OVER() as total_count,
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
@@ -195,21 +215,21 @@ function getListingPage(
     ORDER BY ${sortCol} ${sortDir}, l.id ${sortDir}
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...queryParams, queryLimit, offset) as Array<ListingListRow & { total_count: number }>;
+      )
+      .all(...queryParams, queryLimit, offset) as Array<ListingListRow & { total_count: number }>);
 
   const countListings = () => {
-    const { count } = raw
-      .prepare(
-        `
+    const { count } = timedQuery('listings.count', queryDetails, () => raw
+        .prepare(
+          `
     SELECT COUNT(*) as count
     FROM listings l
     ${ftsJoin}
     LEFT JOIN dealers d ON l.dealer_id = d.id
     ${where}
   `,
-      )
-      .get(...queryParams) as { count: number };
+        )
+        .get(...queryParams) as { count: number });
     return count;
   };
 

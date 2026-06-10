@@ -148,7 +148,15 @@ export function buildListingFilters(
   addInFilter(wheres, params, 'l.ad_status', statuses);
   addNullableInFilter(wheres, params, 'l.vat', vatValues);
   addInFilter(wheres, params, 'l.fuel', fuels);
-  addLikeAnyFilter(wheres, params, 'l.extras_json', extras);
+  if (extras.length > 0) {
+    wheres.push(`EXISTS (
+      SELECT 1
+      FROM listing_extras le
+      WHERE le.listing_id = l.id
+        AND le.extra_label IN (${placeholders(extras)})
+    )`);
+    params.push(...extras);
+  }
   addMinMaxFilter(wheres, params, 'l.current_price', priceMin, priceMax);
   if (priceChangeMin !== null || priceChangeMax !== null) {
     wheres.push('l.price_change IS NOT NULL');

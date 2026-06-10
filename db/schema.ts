@@ -116,6 +116,20 @@ export const listingSnapshots = sqliteTable(
   }),
 );
 
+export const listingExtras = sqliteTable(
+  "listing_extras",
+  {
+    listingId: integer("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    extraLabel: text("extra_label").notNull(),
+  },
+  (table) => ({
+    uniqueListingExtra: uniqueIndex("listing_extras_unique_idx").on(table.listingId, table.extraLabel),
+    labelListingIdx: index("listing_extras_label_listing_idx").on(table.extraLabel, table.listingId),
+  }),
+);
+
 // ─── Users & Auth ─────────────────────────────────────────────────
 
 export const users = sqliteTable("users", {
