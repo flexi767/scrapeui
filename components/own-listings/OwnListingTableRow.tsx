@@ -3,11 +3,11 @@
 import { type KeyboardEvent } from "react";
 import { SearchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AdStatusBadge } from "@/components/listings/AdStatusBadge";
 import { KaparoBadge, VatBadge } from "@/components/listings/VatBadge";
 import { formatDateOnly } from "@/lib/date-format";
 import { OwnListingRow } from "@/lib/queries";
 import { formatCount, formatDate } from "@/lib/utils";
+import { OwnListingAdStatusCell } from "./OwnListingAdStatusCell";
 import { OwnListingPriceCell } from "./OwnListingPriceCell";
 import { OwnListingActionCell, OwnListingTitleCell } from "./OwnListingTableCells";
 import { stopEditorPointerPropagation } from "./TableControls";
@@ -108,31 +108,15 @@ export function OwnListingTableRow({
       </td>
 
       <td className="px-2 py-1.5">
-        {editing ? (
-          <select
-            value={editForm.ad_status}
-            onChange={(e) => {
-              const nextForm = { ...editForm, ad_status: e.target.value };
-              onEditFormChange(nextForm);
-              onSave({ closeAfterSave: true, formSnapshot: nextForm });
-            }}
-            onClick={stopEditorPointerPropagation}
-            onMouseDown={stopEditorPointerPropagation}
-            onPointerDown={stopEditorPointerPropagation}
-            onKeyDown={onEditorKeyDown}
-            className="h-8 bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
-          >
-            <option value="none">—</option>
-            <option value="TOP">TOP</option>
-            <option value="VIP">VIP</option>
-          </select>
-        ) : (
-          <AdStatusBadge
-            status={row.ad_status ?? "none"}
-            empty="none"
-            className="text-xs"
-          />
-        )}
+        <OwnListingAdStatusCell
+          editing={editing}
+          value={editing ? editForm.ad_status : row.ad_status ?? "none"}
+          onSelect={(next) => {
+            const nextForm = { ...editForm, ad_status: next };
+            onEditFormChange(nextForm);
+            onSave({ closeAfterSave: true, formSnapshot: nextForm });
+          }}
+        />
       </td>
 
       <OwnListingPriceCell
