@@ -1,6 +1,11 @@
 import Database from "better-sqlite3";
-import { appendSignedAssetToken } from "@/lib/signed-asset-token";
 import { formatMileage, formatPrice, parseJson } from "@/lib/utils";
+import {
+  buildBackupImageUrl,
+  buildVehicleTitle,
+  stripCityPrefix,
+  type SharedPhotoOptions,
+} from "@/lib/social/listing-payload-shared";
 
 export interface InstagramListingPhoto {
   id: number;
@@ -85,7 +90,7 @@ function parseExtras(raw: string | null): string[] {
 }
 
 function buildCaption(backup: BackupRow, extras: string[]): string {
-  const name = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
+  const name = buildVehicleTitle(backup.make, backup.model, backup.title);
   const mileage = backup.mileage == null ? null : formatMileage(backup.mileage);
   const price = backup.price_amount == null ? null : formatPrice(backup.price_amount);
   const facts = [
@@ -130,7 +135,7 @@ function parseTechData(raw: string | null): Record<string, string> {
 }
 
 function cleanCity(city: string | undefined) {
-  return city?.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() || undefined;
+  return city ? stripCityPrefix(city) || undefined : undefined;
 }
 
 function getPhotoKey(photo: BackupImageRow): string | null {
@@ -168,7 +173,7 @@ function orderPhotos(photos: BackupImageRow[], backup: BackupRow): BackupImageRo
 export function buildInstagramListingPayload(
   db: Database.Database,
   backupId: number,
-  options: { origin?: string; signedPhotoUrls?: boolean } = {},
+  options: SharedPhotoOptions = {},
 ): InstagramListingPayload | null {
   const backup = db
     .prepare(
@@ -210,7 +215,7 @@ export function buildInstagramListingPayload(
     .all(backupId) as BackupImageRow[];
 
   const extras = parseExtras(backup.extras_json);
-  const title = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
+  const title = buildVehicleTitle(backup.make, backup.model, backup.title);
   const techData = parseTechData(backup.tech_data_json);
   const phones = parseStringArray(backup.phones_json);
 
@@ -233,13 +238,10 @@ export function buildInstagramListingPayload(
     extras,
     caption: buildCaption(backup, extras),
     photos: orderPhotos(photos, backup).map((photo) => {
-      const assetPath = options.signedPhotoUrls
-        ? appendSignedAssetToken(`/api/mobilebg-backup-images/${photo.id}`, photo.id)
-        : `/api/mobilebg-backup-images/${photo.id}`;
       return {
         id: photo.id,
         filename: photo.filename ?? `listing-${backupId}-${photo.id}.jpg`,
-        url: options.origin ? new URL(assetPath, options.origin).toString() : assetPath,
+        url: buildBackupImageUrl(photo.id, options),
       };
     }),
   };

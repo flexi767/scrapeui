@@ -1,6 +1,11 @@
 import Database from "better-sqlite3";
-import { appendSignedAssetToken } from "@/lib/signed-asset-token";
 import { parseJson } from "@/lib/utils";
+import {
+  buildBackupImageUrl,
+  buildVehicleTitle,
+  stripCityPrefix,
+  type SharedPhotoOptions,
+} from "@/lib/social/listing-payload-shared";
 
 export interface MarketplaceListingPayload {
   backupId: number;
@@ -107,7 +112,7 @@ function mapTransmission(transmission: string | null): string | undefined {
 function parseLocation(fieldsJson: string | null | undefined): string | undefined {
   const fields = parseJson<Array<{ name?: string; value?: string }>>(fieldsJson, []);
   const city = fields.find((field) => field.name === "f19")?.value?.trim();
-  return city ? city.replace(/^(гр\.|с\.|общ\.)\s*/i, "").trim() : undefined;
+  return city ? stripCityPrefix(city) : undefined;
 }
 
 function buildPayloadFromRows({
@@ -121,17 +126,12 @@ function buildPayloadFromRows({
   backup: BackupRow;
   images: BackupImageRow[];
   fieldsJson?: string | null;
-  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean };
+  options: { skipPhotos?: boolean } & SharedPhotoOptions;
 }): MarketplaceListingPayload {
-  const title = [backup.make, backup.model, backup.title].filter(Boolean).join(" ");
+  const title = buildVehicleTitle(backup.make, backup.model, backup.title);
   const photoUrls = options.skipPhotos
     ? []
-    : images.map((image) => {
-        const assetPath = options.signedPhotoUrls
-          ? appendSignedAssetToken(`/api/mobilebg-backup-images/${image.id}`, image.id)
-          : `/api/mobilebg-backup-images/${image.id}`;
-        return options.origin ? new URL(assetPath, options.origin).toString() : assetPath;
-      });
+    : images.map((image) => buildBackupImageUrl(image.id, options));
 
   return {
     backupId,
@@ -158,7 +158,7 @@ function buildPayloadFromRows({
 export function buildMarketplaceListingPayloads(
   db: Database.Database,
   backupIds: number[],
-  options: { skipPhotos?: boolean; origin?: string; signedPhotoUrls?: boolean } = {},
+  options: { skipPhotos?: boolean } & SharedPhotoOptions = {},
 ) {
   const uniqueIds = [...new Set(backupIds.filter(Number.isFinite))];
   if (uniqueIds.length === 0) return [];
