@@ -1,7 +1,7 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
 import { runInsert } from "@/lib/listings/sql";
-import { getWindowTotal, omitQueryFields } from "./query-utils";
+import { getWindowTotal, omitQueryFields, timedQuery } from "./query-utils";
 import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -36,9 +36,13 @@ export interface PublicListing {
   mileage: number | null;
   currentPrice: number | null;
   imageCount: number | null;
-  thumbKeys: string | null;
-  fullKeys: string | null;
-  imageMeta: string | null;
+  thumbKeys?: string | null;
+  fullKeys?: string | null;
+  imageMeta?: string | null;
+  firstThumbKey?: string | null;
+  firstFullKey?: string | null;
+  imageCdn?: string | null;
+  imageShard?: string | null;
   imagesDownloaded: number | null;
   thumbSaved: number | null;
   isNew: number | null;
@@ -158,8 +162,11 @@ export function getRelatedListings(
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
         l.transmission, l.mileage, l.current_price as currentPrice,
-        l.image_count as imageCount, l.thumb_keys as thumbKeys,
-        l.full_keys as fullKeys, l.image_meta as imageMeta,
+        l.image_count as imageCount,
+        json_extract(l.thumb_keys, '$[0]') as firstThumbKey,
+        json_extract(l.full_keys, '$[0]') as firstFullKey,
+        json_extract(l.image_meta, '$.cdn') as imageCdn,
+        json_extract(l.image_meta, '$.shard') as imageShard,
         l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
         l.is_new as isNew, l.body_type as bodyType
        FROM listings l
@@ -211,28 +218,47 @@ export function getPublicListings(
 
   const where = wheres.join(" AND ");
 
-  const rows = raw
-    .prepare(
-      `SELECT
+  const queryDetails = {
+    dealerId,
+    sort,
+    page: safePage,
+    limit: safeLimit,
+    filters: {
+      make: Boolean(make),
+      fuel: Boolean(fuel),
+      yearFrom: Boolean(yearFrom),
+      yearTo: Boolean(yearTo),
+      priceMin: priceMin != null,
+      priceMax: priceMax != null,
+      mileageMax: mileageMax != null,
+    },
+  };
+
+  const rows = timedQuery("public.listings.page", queryDetails, () => raw
+      .prepare(
+        `SELECT
         COUNT(*) OVER() as totalCount,
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
         l.transmission, l.mileage, l.current_price as currentPrice,
-        l.image_count as imageCount, l.thumb_keys as thumbKeys,
-        l.full_keys as fullKeys, l.image_meta as imageMeta,
+        l.image_count as imageCount,
+        json_extract(l.thumb_keys, '$[0]') as firstThumbKey,
+        json_extract(l.full_keys, '$[0]') as firstFullKey,
+        json_extract(l.image_meta, '$.cdn') as imageCdn,
+        json_extract(l.image_meta, '$.shard') as imageShard,
         l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
         l.is_new as isNew, l.body_type as bodyType
        FROM listings l
        WHERE ${where}
        ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`,
-    )
-    .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>;
+      )
+      .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>);
 
   const countListings = () => {
-    const row = raw
-      .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
-      .get(...params) as { n: number };
+    const row = timedQuery("public.listings.count", queryDetails, () => raw
+        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
+        .get(...params) as { n: number });
     return row.n;
   };
 

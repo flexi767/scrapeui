@@ -1,9 +1,21 @@
 import React from 'react';
 import type { PublicListing } from '@/lib/query-modules/public';
 import { formatListingMileage, formatListingPrice } from '@/lib/listing-format';
-import { getListingThumbSrc } from '@/lib/listing-thumb';
+import { getListingThumbSrc, getListingThumbSrcFromParts } from '@/lib/listing-thumb';
 
 function getPublicListingThumbSrc(listing: PublicListing) {
+  if (listing.firstThumbKey || listing.firstFullKey) {
+    return getListingThumbSrcFromParts({
+      mobile_id: listing.mobileId,
+      first_thumb_key: listing.firstThumbKey,
+      first_full_key: listing.firstFullKey,
+      image_cdn: listing.imageCdn,
+      image_shard: listing.imageShard,
+      images_downloaded: listing.imagesDownloaded,
+      thumb_saved: listing.thumbSaved,
+    });
+  }
+
   return getListingThumbSrc({
     mobile_id: listing.mobileId,
     thumb_keys: listing.thumbKeys,
@@ -71,4 +83,3 @@ export function renderRelatedListingCard(listing: PublicListing, bordered: boole
     ),
   );
 }
-

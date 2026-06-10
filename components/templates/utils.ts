@@ -1,7 +1,30 @@
-import { getListingThumbSrc } from "@/lib/listing-thumb";
+import { getListingThumbSrc, getListingThumbSrcFromParts } from "@/lib/listing-thumb";
 import type { PublicListingFilters } from "./types";
 
-export function getPublicThumbSrc(l: { mobileId: string; thumbKeys: string | null; fullKeys: string | null; imageMeta: string | null; imagesDownloaded: number | null; thumbSaved: number | null }) {
+export function getPublicThumbSrc(l: {
+  mobileId: string;
+  thumbKeys?: string | null;
+  fullKeys?: string | null;
+  imageMeta?: string | null;
+  firstThumbKey?: string | null;
+  firstFullKey?: string | null;
+  imageCdn?: string | null;
+  imageShard?: string | null;
+  imagesDownloaded: number | null;
+  thumbSaved: number | null;
+}) {
+  if (l.firstThumbKey || l.firstFullKey) {
+    return getListingThumbSrcFromParts({
+      mobile_id: l.mobileId,
+      first_thumb_key: l.firstThumbKey,
+      first_full_key: l.firstFullKey,
+      image_cdn: l.imageCdn,
+      image_shard: l.imageShard,
+      images_downloaded: l.imagesDownloaded,
+      thumb_saved: l.thumbSaved,
+    });
+  }
+
   return getListingThumbSrc({ mobile_id: l.mobileId, thumb_keys: l.thumbKeys, full_keys: l.fullKeys, image_meta: l.imageMeta, images_downloaded: l.imagesDownloaded, thumb_saved: l.thumbSaved });
 }
 
