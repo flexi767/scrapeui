@@ -485,6 +485,20 @@ export const mobileBgBackups = sqliteTable("mobilebg_backups", {
   updatedAt: text("updated_at"),
 });
 
+export const mobileBgBackupExtras = sqliteTable(
+  "mobilebg_backup_extras",
+  {
+    backupId: integer("backup_id")
+      .notNull()
+      .references(() => mobileBgBackups.id, { onDelete: "cascade" }),
+    extraLabel: text("extra_label").notNull(),
+  },
+  (table) => ({
+    uniqueBackupExtra: uniqueIndex("mobilebg_backup_extras_unique_idx").on(table.backupId, table.extraLabel),
+    labelBackupIdx: index("mobilebg_backup_extras_label_backup_idx").on(table.extraLabel, table.backupId),
+  }),
+);
+
 export const mobileBgBackupImages = sqliteTable("mobilebg_backup_images", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   backupId: integer("backup_id")

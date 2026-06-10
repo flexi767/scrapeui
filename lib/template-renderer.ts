@@ -18,6 +18,7 @@ export interface RenderData {
   total?: number;
   page?: number;
   limit?: number;
+  nextCursor?: string | null;
   makes?: string[];
   filters?: PublicListingFilters;
 }
@@ -100,14 +101,27 @@ const BLOCK_RENDERER_REGISTRY: Record<string, BlockRenderer> = {
   Pagination: ({ style: pStyle, color }, data) => {
     const totalPages = Math.ceil((data.total ?? 0) / (data.limit ?? 24));
     const current = data.page ?? 1;
-    if (totalPages <= 1) return React.createElement(React.Fragment, null);
+    const nextHref = data.nextCursor ? `?cursor=${encodeURIComponent(data.nextCursor)}` : `?page=${current + 1}`;
+    const hasCursor = Boolean(data.filters?.cursor);
+    const hasNext = Boolean(data.nextCursor) || current < totalPages;
+    if (totalPages <= 1 && !data.nextCursor) return React.createElement(React.Fragment, null);
+
+    if (hasCursor) {
+      return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', gap: 8, padding: 16 } },
+        React.createElement('a', { key: 'first', href: '?page=1', style: { padding: '6px 16px', border: `1px solid ${color ?? '#2563eb'}`, borderRadius: 6, color: color ?? '#2563eb', textDecoration: 'none', fontSize: 13 } }, '← First'),
+        data.nextCursor ? React.createElement('a', { key: 'next', href: nextHref, style: { padding: '6px 16px', background: color ?? '#2563eb', borderRadius: 6, color: '#fff', textDecoration: 'none', fontSize: 13 } }, 'Next →') : null,
+      );
+    }
+
+    const startPage = Math.max(1, Math.min(current - 3, totalPages - 6));
+    const visiblePages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => startPage + i);
     return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', gap: 8, padding: 16 } },
       pStyle === 'prev-next'
         ? [
             current > 1 ? React.createElement('a', { key: 'prev', href: `?page=${current - 1}`, style: { padding: '6px 16px', border: `1px solid ${color ?? '#2563eb'}`, borderRadius: 6, color: color ?? '#2563eb', textDecoration: 'none', fontSize: 13 } }, '← Previous') : null,
-            current < totalPages ? React.createElement('a', { key: 'next', href: `?page=${current + 1}`, style: { padding: '6px 16px', background: color ?? '#2563eb', borderRadius: 6, color: '#fff', textDecoration: 'none', fontSize: 13 } }, 'Next →') : null,
+            hasNext ? React.createElement('a', { key: 'next', href: nextHref, style: { padding: '6px 16px', background: color ?? '#2563eb', borderRadius: 6, color: '#fff', textDecoration: 'none', fontSize: 13 } }, 'Next →') : null,
           ]
-        : Array.from({ length: totalPages }, (_, i) => i + 1).map((n) =>
+        : visiblePages.map((n) =>
             React.createElement('a', { key: n, href: `?page=${n}`, style: { width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, background: n === current ? (color ?? '#2563eb') : '#f1f5f9', color: n === current ? '#fff' : '#475569', fontSize: 13, fontWeight: 600, textDecoration: 'none' } }, n)
           )
     );

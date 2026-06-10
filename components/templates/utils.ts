@@ -54,7 +54,8 @@ export function filterHref(
   if (m.priceMin) p.set("priceMin", String(m.priceMin));
   if (m.priceMax) p.set("priceMax", String(m.priceMax));
   if (m.sort && m.sort !== "newest") p.set("sort", String(m.sort));
-  if (m.page && Number(m.page) > 1) p.set("page", String(m.page));
+  if (u.cursor) p.set("cursor", String(u.cursor));
+  if (!u.cursor && m.page && Number(m.page) > 1) p.set("page", String(m.page));
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 }

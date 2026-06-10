@@ -1,7 +1,8 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
+import { decodeListingCursor, encodeListingCursor } from "@/lib/listing-url";
 import { runInsert } from "@/lib/listings/sql";
-import { getWindowTotal, omitQueryFields, timedQuery } from "./query-utils";
+import { timedQuery } from "./query-utils";
 import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export interface PublicDealer {
 }
 
 export interface PublicListing {
+  id?: number;
   mobileId: string;
   make: string | null;
   model: string | null;
@@ -47,6 +49,7 @@ export interface PublicListing {
   thumbSaved: number | null;
   isNew: number | null;
   bodyType: string | null;
+  lastEdit?: string | null;
 }
 
 export interface PublicListingDetail extends PublicListing {
@@ -70,6 +73,7 @@ export interface PublicListingFilters {
   sort?: string;
   page?: number;
   limit?: number;
+  cursor?: string;
 }
 
 export interface PublicListingsResult {
@@ -77,18 +81,53 @@ export interface PublicListingsResult {
   total: number;
   page: number;
   limit: number;
+  nextCursor: string | null;
   makes: string[];
 }
 
 // ── Allowed sort fields (whitelist) ────────────────────────────────────────
 
 const ALLOWED_SORT: Record<string, string> = {
-  newest: "l.last_edit DESC",
-  price_asc: "l.current_price ASC",
-  price_desc: "l.current_price DESC",
-  mileage_asc: "l.mileage ASC",
-  year_desc: "l.reg_year DESC",
+  newest: "l.last_edit DESC, l.id DESC",
+  price_asc: "l.current_price ASC, l.id ASC",
+  price_desc: "l.current_price DESC, l.id DESC",
+  mileage_asc: "l.mileage ASC, l.id ASC",
+  year_desc: "l.reg_year DESC, l.id DESC",
 };
+
+const PUBLIC_CURSOR_COLUMNS: Record<string, { column: string; key: keyof PublicListing; order: "asc" | "desc" }> = {
+  newest: { column: "l.last_edit", key: "lastEdit", order: "desc" },
+  price_asc: { column: "l.current_price", key: "currentPrice", order: "asc" },
+  price_desc: { column: "l.current_price", key: "currentPrice", order: "desc" },
+  mileage_asc: { column: "l.mileage", key: "mileage", order: "asc" },
+  year_desc: { column: "l.reg_year", key: "regYear", order: "desc" },
+};
+
+function addPublicCursorFilter(
+  wheres: string[],
+  params: (string | number)[],
+  sort: string,
+  cursor?: string,
+): boolean {
+  const cursorConfig = PUBLIC_CURSOR_COLUMNS[sort] ?? PUBLIC_CURSOR_COLUMNS.newest;
+  const decoded = decodeListingCursor(cursor);
+  if (!decoded || decoded.sort !== sort || decoded.order !== cursorConfig.order || decoded.value == null) {
+    return false;
+  }
+
+  const operator = cursorConfig.order === "asc" ? ">" : "<";
+  wheres.push(`(${cursorConfig.column} ${operator} ? OR (${cursorConfig.column} = ? AND l.id ${operator} ?))`);
+  params.push(decoded.value, decoded.value, decoded.id);
+  return true;
+}
+
+function getPublicNextCursor(row: PublicListing | undefined, sort: string): string | null {
+  const cursorConfig = PUBLIC_CURSOR_COLUMNS[sort] ?? PUBLIC_CURSOR_COLUMNS.newest;
+  if (!row?.id) return null;
+  const value = row[cursorConfig.key];
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  return encodeListingCursor({ sort, order: cursorConfig.order, value, id: row.id });
+}
 
 // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -194,6 +233,7 @@ export function getPublicListings(
     sort = "newest",
     page = 1,
     limit = 24,
+    cursor,
   } = filters;
 
   const wheres: string[] = [
@@ -211,10 +251,14 @@ export function getPublicListings(
   if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
   if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
 
+  const countWhere = wheres.join(" AND ");
+  const countParams = [...params];
   const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
   const safePage = Math.max(1, page);
   const safeLimit = Math.min(48, Math.max(1, limit));
-  const offset = (safePage - 1) * safeLimit;
+  const usesCursor = addPublicCursorFilter(wheres, params, sort, cursor);
+  const offset = usesCursor ? 0 : (safePage - 1) * safeLimit;
+  const queryLimit = safeLimit + 1;
 
   const where = wheres.join(" AND ");
 
@@ -231,13 +275,14 @@ export function getPublicListings(
       priceMin: priceMin != null,
       priceMax: priceMax != null,
       mileageMax: mileageMax != null,
+      cursor: usesCursor,
     },
   };
 
   const rows = timedQuery("public.listings.page", queryDetails, () => raw
       .prepare(
         `SELECT
-        COUNT(*) OVER() as totalCount,
+        l.id,
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
         l.transmission, l.mileage, l.current_price as currentPrice,
@@ -247,18 +292,19 @@ export function getPublicListings(
         json_extract(l.image_meta, '$.cdn') as imageCdn,
         json_extract(l.image_meta, '$.shard') as imageShard,
         l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+        l.last_edit as lastEdit,
         l.is_new as isNew, l.body_type as bodyType
        FROM listings l
        WHERE ${where}
        ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`,
       )
-      .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>);
+      .all(...params, queryLimit, offset) as PublicListing[]);
 
   const countListings = () => {
     const row = timedQuery("public.listings.count", queryDetails, () => raw
-        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
-        .get(...params) as { n: number });
+        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${countWhere}`)
+        .get(...countParams) as { n: number });
     return row.n;
   };
 
@@ -271,11 +317,15 @@ export function getPublicListings(
     )
     .all(dealerId) as { make: string }[];
 
+  const pageRows = rows.slice(0, safeLimit);
+  const hasNextPage = rows.length > safeLimit;
+
   return {
-    listings: rows.map((row) => omitQueryFields(row, ['totalCount'])),
-    total: getWindowTotal(rows, safePage, countListings, 'totalCount'),
+    listings: pageRows,
+    total: countListings(),
     page: safePage,
     limit: safeLimit,
+    nextCursor: hasNextPage ? getPublicNextCursor(pageRows[pageRows.length - 1], sort) : null,
     makes: makeRows.map((r) => r.make),
   };
 }

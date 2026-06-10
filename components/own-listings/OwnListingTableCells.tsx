@@ -4,7 +4,7 @@ import { type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ListingThumbPreview } from "@/components/ListingThumbPreview";
 import ListingSearchPrefillButton from "@/components/ListingSearchPrefillButton";
-import { getListingThumbAlt, getListingThumbSrc } from "@/lib/listing-thumb";
+import { getListingThumbAlt, getListingThumbSrcFromParts } from "@/lib/listing-thumb";
 import { type OwnListingRow } from "@/lib/queries";
 import { CARS_BG_TITLE_MAX_LENGTH } from "@/lib/cars-bg/title";
 import { OwnListingPublishButtons } from "./OwnListingPublishButtons";
@@ -39,7 +39,7 @@ export function OwnListingActionCell({
   onPublishToFacebook,
 }: OwnListingActionCellProps) {
   const t = useTranslations('ui');
-  const thumbSrc = getListingThumbSrc(row, { preferListingImage: true });
+  const thumbSrc = getListingThumbSrcFromParts(row, { preferListingImage: true });
   const thumbAlt = getListingThumbAlt(row);
 
   return (

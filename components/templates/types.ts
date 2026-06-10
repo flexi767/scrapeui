@@ -9,6 +9,7 @@ export interface ListingGridProps {
   total: number;
   page: number;
   limit: number;
+  nextCursor?: string | null;
   makes: string[];
   filters: PublicListingFilters;
 }

@@ -1,3 +1,5 @@
+import { toFtsPrefixQuery } from '../query-utils';
+
 export interface TrackedChangesFilters {
   make?: string;
   model?: string;
@@ -52,17 +54,25 @@ export function buildTrackedChangesWhere(filters: TrackedChangesFilters): {
     params.push(...filters.dealerSlugs);
   }
   if (filters.search) {
-    clauses.push(`(
-      l.title LIKE ?
-      OR l.make LIKE ?
-      OR l.model LIKE ?
-      OR l.description LIKE ?
-      OR d.name LIKE ?
-      OR l.mobile_id LIKE ?
-      OR l.cars_id LIKE ?
-    )`);
+    const ftsQuery = toFtsPrefixQuery(filters.search);
     const like = `%${filters.search}%`;
-    params.push(like, like, like, like, like, like, like);
+    if (ftsQuery) {
+      clauses.push(`(
+        EXISTS (
+          SELECT 1
+          FROM listing_change_search_fts
+          WHERE listing_change_search_fts.rowid = l.id
+            AND listing_change_search_fts MATCH ?
+        )
+        OR d.name LIKE ?
+        OR l.mobile_id LIKE ?
+        OR l.cars_id LIKE ?
+      )`);
+      params.push(ftsQuery, like, like, like);
+    } else {
+      clauses.push(`(d.name LIKE ? OR l.mobile_id LIKE ? OR l.cars_id LIKE ?)`);
+      params.push(like, like, like);
+    }
   }
   if (filters.whenStart && filters.whenEnd) {
     clauses.push('s.recorded_at >= ? AND s.recorded_at <= ?');
@@ -92,4 +102,3 @@ export function buildTrackedChangesWhere(filters: TrackedChangesFilters): {
     params,
   };
 }
-

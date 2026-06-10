@@ -9,7 +9,7 @@ import { MakeSelect, FuelSelect, SortSelect, Pagination } from "../FilterBar";
 import { Shell } from "./Shell";
 import s from "./ListingGrid.module.css";
 
-export function ListingGrid({ dealer, listings, total, page, limit, makes, filters }: ListingGridProps) {
+export function ListingGrid({ dealer, listings, total, page, limit, makes, filters, nextCursor }: ListingGridProps) {
   const t = useTranslations("ui");
   const base = `/d/${dealer.slug}`;
   const totalPages = Math.ceil(total / limit);
@@ -60,6 +60,7 @@ export function ListingGrid({ dealer, listings, total, page, limit, makes, filte
         </div>
         <Pagination
           page={page} totalPages={totalPages} base={base} filters={filters}
+          nextCursor={nextCursor} cursorActive={Boolean(filters.cursor)}
           wrapperClassName={s.pagination} btnClassName={s.pageBtn} btnActiveClassName={s.pageBtnActive}
           showArrows={false}
         />

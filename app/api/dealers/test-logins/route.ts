@@ -14,9 +14,28 @@ const TestLoginsSchema = z.object({
   ids: z.array(z.number()),
 });
 
+const LOGIN_TEST_CONCURRENCY = 3;
+
 interface TestResult {
   ok: boolean;
   reason?: string;
+}
+
+async function mapWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  task: (item: T) => Promise<void>,
+) {
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      const item = items[currentIndex];
+      if (item === undefined) break;
+      await task(item);
+    }
+  }));
 }
 
 function runTest(slug: string): Promise<Record<string, TestResult>> {
@@ -78,16 +97,14 @@ export async function POST(req: NextRequest) {
     { 'mobile.bg'?: TestResult; 'cars.bg'?: TestResult; error?: string }
   > = {};
 
-  await Promise.all(
-    dealers.map(async (d) => {
-      try {
-        results[d.id] = await runTest(d.slug);
-      } catch (err) {
-        log.error(`Login test failed for dealer ${d.id}`, err);
-        results[d.id] = { error: errorMessage(err, 'Login test failed') };
-      }
-    }),
-  );
+  await mapWithConcurrency(dealers, LOGIN_TEST_CONCURRENCY, async (d) => {
+    try {
+      results[d.id] = await runTest(d.slug);
+    } catch (err) {
+      log.error(`Login test failed for dealer ${d.id}`, err);
+      results[d.id] = { error: errorMessage(err, 'Login test failed') };
+    }
+  });
 
   return NextResponse.json(results);
 }

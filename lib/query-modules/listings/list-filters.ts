@@ -2,8 +2,8 @@ import type { ListingFilters } from '../types';
 import { toFtsPrefixQuery } from '../query-utils';
 import {
   ownAdStatusExpr,
+  ownDraftActiveExpr,
   ownEffectiveVatExpr,
-  ownExtrasJsonExpr,
   ownFuelExpr,
   ownKaparoExpr,
   ownMakeExpr,
@@ -74,17 +74,6 @@ function addNullableInFilter(
   }
   if (includeNull) clauses.push(`${expression} IS NULL`);
   if (clauses.length > 0) wheres.push(`(${clauses.join(' OR ')})`);
-}
-
-function addLikeAnyFilter(
-  wheres: string[],
-  params: FilterParams,
-  expression: string,
-  values: string[],
-) {
-  if (values.length === 0) return;
-  wheres.push(`(${values.map(() => `${expression} LIKE ?`).join(' OR ')})`);
-  params.push(...values.map((value) => `%${value}%`));
 }
 
 function addMinMaxFilter(
@@ -211,7 +200,44 @@ export function buildOwnListingFilters(
   addInFilter(wheres, params, ownAdStatusExpr, statuses);
   addNullableInFilter(wheres, params, ownEffectiveVatExpr, vatValues);
   addInFilter(wheres, params, ownFuelExpr, fuels);
-  addLikeAnyFilter(wheres, params, ownExtrasJsonExpr, extras);
+  if (extras.length > 0) {
+    const extraPlaceholders = placeholders(extras);
+    wheres.push(`(
+      (
+        ${ownDraftActiveExpr}
+        AND (
+          (
+            b.extras_json IS NOT NULL
+            AND EXISTS (
+              SELECT 1
+              FROM mobilebg_backup_extras mbe
+              WHERE mbe.backup_id = b.id
+                AND mbe.extra_label IN (${extraPlaceholders})
+            )
+          )
+          OR (
+            b.extras_json IS NULL
+            AND EXISTS (
+              SELECT 1
+              FROM listing_extras le
+              WHERE le.listing_id = l.id
+                AND le.extra_label IN (${extraPlaceholders})
+            )
+          )
+        )
+      )
+      OR (
+        NOT ${ownDraftActiveExpr}
+        AND EXISTS (
+          SELECT 1
+          FROM listing_extras le
+          WHERE le.listing_id = l.id
+            AND le.extra_label IN (${extraPlaceholders})
+        )
+      )
+    )`);
+    params.push(...extras, ...extras, ...extras);
+  }
   addMinMaxFilter(wheres, params, ownPriceExpr, priceMin, priceMax);
   if (priceChangeMin !== null || priceChangeMax !== null) {
     wheres.push('l.price_change IS NOT NULL');

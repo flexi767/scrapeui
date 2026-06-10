@@ -39,6 +39,7 @@ export default async function PublicDealerPage({ params, searchParams }: Props) 
     mileageMax: spNum(query.mileageMax),
     sort: sp(query.sort) || "newest",
     page: spNum(query.page) ?? 1,
+    cursor: sp(query.cursor),
   };
 
   const result = getPublicListings(dealer.id, filters);
@@ -52,6 +53,7 @@ export default async function PublicDealerPage({ params, searchParams }: Props) 
         total: result.total,
         page: result.page,
         limit: result.limit,
+        nextCursor: result.nextCursor,
         makes: result.makes,
         filters,
       };
@@ -70,6 +72,7 @@ export default async function PublicDealerPage({ params, searchParams }: Props) 
       total={result.total}
       page={result.page}
       limit={result.limit}
+      nextCursor={result.nextCursor}
       makes={result.makes}
       filters={filters}
     />

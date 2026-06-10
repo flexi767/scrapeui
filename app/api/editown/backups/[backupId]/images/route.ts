@@ -14,13 +14,6 @@ const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MOBILEBG_IMAGE_WIDTH = 1600;
 const MOBILEBG_IMAGE_HEIGHT = 1200;
 
-function backupExists(backupId: number): boolean {
-  const row = raw
-    .prepare('SELECT id FROM mobilebg_backups WHERE id = ? LIMIT 1')
-    .get(backupId) as { id: number } | undefined;
-  return Boolean(row);
-}
-
 function listImages(backupId: number): MobileBgBackupImageRow[] {
   return raw
     .prepare(

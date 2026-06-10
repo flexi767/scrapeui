@@ -113,17 +113,31 @@ export function YearRangeInputs({ base, filters, inputClassName, rowClassName }:
   );
 }
 
-export function Pagination({ page, totalPages, base, filters, wrapperClassName, btnClassName, btnActiveClassName, showArrows = true }: {
+export function Pagination({ page, totalPages, base, filters, nextCursor, cursorActive = false, wrapperClassName, btnClassName, btnActiveClassName, showArrows = true }: {
   page: number;
   totalPages: number;
   base: string;
   filters: PublicListingFilters;
+  nextCursor?: string | null;
+  cursorActive?: boolean;
   wrapperClassName?: string;
   btnClassName?: string;
   btnActiveClassName?: string;
   showArrows?: boolean;
 }) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && !nextCursor) return null;
+  if (cursorActive) {
+    return (
+      <div className={wrapperClassName}>
+        {showArrows && (
+          <Link href={filterHref(base, filters, { page: 1 })} className={btnClassName}>←</Link>
+        )}
+        {nextCursor && (
+          <Link href={filterHref(base, filters, { cursor: nextCursor })} className={btnClassName}>→</Link>
+        )}
+      </div>
+    );
+  }
   const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
   return (
     <div className={wrapperClassName}>
@@ -139,8 +153,8 @@ export function Pagination({ page, totalPages, base, filters, wrapperClassName, 
           {p}
         </Link>
       ))}
-      {showArrows && page < totalPages && (
-        <Link href={filterHref(base, filters, { page: page + 1 })} className={btnClassName}>→</Link>
+      {showArrows && (nextCursor || page < totalPages) && (
+        <Link href={nextCursor ? filterHref(base, filters, { cursor: nextCursor }) : filterHref(base, filters, { page: page + 1 })} className={btnClassName}>→</Link>
       )}
     </div>
   );
