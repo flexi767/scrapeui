@@ -39,3 +39,14 @@ export function timedQuery<T>(
     }
   }
 }
+
+export function toFtsPrefixQuery(value: string): string {
+  const terms = value
+    .normalize('NFKC')
+    .match(/[\p{L}\p{N}]+/gu)
+    ?.map((term) => term.toLowerCase())
+    .filter((term) => term.length > 0)
+    .slice(0, 8) ?? [];
+
+  return terms.map((term) => `${term}*`).join(' ');
+}

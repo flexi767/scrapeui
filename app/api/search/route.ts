@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
-import { toListingFtsQuery } from '@/lib/query-modules/listings/list-filters';
-import { timedQuery } from '@/lib/query-modules/query-utils';
+import { toFtsPrefixQuery, timedQuery } from '@/lib/query-modules/query-utils';
 
 interface SearchResult {
   type: string;
@@ -20,8 +19,8 @@ export async function GET(request: NextRequest) {
   if (!q) return NextResponse.json([]);
 
   const like = `%${q}%`;
-  const listingFtsQuery = toListingFtsQuery(q);
-  const listingSearchSql = listingFtsQuery
+  const ftsQuery = toFtsPrefixQuery(q);
+  const listingSearchSql = ftsQuery
     ? `
       SELECT id, mobile_id, title, make, model
       FROM (
@@ -42,20 +41,20 @@ export async function GET(request: NextRequest) {
       WHERE mobile_id LIKE ?
       LIMIT 10
     `;
-  const params = listingFtsQuery
-    ? [like, listingFtsQuery, like, like, like]
+  const params = ftsQuery
+    ? [ftsQuery, ftsQuery, like, ftsQuery, ftsQuery]
     : [like, like, like, like];
 
-  const results = timedQuery('global.search', { hasListingFts: Boolean(listingFtsQuery) }, () => raw.prepare(`
+  const results = timedQuery('global.search', { hasFts: Boolean(ftsQuery) }, () => raw.prepare(`
     SELECT type, id, title, subtitle, url
     FROM (
       SELECT 0 as group_order, 'task' as type, id, title,
         status || ' — ' || priority as subtitle,
         '/tasks/' || id as url
       FROM (
-        SELECT id, title, status, priority
+        SELECT tasks.id, tasks.title, tasks.status, tasks.priority
         FROM tasks
-        WHERE title LIKE ?
+        ${ftsQuery ? `JOIN tasks_search_fts ON tasks_search_fts.rowid = tasks.id WHERE tasks_search_fts MATCH ?` : `WHERE title LIKE ?`}
         LIMIT 10
       )
       UNION ALL
@@ -71,9 +70,9 @@ export async function GET(request: NextRequest) {
         printf('%.2f', amount / 100.0) || ' ' || currency || ' — ' || category as subtitle,
         '/expenses/' || id as url
       FROM (
-        SELECT id, title, amount, currency, category
+        SELECT expenses.id, expenses.title, expenses.amount, expenses.currency, expenses.category
         FROM expenses
-        WHERE title LIKE ?
+        ${ftsQuery ? `JOIN expenses_search_fts ON expenses_search_fts.rowid = expenses.id WHERE expenses_search_fts MATCH ?` : `WHERE title LIKE ?`}
         LIMIT 10
       )
       UNION ALL
@@ -81,9 +80,9 @@ export async function GET(request: NextRequest) {
         '' as subtitle,
         '/kb/' || slug as url
       FROM (
-        SELECT id, title, slug
+        SELECT articles.id, articles.title, articles.slug
         FROM articles
-        WHERE title LIKE ?
+        ${ftsQuery ? `JOIN articles_search_fts ON articles_search_fts.rowid = articles.id WHERE articles_search_fts MATCH ?` : `WHERE title LIKE ?`}
         LIMIT 10
       )
     )

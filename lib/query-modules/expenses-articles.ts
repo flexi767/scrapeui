@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { LabelRow, ListingSummary } from './core';
-import { getWindowTotal, omitQueryFields } from './query-utils';
+import { getWindowTotal, omitQueryFields, toFtsPrefixQuery } from './query-utils';
 import {
   getRelatedLabels,
   getRelatedListingSummaries,
@@ -49,8 +49,16 @@ export function getExpenses(filters: ExpenseFilters = {}) {
     params.push(dateTo);
   }
   if (search) {
-    wheres.push("e.title LIKE ?");
-    params.push(`%${search}%`);
+    const ftsQuery = toFtsPrefixQuery(search);
+    if (ftsQuery) {
+      wheres.push(`EXISTS (
+        SELECT 1
+        FROM expenses_search_fts
+        WHERE expenses_search_fts.rowid = e.id
+          AND expenses_search_fts MATCH ?
+      )`);
+      params.push(ftsQuery);
+    }
   }
 
   const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
@@ -161,8 +169,16 @@ export function getArticles(filters: ArticleFilters = {}) {
   const params: (string | number)[] = [];
 
   if (search) {
-    wheres.push("a.title LIKE ?");
-    params.push(`%${search}%`);
+    const ftsQuery = toFtsPrefixQuery(search);
+    if (ftsQuery) {
+      wheres.push(`EXISTS (
+        SELECT 1
+        FROM articles_search_fts
+        WHERE articles_search_fts.rowid = a.id
+          AND articles_search_fts MATCH ?
+      )`);
+      params.push(ftsQuery);
+    }
   }
   if (labelId) {
     wheres.push(

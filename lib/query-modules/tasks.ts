@@ -1,5 +1,5 @@
 import { raw } from '@/db/client';
-import { getWindowTotal, omitQueryFields } from './query-utils';
+import { getWindowTotal, omitQueryFields, toFtsPrefixQuery } from './query-utils';
 import { getRelatedLabels, getRelatedListingSummaries } from './relations';
 
 export interface TaskRow {
@@ -54,8 +54,16 @@ export function getTasks(filters: TaskFilters = {}) {
     params.push(assigneeId);
   }
   if (search) {
-    wheres.push("(t.title LIKE ?)");
-    params.push(`%${search}%`);
+    const ftsQuery = toFtsPrefixQuery(search);
+    if (ftsQuery) {
+      wheres.push(`EXISTS (
+        SELECT 1
+        FROM tasks_search_fts
+        WHERE tasks_search_fts.rowid = t.id
+          AND tasks_search_fts MATCH ?
+      )`);
+      params.push(ftsQuery);
+    }
   }
 
   const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
