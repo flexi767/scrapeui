@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import type { LabelRow, ListingSummary } from './core';
-import { getWindowTotal, omitQueryFields, toFtsPrefixQuery } from './query-utils';
+import { getWindowTotal, omitQueryFields, timedQuery, toFtsPrefixQuery } from './query-utils';
 import {
   getRelatedLabels,
   getRelatedListingSummaries,
@@ -63,10 +63,20 @@ export function getExpenses(filters: ExpenseFilters = {}) {
 
   const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
+  const queryDetails = {
+    page,
+    limit,
+    filters: {
+      category: Boolean(category),
+      dateFrom: Boolean(dateFrom),
+      dateTo: Boolean(dateTo),
+      search: Boolean(search),
+    },
+  };
 
-  const rows = raw
-    .prepare(
-      `
+  const rows = timedQuery('expenses.page', queryDetails, () => raw
+      .prepare(
+        `
     SELECT COUNT(*) OVER() as total_count,
       COALESCE(SUM(e.amount) OVER(), 0) as total_amount,
       e.*, u.name as creator_name
@@ -76,19 +86,19 @@ export function getExpenses(filters: ExpenseFilters = {}) {
     ORDER BY e.date DESC, e.created_at DESC
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...params, limit, offset) as Array<ExpenseRow & { total_count: number; total_amount: number }>;
+      )
+      .all(...params, limit, offset) as Array<ExpenseRow & { total_count: number; total_amount: number }>);
 
   const getExpenseTotals = () => {
-    const totals = raw
-      .prepare(
-        `
+    const totals = timedQuery('expenses.totals', queryDetails, () => raw
+        .prepare(
+          `
     SELECT COUNT(*) as count, COALESCE(SUM(e.amount), 0) as total_amount
     FROM expenses e
     ${where}
   `,
-      )
-      .get(...params) as { count: number; total_amount: number };
+        )
+        .get(...params) as { count: number; total_amount: number });
     return totals;
   };
 
@@ -189,10 +199,18 @@ export function getArticles(filters: ArticleFilters = {}) {
 
   const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
+  const queryDetails = {
+    page,
+    limit,
+    filters: {
+      search: Boolean(search),
+      labelId: Boolean(labelId),
+    },
+  };
 
-  const rows = raw
-    .prepare(
-      `
+  const rows = timedQuery('articles.page', queryDetails, () => raw
+      .prepare(
+        `
     SELECT COUNT(*) OVER() as total_count,
       a.*, u.name as author_name
     FROM articles a
@@ -201,17 +219,17 @@ export function getArticles(filters: ArticleFilters = {}) {
     ORDER BY a.updated_at DESC
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...params, limit, offset) as Array<ArticleRow & { total_count: number }>;
+      )
+      .all(...params, limit, offset) as Array<ArticleRow & { total_count: number }>);
 
   const countArticles = () => {
-    const { count } = raw
-      .prepare(
-        `
+    const { count } = timedQuery('articles.count', queryDetails, () => raw
+        .prepare(
+          `
     SELECT COUNT(*) as count FROM articles a ${where}
   `,
-      )
-      .get(...params) as { count: number };
+        )
+        .get(...params) as { count: number });
     return count;
   };
 

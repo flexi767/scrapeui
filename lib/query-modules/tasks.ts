@@ -1,5 +1,5 @@
 import { raw } from '@/db/client';
-import { getWindowTotal, omitQueryFields, toFtsPrefixQuery } from './query-utils';
+import { getWindowTotal, omitQueryFields, timedQuery, toFtsPrefixQuery } from './query-utils';
 import { getRelatedLabels, getRelatedListingSummaries } from './relations';
 
 export interface TaskRow {
@@ -68,10 +68,20 @@ export function getTasks(filters: TaskFilters = {}) {
 
   const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
   const offset = (page - 1) * limit;
+  const queryDetails = {
+    page,
+    limit,
+    filters: {
+      status: Boolean(status),
+      priority: Boolean(priority),
+      assigneeId: Boolean(assigneeId),
+      search: Boolean(search),
+    },
+  };
 
-  const rows = raw
-    .prepare(
-      `
+  const rows = timedQuery('tasks.page', queryDetails, () => raw
+      .prepare(
+        `
     SELECT COUNT(*) OVER() as total_count,
       t.*,
       a.name as assignee_name,
@@ -86,17 +96,17 @@ export function getTasks(filters: TaskFilters = {}) {
       t.created_at DESC
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...params, limit, offset) as Array<TaskRow & { total_count: number }>;
+      )
+      .all(...params, limit, offset) as Array<TaskRow & { total_count: number }>);
 
   const countTasks = () => {
-    const { count } = raw
-      .prepare(
-        `
+    const { count } = timedQuery('tasks.count', queryDetails, () => raw
+        .prepare(
+          `
     SELECT COUNT(*) as count FROM tasks t ${where}
   `,
-      )
-      .get(...params) as { count: number };
+        )
+        .get(...params) as { count: number });
     return count;
   };
 
