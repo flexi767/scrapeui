@@ -11,9 +11,35 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 
 const { chromium } = require('playwright');
+const crypto = require('node:crypto');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { loginMobileBg } = require('../utils/mobilebg-auth');
+
+/**
+ * Inline decryptSecret for legacy CJS script.
+ * Mirrors lib/crypto-credentials.ts — backward-compatible with plaintext values.
+ */
+function decryptSecret(stored) {
+  if (!stored) return stored ?? null;
+  const PREFIX = 'enc:v1:';
+  if (!stored.startsWith(PREFIX)) return stored; // legacy plaintext passthrough
+  const rest = stored.slice(PREFIX.length);
+  const parts = rest.split(':');
+  if (parts.length !== 3) throw new Error('decryptSecret: malformed enc:v1: envelope');
+  const [ivHex, authTagHex, cipherHex] = parts;
+  const keyHex = process.env.CREDENTIALS_ENCRYPTION_KEY;
+  if (!keyHex || keyHex.trim().length !== 64) {
+    throw new Error('CREDENTIALS_ENCRYPTION_KEY must be set to a 64-hex-character string');
+  }
+  const key = Buffer.from(keyHex.trim(), 'hex');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  const ciphertext = Buffer.from(cipherHex, 'hex');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+}
 
 const args = process.argv.slice(2);
 const dealerIdx = args.indexOf('--dealer');
@@ -30,7 +56,8 @@ async function main() {
   const db = new Database(process.env.DB_PATH || path.resolve(__dirname, '../../../scraped/listings.db'));
   const dealer = db.prepare('SELECT * FROM dealers WHERE slug = ?').get(dealerSlug);
   if (!dealer) { console.error(`Dealer "${dealerSlug}" not found`); process.exit(1); }
-  if (!dealer.mobile_user || !dealer.mobile_password) {
+  const decryptedPassword = decryptSecret(dealer.mobile_password);
+  if (!dealer.mobile_user || !decryptedPassword) {
     console.error(`Dealer "${dealerSlug}" has no mobile.bg credentials`); process.exit(1);
   }
 
@@ -46,7 +73,7 @@ async function main() {
   const page = await context.newPage();
 
   console.error(`Logging in as ${dealer.mobile_user}...`);
-  const ok = await loginMobileBg(page, dealer.mobile_user, dealer.mobile_password);
+  const ok = await loginMobileBg(page, dealer.mobile_user, decryptedPassword);
   if (!ok) { console.error('Login failed'); await browser.close(); process.exit(1); }
   console.error('Login OK');
 

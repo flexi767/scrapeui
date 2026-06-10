@@ -9,6 +9,16 @@ import {
 } from '@/lib/dealers/fieldMaps';
 import { PLATFORM_ACCOUNT_COLUMNS } from '@/lib/dealers/platformCredentials';
 import { SOCIAL_ACCOUNT_COLUMNS } from '@/lib/dealers/socialCredentials';
+import { decryptSecret, encryptSecret } from '@/lib/crypto-credentials';
+
+/** Columns that hold third-party account passwords — values must be encrypted at rest. */
+const CREDENTIAL_PASSWORD_COLUMNS = new Set([
+  'mobile_password',
+  'cars_password',
+  'facebook_password',
+  'instagram_password',
+  'tiktok_password',
+]);
 
 // GET own dealer credentials (dealer user or admin)
 export async function GET(
@@ -36,7 +46,15 @@ export async function GET(
   `).get(dealerId) as Record<string, unknown> | undefined;
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(row);
+
+  // Decrypt password fields before returning to client.
+  const decrypted: Record<string, unknown> = { ...row };
+  for (const col of CREDENTIAL_PASSWORD_COLUMNS) {
+    if (col in decrypted) {
+      decrypted[col] = decryptSecret(decrypted[col] as string | null | undefined);
+    }
+  }
+  return NextResponse.json(decrypted);
 }
 
 // PATCH own dealer credentials (dealer user or admin)
@@ -67,6 +85,13 @@ export async function PATCH(
 
   const processed: Record<string, unknown> = { ...body };
   if ('public_enabled' in processed) processed.public_enabled = processed.public_enabled ? 1 : 0;
+
+  // Encrypt password fields before writing to the database.
+  for (const col of CREDENTIAL_PASSWORD_COLUMNS) {
+    if (col in processed) {
+      processed[col] = encryptSecret(processed[col] as string | null | undefined);
+    }
+  }
 
   const updated = runMappedUpdate(raw, 'dealers', 'id', dealerId, processed, map);
   if (!updated) return NextResponse.json({ error: 'nothing to update' }, { status: 400 });

@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import { loginMobileBg } from '@/lib/mobile-bg/auth';
 import { fetchPublishForm } from '@/lib/mobile-bg/fetch-publish-form';
 import { openDb } from '@/scraper/lib/runner';
+import { decryptSecret } from '@/lib/crypto-credentials';
 
 const args = process.argv.slice(2);
 const dealerIdx = args.indexOf('--dealer');
@@ -26,7 +27,8 @@ async function main() {
   const db = openDb();
   const dealer = db.prepare('SELECT id, mobile_user, mobile_password FROM dealers WHERE slug = ?').get(dealerSlug) as DealerRow | undefined;
   if (!dealer) { console.error(`Dealer "${dealerSlug}" not found`); process.exit(1); }
-  if (!dealer.mobile_user || !dealer.mobile_password) { console.error(`Dealer "${dealerSlug}" has no mobile.bg credentials`); process.exit(1); }
+  const decryptedPassword = decryptSecret(dealer.mobile_password);
+  if (!dealer.mobile_user || !decryptedPassword) { console.error(`Dealer "${dealerSlug}" has no mobile.bg credentials`); process.exit(1); }
 
   let mobileId = advId;
   if (!mobileId) {
@@ -38,7 +40,7 @@ async function main() {
   const page = await (await browser.newContext()).newPage();
 
   console.error(`Logging in as ${dealer.mobile_user}...`);
-  if (!await loginMobileBg(page, dealer.mobile_user, dealer.mobile_password)) {
+  if (!await loginMobileBg(page, dealer.mobile_user, decryptedPassword)) {
     console.error('Login failed'); await browser.close(); process.exit(1);
   }
   console.error('Login OK');

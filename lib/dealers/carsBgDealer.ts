@@ -1,4 +1,5 @@
 import type { CarsBgDealerAccount } from '@/lib/cars-bg/sync';
+import { decryptSecret } from '@/lib/crypto-credentials';
 
 export interface CarsBgDealerSource {
   cars_password?: string | null;
@@ -17,7 +18,8 @@ export type AuthenticatedCarsBgDealerAccount = CarsBgDealerAccount & {
 export function getCarsBgDealerAccount(
   dealer: CarsBgDealerSource | null | undefined,
 ): AuthenticatedCarsBgDealerAccount | null {
-  if (!dealer?.cars_user || !dealer.cars_password) return null;
+  const decryptedPassword = decryptSecret(dealer?.cars_password);
+  if (!dealer?.cars_user || !decryptedPassword) return null;
 
   return {
     id: dealer.id,
@@ -25,6 +27,6 @@ export function getCarsBgDealerAccount(
     name: dealer.name ?? null,
     carsUrl: dealer.cars_url ?? null,
     carsUser: dealer.cars_user,
-    carsPassword: dealer.cars_password,
+    carsPassword: decryptedPassword,
   };
 }

@@ -14,6 +14,18 @@ import {
   type SocialAccountFields,
 } from '@/lib/dealers/socialCredentials';
 import { runInsert } from '@/lib/listings/sql';
+import { decryptSecret, encryptSecret } from '@/lib/crypto-credentials';
+
+/** Columns that hold third-party account passwords — must be encrypted at rest. */
+const CREDENTIAL_PASSWORD_COLUMNS = [
+  'mobile_password',
+  'cars_password',
+  'facebook_password',
+  'instagram_password',
+  'tiktok_password',
+] as const;
+
+type PasswordColumn = typeof CREDENTIAL_PASSWORD_COLUMNS[number];
 
 interface DealerRow extends PlatformAccountFields<string | null>, SocialAccountFields<string | null> {
   id: number;
@@ -42,7 +54,16 @@ export async function GET() {
     FROM dealers
     ORDER BY priority DESC, name
   `).all() as DealerRow[];
-  return NextResponse.json(rows);
+
+  // Decrypt password fields before returning to client (admin-only endpoint).
+  const decryptedRows = rows.map((row) => {
+    const out: Record<string, unknown> = { ...row };
+    for (const col of CREDENTIAL_PASSWORD_COLUMNS) {
+      out[col] = decryptSecret(row[col as PasswordColumn] as string | null | undefined);
+    }
+    return out;
+  });
+  return NextResponse.json(decryptedRows);
 }
 
 export async function POST(req: NextRequest) {
@@ -58,6 +79,20 @@ export async function POST(req: NextRequest) {
   } = body;
   const platformFields = pickNullablePlatformAccountFields(body);
   const socialFields = pickNullableSocialAccountFields(body);
+
+  // Encrypt password fields before persisting.
+  for (const col of CREDENTIAL_PASSWORD_COLUMNS) {
+    if (col in platformFields) {
+      (platformFields as unknown as Record<string, unknown>)[col] = encryptSecret(
+        (platformFields as unknown as Record<string, unknown>)[col] as string | null | undefined,
+      );
+    }
+    if (col in socialFields) {
+      (socialFields as unknown as Record<string, unknown>)[col] = encryptSecret(
+        (socialFields as unknown as Record<string, unknown>)[col] as string | null | undefined,
+      );
+    }
+  }
   if (
     typeof name !== 'string' ||
     typeof slug !== 'string' ||

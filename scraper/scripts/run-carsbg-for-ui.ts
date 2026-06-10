@@ -13,6 +13,7 @@
  *       <h5> title (e.g. "Audi A8 Long S-Line")
  *       <p>  specs (e.g. "2019, Дизел, 219000 км.")
  *       <p>  description snippet
+ * NOTE: cars_password is decrypted at the point of use via decryptSecret.
  *   - Offer IDs are hex strings (MongoDB ObjectId), NOT numeric
  *   - Detail page specs: comma-separated string like
  *       "Януари 2019, Седан, ..., Дизел, 219 000км, Автоматични скорости, 286к.с., 4/5 врати, Тъмно син металик"
@@ -48,6 +49,7 @@ import {
 import { emit, formatError, parseRunnerArgs, openDb, fetchRunnerRefData } from '@/scraper/lib/runner';
 import { enqueueNextListPage } from '@/scraper/lib/list-pagination';
 import { runInsert } from '@/lib/listings/sql';
+import { decryptSecret } from '@/lib/crypto-credentials';
 
 const { deepCrawl, requestedSlugs } = parseRunnerArgs();
 const CARS_BG_MAX_IMAGES = 15;
@@ -122,7 +124,8 @@ function processCarsBgListing(
 }
 
 async function deepCrawlCarsBgOwnListings(dealer: CarsBgDealerRow, db: Database.Database) {
-  if (!dealer.own || !dealer.cars_user || !dealer.cars_password) {
+  const decryptedPassword = decryptSecret(dealer.cars_password);
+  if (!dealer.own || !dealer.cars_user || !decryptedPassword) {
     emit({ type: 'log', message: `Skipping cars.bg own deep crawl for ${dealer.slug}: missing own-dealer credentials` });
     return 0;
   }
@@ -131,7 +134,7 @@ async function deepCrawlCarsBgOwnListings(dealer: CarsBgDealerRow, db: Database.
   const page = await browser.newPage();
 
   try {
-    const loggedIn = await loginToCarsBg(page, String(dealer.cars_user), String(dealer.cars_password));
+    const loggedIn = await loginToCarsBg(page, String(dealer.cars_user), String(decryptedPassword));
     if (!loggedIn) {
       emit({ type: 'log', level: 'stderr', message: `Cars.bg own deep crawl login failed for ${dealer.slug}` });
       return 0;

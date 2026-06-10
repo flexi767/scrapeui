@@ -4,6 +4,7 @@ import { acceptMobileBgCookies, loginMobileBg } from '@/lib/mobile-bg/auth';
 import { USER_AGENT } from '@/lib/mobile-bg/constants';
 import { parseJson } from '@/lib/utils';
 import { emit, formatError } from '@/scraper/lib/runner';
+import { decryptSecret } from '@/lib/crypto-credentials';
 
 
 function parseArgs(): { dealerSlugs: string[]; onlyReset: boolean } {
@@ -30,7 +31,7 @@ async function processDealer(
   const page = await context.newPage();
 
   try {
-    if (!await loginMobileBg(page, dealer.mobile_user!, dealer.mobile_password!)) {
+    if (!await loginMobileBg(page, dealer.mobile_user!, decryptSecret(dealer.mobile_password)!)) {
       throw new Error(`Login failed for ${dealer.slug}`);
     }
 
@@ -158,7 +159,7 @@ async function main() {
   const dealers: DealerRowFull[] = [];
   for (const slug of dealerSlugs) {
     const dealer = getDealerBySlug(slug);
-    if (!dealer?.own || !dealer.active || !dealer.mobile_user || !dealer.mobile_password) {
+    if (!dealer?.own || !dealer.active || !dealer.mobile_user || !decryptSecret(dealer.mobile_password)) {
       emit({ type: 'log', level: 'info', message: `Dealer "${slug}" not found or missing credentials, skipping.` });
       continue;
     }

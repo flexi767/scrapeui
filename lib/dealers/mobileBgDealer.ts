@@ -1,4 +1,5 @@
 import type { DealerBackupConfig } from '@/lib/mobile-bg/constants';
+import { decryptSecret } from '@/lib/crypto-credentials';
 
 export interface MobileBgDealerSource {
   id: number;
@@ -12,7 +13,8 @@ export interface MobileBgDealerSource {
 export function getMobileBgDealerConfig(
   dealer: MobileBgDealerSource | null | undefined,
 ): DealerBackupConfig | null {
-  if (!dealer?.mobile_user || !dealer.mobile_password) return null;
+  const decryptedPassword = decryptSecret(dealer?.mobile_password);
+  if (!dealer?.mobile_user || !decryptedPassword) return null;
 
   return {
     id: dealer.id,
@@ -20,6 +22,6 @@ export function getMobileBgDealerConfig(
     name: dealer.name ?? undefined,
     mobileUrl: dealer.mobile_url ?? '',
     mobileUser: dealer.mobile_user,
-    mobilePassword: dealer.mobile_password,
+    mobilePassword: decryptedPassword,
   };
 }
