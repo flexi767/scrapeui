@@ -1,9 +1,12 @@
 import { raw } from '@/db/client';
+import { logger } from '@/lib/logger';
 import {
   DEFAULT_SUB_LOCATION_OPTIONS,
   fetchSubLocationOptions,
   type SubLocationOptions,
 } from '@/lib/mobile-bg/location-options';
+
+const log = logger.child('search-prefill');
 
 export interface ReferenceOption {
   value: string;
@@ -58,7 +61,7 @@ export async function loadSubLocationOptions(
   try {
     return await fetchSubLocationOptions(location);
   } catch (error) {
-    console.warn(
+    log.warn(
       `Falling back to default sub-location options for "${location}":`,
       error,
     );

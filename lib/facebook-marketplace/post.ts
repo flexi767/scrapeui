@@ -15,12 +15,15 @@
 
 import * as fs from "fs";
 import type { Page } from "playwright";
+import { logger } from "@/lib/logger";
 import { fillByLabel, fillLabelCombobox, fillLocation } from "./field-fillers";
 import { launchMarketplaceContext } from "./session";
 import { delay } from "./timing";
 import type { MarketplaceListing, MarketplacePostResult } from "./types";
 
 export type { MarketplaceListing } from "./types";
+
+const log = logger.child("fb-post");
 
 export async function postToFacebookMarketplace(
   listing: MarketplaceListing
@@ -51,7 +54,7 @@ export async function postToFacebookMarketplace(
       !url.includes("/checkpoint");
 
     if (!isLoggedIn) {
-      console.log(
+      log.info(
         "\n⚠️  Not logged in — log in manually in the browser, then close it.\n"
       );
       await waitForPageClose();
@@ -59,7 +62,7 @@ export async function postToFacebookMarketplace(
     }
 
     if (!page.url().includes("/marketplace/create")) {
-      console.log("⚠️  Redirected away — retrying navigation…");
+      log.info("⚠️  Redirected away — retrying navigation…");
       await page.goto(
         "https://www.facebook.com/marketplace/create/vehicle",
         { waitUntil: "domcontentloaded" }
@@ -73,11 +76,11 @@ export async function postToFacebookMarketplace(
     // -----------------------------------------------------------------------
     const photoPaths = listing.photos.slice(0, 10).filter((p) => fs.existsSync(p));
     if (photoPaths.length === 0) {
-      console.warn("⚠️  No valid photo paths — skipping upload.");
+      log.warn("⚠️  No valid photo paths — skipping upload.");
     } else {
       const fileInput = page.locator('input[type="file"]').first();
       await fileInput.setInputFiles(photoPaths).catch((e) =>
-        console.warn("⚠️  Photo upload failed:", e.message)
+        log.warn("⚠️  Photo upload failed:", e.message)
       );
       await delay(2500, 3500);
     }
@@ -194,9 +197,9 @@ export async function postToFacebookMarketplace(
           (el as HTMLInputElement).checked || el.getAttribute("aria-checked") === "true"
         );
         if (!checked) { await nd.click(); await delay(300, 500); }
-        console.log("✓  Enabled: Без повреди");
+        log.info("✓  Enabled: Без повреди");
       } else {
-        console.warn("⚠️  Could not find Без повреди checkbox");
+        log.warn("⚠️  Could not find Без повреди checkbox");
       }
     }
 
@@ -220,26 +223,26 @@ export async function postToFacebookMarketplace(
       if (isOn !== "true") {
         await sw.click();
         await delay(300, 500);
-        console.log("✓  Enabled: Показване на обявата на всички");
+        log.info("✓  Enabled: Показване на обявата на всички");
       } else {
-        console.log("✓  Already enabled: Показване на обявата на всички");
+        log.info("✓  Already enabled: Показване на обявата на всички");
       }
     } else {
-      console.warn("⚠️  Could not find visibility switch");
+      log.warn("⚠️  Could not find visibility switch");
     }
 
     // Save a screenshot so we can verify what got filled
     await page.screenshot({ path: "/tmp/fb-filled.png" }).catch(() => {});
-    console.log("📸  Screenshot saved to /tmp/fb-filled.png");
+    log.info("📸  Screenshot saved to /tmp/fb-filled.png");
 
-    console.log("\n✅  Form pre-filled.");
-    console.log("👀  Review the listing in the browser window.");
-    console.log("🖱️   Click [ Publish ] when ready.\n");
+    log.info("\n✅  Form pre-filled.");
+    log.info("👀  Review the listing in the browser window.");
+    log.info("🖱️   Click [ Publish ] when ready.\n");
 
     await waitForPageClose();
     return { status: "ready_to_publish", message: "Form filled. Waiting for manual publish." };
   } catch (err: unknown) {
-    console.error("facebook-marketplace error:", err);
+    log.error("facebook-marketplace error:", err);
     await waitForPageClose();
     return { status: "error", message: err instanceof Error ? err.message : String(err) };
   }
@@ -264,7 +267,7 @@ if (require.main === module) {
 
   postToFacebookMarketplace(example).then((result) => {
     if (result.status === "error") {
-      console.error("❌", result.message);
+      log.error("❌", result.message);
       process.exit(1);
     }
   });

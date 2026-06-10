@@ -1,9 +1,12 @@
 import React from "react";
+import { logger } from "@/lib/logger";
 import type { PublicDealer, PublicListing, PublicListingDetail, PublicListingFilters } from "./query-modules/public";
 import { formatListingMileage, formatListingPrice } from "./listing-format";
 import { renderFilterBar } from "./template-renderers/filter-bar";
 import { renderImageGallery } from "./template-renderers/image-gallery";
 import { renderListingGridCard, renderRelatedListingCard } from "./template-renderers/listing-cards";
+
+const log = logger.child("template");
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -228,7 +231,7 @@ export function renderCraftNode(
   const renderer = BLOCK_RENDERER_REGISTRY[typeName];
 
   if (!renderer) {
-    console.warn(`No renderer for block type: ${typeName}`);
+    log.warn(`No renderer for block type: ${typeName}`);
     return children.length > 0 ? React.createElement(React.Fragment, null, ...children) : null;
   }
 

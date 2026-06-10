@@ -1,5 +1,8 @@
 import type { Page } from "playwright";
+import { logger } from "@/lib/logger";
 import { delay } from "./timing";
+
+const log = logger.child("fb-fill");
 
 /**
  * Fill a plain text input or textarea found by walking up <=4 parent levels
@@ -22,7 +25,7 @@ export async function fillByLabel(page: Page, labelText: string, value: string):
 
   const el = handle.asElement();
   if (!el) {
-    console.warn(`Could not find field with label "${labelText}"`);
+    log.warn(`Could not find field with label "${labelText}"`);
     return;
   }
   await el.click({ clickCount: 3 }).catch(() => {});
@@ -93,7 +96,7 @@ export async function fillLabelCombobox(page: Page, labelText: string, value: st
   }, value);
 
   if (clicked) {
-    console.log(`  Selected "${value}" via ${clicked}`);
+    log.info(`  Selected "${value}" via ${clicked}`);
     await delay(400, 600);
     await page.keyboard.press("Escape").catch(() => {});
     await delay(300, 500);
@@ -120,7 +123,7 @@ export async function fillLabelCombobox(page: Page, labelText: string, value: st
         return false;
       }, value);
       if (clickedViaSearch) {
-        console.log(`  Selected "${value}" via search input`);
+        log.info(`  Selected "${value}" via search input`);
         await delay(300, 500);
         return true;
       }
@@ -138,18 +141,18 @@ export async function fillLabelCombobox(page: Page, labelText: string, value: st
       .slice(0, 15)
       .join(" | ");
   });
-  console.log(`  Listbox options for "${labelText}": ${visibleOptions}`);
+  log.info(`  Listbox options for "${labelText}": ${visibleOptions}`);
   await page.screenshot({ path: `/tmp/fb-dropdown-${labelText}.png` }).catch(() => {});
   await page.keyboard.press("Escape").catch(() => {});
   await delay(300, 400);
-  console.warn(`No option matched "${value}" for "${labelText}"`);
+  log.warn(`No option matched "${value}" for "${labelText}"`);
   return false;
 }
 
 export async function fillLocation(page: Page, location: string): Promise<void> {
   const input = page.locator('[aria-label="Местоположение"]').first();
   if (!await input.isVisible({ timeout: 3000 }).catch(() => false)) {
-    console.warn("Location field not visible");
+    log.warn("Location field not visible");
     return;
   }
   await input.click({ clickCount: 3 });
