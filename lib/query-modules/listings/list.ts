@@ -25,7 +25,7 @@ import {
   OWN_LISTING_SORT_COLUMNS,
   toListingFtsQuery,
 } from './list-filters';
-import { getWindowTotal, omitQueryFields, timedQuery } from '../query-utils';
+import { timedQuery } from '../query-utils';
 import { decodeListingCursor, encodeListingCursor } from '@/lib/listing-url';
 
 const ownListingFromClause = `
@@ -198,7 +198,6 @@ function getListingPage(
       .prepare(
         `
     SELECT
-      COUNT(*) OVER() as total_count,
       l.id, l.mobile_id, l.cars_id, l.title, l.make, l.model, l.reg_month, l.reg_year, l.mileage, l.fuel, l.body_type,
       l.vin, l.current_price, l.cars_price, l.price_change, l.vat, l.kaparo, l.ad_status, l.last_edit, l.carsbg_title, l.carsbg_created_date, l.carsbg_edited_date, l.views, l.cars_total_views, l.is_new,
       json_extract(l.thumb_keys, '$[0]') as first_thumb_key,
@@ -217,7 +216,7 @@ function getListingPage(
     LIMIT ? OFFSET ?
   `,
       )
-      .all(...queryParams, queryLimit, offset) as Array<ListingListRow & { total_count: number }>);
+      .all(...queryParams, queryLimit, offset) as ListingListRow[]);
 
   const countListings = () => {
     const { count } = timedQuery('listings.count', queryDetails, () => raw
@@ -234,15 +233,13 @@ function getListingPage(
     return count;
   };
 
-  const total = getWindowTotal(rows, page, countListings, 'total_count');
   const pageRows = rows.slice(0, limit);
   const hasNextPage = rows.length > limit;
-  const data = pageRows.map((row) => omitQueryFields(row, ['total_count']));
   const nextCursor = hasNextPage
     ? getListingCursor(pageRows[pageRows.length - 1], sort, order)
     : null;
 
-  return { data, total, page, limit, nextCursor };
+  return { data: pageRows, total: countListings(), page, limit, nextCursor };
 }
 
 export function getListings(filters: ListingFilters = {}) {
@@ -295,7 +292,6 @@ export function getOwnListings(filters: ListingFilters = {}) {
       `
     ${rankedBackupsCte}
     SELECT
-      COUNT(*) OVER() as total_count,
       ${ownListingSelectColumns}
     ${ownListingFromClause}
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
@@ -303,7 +299,7 @@ export function getOwnListings(filters: ListingFilters = {}) {
     LIMIT ? OFFSET ?
   `,
     )
-    .all(...params, limit, offset) as Array<OwnListingRow & { total_count: number }>;
+    .all(...params, limit, offset) as OwnListingRow[];
 
   const countOwnListings = () => {
     const { count } = raw
@@ -319,8 +315,5 @@ export function getOwnListings(filters: ListingFilters = {}) {
     return count;
   };
 
-  const total = getWindowTotal(rows, page, countOwnListings, 'total_count');
-  const data = rows.map((row) => omitQueryFields(row, ['total_count']));
-
-  return { data, total, page, limit };
+  return { data: rows, total: countOwnListings(), page, limit };
 }
