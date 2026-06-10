@@ -1,5 +1,6 @@
 import { createChildJobRoute } from '@/lib/api/child-stream';
 import { CRAWLEE_STORAGE_DIR } from '@/lib/storage-paths';
+import { requireAdmin } from '@/lib/api/auth-helpers';
 
 export const runtime = 'nodejs';
 
@@ -34,5 +35,14 @@ const route = createChildJobRoute({
   },
 });
 
-export const POST = route.POST;
-export const DELETE = route.DELETE;
+export async function POST(req: Request) {
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
+  return route.POST(req);
+}
+
+export async function DELETE() {
+  const check = await requireAdmin();
+  if ('error' in check) return check.error;
+  return route.DELETE();
+}

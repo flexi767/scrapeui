@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { raw } from '@/db/client';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireDealerScope } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { readJsonBody } from '@/lib/api/json-body';
 import { currentIsoTimestamp } from '@/lib/date-format';
@@ -63,17 +63,18 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
-  if (!backupExists(backupId)) {
+
+  const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+  if (!owner) {
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
+  const check = await requireDealerScope(owner.dealer_id);
+  if ('error' in check) return check.error;
 
   return NextResponse.json({ images: listImages(backupId).map(toPayload) });
 }
@@ -82,17 +83,18 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
-  if (!backupExists(backupId)) {
+
+  const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+  if (!owner) {
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
+  const check = await requireDealerScope(owner.dealer_id);
+  if ('error' in check) return check.error;
 
   const formData = await request.formData();
   const files = formData
@@ -148,17 +150,18 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
-  if (!backupExists(backupId)) {
+
+  const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+  if (!owner) {
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
+  const check = await requireDealerScope(owner.dealer_id);
+  if ('error' in check) return check.error;
 
   const payload = await readJsonBody<{ imageIds?: unknown }>(request);
   const imageIds = payload?.imageIds;

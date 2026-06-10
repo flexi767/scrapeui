@@ -2,6 +2,14 @@ import type Database from "better-sqlite3";
 
 type DbValue = string | number | null;
 
+const ALLOWED_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+function ident(name: string): string {
+  if (!ALLOWED_IDENTIFIER.test(name)) {
+    throw new Error(`Unsafe SQL identifier: ${name}`);
+  }
+  return name;
+}
+
 export function parseIntParam(rawValue: string): number | null {
   const id = Number.parseInt(rawValue, 10);
   return Number.isFinite(id) ? id : null;
@@ -21,7 +29,7 @@ export function collectMappedUpdates(
 
   for (const [bodyKey, dbColumn] of Object.entries(fieldMap)) {
     if (bodyKey in body) {
-      assignments.push(`${dbColumn} = ?`);
+      assignments.push(`${ident(dbColumn)} = ?`);
       values.push((body[bodyKey] ?? null) as DbValue);
     }
   }
@@ -42,14 +50,14 @@ export function runMappedUpdate(
 
   for (const [column, value] of Object.entries(extraAssignments)) {
     if (assignments.length > 0) {
-      assignments.push(`${column} = ?`);
+      assignments.push(`${ident(column)} = ?`);
       values.push(value);
     }
   }
 
   if (assignments.length === 0) return false;
 
-  db.prepare(`UPDATE ${table} SET ${assignments.join(", ")} WHERE ${idColumn} = ?`).run(
+  db.prepare(`UPDATE ${ident(table)} SET ${assignments.join(", ")} WHERE ${ident(idColumn)} = ?`).run(
     ...values,
     id,
   );
@@ -65,7 +73,7 @@ export function insertJoinRows(
   relatedIds: unknown,
 ) {
   if (!Array.isArray(relatedIds) || relatedIds.length === 0) return;
-  const insert = db.prepare(`INSERT INTO ${table} (${ownerColumn}, ${relatedColumn}) VALUES (?, ?)`);
+  const insert = db.prepare(`INSERT INTO ${ident(table)} (${ident(ownerColumn)}, ${ident(relatedColumn)}) VALUES (?, ?)`);
   for (const relatedId of relatedIds) {
     insert.run(ownerId, relatedId);
   }
@@ -96,9 +104,9 @@ export function replaceJoinRows(
 ) {
   if (!Array.isArray(relatedIds)) return;
 
-  db.prepare(`DELETE FROM ${table} WHERE ${ownerColumn} = ?`).run(ownerId);
+  db.prepare(`DELETE FROM ${ident(table)} WHERE ${ident(ownerColumn)} = ?`).run(ownerId);
   const insert = db.prepare(
-    `INSERT INTO ${table} (${ownerColumn}, ${relatedColumn}) VALUES (?, ?)`,
+    `INSERT INTO ${ident(table)} (${ident(ownerColumn)}, ${ident(relatedColumn)}) VALUES (?, ?)`,
   );
   for (const relatedId of relatedIds) {
     insert.run(ownerId, relatedId);
@@ -114,9 +122,9 @@ export function copyJoinRows(
   toOwnerId: number,
 ) {
   db.prepare(`
-    INSERT INTO ${table} (${ownerColumn}, ${relatedColumn})
-    SELECT ?, ${relatedColumn}
-    FROM ${table}
-    WHERE ${ownerColumn} = ?
+    INSERT INTO ${ident(table)} (${ident(ownerColumn)}, ${ident(relatedColumn)})
+    SELECT ?, ${ident(relatedColumn)}
+    FROM ${ident(table)}
+    WHERE ${ident(ownerColumn)} = ?
   `).run(toOwnerId, fromOwnerId);
 }

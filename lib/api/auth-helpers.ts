@@ -33,6 +33,15 @@ export function forbiddenResponse(message = 'Forbidden'): NextResponse {
   return NextResponse.json({ error: message }, { status: 403 });
 }
 
+export async function requireDealerScope(dealerId: number): Promise<AuthOk | AuthErr> {
+  const check = await requireAuth();
+  if ('error' in check) return check;
+  if (!canAccessDealer(check.session, dealerId)) {
+    return { error: forbiddenResponse() };
+  }
+  return check;
+}
+
 type PageAuthOk = { session: Session };
 type PageAuthErr = { redirect: string };
 

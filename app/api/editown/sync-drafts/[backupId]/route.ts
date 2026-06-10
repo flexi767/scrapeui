@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireDealerScope } from '@/lib/api/auth-helpers';
 import { getEditOwnSyncRows } from '@/lib/queries';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { currentIsoTimestamp } from '@/lib/date-format';
@@ -10,14 +10,18 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> }
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   try {
     const backupId = parsePositiveIntParam((await params).backupId);
     if (!backupId) {
       return NextResponse.json({ error: 'Invalid backup id' }, { status: 400 });
     }
+
+    const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+    if (!owner) {
+      return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
+    }
+    const check = await requireDealerScope(owner.dealer_id);
+    if ('error' in check) return check.error;
 
     const row = getEditOwnSyncRows().find((entry) => entry.backup_id === backupId);
     if (!row) {

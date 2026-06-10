@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireDealerScope } from '@/lib/api/auth-helpers';
 import { raw } from '@/db/client';
 import { normalizeVatValue } from '@/lib/vat';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
@@ -24,14 +24,18 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
     return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
   }
+
+  const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+  if (!owner) {
+    return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
+  }
+  const check = await requireDealerScope(owner.dealer_id);
+  if ('error' in check) return check.error;
 
   const row = raw
     .prepare(
@@ -55,15 +59,19 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   try {
     const { backupId: backupIdParam } = await params;
     const backupId = parsePositiveIntParam(backupIdParam);
     if (!backupId) {
       return NextResponse.json({ error: 'Invalid backup ID' }, { status: 400 });
     }
+
+    const owner = raw.prepare('SELECT dealer_id FROM mobilebg_backups WHERE id = ?').get(backupId) as { dealer_id: number } | undefined;
+    if (!owner) {
+      return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
+    }
+    const check = await requireDealerScope(owner.dealer_id);
+    if ('error' in check) return check.error;
 
     const payload = await readJsonBody<Record<string, unknown>>(request);
     if (!payload) {
@@ -203,9 +211,6 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ backupId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   if (!backupId) {
@@ -213,15 +218,18 @@ export async function DELETE(
   }
 
   const backup = raw.prepare(`
-    SELECT id, listing_id
+    SELECT id, listing_id, dealer_id
     FROM mobilebg_backups
     WHERE id = ?
     LIMIT 1
-  `).get(backupId) as { id: number; listing_id: string | null } | undefined;
+  `).get(backupId) as { id: number; listing_id: string | null; dealer_id: number } | undefined;
 
   if (!backup) {
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
+
+  const check = await requireDealerScope(backup.dealer_id);
+  if ('error' in check) return check.error;
 
   if (backup.listing_id) {
     return NextResponse.json(

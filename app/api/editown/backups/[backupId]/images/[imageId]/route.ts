@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { raw } from '@/db/client';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { requireDealerScope } from '@/lib/api/auth-helpers';
 import { parsePositiveIntParam } from '@/lib/api/db-helpers';
 import { refreshImageCount, normalizeImageOrder, STORAGE_IMAGE_ROOT } from '../image-helpers';
 
@@ -21,15 +21,21 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ backupId: string; imageId: string }> },
 ) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
-
   const { backupId: backupIdParam, imageId: imageIdParam } = await params;
   const backupId = parsePositiveIntParam(backupIdParam);
   const imageId = parsePositiveIntParam(imageIdParam);
   if (!backupId || !imageId) {
     return NextResponse.json({ error: 'Invalid image or backup ID' }, { status: 400 });
   }
+
+  const owner = raw.prepare(
+    'SELECT b.dealer_id FROM mobilebg_backup_images i JOIN mobilebg_backups b ON b.id = i.backup_id WHERE i.id = ? AND i.backup_id = ? LIMIT 1'
+  ).get(imageId, backupId) as { dealer_id: number } | undefined;
+  if (!owner) {
+    return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+  }
+  const check = await requireDealerScope(owner.dealer_id);
+  if ('error' in check) return check.error;
 
   const image = raw
     .prepare(

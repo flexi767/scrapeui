@@ -10,13 +10,14 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth: session, request }) {
-      const isLoggedIn = !!session?.user;
-      const isLoginPage = request.nextUrl.pathname === '/login';
-      const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth');
+      const { pathname } = request.nextUrl;
+      const isPublic =
+        /^\/login$/.test(pathname) ||
+        /^\/api\/auth(\/|$)/.test(pathname) ||
+        /^\/api\/public(\/|$)/.test(pathname);
 
-      if (isLoginPage || isApiAuth) return true;
-      if (!isLoggedIn) return false;
-      return true;
+      if (isPublic) return true;
+      return !!session?.user;
     },
     jwt({ token, user }) {
       if (user) {
