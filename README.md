@@ -83,3 +83,19 @@ COMFYUI_OUTPUT_NODE_ID=9
 ```
 
 Reference images are uploaded to ComfyUI with `/upload/image` before each generation. Keep OpenAI configured as a fallback while tuning the ComfyUI workflow; the UI already falls back to local canvas posters if the image API fails.
+
+## Architecture notes
+
+### ORM usage
+
+Drizzle is used as a schema definition and TypeScript type-generation layer only. Business-logic queries are hand-written SQL executed via the better-sqlite3 `raw` client. Do not expect ORM-level query-builder safety; always validate identifier and input parameters yourself before constructing SQL.
+
+### Single-node runtime constraint
+
+Scraper and automation jobs are spawned as in-process child processes with run-state held in memory (`lib/api/child-stream.ts`). The app runs as a single node and is **not safe for horizontal scaling**—job state and "already running" guards are per-process, and SQLite enforces single-writer constraints. To support multiple server instances, job state and job queue would need to move to the database, and long-running jobs would need to be decoupled into separate worker processes.
+
+### Required environment variables
+
+- **`CREDENTIALS_ENCRYPTION_KEY`** (64 hex chars, REQUIRED in production): Encrypts dealer third-party credentials at rest. Must be identical across all environments; if different values are used, decryption will fail and the app will not start.
+- **`ALLOW_DEV_LOGIN`** (required alongside `NODE_ENV=development`): Enables the `__dev_auto__` development-only login mode.
+- **Optional**: `LM_STUDIO_URL`, `OPENAI_API_KEY`, `OPENAI_FALLBACK_MODEL` (used by chat route for LLM fallback image generation)

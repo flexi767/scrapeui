@@ -353,6 +353,12 @@ sqlite3 /Users/v/dev/scraped/listings.db
 6. **Bracket routes in shell:** quote paths like `app/api/listings/[mobileId]/route.ts`
 7. **Session changes:** after login/logout, redirect to refresh session
 
+## Architecture Constraints
+
+1. **ORM is schema/types only**: Drizzle generates schema and TypeScript types. Business queries use hand-written SQL via `better-sqlite3` raw client. Validate identifiers and inputs yourself.
+2. **Single-node only**: Job state lives in memory (`lib/api/child-stream.ts`). Horizontal scaling not supported without moving job state to DB and decoupling workers.
+3. **Key env variables**: `CREDENTIALS_ENCRYPTION_KEY` (64 hex, REQUIRED, must match across environments), `ALLOW_DEV_LOGIN=1` (dev login), optional `LM_STUDIO_URL` / `OPENAI_API_KEY` / `OPENAI_FALLBACK_MODEL` (chat LLM fallback).
+
 ## Updating This File
 
 **Process:** When you discover a pattern, mistake, or best practice:
