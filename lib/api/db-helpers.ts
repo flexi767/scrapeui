@@ -3,7 +3,7 @@ import type Database from "better-sqlite3";
 type DbValue = string | number | null;
 
 const ALLOWED_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
-function ident(name: string): string {
+export function ident(name: string): string {
   if (!ALLOWED_IDENTIFIER.test(name)) {
     throw new Error(`Unsafe SQL identifier: ${name}`);
   }
