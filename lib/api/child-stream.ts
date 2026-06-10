@@ -1,6 +1,9 @@
 import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
 import { requireAuth } from '@/lib/api/auth-helpers';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('scrape');
 
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
@@ -126,6 +129,7 @@ export function createSseStreamResponse(
       });
 
       child.on('close', (code: number | null) => {
+        log.info('Child process closed', { code, script: scriptPath });
         state.clearIfDone(child);
         send({ type: options?.closeEventType ?? 'stream_closed', code });
         try {
@@ -136,6 +140,7 @@ export function createSseStreamResponse(
       });
 
       child.on('error', (err: Error) => {
+        log.error('Child process error', err.message);
         state.clearIfDone(child);
         send({ type: 'error', message: err.message });
         try {

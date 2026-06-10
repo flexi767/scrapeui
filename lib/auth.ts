@@ -43,9 +43,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // Dev auto-login: password "dev" + NODE_ENV=development → skip bcrypt
+        // Dev auto-login: NODE_ENV=development AND ALLOW_DEV_LOGIN=1 AND password "__dev_auto__" → skip bcrypt.
+        // Both env flags must be set; ALLOW_DEV_LOGIN=1 prevents a misconfigured NODE_ENV from enabling this alone.
         const isDev = process.env.NODE_ENV === 'development';
-        const isDevLogin = isDev && credentials?.password === '__dev_auto__';
+        const isDevLogin = isDev && process.env.ALLOW_DEV_LOGIN === '1' && credentials?.password === '__dev_auto__';
 
         if (!isDevLogin && (!credentials?.username || !credentials?.password))
           return null;

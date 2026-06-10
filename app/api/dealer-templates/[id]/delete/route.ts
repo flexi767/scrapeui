@@ -26,7 +26,8 @@ export async function POST(_request: Request, { params }: Params) {
   try {
     deleteDealerTemplateConfig(configId);
   } catch (e) {
-    return Response.json({ error: (e as Error).message }, { status: 409 });
+    console.error('[dealer-template delete]', e);
+    return Response.json({ error: 'Unable to delete template' }, { status: 409 });
   }
 
   return Response.json({ ok: true });

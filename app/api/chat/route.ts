@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
+import { logger } from '@/lib/logger';
+
+const log = logger.child('chat');
 
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL ?? 'http://localhost:1234/v1/chat/completions';
 const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL ?? 'gpt-4o';
@@ -93,6 +96,7 @@ export async function POST(req: NextRequest) {
       if (upstream.ok) return streamResponse(upstream);
 
       const fallbackErrorText = await upstream.text();
+      log.error('Fallback model request failed', { status: upstream.status, primaryModel: targetModel, fallbackModel: OPENAI_FALLBACK_MODEL });
       return new Response(
         JSON.stringify({
           error: fallbackErrorText,
@@ -107,6 +111,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    log.warn('Primary model request failed', { status: upstream.status, model: targetModel });
     return new Response(
       JSON.stringify({
         error: primaryErrorText,
