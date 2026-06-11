@@ -3,6 +3,9 @@ export async function register() {
     const { validateEnv } = await import('@/lib/env');
     validateEnv();
 
+    const { assertDbPerformanceHealth } = await import('@/lib/db-performance-health');
+    assertDbPerformanceHealth();
+
     const { markStaleCrawlRunsInterrupted } = await import('@/lib/query-modules/mobilebg');
     const n = markStaleCrawlRunsInterrupted();
     if (n > 0) {
