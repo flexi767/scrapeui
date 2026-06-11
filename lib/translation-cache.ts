@@ -1,29 +1,25 @@
+import { createTtlCache } from './ttl-cache';
+
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-interface CacheEntry {
-  messages: Record<string, Record<string, string>>;
-  setAt: number;
-}
+type TranslationMessages = Record<string, Record<string, string>>;
 
-const cache = new Map<string, CacheEntry>();
+const cache = createTtlCache<TranslationMessages | null>({
+  ttlMs: TTL_MS,
+  maxEntries: 16,
+});
 
 export function getCachedTranslations(
   locale: string,
-): Record<string, Record<string, string>> | null {
-  const entry = cache.get(locale);
-  if (!entry) return null;
-  if (performance.now() - entry.setAt > TTL_MS) {
-    cache.delete(locale);
-    return null;
-  }
-  return entry.messages;
+): TranslationMessages | null {
+  return cache.peek(locale) ?? null;
 }
 
 export function setCachedTranslations(
   locale: string,
-  messages: Record<string, Record<string, string>>,
+  messages: TranslationMessages,
 ): void {
-  cache.set(locale, { messages, setAt: performance.now() });
+  cache.set(locale, messages);
 }
 
 export function invalidateTranslationCache(): void {
