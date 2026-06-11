@@ -51,7 +51,7 @@ export default function MobileBgMakeModelSyncRunner() {
       });
 
       if (!res.ok || !res.body) {
-        toast.error(await readJsonError(res, 'Sync failed to start'));
+        toast.error(await readJsonError(res, t('sync_failed_to_start')));
         setRunning(false);
         return;
       }
@@ -62,21 +62,21 @@ export default function MobileBgMakeModelSyncRunner() {
         setLog((prev) => [...prev, entry]);
 
         if (entry.type === 'error') {
-          toast.error(entry.message || 'Sync failed');
+          toast.error(entry.message || t('sync_failed'));
         }
 
         if (entry.type === 'complete') {
           sawComplete = true;
           setCompleted(entry);
-          toast.success(`Sync completed: ${entry.makesProcessed ?? 0} makes, ${entry.modelsProcessed ?? 0} models`);
+          toast.success(t('sync_completed', { makes: entry.makesProcessed ?? 0, models: entry.modelsProcessed ?? 0 }));
         }
 
         if (entry.type === 'exit' && entry.code && !sawComplete) {
-          toast.error(`Sync exited with code ${entry.code}`);
+          toast.error(t('sync_exited_with_code', { code: entry.code }));
         }
       });
     } catch (error) {
-      toast.error(errorMessage(error, 'Sync failed'));
+      toast.error(errorMessage(error, t('sync_failed')));
     } finally {
       setRunning(false);
     }
@@ -129,8 +129,12 @@ export default function MobileBgMakeModelSyncRunner() {
 
       {completed && (
         <div className="rounded border border-emerald-700/60 bg-emerald-900/20 px-4 py-3 text-sm text-emerald-300">
-          Synced {completed.makesProcessed ?? 0} makes and {completed.modelsProcessed ?? 0} models.
-          {' '}Found {completed.makeCountsFound ?? 0} make counts and {completed.modelCountsFound ?? 0} model counts.
+          {t('sync_result_summary', {
+            makes: completed.makesProcessed ?? 0,
+            models: completed.modelsProcessed ?? 0,
+            makeCounts: completed.makeCountsFound ?? 0,
+            modelCounts: completed.modelCountsFound ?? 0,
+          })}
         </div>
       )}
 
@@ -153,7 +157,7 @@ export default function MobileBgMakeModelSyncRunner() {
                       </div>
                     </div>
                     <div className="mt-1 text-xs text-gray-400">
-                      {entry.modelsProcessed ?? 0} models, make count {entry.makeCount ?? '—'}, model counts found {entry.modelCountsFound ?? 0}
+                      {t('make_model_log_detail', { models: entry.modelsProcessed ?? 0, makeCount: entry.makeCount ?? '—', modelCounts: entry.modelCountsFound ?? 0 })}
                     </div>
                   </div>
                 );
@@ -167,7 +171,7 @@ export default function MobileBgMakeModelSyncRunner() {
 
               return (
                 <div key={`${entry.type}-${index}`} className={`rounded border border-gray-800 bg-gray-900/70 px-3 py-2 text-sm ${tone}`}>
-                  {entry.message || (entry.type === 'exit' ? `Process exited with code ${entry.code ?? 'unknown'}` : entry.type)}
+                  {entry.message || (entry.type === 'exit' ? t('process_exited_with_code', { code: entry.code ?? 'unknown' }) : entry.type)}
                 </div>
               );
             })}

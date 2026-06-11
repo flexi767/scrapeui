@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
   CheckboxField,
   FormSection,
@@ -23,11 +26,13 @@ export function PricingSection({
   form: FormState;
   setField: SetFormField;
 }) {
+  const t = useTranslations('ui');
+
   return (
     <FormSection>
       <div className="grid gap-4 xl:grid-cols-[80px_1.8fr_90px_100px_130px_110px]">
         <InputField
-          label="Цена"
+          label={t('price')}
           value={form.price}
           onChange={(value) => setField("price", value)}
           type="number"
@@ -35,7 +40,7 @@ export function PricingSection({
           accent
         />
         <SelectField
-          label="ДДС"
+          label={t('vat')}
           value={form.vat}
           onChange={(value) => setField("vat", value)}
           options={[
@@ -47,14 +52,14 @@ export function PricingSection({
           accent
         />
         <SelectField
-          label="Валута"
+          label={t('currency')}
           value={form.currency}
           onChange={(value) => setField("currency", value)}
           options={CURRENCY_OPTIONS}
           accent
         />
         <InputField
-          label="Пробег [км]"
+          label={t('mileage_km')}
           value={form.mileage}
           onChange={(value) => setField("mileage", value)}
           type="number"
@@ -62,14 +67,14 @@ export function PricingSection({
           accent
         />
         <SelectField
-          label="Месец"
+          label={t('month')}
           value={form.productionMonth}
           onChange={(value) => setField("productionMonth", value)}
           options={MONTH_OPTIONS}
           accent
         />
         <SelectField
-          label="Година"
+          label={t('year_label')}
           value={form.productionYear}
           onChange={(value) => setField("productionYear", value)}
           options={PRODUCTION_YEAR_OPTIONS}
@@ -78,7 +83,7 @@ export function PricingSection({
       </div>
       <div className="mt-3">
         <CheckboxField
-          label="Цена само при запитване"
+          label={t('price_on_request')}
           checked={form.priceOnRequest}
           onChange={(checked) => setField("priceOnRequest", checked)}
         />

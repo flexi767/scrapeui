@@ -75,7 +75,7 @@ export function TranslationEditor() {
       setError(
         translateError instanceof Error
           ? translateError.message
-          : 'Auto-translation failed',
+          : t('auto_translation_failed'),
       );
     } finally {
       setTranslatingKey(null);
@@ -120,13 +120,13 @@ export function TranslationEditor() {
       <table className="w-full border-collapse border border-gray-600">
         <thead>
           <tr className="bg-gray-800">
-            <th className="border border-gray-600 px-4 py-2 text-left">Key</th>
-            <th className="border border-gray-600 px-4 py-2 text-left">Context</th>
+            <th className="border border-gray-600 px-4 py-2 text-left">{t('translation_key')}</th>
+            <th className="border border-gray-600 px-4 py-2 text-left">{t('translation_context')}</th>
             <th className="border border-gray-600 px-4 py-2 text-left">BG</th>
             <th className="border border-gray-600 px-4 py-2 text-left">EN</th>
             <th className="border border-gray-600 px-4 py-2 text-left">DE</th>
             <th className="border border-gray-600 px-4 py-2 text-left">RU</th>
-            <th className="border border-gray-600 px-4 py-2 text-left">Auto</th>
+            <th className="border border-gray-600 px-4 py-2 text-left">{t('auto_translate')}</th>
           </tr>
         </thead>
         <tbody>

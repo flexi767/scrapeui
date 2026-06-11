@@ -1,4 +1,7 @@
+'use client';
+
 import type { Ref } from 'react';
+import { useTranslations } from 'next-intl';
 import { formatCount, formatPrice } from '@/lib/utils';
 import { ScrapeThumbnail } from '@/components/scrape-runner/ScrapeThumbnail';
 import type { ScrapeLogEntry } from '@/components/scrape-runner/types';
@@ -9,6 +12,7 @@ interface ScrapeLogPanelProps {
 }
 
 export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
+  const t = useTranslations('ui');
   if (log.length === 0) return null;
 
   return (
@@ -42,23 +46,23 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
                   <span className="font-semibold text-green-400">{formatPrice(entry.price)}</span>
                   {entry.views != null && (
                     <span className="text-gray-500">
-                      <span className="text-white">{formatCount(entry.views)}</span> views
+                      <span className="text-white">{formatCount(entry.views)}</span> {t('views')}
                     </span>
                   )}
                   {entry.newListing && (
-                    <span className="rounded-full bg-red-900/70 px-1.5 py-0.5 text-[10px] text-red-200">new</span>
+                    <span className="rounded-full bg-red-900/70 px-1.5 py-0.5 text-[10px] text-red-200">{t('new_badge')}</span>
                   )}
                   {entry.uniqueMatch && (
-                    <span className="rounded-full bg-emerald-900/70 px-1.5 py-0.5 text-[10px] text-emerald-200">unique</span>
+                    <span className="rounded-full bg-emerald-900/70 px-1.5 py-0.5 text-[10px] text-emerald-200">{t('unique_badge')}</span>
                   )}
                   {entry.syncNeeded && (
                     <span className="rounded-full bg-amber-900/70 px-1.5 py-0.5 text-[10px] text-amber-200">
-                      sync{entry.mobilePrice != null ? ` ${formatPrice(entry.mobilePrice)}` : ''}
+                      {t('syncing')}{entry.mobilePrice != null ? ` ${formatPrice(entry.mobilePrice)}` : ''}
                     </span>
                   )}
                   {!!entry.imageCount && (
                     <span className="text-gray-500">
-                      <span className="text-white">{entry.imageCount}</span> imgs
+                      <span className="text-white">{entry.imageCount}</span> {t('imgs')}
                     </span>
                   )}
                 </div>
@@ -70,7 +74,7 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
         if (entry.type === 'done') {
           return (
             <div key={i} className="py-1 font-mono text-xs text-green-400">
-              ✅ {entry.dealer}: {entry.count} listings scraped
+              ✅ {t('listings_scraped', { dealer: entry.dealer, count: entry.count })}
             </div>
           );
         }
@@ -78,7 +82,7 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
         if (entry.type === 'seeded') {
           return (
             <div key={i} className="py-1 font-mono text-xs text-blue-400">
-              💾 {entry.message || 'Data saved'}
+              💾 {entry.message || t('data_saved')}
             </div>
           );
         }

@@ -94,7 +94,7 @@ export function MobileBgSearchResultsTable({
   }
 
   function renderDealerName(row: MobileBgSearchResultRow) {
-    const fullLabel = row.dealer_name ?? 'Частно лице';
+    const fullLabel = row.dealer_name ?? t('private_seller');
     const shortLabel = truncateDealerLabel(fullLabel);
     if (row.dealer_url) {
       return (
@@ -112,8 +112,10 @@ export function MobileBgSearchResultsTable({
         {sourceMobileId && (
           <div className="mt-1 text-xs text-sky-200/90">
             {matchedPosition
-              ? `Source listing ${sourceMobileId} is at original position ${matchedPosition}${matchedSortedPosition ? ` and local price-sort position ${matchedSortedPosition}` : ''} on this results page`
-              : `Source listing ${sourceMobileId} is not on this results page`}
+              ? (matchedSortedPosition
+                  ? t('source_at_both_positions', { id: sourceMobileId, orig: matchedPosition, sorted: matchedSortedPosition })
+                  : t('source_at_orig_position', { id: sourceMobileId, orig: matchedPosition }))
+              : t('source_not_on_page', { id: sourceMobileId })}
           </div>
         )}
         {summaryText && (
@@ -123,13 +125,13 @@ export function MobileBgSearchResultsTable({
         )}
         <div className="mt-1 text-xs text-slate-200/60">
           {rows.length > 0
-            ? `Showing ${rows.length} result${rows.length === 1 ? '' : 's'} from the current mobile.bg search, displayed locally by effective price`
-            : 'No results returned for the current mobile.bg search'}
+            ? t('showing_results', { count: rows.length })
+            : t('no_mobilebg_results_found')}
         </div>
         <div className="mt-1 text-xs text-slate-200/60">
           {highestLoadedPage > page
-            ? `Pages ${page}-${highestLoadedPage}${totalPages ? ` of ${totalPages}` : ''}${hasNextPage ? ' • more pages available' : ''}`
-            : `Page ${page}${totalPages ? ` of ${totalPages}` : ''}${hasNextPage ? ' • more pages available' : ''}`}
+            ? `${t('pages_range', { from: page, to: highestLoadedPage })}${totalPages ? ` ${t('of_total_pages', { total: totalPages })}` : ''}${hasNextPage ? ` ${t('more_pages_available')}` : ''}`
+            : `${t('page_number', { page })}${totalPages ? ` ${t('of_total_pages', { total: totalPages })}` : ''}${hasNextPage ? ` ${t('more_pages_available')}` : ''}`}
         </div>
       </div>
 
@@ -274,7 +276,7 @@ export function MobileBgSearchResultsTable({
                 <td
                   className="px-3 py-1 text-center text-xs text-slate-200/80"
                   title={row.vat_status === 'excluded' && row.current_price != null
-                    ? `${getVatBadgeLabel(row.vat_status)} • sorts as ${formatPrice(getEffectiveSortPrice(row))}`
+                    ? `${getVatBadgeLabel(row.vat_status)} • ${t('sorts_as', { price: formatPrice(getEffectiveSortPrice(row)) })}`
                     : undefined}
                 >
                   <VatBadge vat={row.vat_status} />
