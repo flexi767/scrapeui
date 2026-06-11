@@ -287,9 +287,26 @@ export function getOwnListings(filters: ListingFilters = {}) {
   const sortDir = order === "asc" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 
-  const rows = raw
-    .prepare(
-      `
+  const queryDetails = {
+    sort,
+    order,
+    page,
+    limit,
+    filters: {
+      make: Boolean(filters.make),
+      model: Boolean(filters.model),
+      dealers: filters.dealerSlugs?.length ?? 0,
+      years: filters.years?.length ?? 0,
+      statuses: filters.statuses?.length ?? 0,
+      vat: filters.vatValues?.length ?? 0,
+      fuels: filters.fuels?.length ?? 0,
+      extras: filters.extras?.length ?? 0,
+    },
+  };
+
+  const rows = timedQuery('own-listings.page', queryDetails, () => raw
+      .prepare(
+        `
     ${rankedBackupsCte}
     SELECT
       ${ownListingSelectColumns}
@@ -298,20 +315,20 @@ export function getOwnListings(filters: ListingFilters = {}) {
     ORDER BY (l.id IS NULL) DESC, ${ownSortCol} ${sortDir}
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...params, limit, offset) as OwnListingRow[];
+      )
+      .all(...params, limit, offset) as OwnListingRow[]);
 
   const countOwnListings = () => {
-    const { count } = raw
-      .prepare(
-        `
+    const { count } = timedQuery('own-listings.count', queryDetails, () => raw
+        .prepare(
+          `
     ${rankedBackupsCte}
     SELECT COUNT(*) as count
     ${ownListingFromClause}
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
   `,
-      )
-      .get(...params) as { count: number };
+        )
+        .get(...params) as { count: number });
     return count;
   };
 

@@ -1,6 +1,6 @@
 import { raw } from '@/db/client';
 import { firstBackupImageIdExpr } from '../types';
-import { getWindowTotal, omitQueryFields } from '../query-utils';
+import { timedQuery } from '../query-utils';
 import {
   actualTrackedChangePredicate,
   buildTrackedChangesWhere,
@@ -62,15 +62,15 @@ export interface TrackedChangeWindow {
 }
 
 export function getTrackedChangeWindows(): TrackedChangeWindow[] {
-  const rows = raw
-    .prepare(
-      `
+  const rows = timedQuery('tracked-changes.windows', {}, () => raw
+      .prepare(
+        `
     SELECT recorded_at
     FROM listing_snapshots
     ORDER BY recorded_at DESC, id DESC
   `,
-    )
-    .all() as { recorded_at: string }[];
+      )
+      .all() as { recorded_at: string }[]);
 
   const windows: TrackedChangeWindow[] = [];
   const windowMs = 10 * 60 * 1000;
@@ -129,6 +129,19 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
   const limit = filters.limit ?? 50;
   const offset = (page - 1) * limit;
   const { where, params } = buildTrackedChangesWhere(filters);
+  const queryDetails = {
+    page,
+    limit,
+    filters: {
+      make: Boolean(filters.make),
+      model: Boolean(filters.model),
+      dealers: filters.dealerSlugs?.length ?? 0,
+      fields: filters.fields?.length ?? 0,
+      search: Boolean(filters.search),
+      whenStart: Boolean(filters.whenStart),
+      whenEnd: Boolean(filters.whenEnd),
+    },
+  };
 
   const baseFrom = `
     FROM listing_snapshots s
@@ -137,9 +150,9 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
     ${where}
   `;
 
-  const data = raw
-    .prepare(
-      `
+  const data = timedQuery('tracked-changes.page', queryDetails, () => raw
+      .prepare(
+        `
     WITH change_rows AS (
       SELECT
         s.id,
@@ -178,19 +191,19 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
         l.description as current_description
       ${baseFrom}
     )
-    SELECT change_rows.*, COUNT(*) OVER() as total_count
+    SELECT change_rows.*
     FROM change_rows
     WHERE ${actualTrackedChangePredicate}
     ORDER BY recorded_at DESC, id DESC
     LIMIT ? OFFSET ?
   `,
-    )
-    .all(...params, limit, offset) as Array<TrackedChangeRow & { total_count: number }>;
+      )
+      .all(...params, limit, offset) as TrackedChangeRow[]);
 
   const countTrackedChanges = () => {
-    const totalRow = raw
-      .prepare(
-        `
+    const totalRow = timedQuery('tracked-changes.count', queryDetails, () => raw
+        .prepare(
+          `
     WITH change_rows AS (
       SELECT
         s.price as snapshot_price,
@@ -208,14 +221,13 @@ export function getTrackedChanges(filters: TrackedChangesFilters = {}): {
     FROM change_rows
     WHERE ${actualTrackedChangePredicate}
   `,
-      )
-      .get(...params) as { count: number };
+        )
+        .get(...params) as { count: number });
     return totalRow.count;
   };
 
-  const total = getWindowTotal(data, page, countTrackedChanges, 'total_count');
   return {
-    data: data.map((row) => omitQueryFields(row, ['total_count'])),
-    total,
+    data,
+    total: countTrackedChanges(),
   };
 }
