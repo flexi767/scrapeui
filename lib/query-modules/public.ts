@@ -2,6 +2,7 @@ import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
 import { decodeListingCursor, encodeListingCursor } from "@/lib/listing-url";
 import { runInsert } from "@/lib/listings/sql";
+import { createTtlCache } from "@/lib/ttl-cache";
 import { timedQuery } from "./query-utils";
 import { notDuplicateLExpr } from "./types";
 
@@ -85,6 +86,18 @@ export interface PublicListingsResult {
   makes: string[];
 }
 
+// ── TTL caches ─────────────────────────────────────────────────────────────
+// Public dealer pages are force-dynamic but change only when a scrape runs.
+// A 60 s TTL reduces SQLite pressure under traffic spikes while keeping data
+// fresh enough for the app's scrape cadence. These caches are single-node /
+// in-process only (see CLAUDE.md).
+
+const dealerBySlugCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
+const dealerByDomainCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
+const publicListingsCache = createTtlCache<PublicListingsResult>({ ttlMs: 60_000, maxEntries: 500 });
+const publicListingCache = createTtlCache<PublicListingDetail | null>({ ttlMs: 60_000, maxEntries: 2000 });
+const relatedListingsCache = createTtlCache<PublicListing[]>({ ttlMs: 60_000, maxEntries: 1000 });
+
 // ── Allowed sort fields (whitelist) ────────────────────────────────────────
 
 const ALLOWED_SORT: Record<string, string> = {
@@ -157,17 +170,21 @@ function hydrateDealer(row: (PublicDealer & { publicContentRaw?: string | null }
 }
 
 export function getPublicDealer(slug: string): PublicDealer | null {
-  const row = raw
-    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
-    .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
-  return hydrateDealer(row);
+  return dealerBySlugCache.get(slug, () => {
+    const row = raw
+      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
+      .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+    return hydrateDealer(row);
+  });
 }
 
 export function getDealerByDomain(domain: string): PublicDealer | null {
-  const row = raw
-    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
-    .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
-  return hydrateDealer(row);
+  return dealerByDomainCache.get(domain, () => {
+    const row = raw
+      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
+      .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+    return hydrateDealer(row);
+  });
 }
 
 export interface DealerEnquiryInput {
@@ -195,9 +212,10 @@ export function getRelatedListings(
   limit = 6,
 ): PublicListing[] {
   if (!make) return [];
-  return raw
-    .prepare(
-      `SELECT
+  const key = `${dealerId}:${excludeMobileId}:${make}:${limit}`;
+  return relatedListingsCache.get(key, () => raw
+      .prepare(
+        `SELECT
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
         l.transmission, l.mileage, l.current_price as currentPrice,
@@ -214,74 +232,76 @@ export function getRelatedListings(
          AND ${notDuplicateLExpr}
        ORDER BY l.last_edit DESC
        LIMIT ?`,
-    )
-    .all(dealerId, make, excludeMobileId, limit) as PublicListing[];
+      )
+      .all(dealerId, make, excludeMobileId, limit) as PublicListing[]);
 }
 
 export function getPublicListings(
   dealerId: number,
   filters: PublicListingFilters = {},
 ): PublicListingsResult {
-  const {
-    make = "",
-    fuel = "",
-    yearFrom = "",
-    yearTo = "",
-    priceMin,
-    priceMax,
-    mileageMax,
-    sort = "newest",
-    page = 1,
-    limit = 24,
-    cursor,
-  } = filters;
+  const key = `${dealerId}:${JSON.stringify(filters)}`;
+  return publicListingsCache.get(key, () => {
+    const {
+      make = "",
+      fuel = "",
+      yearFrom = "",
+      yearTo = "",
+      priceMin,
+      priceMax,
+      mileageMax,
+      sort = "newest",
+      page = 1,
+      limit = 24,
+      cursor,
+    } = filters;
 
-  const wheres: string[] = [
-    "l.dealer_id = ?",
-    "l.is_active = 1",
-    notDuplicateLExpr,
-  ];
-  const params: (string | number)[] = [dealerId];
+    const wheres: string[] = [
+      "l.dealer_id = ?",
+      "l.is_active = 1",
+      notDuplicateLExpr,
+    ];
+    const params: (string | number)[] = [dealerId];
 
-  if (make) { wheres.push("l.make = ?"); params.push(make); }
-  if (fuel) { wheres.push("l.fuel = ?"); params.push(fuel); }
-  if (yearFrom) { wheres.push("CAST(l.reg_year AS INTEGER) >= ?"); params.push(parseInt(yearFrom, 10)); }
-  if (yearTo) { wheres.push("CAST(l.reg_year AS INTEGER) <= ?"); params.push(parseInt(yearTo, 10)); }
-  if (priceMin != null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
-  if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
-  if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
+    if (make) { wheres.push("l.make = ?"); params.push(make); }
+    if (fuel) { wheres.push("l.fuel = ?"); params.push(fuel); }
+    if (yearFrom) { wheres.push("CAST(l.reg_year AS INTEGER) >= ?"); params.push(parseInt(yearFrom, 10)); }
+    if (yearTo) { wheres.push("CAST(l.reg_year AS INTEGER) <= ?"); params.push(parseInt(yearTo, 10)); }
+    if (priceMin != null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
+    if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
+    if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
 
-  const countWhere = wheres.join(" AND ");
-  const countParams = [...params];
-  const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
-  const safePage = Math.max(1, page);
-  const safeLimit = Math.min(48, Math.max(1, limit));
-  const usesCursor = addPublicCursorFilter(wheres, params, sort, cursor);
-  const offset = usesCursor ? 0 : (safePage - 1) * safeLimit;
-  const queryLimit = safeLimit + 1;
+    const countWhere = wheres.join(" AND ");
+    const countParams = [...params];
+    const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(48, Math.max(1, limit));
+    const usesCursor = addPublicCursorFilter(wheres, params, sort, cursor);
+    const offset = usesCursor ? 0 : (safePage - 1) * safeLimit;
+    const queryLimit = safeLimit + 1;
 
-  const where = wheres.join(" AND ");
+    const where = wheres.join(" AND ");
 
-  const queryDetails = {
-    dealerId,
-    sort,
-    page: safePage,
-    limit: safeLimit,
-    filters: {
-      make: Boolean(make),
-      fuel: Boolean(fuel),
-      yearFrom: Boolean(yearFrom),
-      yearTo: Boolean(yearTo),
-      priceMin: priceMin != null,
-      priceMax: priceMax != null,
-      mileageMax: mileageMax != null,
-      cursor: usesCursor,
-    },
-  };
+    const queryDetails = {
+      dealerId,
+      sort,
+      page: safePage,
+      limit: safeLimit,
+      filters: {
+        make: Boolean(make),
+        fuel: Boolean(fuel),
+        yearFrom: Boolean(yearFrom),
+        yearTo: Boolean(yearTo),
+        priceMin: priceMin != null,
+        priceMax: priceMax != null,
+        mileageMax: mileageMax != null,
+        cursor: usesCursor,
+      },
+    };
 
-  const rows = timedQuery("public.listings.page", queryDetails, () => raw
-      .prepare(
-        `SELECT
+    const rows = timedQuery("public.listings.page", queryDetails, () => raw
+        .prepare(
+          `SELECT
         l.id,
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.fuel,
@@ -298,45 +318,47 @@ export function getPublicListings(
        WHERE ${where}
        ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`,
-      )
-      .all(...params, queryLimit, offset) as PublicListing[]);
+        )
+        .all(...params, queryLimit, offset) as PublicListing[]);
 
-  const countListings = () => {
-    const row = timedQuery("public.listings.count", queryDetails, () => raw
-        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${countWhere}`)
-        .get(...countParams) as { n: number });
-    return row.n;
-  };
+    const countListings = () => {
+      const row = timedQuery("public.listings.count", queryDetails, () => raw
+          .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${countWhere}`)
+          .get(...countParams) as { n: number });
+      return row.n;
+    };
 
-  // Available makes for filter dropdown
-  const makeRows = raw
-    .prepare(
-      `SELECT DISTINCT make FROM listings
+    const makeRows = raw
+      .prepare(
+        `SELECT DISTINCT make FROM listings
        WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
        ORDER BY make`,
-    )
-    .all(dealerId) as { make: string }[];
+      )
+      .all(dealerId) as { make: string }[];
 
-  const pageRows = rows.slice(0, safeLimit);
-  const hasNextPage = rows.length > safeLimit;
+    const pageRows = rows.slice(0, safeLimit);
+    const hasNextPage = rows.length > safeLimit;
 
-  return {
-    listings: pageRows,
-    total: countListings(),
-    page: safePage,
-    limit: safeLimit,
-    nextCursor: hasNextPage ? getPublicNextCursor(pageRows[pageRows.length - 1], sort) : null,
-    makes: makeRows.map((r) => r.make),
-  };
+    return {
+      listings: pageRows,
+      total: countListings(),
+      page: safePage,
+      limit: safeLimit,
+      nextCursor: hasNextPage ? getPublicNextCursor(pageRows[pageRows.length - 1], sort) : null,
+      makes: makeRows.map((r) => r.make),
+    };
+  });
 }
 
 export function getPublicListing(
   dealerId: number,
   mobileId: string,
 ): PublicListingDetail | null {
-  const row = raw
-    .prepare(
-      `SELECT
+  const key = `${dealerId}:${mobileId}`;
+  return publicListingCache.get(key, () => {
+    const row = raw
+      .prepare(
+        `SELECT
         l.mobile_id as mobileId,
         l.make, l.model, l.reg_year as regYear, l.reg_month as regMonth,
         l.fuel, l.transmission, l.mileage, l.current_price as currentPrice,
@@ -349,7 +371,8 @@ export function getPublicListing(
        FROM listings l
        WHERE l.dealer_id = ? AND l.mobile_id = ? AND l.is_active = 1
        LIMIT 1`,
-    )
-    .get(dealerId, mobileId) as PublicListingDetail | undefined;
-  return row ?? null;
+      )
+      .get(dealerId, mobileId) as PublicListingDetail | undefined;
+    return row ?? null;
+  });
 }

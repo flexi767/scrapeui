@@ -1,24 +1,17 @@
 import { raw } from '@/db/client';
 import { PLATFORM_ACCOUNT_COLUMNS, PLATFORM_URL_COLUMNS } from '@/lib/dealers/platformCredentials';
+import { createTtlCache } from '@/lib/ttl-cache';
 import { notDuplicateExpr, notDuplicateLExpr } from './types';
 
 const FACET_CACHE_TTL_MS = 30_000;
 
-interface CacheEntry<T> {
-  expiresAt: number;
-  value: T;
-}
-
-const facetCache = new Map<string, CacheEntry<unknown>>();
+const facetCache = createTtlCache<unknown>({
+  ttlMs: FACET_CACHE_TTL_MS,
+  maxEntries: 64,
+});
 
 function cachedFacet<T>(key: string, load: () => T): T {
-  const now = Date.now();
-  const cached = facetCache.get(key);
-  if (cached && cached.expiresAt > now) return cached.value as T;
-
-  const value = load();
-  facetCache.set(key, { value, expiresAt: now + FACET_CACHE_TTL_MS });
-  return value;
+  return facetCache.get(key, load) as T;
 }
 
 export interface MakeModel {

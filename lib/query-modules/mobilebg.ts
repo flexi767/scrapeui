@@ -251,6 +251,17 @@ export function getMobileBgEditFormById(
   return row ?? null;
 }
 
+export function markStaleCrawlRunsInterrupted(): number {
+  // Any run still 'running' is stale once the process restarts (job state is
+  // in-memory only, so a live run cannot survive a restart).
+  const res = raw
+    .prepare(
+      `UPDATE mobilebg_crawl_runs SET status = 'interrupted', finished_at = ? WHERE status = 'running'`,
+    )
+    .run(currentIsoTimestamp());
+  return res.changes;
+}
+
 export function getMobileBgRepostJobs(limit = 100): MobileBgRepostJobRow[] {
   return raw
     .prepare(
