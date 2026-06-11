@@ -27,10 +27,11 @@ interface Props {
   syncActive?: boolean;
 }
 
-export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], allExtras = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel = 'Sync', syncActive = false }: Props) {
+export default function FilterBar({ makes, makeModels, allDealers, allYears, allCategories = [], allFuels = [], allExtras = [], total, priceChangeRange, priceRange, basePath = '/listings', showPageLinks = true, syncHref, syncLabel, syncActive = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations('ui');
+  const effectiveSyncLabel = syncLabel ?? t('sync');
 
   const currentMake = searchParams.get('make') ?? '';
   const currentModel = searchParams.get('model') ?? '';
@@ -135,9 +136,9 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   }
 
   const VAT_OPTIONS = [
-    { value: 'included', label: 'има' },
-    { value: 'exempt', label: 'няма' },
-    { value: 'excluded', label: '+ДДС' },
+    { value: 'included', label: t('vat_included') },
+    { value: 'exempt', label: t('vat_exempt') },
+    { value: 'excluded', label: t('vat_excluded') },
     { value: 'null', label: '—' },
   ];
 
@@ -299,7 +300,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
                 : 'border-gray-700 text-gray-500 hover:text-gray-300'
             }`}
           >
-            {syncLabel}
+            {effectiveSyncLabel}
           </a>
         )}
         {showPageLinks && (

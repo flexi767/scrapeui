@@ -123,7 +123,7 @@ export default async function EditOwnPage({
               basePath="/editown"
               showPageLinks={false}
               syncHref={dirtyCount > 0 ? '/editown/sync?autorun=1' : '/editown/sync'}
-              syncLabel={dirtyCount > 0 ? `Sync (${dirtyCount})` : 'Sync'}
+              syncLabel={dirtyCount > 0 ? t('sync_with_count', { count: dirtyCount }) : t('sync')}
               syncActive={dirtyCount > 0}
             />
           </Suspense>

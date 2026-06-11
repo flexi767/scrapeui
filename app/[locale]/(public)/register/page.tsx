@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { slugifyDealerName } from '@/components/dealers/utils';
 import { apiRequest, errorMessage } from '@/lib/utils';
 
 export default function PublicRegisterPage() {
   const router = useRouter();
+  const t = useTranslations('ui');
 
   const [form, setForm] = useState({
     name: '',
@@ -39,17 +41,17 @@ export default function PublicRegisterPage() {
       !form.name.trim() || !form.slug.trim() ||
       !form.username.trim() || !form.password.trim() || !form.email.trim()
     ) {
-      toast.error('Name, slug, username, password and email are required');
+      toast.error(t('register_fields_required'));
       return;
     }
     setSaving(true);
     try {
-      const data = await apiRequest<{ id?: number }>('/api/dealers/self-register', 'Registration failed', {
+      const data = await apiRequest<{ id?: number }>('/api/dealers/self-register', t('registration_failed'), {
         method: 'POST',
         json: form,
       });
       if (!data.id) {
-        toast.error('Registration failed');
+        toast.error(t('registration_failed'));
         return;
       }
 
@@ -59,16 +61,16 @@ export default function PublicRegisterPage() {
         redirect: false,
       });
       if (signInResult?.error) {
-        toast.success('Account created — please log in');
+        toast.success(t('account_created_please_login'));
         router.push('/login');
         return;
       }
 
-      toast.success(`Welcome, ${form.name}!`);
+      toast.success(t('welcome_name', { name: form.name }));
       router.push('/dashboard');
       router.refresh();
     } catch (error) {
-      toast.error(errorMessage(error, 'Registration failed'));
+      toast.error(errorMessage(error, t('registration_failed')));
     } finally {
       setSaving(false);
     }
@@ -79,44 +81,44 @@ export default function PublicRegisterPage() {
       <header className="sticky top-0 z-20 border-b border-gray-700/60 bg-[#111827]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
           <Link href="/login" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
-            ← Login
+            {t('back_to_login')}
           </Link>
-          <span className="text-sm font-medium text-gray-400">Register as a dealer</span>
+          <span className="text-sm font-medium text-gray-400">{t('register_as_dealer')}</span>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-100 mb-6">Create your dealer account</h1>
+        <h1 className="text-xl font-semibold text-gray-100 mb-6">{t('create_dealer_account')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
-            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Dealer info</h2>
+            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">{t('dealer_info')}</h2>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Dealer / company name</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('dealer_company_name')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="M Motors"
+                placeholder={t('dealer_name_placeholder')}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Slug <span className="text-gray-500 text-xs">(used in public URLs)</span></label>
+              <label className="block text-sm text-gray-400 mb-1">{t('slug_label')} <span className="text-gray-500 text-xs">{t('slug_hint')}</span></label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500 font-mono"
                 value={form.slug}
                 onChange={(e) => { setSlugManual(true); set('slug', e.target.value); }}
-                placeholder="m-motors"
+                placeholder={t('slug_placeholder')}
                 pattern="[a-z0-9-]+"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Mobile.bg listing URL</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('mobilebg_listing_url')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.mobile_url}
@@ -134,11 +136,11 @@ export default function PublicRegisterPage() {
                   checked={form.own}
                   onChange={(e) => set('own', e.target.checked)}
                 />
-                This is my own listing inventory
+                {t('own_listing_inventory')}
               </label>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Priority</label>
+                <label className="text-sm text-gray-400">{t('priority_label')}</label>
                 <input
                   type="number"
                   className="w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
@@ -151,10 +153,10 @@ export default function PublicRegisterPage() {
           </section>
 
           <section className="bg-gray-800 rounded-lg border border-gray-700 p-5 space-y-4">
-            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Account</h2>
+            <h2 className="text-sm font-medium text-gray-300 uppercase tracking-wide">{t('account_section')}</h2>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Username</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('username_label')}</label>
               <input
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.username}
@@ -164,7 +166,7 @@ export default function PublicRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Password <span className="text-gray-500 text-xs">(min. 6 characters)</span></label>
+              <label className="block text-sm text-gray-400 mb-1">{t('password_label')} <span className="text-gray-500 text-xs">{t('password_hint')}</span></label>
               <input
                 type="password"
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
@@ -176,13 +178,13 @@ export default function PublicRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Email</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('email_label')}</label>
               <input
                 type="email"
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                 value={form.email}
                 onChange={(e) => set('email', e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('email_placeholder')}
                 required
               />
             </div>
@@ -193,7 +195,7 @@ export default function PublicRegisterPage() {
             disabled={saving}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded px-4 py-2.5 transition-colors"
           >
-            {saving ? 'Creating account…' : 'Create account'}
+            {saving ? t('creating_account') : t('create_account')}
           </button>
         </form>
       </main>

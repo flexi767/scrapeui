@@ -93,9 +93,9 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-400">
-          New dealer?{' '}
+          {t('new_dealer_question')}{' '}
           <Link href="/register" className="text-blue-400 hover:text-blue-300 underline">
-            Register as a dealer
+            {t('register_as_dealer_link')}
           </Link>
         </p>
       </div>

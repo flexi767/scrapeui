@@ -133,12 +133,12 @@ export default function CarsBgSyncRunner({ dealers }: Props) {
         if (event.message) appendLog({ kind: 'status', message: event.message });
         if (liveRunRef.current) {
           if (event.failedUpdates + event.failedCreates + event.failedDeletes === 0) {
-            toast.success(`Cars.bg sync finished: ${event.updated} updated, ${event.created} created, ${event.deleted} deleted`);
+            toast.success(t('carsbg_sync_finished', { updated: event.updated, created: event.created, deleted: event.deleted }));
           } else {
             toast.error(t('carsbg_sync_finished_with_failures'));
           }
         } else {
-          toast.success(`Cars.bg plan ready: ${event.missing} missing, ${event.diffs} diffs, ${event.stale} stale`);
+          toast.success(t('carsbg_plan_ready', { missing: event.missing, diffs: event.diffs, stale: event.stale }));
         }
       }
     },

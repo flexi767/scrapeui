@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { listingCursorHref, listingPageHref } from '@/lib/listing-url';
 
 interface Props {
@@ -20,6 +23,7 @@ function getPageWindow(page: number, totalPages: number): number[] {
 }
 
 export function ListingsPagination({ page, totalPages, nextCursor, cursorActive = false, currentParams, basePath }: Props) {
+  const t = useTranslations('ui');
   if (totalPages <= 1 && !nextCursor) return null;
   if (cursorActive) {
     return (
@@ -28,14 +32,14 @@ export function ListingsPagination({ page, totalPages, nextCursor, cursorActive 
           href={listingPageHref(basePath, currentParams, 1)}
           className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
         >
-          First
+          {t('first')}
         </Link>
         {nextCursor && (
           <Link
             href={listingCursorHref(basePath, currentParams, nextCursor)}
             className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
           >
-            Next
+            {t('next')}
           </Link>
         )}
       </div>
@@ -54,7 +58,7 @@ export function ListingsPagination({ page, totalPages, nextCursor, cursorActive 
           href={listingPageHref(basePath, currentParams, page - 1)}
           className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
         >
-          Prev
+          {t('prev')}
         </Link>
       )}
       {pageNumbers[0] > 1 && (
@@ -102,7 +106,7 @@ export function ListingsPagination({ page, totalPages, nextCursor, cursorActive 
           href={nextHref}
           className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
         >
-          Next
+          {t('next')}
         </Link>
       )}
     </div>

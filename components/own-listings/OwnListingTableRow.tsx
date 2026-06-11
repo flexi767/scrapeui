@@ -24,6 +24,7 @@ interface OwnListingTableRowProps {
   /** True when this row's edit was started by clicking the status cell. */
   adStatusAutoOpen: boolean;
   onStartEdit: (row: OwnListingRow, openAdStatus?: boolean) => void;
+  onStartPriceEdit: (row: OwnListingRow) => void;
   onEditFormChange: (form: OwnListingEditForm) => void;
   onSave: (options?: {
     closeAfterSave?: boolean;
@@ -48,6 +49,7 @@ export function OwnListingTableRow({
   publishingToFb,
   adStatusAutoOpen,
   onStartEdit,
+  onStartPriceEdit,
   onEditFormChange,
   onSave,
   onDebouncedPriceSave,
@@ -142,6 +144,7 @@ export function OwnListingTableRow({
         onEditFormChange={onEditFormChange}
         onEditorKeyDown={onEditorKeyDown}
         onSave={onSave}
+        onStartPriceEdit={onStartPriceEdit}
       />
 
       <td className="px-2 py-1.5 text-center">
@@ -192,9 +195,9 @@ export function OwnListingTableRow({
             className="h-8 bg-gray-700 border border-gray-500 rounded px-1 text-white text-sm"
           >
             <option value="">—</option>
-            <option value="included">има</option>
-            <option value="exempt">няма</option>
-            <option value="excluded">+ДДС</option>
+            <option value="included">{t('vat_included')}</option>
+            <option value="exempt">{t('vat_exempt')}</option>
+            <option value="excluded">{t('vat_excluded')}</option>
           </select>
         ) : (
           <VatBadge vat={row.vat} />

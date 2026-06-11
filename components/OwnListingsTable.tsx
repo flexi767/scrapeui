@@ -54,9 +54,23 @@ export default function OwnListingsTable({ initialRows }: Props) {
     setAdStatusAutoOpen(openAdStatus);
   }
 
+  function startPriceEdit(row: OwnListingRow) {
+    if (saving) return;
+    clearPriceSaveTimeout();
+    const nextForm = {
+      ...getEditFormFromOwnListing(row),
+      current_price: Math.max(0, (row.current_price ?? 0) - 100),
+    };
+    setEditForm(nextForm);
+    setEditingKey(getOwnListingRowKey(row));
+    setAdStatusAutoOpen(false);
+    debouncedPriceSave(nextForm, row);
+  }
+
   async function handleSave(options?: {
     closeAfterSave?: boolean;
     formSnapshot?: typeof editForm;
+    rowSnapshot?: OwnListingRow;
   }) {
     clearPriceSaveTimeout();
     const formToSave = options?.formSnapshot ?? editForm;
@@ -68,7 +82,9 @@ export default function OwnListingsTable({ initialRows }: Props) {
 
     setSaving(true);
     try {
-      const editingRow = rows.find((row) => getOwnListingRowKey(row) === editingKey);
+      const editingRow =
+        options?.rowSnapshot ??
+        rows.find((row) => getOwnListingRowKey(row) === editingKey);
       if (!editingRow) {
         toast.error(t('no_listing_being_edited'));
         return;
@@ -117,12 +133,13 @@ export default function OwnListingsTable({ initialRows }: Props) {
     }
   }
 
-  function debouncedPriceSave(nextForm: OwnListingEditForm) {
+  function debouncedPriceSave(nextForm: OwnListingEditForm, rowSnapshot?: OwnListingRow) {
     clearPriceSaveTimeout();
     priceSaveTimeoutRef.current = window.setTimeout(() => {
       void handleSave({
         closeAfterSave: true,
         formSnapshot: nextForm,
+        rowSnapshot,
       });
     }, 1000);
   }
@@ -217,6 +234,7 @@ export default function OwnListingsTable({ initialRows }: Props) {
                 syncing={Boolean(syncingIds[row.backup_id])}
                 publishingToFb={Boolean(publishingToFbIds[row.backup_id])}
                 onStartEdit={startEdit}
+                onStartPriceEdit={startPriceEdit}
                 onEditFormChange={setEditForm}
                 onSave={(options) => void handleSave(options)}
                 onDebouncedPriceSave={debouncedPriceSave}

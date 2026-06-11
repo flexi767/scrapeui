@@ -35,32 +35,6 @@ interface Dealer {
   priority: number;
 }
 
-function formatDate(dateString: string | null): string {
-  if (!dateString) return 'Never';
-  try {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-}
-
 export function Dashboard() {
   const { data: session, status: sessionStatus } = useSession();
   const t = useTranslations('ui');
@@ -69,6 +43,32 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = session?.user?.role === 'admin';
+
+  function formatDate(dateString: string | null): string {
+    if (!dateString) return t('never');
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return t('just_now');
+      if (diffMins < 60) return t('minutes_ago', { n: diffMins });
+      if (diffHours < 24) return t('hours_ago', { n: diffHours });
+      if (diffDays < 7) return t('days_ago', { n: diffDays });
+
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  }
 
   const navigationLinks = [
     { href: '/listings', label: t('listings'), icon: CarFront, description: t('browse_all_car_listings') },
@@ -280,7 +280,7 @@ export function Dashboard() {
                 >
                   {/* Hover gradient background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 transition-all duration-200 group-hover:from-blue-500/5 group-hover:to-purple-500/5" />
-                  
+
                   <div className="relative space-y-3">
                     <div className="flex items-center justify-between">
                       <Icon className="h-6 w-6 text-gray-400 transition-colors group-hover:text-blue-400" />

@@ -6,6 +6,7 @@ import { getListingByMobileId, getSnapshots } from '@/lib/queries';
 import { currentIsoTimestamp, formatDateOnly } from '@/lib/date-format';
 import { formatCount, formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
+import { VatBadge } from '@/components/listings/VatBadge';
 
 interface Props {
   params: Promise<{ mobileId: string }>;
@@ -98,15 +99,7 @@ export default async function PriceHistoryPage({ params }: Props) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {snap.vat === 'included' ? (
-                          <span className="rounded-full bg-blue-900/70 px-2 py-0.5 text-[11px] text-blue-200">има</span>
-                        ) : snap.vat === 'exempt' ? (
-                          <span className="rounded-full bg-green-900/70 px-2 py-0.5 text-[11px] text-green-200">няма</span>
-                        ) : snap.vat === 'excluded' ? (
-                          <span className="rounded-full bg-red-900/70 px-2 py-0.5 text-[11px] text-red-200">+ДДС</span>
-                        ) : (
-                          <span className="text-gray-600">—</span>
-                        )}
+                        <VatBadge vat={snap.vat} />
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-gray-400">
                         {snap.last_edit ? formatDate(snap.last_edit) : <span className="text-gray-600">—</span>}

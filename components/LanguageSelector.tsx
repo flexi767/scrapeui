@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { setCookie } from '@/lib/translation-utils';
@@ -26,6 +27,7 @@ function isLocale(value: string): value is Locale {
 }
 
 export function LanguageSelector() {
+  const t = useTranslations('ui');
   const locale = useLocale();
   const currentLocale = isLocale(locale) ? locale : 'bg';
   const pathname = usePathname();
@@ -66,7 +68,7 @@ export function LanguageSelector() {
         className="inline-flex h-7 w-8 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-[12px] leading-none text-gray-100 hover:bg-gray-800"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Language: ${LOCALE_NAMES[currentLocale]}`}
+        aria-label={t('language_label', { name: LOCALE_NAMES[currentLocale] })}
         title={LOCALE_NAMES[currentLocale]}
       >
         <span aria-hidden="true">{LOCALE_FLAGS[currentLocale]}</span>
