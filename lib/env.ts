@@ -11,6 +11,12 @@ const schema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
 
+  DB_PATH: z.string().optional(),
+
+  ALLOW_DEV_LOGIN: z.string().optional(),
+
+  SLOW_QUERY_MS: z.coerce.number().int().nonnegative().optional(),
+
   CREDENTIALS_ENCRYPTION_KEY: z
     .string()
     .optional()

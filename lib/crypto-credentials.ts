@@ -12,12 +12,13 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { env } from '@/lib/env';
 
 const ALGORITHM = 'aes-256-gcm';
 const PREFIX = 'enc:v1:';
 
 function getKey(): Buffer {
-  const raw = process.env.CREDENTIALS_ENCRYPTION_KEY;
+  const raw = env.CREDENTIALS_ENCRYPTION_KEY;
   if (!raw || raw.trim().length !== 64) {
     throw new Error(
       'CREDENTIALS_ENCRYPTION_KEY must be set to a 64-hex-character string (32 bytes). ' +

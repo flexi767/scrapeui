@@ -1,6 +1,7 @@
 import path from 'path';
+import { env } from '@/lib/env';
 
-export const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), '../scraped/listings.db');
+export const DB_PATH = env.DB_PATH ?? path.join(process.cwd(), '../scraped/listings.db');
 
 export const SCRAPED_ROOT = path.dirname(DB_PATH);
 export const CARIMG_DIR = path.join(SCRAPED_ROOT, 'carimg');

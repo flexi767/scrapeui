@@ -1,3 +1,5 @@
+import { env } from '@/lib/env';
+
 export function omitQueryFields<T extends object, K extends keyof T>(
   row: T,
   fields: readonly K[],
@@ -30,7 +32,7 @@ export function timedQuery<T>(
     return run();
   } finally {
     const elapsedMs = performance.now() - startedAt;
-    const thresholdMs = Number(process.env.SLOW_QUERY_MS ?? DEFAULT_SLOW_QUERY_MS);
+    const thresholdMs = env.SLOW_QUERY_MS ?? DEFAULT_SLOW_QUERY_MS;
     if (Number.isFinite(thresholdMs) && elapsedMs >= thresholdMs) {
       console.warn(`[slow-query] ${label}`, {
         elapsedMs: Math.round(elapsedMs),

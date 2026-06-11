@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { raw } from '@/db/client';
 import { getUserPageKeys } from '@/lib/page-permissions';
 import { authConfig } from './auth.config';
+import { env } from '@/lib/env';
 
 declare module 'next-auth' {
   interface User {
@@ -45,8 +46,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         // Dev auto-login: NODE_ENV=development AND ALLOW_DEV_LOGIN=1 AND password "__dev_auto__" → skip bcrypt.
         // Both env flags must be set; ALLOW_DEV_LOGIN=1 prevents a misconfigured NODE_ENV from enabling this alone.
-        const isDev = process.env.NODE_ENV === 'development';
-        const isDevLogin = isDev && process.env.ALLOW_DEV_LOGIN === '1' && credentials?.password === '__dev_auto__';
+        const isDev = env.NODE_ENV === 'development';
+        const isDevLogin = isDev && env.ALLOW_DEV_LOGIN === '1' && credentials?.password === '__dev_auto__';
 
         if (!isDevLogin && (!credentials?.username || !credentials?.password))
           return null;
