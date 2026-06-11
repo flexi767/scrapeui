@@ -4,6 +4,10 @@ import bcrypt from 'bcryptjs';
 import { raw } from '@/db/client';
 import { getUserPageKeys } from '@/lib/page-permissions';
 import { authConfig } from './auth.config';
+import { rateLimit } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
+
+const authLog = logger.child('auth');
 
 declare module 'next-auth' {
   interface User {
@@ -70,6 +74,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user) return null;
 
         if (!isDevLogin) {
+          // Failed-attempt throttle: 10 real password attempts per 15 minutes per username.
+          const username = (credentials!.username as string).toLowerCase();
+          const rl = rateLimit(`login:${username}`, { limit: 10, windowMs: 15 * 60 * 1000 });
+          if (!rl.allowed) {
+            authLog.warn('login throttled', { username });
+            return null;
+          }
+
           const valid = await bcrypt.compare(
             credentials!.password as string,
             user.password_hash,

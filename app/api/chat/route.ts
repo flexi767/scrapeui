@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-helpers';
 import { logger } from '@/lib/logger';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 const log = logger.child('chat');
 
@@ -37,6 +38,19 @@ function streamResponse(upstream: Response): Response {
 export async function POST(req: NextRequest) {
   const check = await requireAuth();
   if ('error' in check) return check.error;
+
+  // Rate limit: 30 requests per minute, keyed by authenticated user id (falls back to IP).
+  const rlKey = `chat:${check.session.user.id ?? clientIp(req)}`;
+  const rl = rateLimit(rlKey, { limit: 30, windowMs: 60 * 1000 });
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(rl.retryAfterSec),
+      },
+    });
+  }
 
   const { messages, model } = await req.json();
 

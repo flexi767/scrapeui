@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { readJsonBody } from "@/lib/api/json-body";
 import { getPublicDealer, createDealerEnquiry } from "@/lib/queries";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,18 @@ function str(value: unknown, max: number): string | null {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 enquiries per 10 minutes per IP.
+  const rl = rateLimit(`enquiry:${clientIp(req)}`, { limit: 5, windowMs: 10 * 60 * 1000 });
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(rl.retryAfterSec),
+      },
+    });
+  }
+
   const body = await readJsonBody<EnquiryBody>(req, {});
   const slug = str(body?.slug, 200);
   const name = str(body?.name, 120);
