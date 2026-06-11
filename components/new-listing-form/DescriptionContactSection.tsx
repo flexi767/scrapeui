@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
   FieldLabel,
   FormSection,
@@ -17,11 +20,13 @@ export function DescriptionContactSection({
   form: FormState;
   setField: SetFormField;
 }) {
+  const t = useTranslations('ui');
+
   return (
-    <FormSection title="Описание И Контакт">
+    <FormSection title={t('description_contact')}>
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <FieldLabel>Допълнителна информация</FieldLabel>
+          <FieldLabel>{t('additional_info')}</FieldLabel>
           <textarea
             value={form.description}
             onChange={(event) => setField("description", event.target.value)}
@@ -33,32 +38,32 @@ export function DescriptionContactSection({
 
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
           <h3 className="mb-4 text-sm font-semibold text-white">
-            Данни за обратна връзка
+            {t('contact_info')}
           </h3>
           <div className="space-y-4">
             <InputField
-              label="Мобилен телефон"
+              label={t('mobile_phone')}
               value={form.phone}
               onChange={(value) => setField("phone", value)}
               maxLength={14}
               accent
             />
             <InputField
-              label="Електронна поща"
+              label={t('email')}
               value={form.email}
               onChange={(value) => setField("email", value)}
               maxLength={40}
               accent
             />
             <InputField
-              label="http://"
+              label={t('website')}
               value={form.website}
               onChange={(value) => setField("website", value)}
               maxLength={40}
             />
           </div>
           <p className="mt-6 text-xs text-sky-300">
-            Оцветените в синьо полета са задължителни в Mobile.bg.
+            {t('mobile_bg_required_fields')}
           </p>
         </div>
       </div>

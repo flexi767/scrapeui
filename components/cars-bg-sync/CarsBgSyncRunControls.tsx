@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 interface CarsBgSyncRunControlsProps {
   running: boolean;
   stopping: boolean;
@@ -13,6 +17,8 @@ export function CarsBgSyncRunControls({
   onPreview,
   onRunLive,
 }: CarsBgSyncRunControlsProps) {
+  const t = useTranslations('ui');
+
   return (
     <div className="flex flex-wrap items-center gap-4">
       <button
@@ -28,7 +34,7 @@ export function CarsBgSyncRunControls({
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         )}
-        {stopping ? 'Stopping…' : running ? 'Stop' : 'Preview plan'}
+        {stopping ? t('stopping') : running ? t('stop') : t('preview_plan')}
       </button>
 
       <button
@@ -36,12 +42,12 @@ export function CarsBgSyncRunControls({
         disabled={running}
         className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Run live
+        {t('run_live')}
       </button>
 
       {currentDealer && (
         <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">
-          <div className="text-[11px] uppercase tracking-wide text-sky-300/70">Current dealer</div>
+          <div className="text-[11px] uppercase tracking-wide text-sky-300/70">{t('current_dealer')}</div>
           <div className="mt-1 truncate">{currentDealer}</div>
         </div>
       )}

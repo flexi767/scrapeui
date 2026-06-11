@@ -1,4 +1,7 @@
+'use client';
+
 import type { Ref } from 'react';
+import { useTranslations } from 'next-intl';
 import type { CarsBgSyncLogEntry } from '@/components/cars-bg-sync/types';
 
 interface CarsBgSyncLogPanelProps {
@@ -7,12 +10,14 @@ interface CarsBgSyncLogPanelProps {
 }
 
 export function CarsBgSyncLogPanel({ logs, logRef }: CarsBgSyncLogPanelProps) {
+  const t = useTranslations('ui');
+
   return (
     <div className="rounded-xl border border-gray-700/60 bg-gray-900/40">
-      <div className="border-b border-gray-700/60 px-4 py-3 text-sm font-medium text-gray-200">Live log</div>
+      <div className="border-b border-gray-700/60 px-4 py-3 text-sm font-medium text-gray-200">{t('live_log')}</div>
       <div ref={logRef} className="max-h-[420px] overflow-y-auto px-4 py-3 font-mono text-xs leading-6">
         {logs.length === 0 ? (
-          <div className="text-gray-500">No output yet.</div>
+          <div className="text-gray-500">{t('no_output_yet')}</div>
         ) : (
           logs.map((entry, index) => (
             <div

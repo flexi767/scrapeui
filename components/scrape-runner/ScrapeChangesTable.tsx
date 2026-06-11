@@ -1,4 +1,7 @@
+'use client';
+
 import type { Ref } from 'react';
+import { useTranslations } from 'next-intl';
 import { formatPrice } from '@/lib/utils';
 import { ScrapeThumbnail } from '@/components/scrape-runner/ScrapeThumbnail';
 import type { ScrapeLogEntry } from '@/components/scrape-runner/types';
@@ -9,20 +12,22 @@ interface ScrapeChangesTableProps {
 }
 
 export function ScrapeChangesTable({ changes, changesRef }: ScrapeChangesTableProps) {
+  const t = useTranslations('ui');
+
   if (changes.length === 0) return null;
 
   return (
     <div ref={changesRef} className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900/70">
-      <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Detected changes</div>
+      <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">{t('detected_changes')}</div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-700 bg-gray-800/60 text-xs uppercase tracking-wider text-gray-400">
-            <th className="px-4 py-2 text-left">Listing</th>
-            <th className="px-4 py-2 text-left">Price</th>
-            <th className="px-4 py-2 text-left">VAT</th>
-            <th className="px-4 py-2 text-left">Views</th>
-            <th className="px-4 py-2 text-left">Paid</th>
-            <th className="px-4 py-2 text-left">Other</th>
+            <th className="px-4 py-2 text-left">{t('listing')}</th>
+            <th className="px-4 py-2 text-left">{t('price')}</th>
+            <th className="px-4 py-2 text-left">{t('vat')}</th>
+            <th className="px-4 py-2 text-left">{t('views')}</th>
+            <th className="px-4 py-2 text-left">{t('paid')}</th>
+            <th className="px-4 py-2 text-left">{t('other')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800">
@@ -76,7 +81,7 @@ export function ScrapeChangesTable({ changes, changesRef }: ScrapeChangesTablePr
                 {entry.adStatusChanged ? `${entry.oldStatus ?? '—'} → ${entry.newStatus ?? '—'}` : <span className="text-gray-600">—</span>}
               </td>
               <td className="px-4 py-2 text-sm text-gray-300">
-                {[entry.kaparoChanged && 'капаро', entry.titleChanged && 'title', entry.descriptionChanged && 'description'].filter(Boolean).join(', ') || '—'}
+                {[entry.kaparoChanged && t('к'), entry.titleChanged && t('title'), entry.descriptionChanged && t('description')].filter(Boolean).join(', ') || '—'}
               </td>
             </tr>
           ))}

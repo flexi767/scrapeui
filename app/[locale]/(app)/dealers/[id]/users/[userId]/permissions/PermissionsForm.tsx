@@ -3,23 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { apiRequest, errorMessage } from '@/lib/utils';
 import { PAGE_KEYS, type PageKey } from '@/lib/page-keys';
-
-const PAGE_LABELS: Record<PageKey, string> = {
-  listings: 'Listings',
-  editown: 'Edit Own',
-  mobilebg: 'Mobile.bg',
-  tasks: 'Tasks',
-  expenses: 'Expenses',
-  templates: 'Templates',
-  translations: 'Translations',
-  config: 'Config',
-  mapping: 'Mapping',
-  kb: 'Knowledge Base',
-  files: 'Files',
-  dealers: 'Dealers',
-};
 
 export function PermissionsForm({
   userId,
@@ -30,9 +16,25 @@ export function PermissionsForm({
   username: string;
   initialGrantedPageKeys: string[];
 }) {
+  const t = useTranslations('ui');
   const router = useRouter();
   const [granted, setGranted] = useState<Set<string>>(new Set(initialGrantedPageKeys));
   const [saving, setSaving] = useState(false);
+
+  const PAGE_LABELS: Record<PageKey, string> = {
+    listings: t('page_listings'),
+    editown: t('page_editown'),
+    mobilebg: t('page_mobilebg'),
+    tasks: t('page_tasks'),
+    expenses: t('page_expenses'),
+    templates: t('page_templates'),
+    translations: t('page_translations'),
+    config: t('page_config'),
+    mapping: t('page_mapping'),
+    kb: t('page_kb'),
+    files: t('page_files'),
+    dealers: t('page_dealers'),
+  };
 
   function toggle(key: PageKey) {
     setGranted((prev) => {
@@ -49,7 +51,7 @@ export function PermissionsForm({
         method: 'PUT',
         json: { pageKeys: Array.from(granted) },
       });
-      toast.success(`Permissions updated for ${username}`);
+      toast.success(t('permissions_updated_for', { username }));
       router.refresh();
     } catch (error) {
       toast.error(errorMessage(error, 'Failed to save permissions'));
@@ -62,7 +64,7 @@ export function PermissionsForm({
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-gray-300 opacity-60">
         <input type="checkbox" checked readOnly className="rounded border-gray-600" />
-        Dashboard <span className="text-xs text-gray-500">(always visible)</span>
+        {t('dashboard_always_visible')}
       </div>
 
       {PAGE_KEYS.map((key) => (
@@ -83,7 +85,7 @@ export function PermissionsForm({
         disabled={saving}
         className="bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded px-4 py-2 transition-colors"
       >
-        {saving ? 'Saving…' : 'Save permissions'}
+        {saving ? t('saving') : t('save_permissions')}
       </button>
     </div>
   );

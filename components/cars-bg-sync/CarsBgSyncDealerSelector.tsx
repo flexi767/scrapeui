@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { DealerRow } from '@/lib/queries';
 
 interface CarsBgSyncDealerSelectorProps {
@@ -17,14 +20,14 @@ export function CarsBgSyncDealerSelector({
   onToggleDealer,
   onToggleAll,
 }: CarsBgSyncDealerSelectorProps) {
+  const t = useTranslations('ui');
+
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-gray-200">Dealers</div>
-          <div className="mt-1 text-xs text-gray-500">
-            Select one or more own dealers for preview or live sync.
-          </div>
+          <div className="text-sm font-medium text-gray-200">{t('dealers')}</div>
+          <div className="mt-1 text-xs text-gray-500">{t('select_dealers_desc')}</div>
         </div>
         <button
           type="button"
@@ -32,7 +35,7 @@ export function CarsBgSyncDealerSelector({
           onClick={onToggleAll}
           className="rounded-md border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {allSelected ? 'Clear all' : 'Select all'}
+          {allSelected ? t('clear_all') : t('select_all')}
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">

@@ -1,10 +1,13 @@
+'use client';
+
+import { useTranslations } from "next-intl";
 import type { SavedSearchSummary } from "@/lib/mobile-bg/saved-searches";
 
-function formatYear(search: SavedSearchSummary) {
+function formatYear(search: SavedSearchSummary, yearFromLabel: string, yearToLabel: string) {
   if (search.yearFrom && search.yearTo)
     return `${search.yearFrom} - ${search.yearTo}`;
-  if (search.yearFrom) return `from ${search.yearFrom}`;
-  if (search.yearTo) return `to ${search.yearTo}`;
+  if (search.yearFrom) return `${yearFromLabel} ${search.yearFrom}`;
+  if (search.yearTo) return `${yearToLabel} ${search.yearTo}`;
   if (search.regYear) return search.regYear;
   return "—";
 }
@@ -18,6 +21,7 @@ function SavedSearchListRow({
   active: boolean;
   onSelect: (id: number) => void;
 }) {
+  const t = useTranslations('ui');
   const title =
     [search.make, search.model].filter(Boolean).join(" ") ||
     search.title ||
@@ -35,11 +39,11 @@ function SavedSearchListRow({
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-white">{title}</div>
           <div className="truncate text-xs text-gray-400">
-            Year: {formatYear(search)}
+            {t('year_label')}: {formatYear(search, t('year_from'), t('year_to'))}
           </div>
           {search.mobileId ? (
             <div className="mt-1 truncate text-[11px] text-gray-500">
-              Entry: {search.title || "—"} • {search.mobileId}
+              {t('entry_label')}: {search.title || "—"} • {search.mobileId}
             </div>
           ) : null}
         </div>
@@ -58,16 +62,18 @@ export function SavedSearchList({
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
+  const t = useTranslations('ui');
+
   return (
     <section className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/70">
       <div className="border-b border-gray-700 px-4 py-3">
-        <div className="text-sm font-medium text-gray-200">Saved searches</div>
-        <div className="text-xs text-gray-500">{searches.length} total</div>
+        <div className="text-sm font-medium text-gray-200">{t('saved_searches')}</div>
+        <div className="text-xs text-gray-500">{t('total_count', { count: searches.length })}</div>
       </div>
       <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
         {searches.length === 0 ? (
           <div className="px-4 py-8 text-sm text-gray-500">
-            No saved searches yet.
+            {t('no_saved_searches')}
           </div>
         ) : (
           <div className="divide-y divide-gray-800">

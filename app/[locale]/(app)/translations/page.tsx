@@ -1,6 +1,7 @@
 
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { TranslationEditor } from './TranslationEditor';
 
 export default async function TranslationsPage() {
@@ -11,9 +12,11 @@ export default async function TranslationsPage() {
     redirect('/');
   }
 
+  const t = await getTranslations('ui');
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
-      <h1 className="text-3xl font-bold mb-8">Manage Translations</h1>
+      <h1 className="text-3xl font-bold mb-8">{t('manage_translations')}</h1>
       <TranslationEditor />
     </div>
   );
