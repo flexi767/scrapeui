@@ -1,8 +1,34 @@
 import { raw } from "@/db/client";
 import { currentIsoTimestamp } from "@/lib/date-format";
 import { runInsert } from "@/lib/listings/sql";
+import { createTtlCache } from "@/lib/ttl-cache";
 import { getWindowTotal, omitQueryFields } from "./query-utils";
 import { notDuplicateLExpr } from "./types";
+
+// ── TTL caches ─────────────────────────────────────────────────────────────
+// Public dealer pages are force-dynamic but change only when a scrape runs
+// (typically every few minutes to hours). A 60 s TTL is an acceptable
+// staleness trade-off: it dramatically reduces SQLite pressure under traffic
+// spikes while keeping data fresh enough for any scrape cadence.
+// These caches are single-node / in-process only (see CLAUDE.md).
+
+/** Low-cardinality: one entry per dealer slug. */
+const dealerBySlugCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
+
+/** Low-cardinality: one entry per custom public domain. */
+const dealerByDomainCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
+
+/**
+ * Higher-cardinality: keyed by dealerId + serialised filter bag.
+ * Bounded at 500 so extreme filter combinations can't grow the heap unboundedly.
+ */
+const publicListingsCache = createTtlCache<PublicListingsResult>({ ttlMs: 60_000, maxEntries: 500 });
+
+/** Per-listing detail pages: one entry per (dealerId, mobileId) pair. */
+const publicListingCache = createTtlCache<PublicListingDetail | null>({ ttlMs: 60_000, maxEntries: 2000 });
+
+/** Related listings sidebar: one entry per (dealerId, excludeMobileId, make, limit) tuple. */
+const relatedListingsCache = createTtlCache<PublicListing[]>({ ttlMs: 60_000, maxEntries: 1000 });
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -114,17 +140,23 @@ function hydrateDealer(row: (PublicDealer & { publicContentRaw?: string | null }
 }
 
 export function getPublicDealer(slug: string): PublicDealer | null {
-  const row = raw
-    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
-    .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
-  return hydrateDealer(row);
+  // Cache key: slug. TTL 60 s, max 200 entries.
+  return dealerBySlugCache.get(slug, () => {
+    const row = raw
+      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
+      .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+    return hydrateDealer(row);
+  });
 }
 
 export function getDealerByDomain(domain: string): PublicDealer | null {
-  const row = raw
-    .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
-    .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
-  return hydrateDealer(row);
+  // Cache key: domain. TTL 60 s, max 200 entries.
+  return dealerByDomainCache.get(domain, () => {
+    const row = raw
+      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
+      .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
+    return hydrateDealer(row);
+  });
 }
 
 export interface DealerEnquiryInput {
@@ -152,128 +184,142 @@ export function getRelatedListings(
   limit = 6,
 ): PublicListing[] {
   if (!make) return [];
-  return raw
-    .prepare(
-      `SELECT
-        l.mobile_id as mobileId,
-        l.make, l.model, l.reg_year as regYear, l.fuel,
-        l.transmission, l.mileage, l.current_price as currentPrice,
-        l.image_count as imageCount, l.thumb_keys as thumbKeys,
-        l.full_keys as fullKeys, l.image_meta as imageMeta,
-        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
-        l.is_new as isNew, l.body_type as bodyType
-       FROM listings l
-       WHERE l.dealer_id = ? AND l.is_active = 1 AND l.make = ?
-         AND l.mobile_id != ?
-         AND ${notDuplicateLExpr}
-       ORDER BY l.last_edit DESC
-       LIMIT ?`,
-    )
-    .all(dealerId, make, excludeMobileId, limit) as PublicListing[];
+  // Cache key: (dealerId, excludeMobileId, make, limit). TTL 60 s, max 1000 entries.
+  const key = `${dealerId}:${excludeMobileId}:${make}:${limit}`;
+  return relatedListingsCache.get(key, () =>
+    raw
+      .prepare(
+        `SELECT
+          l.mobile_id as mobileId,
+          l.make, l.model, l.reg_year as regYear, l.fuel,
+          l.transmission, l.mileage, l.current_price as currentPrice,
+          l.image_count as imageCount, l.thumb_keys as thumbKeys,
+          l.full_keys as fullKeys, l.image_meta as imageMeta,
+          l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+          l.is_new as isNew, l.body_type as bodyType
+         FROM listings l
+         WHERE l.dealer_id = ? AND l.is_active = 1 AND l.make = ?
+           AND l.mobile_id != ?
+           AND ${notDuplicateLExpr}
+         ORDER BY l.last_edit DESC
+         LIMIT ?`,
+      )
+      .all(dealerId, make, excludeMobileId, limit) as PublicListing[],
+  );
 }
 
 export function getPublicListings(
   dealerId: number,
   filters: PublicListingFilters = {},
 ): PublicListingsResult {
-  const {
-    make = "",
-    fuel = "",
-    yearFrom = "",
-    yearTo = "",
-    priceMin,
-    priceMax,
-    mileageMax,
-    sort = "newest",
-    page = 1,
-    limit = 24,
-  } = filters;
+  // Cache key: dealerId + stable serialisation of the resolved filter bag.
+  // TTL 60 s, max 500 entries. Public listings change only on scrape runs;
+  // up to ~60 s of staleness is acceptable.
+  const key = `${dealerId}:${JSON.stringify(filters)}`;
+  return publicListingsCache.get(key, () => {
+    const {
+      make = "",
+      fuel = "",
+      yearFrom = "",
+      yearTo = "",
+      priceMin,
+      priceMax,
+      mileageMax,
+      sort = "newest",
+      page = 1,
+      limit = 24,
+    } = filters;
 
-  const wheres: string[] = [
-    "l.dealer_id = ?",
-    "l.is_active = 1",
-    notDuplicateLExpr,
-  ];
-  const params: (string | number)[] = [dealerId];
+    const wheres: string[] = [
+      "l.dealer_id = ?",
+      "l.is_active = 1",
+      notDuplicateLExpr,
+    ];
+    const params: (string | number)[] = [dealerId];
 
-  if (make) { wheres.push("l.make = ?"); params.push(make); }
-  if (fuel) { wheres.push("l.fuel = ?"); params.push(fuel); }
-  if (yearFrom) { wheres.push("CAST(l.reg_year AS INTEGER) >= ?"); params.push(parseInt(yearFrom, 10)); }
-  if (yearTo) { wheres.push("CAST(l.reg_year AS INTEGER) <= ?"); params.push(parseInt(yearTo, 10)); }
-  if (priceMin != null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
-  if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
-  if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
+    if (make) { wheres.push("l.make = ?"); params.push(make); }
+    if (fuel) { wheres.push("l.fuel = ?"); params.push(fuel); }
+    if (yearFrom) { wheres.push("CAST(l.reg_year AS INTEGER) >= ?"); params.push(parseInt(yearFrom, 10)); }
+    if (yearTo) { wheres.push("CAST(l.reg_year AS INTEGER) <= ?"); params.push(parseInt(yearTo, 10)); }
+    if (priceMin != null) { wheres.push("l.current_price >= ?"); params.push(priceMin); }
+    if (priceMax != null) { wheres.push("l.current_price <= ?"); params.push(priceMax); }
+    if (mileageMax != null) { wheres.push("l.mileage <= ?"); params.push(mileageMax); }
 
-  const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
-  const safePage = Math.max(1, page);
-  const safeLimit = Math.min(48, Math.max(1, limit));
-  const offset = (safePage - 1) * safeLimit;
+    const orderBy = ALLOWED_SORT[sort] ?? ALLOWED_SORT.newest;
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(48, Math.max(1, limit));
+    const offset = (safePage - 1) * safeLimit;
 
-  const where = wheres.join(" AND ");
+    const where = wheres.join(" AND ");
 
-  const rows = raw
-    .prepare(
-      `SELECT
-        COUNT(*) OVER() as totalCount,
-        l.mobile_id as mobileId,
-        l.make, l.model, l.reg_year as regYear, l.fuel,
-        l.transmission, l.mileage, l.current_price as currentPrice,
-        l.image_count as imageCount, l.thumb_keys as thumbKeys,
-        l.full_keys as fullKeys, l.image_meta as imageMeta,
-        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
-        l.is_new as isNew, l.body_type as bodyType
-       FROM listings l
-       WHERE ${where}
-       ORDER BY ${orderBy}
-       LIMIT ? OFFSET ?`,
-    )
-    .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>;
+    const rows = raw
+      .prepare(
+        `SELECT
+          COUNT(*) OVER() as totalCount,
+          l.mobile_id as mobileId,
+          l.make, l.model, l.reg_year as regYear, l.fuel,
+          l.transmission, l.mileage, l.current_price as currentPrice,
+          l.image_count as imageCount, l.thumb_keys as thumbKeys,
+          l.full_keys as fullKeys, l.image_meta as imageMeta,
+          l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+          l.is_new as isNew, l.body_type as bodyType
+         FROM listings l
+         WHERE ${where}
+         ORDER BY ${orderBy}
+         LIMIT ? OFFSET ?`,
+      )
+      .all(...params, safeLimit, offset) as Array<PublicListing & { totalCount: number }>;
 
-  const countListings = () => {
-    const row = raw
-      .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
-      .get(...params) as { n: number };
-    return row.n;
-  };
+    const countListings = () => {
+      const row = raw
+        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${where}`)
+        .get(...params) as { n: number };
+      return row.n;
+    };
 
-  // Available makes for filter dropdown
-  const makeRows = raw
-    .prepare(
-      `SELECT DISTINCT make FROM listings
-       WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
-       ORDER BY make`,
-    )
-    .all(dealerId) as { make: string }[];
+    // Available makes for filter dropdown
+    const makeRows = raw
+      .prepare(
+        `SELECT DISTINCT make FROM listings
+         WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
+         ORDER BY make`,
+      )
+      .all(dealerId) as { make: string }[];
 
-  return {
-    listings: rows.map((row) => omitQueryFields(row, ['totalCount'])),
-    total: getWindowTotal(rows, safePage, countListings, 'totalCount'),
-    page: safePage,
-    limit: safeLimit,
-    makes: makeRows.map((r) => r.make),
-  };
+    return {
+      listings: rows.map((row) => omitQueryFields(row, ['totalCount'])),
+      total: getWindowTotal(rows, safePage, countListings, 'totalCount'),
+      page: safePage,
+      limit: safeLimit,
+      makes: makeRows.map((r) => r.make),
+    };
+  });
 }
 
 export function getPublicListing(
   dealerId: number,
   mobileId: string,
 ): PublicListingDetail | null {
-  const row = raw
-    .prepare(
-      `SELECT
-        l.mobile_id as mobileId,
-        l.make, l.model, l.reg_year as regYear, l.reg_month as regMonth,
-        l.fuel, l.transmission, l.mileage, l.current_price as currentPrice,
-        l.image_count as imageCount, l.thumb_keys as thumbKeys,
-        l.full_keys as fullKeys, l.image_meta as imageMeta,
-        l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
-        l.is_new as isNew, l.body_type as bodyType,
-        l.power, l.color, l.vin, l.euronorm,
-        l.description, l.extras_json as extrasJson
-       FROM listings l
-       WHERE l.dealer_id = ? AND l.mobile_id = ? AND l.is_active = 1
-       LIMIT 1`,
-    )
-    .get(dealerId, mobileId) as PublicListingDetail | undefined;
-  return row ?? null;
+  // Cache key: (dealerId, mobileId). TTL 60 s, max 2000 entries.
+  const key = `${dealerId}:${mobileId}`;
+  return publicListingCache.get(key, () => {
+    const row = raw
+      .prepare(
+        `SELECT
+          l.mobile_id as mobileId,
+          l.make, l.model, l.reg_year as regYear, l.reg_month as regMonth,
+          l.fuel, l.transmission, l.mileage, l.current_price as currentPrice,
+          l.image_count as imageCount, l.thumb_keys as thumbKeys,
+          l.full_keys as fullKeys, l.image_meta as imageMeta,
+          l.images_downloaded as imagesDownloaded, l.thumb_saved as thumbSaved,
+          l.is_new as isNew, l.body_type as bodyType,
+          l.power, l.color, l.vin, l.euronorm,
+          l.description, l.extras_json as extrasJson
+         FROM listings l
+         WHERE l.dealer_id = ? AND l.mobile_id = ? AND l.is_active = 1
+         LIMIT 1`,
+      )
+      .get(dealerId, mobileId) as PublicListingDetail | undefined;
+    return row ?? null;
+  });
 }
