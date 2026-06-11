@@ -25,20 +25,20 @@ interface SearchParams {
   page?: string;
 }
 
-const FIELD_OPTIONS = [
-  { value: 'price', label: 'Price' },
-  { value: 'vat', label: 'VAT' },
-  { value: 'last_edit', label: 'Last Edit' },
-  { value: 'views', label: 'Views' },
-  { value: 'ad_status', label: 'Paid' },
-  { value: 'kaparo', label: 'К' },
-  { value: 'title', label: 'Title' },
-  { value: 'description', label: 'Description' },
-];
+const FIELD_OPTION_VALUES = [
+  { value: 'price', labelKey: 'price' },
+  { value: 'vat', labelKey: 'vat' },
+  { value: 'last_edit', labelKey: 'last_edit' },
+  { value: 'views', labelKey: 'views' },
+  { value: 'ad_status', labelKey: 'paid' },
+  { value: 'kaparo', labelKey: 'к' },
+  { value: 'title', labelKey: 'title' },
+  { value: 'description', labelKey: 'description' },
+] as const;
 
-const DEFAULT_FIELD_VALUES = FIELD_OPTIONS
-  .map((field) => field.value)
-  .filter((value) => value !== 'views');
+const DEFAULT_FIELD_VALUES = FIELD_OPTION_VALUES
+  .map((f) => f.value)
+  .filter((v) => v !== 'views');
 
 function toArray(value: string | string[] | undefined): string[] {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -58,23 +58,25 @@ function isRealTitleChange(change: TrackedChangeRow) {
   return !targetTitle.endsWith(snapshotTitle);
 }
 
-function changedFields(change: TrackedChangeRow) {
-  const result: string[] = [];
-  if (change.snapshot_price != null && change.snapshot_price !== change.target_price) result.push('Price');
-  if (change.snapshot_vat != null && change.snapshot_vat !== change.target_vat) result.push('VAT');
-  if (change.snapshot_last_edit != null && change.snapshot_last_edit !== change.target_last_edit) result.push('Last Edit');
-  if (change.snapshot_views != null && change.snapshot_views !== change.target_views) {
-    result.push(change.source === 'c' ? 'Cars.bg views' : 'Views');
-  }
-  if (change.snapshot_ad_status != null && change.snapshot_ad_status !== change.target_ad_status) result.push('Paid');
-  if (change.snapshot_kaparo != null && change.snapshot_kaparo !== change.target_kaparo) result.push('К');
-  if (isRealTitleChange(change)) result.push('Title');
-  if (change.snapshot_description && change.snapshot_description !== change.target_description) result.push('Description');
+function changedFields(change: TrackedChangeRow, labels: Record<string, string>) {
+  const result: { display: string; urlValue: string }[] = [];
+  if (change.snapshot_price != null && change.snapshot_price !== change.target_price)
+    result.push({ display: labels.price, urlValue: 'price' });
+  if (change.snapshot_vat != null && change.snapshot_vat !== change.target_vat)
+    result.push({ display: labels.vat, urlValue: 'vat' });
+  if (change.snapshot_last_edit != null && change.snapshot_last_edit !== change.target_last_edit)
+    result.push({ display: labels.last_edit, urlValue: 'last_edit' });
+  if (change.snapshot_views != null && change.snapshot_views !== change.target_views)
+    result.push({ display: change.source === 'c' ? labels.cars_bg_views : labels.views, urlValue: 'views' });
+  if (change.snapshot_ad_status != null && change.snapshot_ad_status !== change.target_ad_status)
+    result.push({ display: labels.paid, urlValue: 'ad_status' });
+  if (change.snapshot_kaparo != null && change.snapshot_kaparo !== change.target_kaparo)
+    result.push({ display: labels.к, urlValue: 'kaparo' });
+  if (isRealTitleChange(change))
+    result.push({ display: labels.title, urlValue: 'title' });
+  if (change.snapshot_description && change.snapshot_description !== change.target_description)
+    result.push({ display: labels.description, urlValue: 'description' });
   return result;
-}
-
-function getViewsLabel(change: TrackedChangeRow) {
-  return change.source === 'c' ? 'Cars.bg views' : 'Views';
 }
 
 function formatWhenOption(value: string, count: number) {
@@ -126,6 +128,23 @@ export default async function ListingsChangesPage({
   const makes = Object.keys(makeModels).sort();
   const allDealers = getAllDealers();
   const totalPages = Math.ceil(total / 50);
+
+  const fieldLabels = {
+    price: t('price'),
+    vat: t('vat'),
+    last_edit: t('last_edit'),
+    views: t('views'),
+    cars_bg_views: t('cars_bg_views'),
+    paid: t('paid'),
+    к: t('к'),
+    title: t('title'),
+    description: t('description'),
+  };
+
+  const FIELD_OPTIONS = FIELD_OPTION_VALUES.map((f) => ({
+    value: f.value,
+    label: fieldLabels[f.labelKey as keyof typeof fieldLabels] ?? f.labelKey,
+  }));
 
   const currentParams = new URLSearchParams();
   if (make) currentParams.set('make', make);
@@ -184,7 +203,7 @@ export default async function ListingsChangesPage({
                 const thumb = getListingThumbSrc(row);
                 const thumbAlt = getListingThumbAlt(row);
                 const listingSlug = row.mobile_id || row.cars_id || String(row.listing_id);
-                const fields = changedFields(row);
+                const rowFields = changedFields(row, fieldLabels);
 
                 return (
                   <tr key={row.id} className="group transition-colors hover:bg-gray-800/40 align-top">
@@ -225,13 +244,13 @@ export default async function ListingsChangesPage({
 
                     <td className="px-3 py-1.5">
                       <div className="flex flex-wrap gap-1.5">
-                        {fields.map((label) => (
+                        {rowFields.map(({ display, urlValue }) => (
                           <Link
-                            key={label}
-                            href={`/listings/changes?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([key]) => key !== 'field' && key !== 'page'), ['field', label === 'Last Edit' ? 'last_edit' : label === 'Paid' ? 'ad_status' : label === 'К' ? 'kaparo' : label.toLowerCase()]]).toString()}`}
+                            key={urlValue}
+                            href={`/listings/changes?${new URLSearchParams([...Array.from(currentParams.entries()).filter(([key]) => key !== 'field' && key !== 'page'), ['field', urlValue]]).toString()}`}
                             className="rounded-full bg-gray-800 px-2 py-0.5 text-[11px] text-gray-300 hover:text-white"
                           >
-                            {label}
+                            {display}
                           </Link>
                         ))}
                       </div>
@@ -239,14 +258,14 @@ export default async function ListingsChangesPage({
 
                     <td className="px-3 py-1.5 text-xs text-gray-300">
                       <div className="space-y-1">
-                        {row.snapshot_price != null && row.snapshot_price !== row.target_price ? <div>Price: {formatPrice(row.snapshot_price)} → {formatPrice(row.target_price)}</div> : null}
-                        {row.snapshot_vat != null && row.snapshot_vat !== row.target_vat ? <div>VAT: {row.snapshot_vat || '—'} → {row.target_vat || '—'}</div> : null}
-                        {row.snapshot_last_edit != null && row.snapshot_last_edit !== row.target_last_edit ? <div>Last Edit: {formatDate(row.snapshot_last_edit)} → {formatDate(row.target_last_edit)}</div> : null}
-                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{getViewsLabel(row)}: {formatCount(row.snapshot_views)} → {formatCount(row.target_views ?? 0)}</div> : null}
-                        {row.snapshot_ad_status != null && row.snapshot_ad_status !== row.target_ad_status ? <div>Paid: {row.snapshot_ad_status} → {row.target_ad_status || 'none'}</div> : null}
-                        {row.snapshot_kaparo != null && row.snapshot_kaparo !== row.target_kaparo ? <div>К: {row.snapshot_kaparo ? 'yes' : 'no'} → {row.target_kaparo ? 'yes' : 'no'}</div> : null}
-                        {isRealTitleChange(row) ? <div className="line-clamp-2">Title: {row.snapshot_title} → {row.target_title || '—'}</div> : null}
-                        {row.snapshot_description && row.snapshot_description !== row.target_description ? <div className="line-clamp-3 whitespace-pre-wrap text-gray-400">Description: {row.snapshot_description}</div> : null}
+                        {row.snapshot_price != null && row.snapshot_price !== row.target_price ? <div>{t('price')}: {formatPrice(row.snapshot_price)} → {formatPrice(row.target_price)}</div> : null}
+                        {row.snapshot_vat != null && row.snapshot_vat !== row.target_vat ? <div>{t('vat')}: {row.snapshot_vat || '—'} → {row.target_vat || '—'}</div> : null}
+                        {row.snapshot_last_edit != null && row.snapshot_last_edit !== row.target_last_edit ? <div>{t('last_edit')}: {formatDate(row.snapshot_last_edit)} → {formatDate(row.target_last_edit)}</div> : null}
+                        {row.snapshot_views != null && row.snapshot_views !== row.target_views ? <div>{row.source === 'c' ? t('cars_bg_views') : t('views')}: {formatCount(row.snapshot_views)} → {formatCount(row.target_views ?? 0)}</div> : null}
+                        {row.snapshot_ad_status != null && row.snapshot_ad_status !== row.target_ad_status ? <div>{t('paid')}: {row.snapshot_ad_status} → {row.target_ad_status || 'none'}</div> : null}
+                        {row.snapshot_kaparo != null && row.snapshot_kaparo !== row.target_kaparo ? <div>{t('к')}: {row.snapshot_kaparo ? t('yes') : t('no')} → {row.target_kaparo ? t('yes') : t('no')}</div> : null}
+                        {isRealTitleChange(row) ? <div className="line-clamp-2">{t('title')}: {row.snapshot_title} → {row.target_title || '—'}</div> : null}
+                        {row.snapshot_description && row.snapshot_description !== row.target_description ? <div className="line-clamp-3 whitespace-pre-wrap text-gray-400">{t('description')}: {row.snapshot_description}</div> : null}
                       </div>
                     </td>
 

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback, useRef } from 'react';
 import { Editor, Frame, useEditor } from '@craftjs/core';
+import { useTranslations } from 'next-intl';
 import { BLOCK_RESOLVER, BLOCK_PALETTE } from '@/components/editor-blocks';
 import type { DealerTemplateConfig } from '@/lib/queries';
 import { apiRequest } from '@/lib/utils';
@@ -26,6 +27,7 @@ function EditorToolbar({
   onPageTypeChange: (t: 'listingGrid' | 'listingDetail') => void;
   onPreviewToggle: () => void;
 }) {
+  const t = useTranslations('ui');
   const { actions, query, canUndo, canRedo } = useEditor((_state, q) => ({
     canUndo: q.history.canUndo(),
     canRedo: q.history.canRedo(),
@@ -71,24 +73,24 @@ function EditorToolbar({
           disabled={!canUndo}
           className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 rounded"
         >
-          ↩ Undo
+          ↩ {t('undo')}
         </button>
         <button
           onClick={() => actions.history.redo()}
           disabled={!canRedo}
           className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 rounded"
         >
-          ↪ Redo
+          ↪ {t('redo')}
         </button>
       </div>
       <div className="flex gap-1 ml-2 bg-gray-800 rounded-md p-0.5">
-        {(['listingGrid', 'listingDetail'] as const).map((t) => (
+        {(['listingGrid', 'listingDetail'] as const).map((pt) => (
           <button
-            key={t}
-            onClick={() => onPageTypeChange(t)}
-            className={`text-xs px-3 py-1 rounded ${pageType === t ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            key={pt}
+            onClick={() => onPageTypeChange(pt)}
+            className={`text-xs px-3 py-1 rounded ${pageType === pt ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
           >
-            {t === 'listingGrid' ? 'Grid Page' : 'Detail Page'}
+            {pt === 'listingGrid' ? t('grid_page') : t('detail_page')}
           </button>
         ))}
       </div>
@@ -98,7 +100,7 @@ function EditorToolbar({
             onClick={onPreviewToggle}
             className={`text-xs px-3 py-1.5 rounded-md border ${previewOpen ? 'border-blue-500 text-blue-400 bg-blue-900/30' : 'border-gray-600 text-gray-400 hover:text-white'}`}
           >
-            {previewOpen ? 'Hide Preview' : 'Preview'}
+            {previewOpen ? t('hide_preview') : t('preview')}
           </button>
         )}
         {!activated && (
@@ -107,18 +109,18 @@ function EditorToolbar({
             disabled={activating}
             className="text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 px-4 py-1.5 rounded-md font-medium"
           >
-            {activating ? 'Activating…' : 'Activate'}
+            {activating ? t('activating') : t('activate')}
           </button>
         )}
         {activated && (
-          <span className="text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-1">Active</span>
+          <span className="text-xs bg-green-900 text-green-300 border border-green-700 rounded px-2 py-1">{t('active')}</span>
         )}
         <button
           onClick={save}
           disabled={saving}
           className="text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-1.5 rounded-md font-medium"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('saving') : t('save')}
         </button>
       </div>
     </div>
@@ -155,6 +157,7 @@ function BlockPalette({ pageType }: { pageType: 'listingGrid' | 'listingDetail' 
 // ── Properties panel (right) ─────────────────────────────────────────────────
 
 function PropertiesPanel() {
+  const t = useTranslations('ui');
   const { selected, actions } = useEditor((state) => {
     const selectedIds = state.events.selected;
     const id = selectedIds.size > 0 ? [...selectedIds][0] : null;
@@ -164,7 +167,7 @@ function PropertiesPanel() {
   if (!selected) {
     return (
       <div className="w-60 bg-gray-900 border-l border-gray-700 flex items-center justify-center text-gray-500 text-sm shrink-0">
-        Select a block
+        {t('select_a_block')}
       </div>
     );
   }
@@ -252,6 +255,7 @@ function PreviewPanel({
   pageType: 'listingGrid' | 'listingDetail';
   firstListingId: string | null;
 }) {
+  const t = useTranslations('ui');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const src = pageType === 'listingDetail' && firstListingId
     ? `/d/${dealerSlug}/${firstListingId}`
@@ -264,9 +268,9 @@ function PreviewPanel({
   return (
     <div className="flex-1 flex flex-col border-l border-gray-700 bg-gray-950 min-w-0">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700 bg-gray-900 shrink-0">
-        <span className="text-xs text-gray-400 font-medium">Preview</span>
-        <span className="text-xs text-gray-600">(saved state)</span>
-        <button onClick={reload} className="ml-auto text-xs text-gray-400 hover:text-white">↻ Refresh</button>
+        <span className="text-xs text-gray-400 font-medium">{t('preview')}</span>
+        <span className="text-xs text-gray-600">({t('saved_state')})</span>
+        <button onClick={reload} className="ml-auto text-xs text-gray-400 hover:text-white">↻ {t('refresh')}</button>
       </div>
       <iframe ref={iframeRef} src={src} className="flex-1 w-full bg-white" />
     </div>

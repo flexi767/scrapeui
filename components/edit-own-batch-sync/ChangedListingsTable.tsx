@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getPriceWithVat } from '@/lib/vat';
 import { buildChangeRows } from './helpers';
@@ -15,25 +18,27 @@ export function ChangedListingsTable({
   revertingId: number | null;
   onRevert: (row: BatchRow) => void;
 }) {
+  const t = useTranslations('ui');
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-700/60">
       <table className="w-full text-sm">
         <thead className="bg-gray-800/70 text-xs uppercase tracking-wider text-gray-400">
           <tr>
-            <th className="px-3 py-2 text-left">Status</th>
-            <th className="px-3 py-2 text-left">Listing</th>
-            <th className="px-3 py-2 text-left">Changes</th>
-            <th className="px-3 py-2 text-left">Dealer</th>
-            <th className="px-3 py-2 text-right">Price</th>
-            <th className="px-3 py-2 text-right">Updated</th>
-            <th className="px-3 py-2 text-right">Action</th>
+            <th className="px-3 py-2 text-left">{t('status')}</th>
+            <th className="px-3 py-2 text-left">{t('listing')}</th>
+            <th className="px-3 py-2 text-left">{t('changes')}</th>
+            <th className="px-3 py-2 text-left">{t('dealer')}</th>
+            <th className="px-3 py-2 text-right">{t('price')}</th>
+            <th className="px-3 py-2 text-right">{t('updated')}</th>
+            <th className="px-3 py-2 text-right">{t('action')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-700/50 bg-gray-900/40">
           {rows.length === 0 && (
             <tr>
               <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
-                No changed listings are waiting for sync.
+                {t('no_changed_listings')}
               </td>
             </tr>
           )}
@@ -73,7 +78,7 @@ export function ChangedListingsTable({
                       ))}
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-600">No pending field changes</span>
+                    <span className="text-xs text-gray-600">{t('no_pending_changes')}</span>
                   )}
                 </td>
                 <td className="px-3 py-3 text-gray-300">{row.dealer_name ?? '—'}</td>
@@ -96,7 +101,7 @@ export function ChangedListingsTable({
                     disabled={!canRevert || revertingId === row.backup_id}
                     className="rounded-md border border-gray-700 px-2.5 py-1 text-xs text-gray-200 hover:border-gray-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {revertingId === row.backup_id ? 'Reverting…' : 'Revert'}
+                    {revertingId === row.backup_id ? t('reverting') : t('revert')}
                   </button>
                 </td>
               </tr>

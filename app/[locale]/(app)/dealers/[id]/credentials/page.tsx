@@ -307,7 +307,7 @@ export default function DealerCredentialsPage() {
             href={`/dealers/${dealerId}/users/${dealerUser.id}/permissions`}
             className="text-sm text-blue-400 hover:text-blue-300 underline"
           >
-            Manage page permissions for {dealerUser.username}
+            {t('manage_permissions_for', { username: dealerUser.username })}
           </Link>
         )}
 

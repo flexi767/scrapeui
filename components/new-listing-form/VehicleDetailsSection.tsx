@@ -69,7 +69,7 @@ export function VehicleDetailsSection({
       <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr_2fr_1fr_1fr]">
         <div className="min-w-0 w-full flex flex-col gap-1 xl:w-56">
           <FieldLabel required>
-            {makesLoading ? "Марка (зарежда...)" : "Марка"}
+            {makesLoading ? t('make_loading') : t('make_label')}
           </FieldLabel>
           <AutocompleteInput
             value={form.make}
@@ -93,7 +93,7 @@ export function VehicleDetailsSection({
           />
         </div>
         <div className="min-w-0 flex flex-col gap-1 xl:w-56">
-          <FieldLabel>Модел</FieldLabel>
+          <FieldLabel>{t('model_label')}</FieldLabel>
           <AutocompleteInput
             value={form.model}
             onChange={(value) => setField("model", value)}
@@ -117,7 +117,7 @@ export function VehicleDetailsSection({
         </div>
         <div className="min-w-0 flex flex-col gap-1">
           <div className="flex items-center justify-between gap-3">
-            <FieldLabel required>Заглавие</FieldLabel>
+            <FieldLabel required>{t('title_label')}</FieldLabel>
             <span className="text-xs text-gray-500">
               {form.title.length}/50
             </span>
@@ -132,7 +132,7 @@ export function VehicleDetailsSection({
         </div>
         <div className="min-w-0 xl:w-28 xl:justify-self-end">
           <SelectField
-            label="Двигател"
+            label={t('fuel_label')}
             value={form.fuel}
             onChange={(value) => setField("fuel", value)}
             options={["", ...fuels.filter(Boolean)]}
@@ -143,7 +143,7 @@ export function VehicleDetailsSection({
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr_1.1fr_1.1fr_1.1fr]">
         <div className="w-full xl:w-56">
           <InputField
-            label="Мощност [к.с.]"
+            label={t('power_hp')}
             value={form.power}
             onChange={(value) => setField("power", value)}
             type="number"
@@ -152,21 +152,21 @@ export function VehicleDetailsSection({
         </div>
         <div className="xl:w-56">
           <SelectField
-            label="Евростандарт"
+            label={t('euronorm')}
             value={form.euronorm}
             onChange={(value) => setField("euronorm", value)}
             options={EURO_OPTIONS}
           />
         </div>
         <SelectField
-          label="Кутия"
+          label={t('gearbox')}
           value={form.transmission}
           onChange={(value) => setField("transmission", value)}
           options={["", ...transmissions.filter(Boolean)]}
           accent
         />
         <SelectField
-          label="Основна"
+          label={t('main_category')}
           value={form.pubtype}
           onChange={onCategoryChange}
           options={MAIN_CATEGORIES.map((item) => ({
@@ -177,7 +177,7 @@ export function VehicleDetailsSection({
         />
         <div className="min-w-0 xl:w-28 xl:justify-self-end">
           <SelectField
-            label="Категория"
+            label={t('body_type_label')}
             value={form.bodyType}
             onChange={(value) => setField("bodyType", value)}
             options={BODY_TYPE_OPTIONS}
@@ -189,7 +189,7 @@ export function VehicleDetailsSection({
       <div className="mt-4 flex flex-nowrap gap-4 overflow-x-auto pb-1">
         <div className="w-56 shrink-0">
           <InputField
-            label="Кубатура [куб.см]"
+            label={t('engine_cc')}
             value={form.engineCc}
             onChange={(value) => setField("engineCc", value)}
             type="number"
@@ -198,7 +198,7 @@ export function VehicleDetailsSection({
         </div>
         <div className="w-56 shrink-0">
           <SelectField
-            label="Състояние"
+            label={t('condition')}
             value={form.condition}
             onChange={(value) => setField("condition", value)}
             options={CONDITION_OPTIONS}
@@ -208,7 +208,7 @@ export function VehicleDetailsSection({
           <>
             <div className="w-[15.4rem] shrink-0">
               <InputField
-                label="Пробег с едно зареждане (WLTP) [км]"
+                label={t('battery_range')}
                 value={form.batteryRange}
                 onChange={(value) => setField("batteryRange", value)}
                 type="number"
@@ -218,7 +218,7 @@ export function VehicleDetailsSection({
             </div>
             <div className="w-[15.4rem] shrink-0">
               <InputField
-                label="Капацитет на батерията [kWh]"
+                label={t('battery_capacity')}
                 value={form.batteryCapacity}
                 onChange={(value) => setField("batteryCapacity", value)}
                 type="number"

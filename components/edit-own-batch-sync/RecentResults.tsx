@@ -1,14 +1,19 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils';
 import { labelForRow } from './helpers';
 import { SyncBadge } from './SyncBadge';
 import type { BatchRow } from './types';
 
 export function RecentResults({ rows }: { rows: BatchRow[] }) {
+  const t = useTranslations('ui');
+
   if (rows.length === 0) return null;
 
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-900/70 overflow-hidden">
-      <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">Recent results</div>
+      <div className="border-b border-gray-700 px-4 py-3 text-sm font-medium text-gray-300">{t('recent_results')}</div>
       <div className="divide-y divide-gray-800">
         {rows.map((row) => (
           <div key={row.backup_id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">

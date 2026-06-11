@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { SearchPositionPreviewThumb } from '@/components/search-positions/SearchPositionPreviewThumb';
 import type { RankStats, SearchPositionPreview, SearchPositionSummary } from '@/components/search-positions/types';
 
@@ -24,29 +27,31 @@ export function SearchPositionsControlPanel({
   onCheckAll,
   onMissingOnly,
 }: SearchPositionsControlPanelProps) {
+  const t = useTranslations('ui');
+
   return (
     <div className="space-y-5 rounded-lg border border-gray-700 bg-gray-800/60 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Check Search Positions</h2>
+          <h2 className="text-lg font-semibold text-white">{t('check_search_positions')}</h2>
           <p className="mt-1 max-w-2xl text-sm text-gray-400">
-            Runs the edit-own search-position checker and streams progress here while it updates found and missing ranks.
+            {t('check_search_positions_desc')}
           </p>
         </div>
 
         <div className="rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3 text-right">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">Mode</div>
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">{t('mode')}</div>
           <div className="mt-1 text-sm font-medium text-gray-100">
-            {running ? (activeMode === 'missing' ? 'Missing only' : 'All listings') : 'Idle'}
+            {running ? (activeMode === 'missing' ? t('missing_only') : t('all_listings')) : t('idle')}
           </div>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <MetricCard label="Total" value={stats?.total ?? doneSummary?.total ?? '—'} valueClassName="text-white" />
-        <MetricCard label="Checked" value={stats?.checked ?? doneSummary?.total ?? 0} valueClassName="text-white" />
-        <MetricCard label="Found" value={stats?.found ?? doneSummary?.found ?? 0} valueClassName="text-emerald-400" />
-        <MetricCard label="Missing" value={stats?.notFound ?? doneSummary?.notFound ?? 0} valueClassName="text-amber-300" />
+        <MetricCard label={t('total')} value={stats?.total ?? doneSummary?.total ?? '—'} valueClassName="text-white" />
+        <MetricCard label={t('checked')} value={stats?.checked ?? doneSummary?.total ?? 0} valueClassName="text-white" />
+        <MetricCard label={t('found')} value={stats?.found ?? doneSummary?.found ?? 0} valueClassName="text-emerald-400" />
+        <MetricCard label={t('missing')} value={stats?.notFound ?? doneSummary?.notFound ?? 0} valueClassName="text-amber-300" />
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
@@ -63,7 +68,7 @@ export function SearchPositionsControlPanel({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           )}
-          {stopping ? 'Stopping…' : running ? 'Stop' : 'Check all'}
+          {stopping ? t('stopping') : running ? t('stop') : t('check_all')}
         </button>
 
         <button
@@ -71,12 +76,12 @@ export function SearchPositionsControlPanel({
           disabled={running}
           className="rounded-md border border-gray-600 px-5 py-2 text-sm font-semibold text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Missing only
+          {t('missing_only')}
         </button>
 
         {currentLabel && (
           <div className="min-w-0 flex-1 rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2 text-sm text-sky-200">
-            <div className="text-[11px] uppercase tracking-wide text-sky-300/70">Current</div>
+            <div className="text-[11px] uppercase tracking-wide text-sky-300/70">{t('current')}</div>
             <div className="mt-2 flex items-center gap-3">
               <SearchPositionPreviewThumb
                 thumbUrl={currentPreview?.thumbUrl ?? null}

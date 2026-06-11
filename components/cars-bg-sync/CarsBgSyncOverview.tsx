@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { CarsBgSyncTotals } from '@/components/cars-bg-sync/types';
 
 interface CarsBgSyncOverviewProps {
@@ -8,19 +11,23 @@ interface CarsBgSyncOverviewProps {
 }
 
 export function CarsBgSyncOverview({ totals, running, liveMode, doneSummary }: CarsBgSyncOverviewProps) {
+  const t = useTranslations('ui');
+
+  const modeLabel = running
+    ? (liveMode ? t('running_live') : t('planning'))
+    : (doneSummary ? (liveMode ? t('last_run_live') : t('last_preview')) : t('idle'));
+
   return (
     <div className="flex flex-wrap gap-3">
-      <MetricCard label="Missing" value={totals.missing} valueClassName="text-white" />
-      <MetricCard label="Diffs" value={totals.diffs} valueClassName="text-amber-300" />
-      <MetricCard label="Stale" value={totals.stale} valueClassName="text-red-300" />
-      <MetricCard label="Updated" value={totals.updated} valueClassName="text-sky-300" />
-      <MetricCard label="Created" value={totals.created} valueClassName="text-emerald-400" />
-      <MetricCard label="Deleted" value={totals.deleted} valueClassName="text-red-400" />
+      <MetricCard label={t('missing')} value={totals.missing} valueClassName="text-white" />
+      <MetricCard label={t('diffs')} value={totals.diffs} valueClassName="text-amber-300" />
+      <MetricCard label={t('stale')} value={totals.stale} valueClassName="text-red-300" />
+      <MetricCard label={t('updated')} value={totals.updated} valueClassName="text-sky-300" />
+      <MetricCard label={t('created')} value={totals.created} valueClassName="text-emerald-400" />
+      <MetricCard label={t('deleted')} value={totals.deleted} valueClassName="text-red-400" />
       <div className="ml-auto rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-2.5 text-right text-sm">
-        <span className="uppercase tracking-wide text-gray-500">Mode</span>
-        <span className="ml-2 text-sm font-medium text-gray-100">
-          {running ? (liveMode ? 'Running live' : 'Planning') : (doneSummary ? (liveMode ? 'Last run live' : 'Last preview') : 'Idle')}
-        </span>
+        <span className="uppercase tracking-wide text-gray-500">{t('mode')}</span>
+        <span className="ml-2 text-sm font-medium text-gray-100">{modeLabel}</span>
       </div>
     </div>
   );
