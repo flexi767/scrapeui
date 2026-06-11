@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/api/auth-helpers';
 import { logger } from '@/lib/logger';
 
 const log = logger.child('scrape');
+const MAX_CHILD_JOB_MS = 15 * 60 * 1000; // 15 minutes
 
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
@@ -101,6 +102,15 @@ export function createSseStreamResponse(
 
       state.activate(child, controller);
 
+      const watchdog = setTimeout(() => {
+        if (state.child === child && state.isRunning()) {
+          log.warn('Job exceeded max runtime; killing', { scriptPath, maxMs: MAX_CHILD_JOB_MS });
+          state.send({ type: 'log', level: 'stderr', message: 'Job exceeded max runtime; stopping.' });
+          child.kill('SIGKILL');
+        }
+      }, MAX_CHILD_JOB_MS);
+      watchdog.unref();
+
       let stdoutBuffer = '';
       child.stdout.on('data', (chunk: Buffer) => {
         stdoutBuffer += chunk.toString();
@@ -129,6 +139,7 @@ export function createSseStreamResponse(
       });
 
       child.on('close', (code: number | null) => {
+        clearTimeout(watchdog);
         log.info('Child process closed', { code, script: scriptPath });
         state.clearIfDone(child);
         send({ type: options?.closeEventType ?? 'stream_closed', code });
@@ -140,6 +151,7 @@ export function createSseStreamResponse(
       });
 
       child.on('error', (err: Error) => {
+        clearTimeout(watchdog);
         log.error('Child process error', err.message);
         state.clearIfDone(child);
         send({ type: 'error', message: err.message });
