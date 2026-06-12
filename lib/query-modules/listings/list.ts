@@ -25,7 +25,7 @@ import {
   OWN_LISTING_SORT_COLUMNS,
   toListingFtsQuery,
 } from './list-filters';
-import { timedQuery } from '../query-utils';
+import { getWindowTotal, omitQueryFields, timedQuery } from '../query-utils';
 import { decodeListingCursor, encodeListingCursor } from '@/lib/listing-url';
 
 const ownListingFromClause = `
@@ -173,6 +173,10 @@ function getListingPage(
   const offset = usesCursor ? 0 : (page - 1) * limit;
   const queryLimit = limit + 1;
   const deletedAtSelect = options.includeDeletedAt ? ", l.deleted_at" : "";
+  // In offset mode, fetch the filtered total alongside the page so we don't
+  // re-run the same filtered query as a COUNT(*). Cursor mode skips it: the
+  // window count would force a full scan that cursor pagination avoids.
+  const totalSelect = usesCursor ? "" : ",\n      COUNT(*) OVER () as total_count";
 
   const queryDetails = {
     sort,
@@ -207,7 +211,7 @@ function getListingPage(
       l.images_downloaded, l.thumb_saved, l.is_active${deletedAtSelect},
       ${firstBackupImageIdExpr} as first_backup_image_id,
       COALESCE(l.source, 'm') as source,
-      d.name as dealer_name, d.slug as dealer_slug
+      d.name as dealer_name, d.slug as dealer_slug${totalSelect}
     FROM listings l
     ${ftsJoin}
     LEFT JOIN dealers d ON l.dealer_id = d.id
@@ -216,7 +220,7 @@ function getListingPage(
     LIMIT ? OFFSET ?
   `,
       )
-      .all(...queryParams, queryLimit, offset) as ListingListRow[]);
+      .all(...queryParams, queryLimit, offset) as Array<ListingListRow & { total_count?: number }>);
 
   const countListings = () => {
     if (usesCursor) return Math.max(0, offset + Math.min(rows.length, limit));
@@ -234,13 +238,16 @@ function getListingPage(
     return count;
   };
 
-  const pageRows = rows.slice(0, limit);
+  const total = usesCursor
+    ? countListings()
+    : getWindowTotal(rows as Array<ListingListRow & { total_count: number }>, page, countListings, 'total_count');
+  const pageRows = rows.slice(0, limit).map((row) => omitQueryFields(row, ['total_count']));
   const hasNextPage = rows.length > limit;
   const nextCursor = hasNextPage
     ? getListingCursor(pageRows[pageRows.length - 1], sort, order)
     : null;
 
-  return { data: pageRows, total: countListings(), page, limit, nextCursor };
+  return { data: pageRows, total, page, limit, nextCursor };
 }
 
 export function getListings(filters: ListingFilters = {}) {
@@ -310,14 +317,15 @@ export function getOwnListings(filters: ListingFilters = {}) {
         `
     ${rankedBackupsCte}
     SELECT
-      ${ownListingSelectColumns}
+      ${ownListingSelectColumns},
+      COUNT(*) OVER () as total_count
     ${ownListingFromClause}
     WHERE b.row_num = 1 AND ${wheres.join(" AND ")}
     ORDER BY (l.id IS NULL) DESC, ${ownSortCol} ${sortDir}
     LIMIT ? OFFSET ?
   `,
       )
-      .all(...params, limit, offset) as OwnListingRow[]);
+      .all(...params, limit, offset) as Array<OwnListingRow & { total_count: number }>);
 
   const countOwnListings = () => {
     const { count } = timedQuery('own-listings.count', queryDetails, () => raw
@@ -333,5 +341,8 @@ export function getOwnListings(filters: ListingFilters = {}) {
     return count;
   };
 
-  return { data: rows, total: countOwnListings(), page, limit };
+  // The ranked-backups CTE is the most expensive part of this query; the
+  // window count avoids running it a second time for the total.
+  const total = getWindowTotal(rows, page, countOwnListings, 'total_count');
+  return { data: rows.map((row) => omitQueryFields(row, ['total_count'])), total, page, limit };
 }

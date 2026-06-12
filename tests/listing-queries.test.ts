@@ -122,6 +122,19 @@ describe('getListings', () => {
     expect(page2.total).toBe(3);
   });
 
+  it('keeps a correct total on an empty out-of-range page', () => {
+    const { data, total } = queries.getListings({ limit: 2, page: 5 });
+    expect(data).toEqual([]);
+    expect(total).toBe(3);
+  });
+
+  it('does not leak internal columns into result rows', () => {
+    const { data } = queries.getListings();
+    expect(data[0]).not.toHaveProperty('total_count');
+    const own = queries.getOwnListings();
+    expect(own.data[0]).not.toHaveProperty('total_count');
+  });
+
   it('supports ascending sort with a whitelisted column', () => {
     const { data } = queries.getListings({ sort: 'price', order: 'asc' });
     expect(data.map((row) => row.id)).toEqual([2, 1, 3]);
