@@ -5,12 +5,23 @@ import { logger } from '@/lib/logger';
 
 const log = logger.child('scrape');
 const MAX_CHILD_JOB_MS = 15 * 60 * 1000; // 15 minutes
+// Ring buffer of events kept for clients that (re)attach mid-run. Sized for
+// the chattiest jobs (deep scrapes log per listing); ~a few hundred bytes each.
+const MAX_BUFFERED_EVENTS = 5000;
 
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
+/**
+ * In-memory state for one job type: at most one running child process, plus
+ * any number of SSE subscribers. The job's lifetime is owned by the child
+ * process and the DELETE endpoint — never by a subscriber's connection.
+ *
+ * SINGLE-NODE ONLY (see CLAUDE.md — Architecture Constraints).
+ */
 export class ChildStreamState {
   private _child: ChildProcess | null = null;
-  private _controller: StreamController | null = null;
+  private readonly _controllers = new Set<StreamController>();
+  private _buffer: Uint8Array[] = [];
   private readonly encoder = new TextEncoder();
 
   get child(): ChildProcess | null {
@@ -23,31 +34,62 @@ export class ChildStreamState {
     return this._child.exitCode === null && this._child.signalCode === null;
   }
 
-  activate(child: ChildProcess, controller: StreamController): void {
+  activate(child: ChildProcess): void {
     this._child = child;
-    this._controller = controller;
+    this._buffer = [];
+  }
+
+  /** Add an SSE subscriber, replaying everything the job has emitted so far. */
+  subscribe(controller: StreamController): void {
+    for (const chunk of this._buffer) {
+      try {
+        controller.enqueue(chunk);
+      } catch {
+        return; // Subscriber already gone.
+      }
+    }
+    this._controllers.add(controller);
+  }
+
+  unsubscribe(controller: StreamController): void {
+    this._controllers.delete(controller);
   }
 
   send(data: object): void {
-    if (!this._controller) return;
-    try {
-      this._controller.enqueue(this.encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-    } catch {
-      // Ignore enqueue errors after disconnect/close.
+    const chunk = this.encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+    this._buffer.push(chunk);
+    if (this._buffer.length > MAX_BUFFERED_EVENTS) this._buffer.shift();
+
+    for (const controller of this._controllers) {
+      try {
+        controller.enqueue(chunk);
+      } catch {
+        this._controllers.delete(controller);
+      }
     }
+  }
+
+  /** Close all subscriber streams (job finished or errored). */
+  closeAll(): void {
+    for (const controller of this._controllers) {
+      try {
+        controller.close();
+      } catch {
+        // Ignore close errors after disconnect/close.
+      }
+    }
+    this._controllers.clear();
   }
 
   clearIfDone(child: ChildProcess): void {
     if (this._child === child) {
       this._child = null;
-      this._controller = null;
     }
   }
 
   clearStale(): void {
     if (this._child && !this.isRunning()) {
       this._child = null;
-      this._controller = null;
     }
   }
 }
@@ -59,8 +101,6 @@ export interface SseStreamOptions {
 }
 
 export interface ChildJobRouteDefinition {
-  alreadyRunning: string;
-  disconnectedMessage: string;
   prepare: (req: Request) => Promise<ChildJobRun | Response> | ChildJobRun | Response;
   stopMessages: {
     notRunning: string;
@@ -75,102 +115,108 @@ export interface ChildJobRun {
   options?: SseStreamOptions;
 }
 
-export function createSseStreamResponse(
-  req: Request,
+/**
+ * Spawn the worker and wire its output into `state`. The child's lifetime is
+ * independent of any HTTP connection: subscribers may come and go, and the
+ * job keeps running until it finishes, errors, hits the watchdog, or is
+ * stopped explicitly via DELETE.
+ */
+function startChildJob(
   state: ChildStreamState,
   scriptPath: string,
   scriptArgs: string[],
-  disconnectedMessage: string,
   options?: SseStreamOptions,
-): Response {
+): void {
+  const child = spawn(
+    path.join(process.cwd(), 'node_modules/.bin/tsx'),
+    [scriptPath, ...scriptArgs],
+    { env: options?.env ?? process.env },
+  );
+
+  state.activate(child);
+
+  const watchdog = setTimeout(() => {
+    if (state.child === child && state.isRunning()) {
+      log.warn('Job exceeded max runtime; killing', { scriptPath, maxMs: MAX_CHILD_JOB_MS });
+      state.send({ type: 'log', level: 'stderr', message: 'Job exceeded max runtime; stopping.' });
+      child.kill('SIGKILL');
+    }
+  }, MAX_CHILD_JOB_MS);
+  watchdog.unref();
+
+  let stdoutBuffer = '';
+  child.stdout.on('data', (chunk: Buffer) => {
+    stdoutBuffer += chunk.toString();
+    const lines = stdoutBuffer.split('\n');
+    stdoutBuffer = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        state.send(JSON.parse(line));
+      } catch {
+        if (!options?.silentNonJsonStdout) {
+          state.send({ type: 'log', level: 'stderr', message: line });
+        }
+      }
+    }
+  });
+
+  let stderrBuffer = '';
+  child.stderr.on('data', (chunk: Buffer) => {
+    stderrBuffer += chunk.toString();
+    const lines = stderrBuffer.split('\n');
+    stderrBuffer = lines.pop() ?? '';
+    for (const line of lines) {
+      if (line.trim()) state.send({ type: 'log', level: 'stderr', message: line });
+    }
+  });
+
+  child.on('close', (code: number | null) => {
+    clearTimeout(watchdog);
+    log.info('Child process closed', { code, script: scriptPath });
+    state.clearIfDone(child);
+    state.send({ type: options?.closeEventType ?? 'stream_closed', code });
+    state.closeAll();
+  });
+
+  child.on('error', (err: Error) => {
+    clearTimeout(watchdog);
+    log.error('Child process error', err.message);
+    state.clearIfDone(child);
+    state.send({ type: 'error', message: err.message });
+    state.closeAll();
+  });
+}
+
+/**
+ * SSE response that observes the running job. Closing it (tab close, abort,
+ * navigation) only detaches this subscriber — the job keeps running.
+ */
+function createAttachResponse(req: Request, state: ChildStreamState): Response {
+  let subscriber: StreamController | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
-      const enc = new TextEncoder();
-      const send = (data: object) => {
-        try {
-          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          // Ignore enqueue errors after disconnect/close.
-        }
-      };
+      subscriber = controller;
+      state.subscribe(controller);
 
-      const child = spawn(
-        path.join(process.cwd(), 'node_modules/.bin/tsx'),
-        [scriptPath, ...scriptArgs],
-        { env: options?.env ?? process.env },
-      );
-
-      state.activate(child, controller);
-
-      const watchdog = setTimeout(() => {
-        if (state.child === child && state.isRunning()) {
-          log.warn('Job exceeded max runtime; killing', { scriptPath, maxMs: MAX_CHILD_JOB_MS });
-          state.send({ type: 'log', level: 'stderr', message: 'Job exceeded max runtime; stopping.' });
-          child.kill('SIGKILL');
-        }
-      }, MAX_CHILD_JOB_MS);
-      watchdog.unref();
-
-      let stdoutBuffer = '';
-      child.stdout.on('data', (chunk: Buffer) => {
-        stdoutBuffer += chunk.toString();
-        const lines = stdoutBuffer.split('\n');
-        stdoutBuffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            send(JSON.parse(line));
-          } catch {
-            if (!options?.silentNonJsonStdout) {
-              send({ type: 'log', level: 'stderr', message: line });
-            }
-          }
-        }
-      });
-
-      let stderrBuffer = '';
-      child.stderr.on('data', (chunk: Buffer) => {
-        stderrBuffer += chunk.toString();
-        const lines = stderrBuffer.split('\n');
-        stderrBuffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (line.trim()) send({ type: 'log', level: 'stderr', message: line });
-        }
-      });
-
-      child.on('close', (code: number | null) => {
-        clearTimeout(watchdog);
-        log.info('Child process closed', { code, script: scriptPath });
-        state.clearIfDone(child);
-        send({ type: options?.closeEventType ?? 'stream_closed', code });
+      // If the job already finished while we were attaching, end the stream.
+      if (!state.isRunning()) {
+        state.unsubscribe(controller);
         try {
           controller.close();
         } catch {
           // Ignore close errors after disconnect/close.
         }
-      });
-
-      child.on('error', (err: Error) => {
-        clearTimeout(watchdog);
-        log.error('Child process error', err.message);
-        state.clearIfDone(child);
-        send({ type: 'error', message: err.message });
-        try {
-          controller.close();
-        } catch {
-          // Ignore close errors after disconnect/close.
-        }
-      });
+        return;
+      }
 
       req.signal.addEventListener('abort', () => {
-        if (state.child === child) {
-          state.send({ type: 'log', level: 'stderr', message: disconnectedMessage });
-          child.kill('SIGTERM');
-        }
+        state.unsubscribe(controller);
       });
     },
     cancel() {
-      state.clearStale();
+      if (subscriber) state.unsubscribe(subscriber);
     },
   });
 
@@ -205,7 +251,6 @@ export function createStopResponse(
   const stopped = child.kill('SIGTERM');
 
   if (stopped) {
-    state.clearIfDone(child);
     setTimeout(() => {
       if (state.child === child && state.isRunning()) {
         state.send({ type: 'log', level: 'stderr', message: messages.forcingShutdown });
@@ -232,24 +277,23 @@ export function createChildJobRoute(definition: ChildJobRouteDefinition) {
 
       state.clearStale();
 
-      if (state.child) {
-        return new Response(JSON.stringify({ error: definition.alreadyRunning }), {
-          status: 409,
-          headers: { 'Content-Type': 'application/json' },
-        });
+      // A job is already running: attach to it (with replay) instead of
+      // starting another or failing. The request body is ignored.
+      if (state.isRunning()) {
+        return createAttachResponse(req, state);
       }
 
       const run = await definition.prepare(req);
       if (run instanceof Response) return run;
 
-      return createSseStreamResponse(
-        req,
+      startChildJob(
         state,
         path.isAbsolute(run.scriptPath) ? run.scriptPath : path.join(process.cwd(), run.scriptPath),
         run.scriptArgs ?? [],
-        definition.disconnectedMessage,
         run.options,
       );
+
+      return createAttachResponse(req, state);
     },
 
     async DELETE() {

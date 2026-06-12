@@ -5,8 +5,6 @@ import { requireAdmin } from '@/lib/api/auth-helpers';
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A scraper run is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping scraper…',
   async prepare(req) {
     const { dealers, deepCrawl, downloadImages, source } = await req.json();
     const scriptArgs = ['--dealers', (dealers as string[]).join(',')];

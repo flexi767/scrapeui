@@ -4,8 +4,6 @@ import { readJsonBody } from '@/lib/api/json-body';
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A search-position run is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping search-position run…',
   async prepare(req) {
     const payload = await readJsonBody<{ missingOnly?: boolean }>(req);
     const scriptArgs: string[] = [];

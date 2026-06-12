@@ -4,8 +4,6 @@ import { readJsonBody } from '@/lib/api/json-body';
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A cars.bg sync run is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping cars.bg sync…',
   async prepare(req) {
     const payload = await readJsonBody<{ live?: boolean; dealers?: string[] }>(req);
     const scriptArgs: string[] = [];

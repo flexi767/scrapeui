@@ -3,8 +3,6 @@ import { createChildJobRoute } from '@/lib/api/child-stream';
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A batch sync run is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping batch sync…',
   prepare() {
     return {
       scriptPath: 'scraper/scripts/run-own-batch-sync.ts',

@@ -11,8 +11,6 @@ const editFormsBodySchema = z.object({
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'An edit-form capture is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping capture…',
   async prepare(req) {
     const parsed = editFormsBodySchema.safeParse(await req.json());
     if (!parsed.success) {

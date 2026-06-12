@@ -292,6 +292,7 @@ scripts/            # Migration & seed scripts
 - Mobile.bg repost and update flows use backup draft values plus captured structure from `mobilebg_edit_form_snapshots`
 - If an update needs an edit-form snapshot and none exists, auto-capture it instead of failing hard
 - **Never run Playwright inside an API route handler.** All browser automation (repost, update, edit-form capture, scraping, batch sync) runs in a spawned child process via `createChildJobRoute` (`lib/api/child-stream.ts`); single actions go through `scraper/scripts/run-mobilebg-action.ts`, and clients consume the SSE stream with `runStreamedAction` from `lib/streaming-job.ts`
+- **Child jobs survive client disconnects.** The SSE stream is an observer, not the job owner: closing the tab only detaches the subscriber. A POST while a job is running attaches to it (replaying buffered events) instead of returning 409; DELETE is the only way to stop a job. See `tests/child-stream.test.ts`
 - Store Mobile.bg backup images locally under stable per-listing paths, not date-based folders
 - Never store raw HTML long-term; persist structured fields, metadata, and screenshots instead
 

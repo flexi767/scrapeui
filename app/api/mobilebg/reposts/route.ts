@@ -11,8 +11,6 @@ const repostsBodySchema = z.object({
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A repost is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping repost…',
   async prepare(req) {
     const parsed = repostsBodySchema.safeParse(await req.json());
     if (!parsed.success) {

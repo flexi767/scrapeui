@@ -11,8 +11,6 @@ const updatesBodySchema = z.object({
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A mobile.bg update is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping update…',
   async prepare(req) {
     const parsed = updatesBodySchema.safeParse(await req.json());
     if (!parsed.success) {

@@ -4,8 +4,6 @@ import { readJsonBody } from '@/lib/api/json-body';
 export const runtime = 'nodejs';
 
 const route = createChildJobRoute({
-  alreadyRunning: 'A renew & reset run is already in progress',
-  disconnectedMessage: 'Client disconnected. Stopping…',
   async prepare(req) {
     const body = await readJsonBody<Record<string, unknown>>(req, {});
     const dealerSlugs = Array.isArray(body?.dealerSlugs)
