@@ -1,4 +1,8 @@
-import SearchPositionsRunner from '@/components/SearchPositionsRunner';
+import dynamic from 'next/dynamic';
+
+const SearchPositionsRunner = dynamic(() => import('@/components/SearchPositionsRunner'), {
+  loading: () => <div className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-6 text-sm text-gray-400">Loading search positions...</div>,
+});
 
 export default function EditOwnSearchPositionsPage() {
   return (

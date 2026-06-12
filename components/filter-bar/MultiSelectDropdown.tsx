@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface MultiSelectOption {
   value: string;
@@ -35,6 +35,7 @@ export default function MultiSelectDropdown({
   const ref = useRef<HTMLDivElement>(null);
   const active = activeOverride ?? selectedValues.length > 0;
   const canClear = showClear ?? selectedValues.length > 0;
+  const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -72,7 +73,7 @@ export default function MultiSelectDropdown({
             <label key={option.value} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700">
               <input
                 type="checkbox"
-                checked={selectedValues.includes(option.value)}
+                checked={selectedSet.has(option.value)}
                 onChange={() => onToggle(option.value)}
                 className="accent-blue-500"
               />

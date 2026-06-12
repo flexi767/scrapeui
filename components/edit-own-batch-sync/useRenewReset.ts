@@ -6,6 +6,7 @@ import { streamJsonEvents } from '@/lib/streaming-job';
 import { errorMessage, isAbortError } from '@/lib/utils';
 import { startRenewReset, stopRenewResetJob } from './api';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { appendBounded } from '@/components/shared/render-window';
 import { statsFromStreamEvent, streamEventMessageKind } from './helpers';
 import type { LogEntry, OwnDealer, RunStats, StreamEntry } from './types';
 
@@ -22,7 +23,7 @@ export function useRenewReset(ownDealers: OwnDealer[]) {
 
   useAutoScroll(renewLogRef, renewLogs);
 
-  const appendRenewLog = (entry: LogEntry) => setRenewLogs((prev) => [...prev, entry]);
+  const appendRenewLog = (entry: LogEntry) => setRenewLogs((prev) => appendBounded(prev, entry));
 
   async function runRenewReset() {
     if (renewDealers.length === 0) {

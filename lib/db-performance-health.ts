@@ -24,6 +24,11 @@ const REQUIRED_INDEXES = [
   'listings_active_dealer_idx',
   'listings_active_make_model_idx',
   'listings_active_filter_facets_idx',
+  'listings_public_dealer_make_idx',
+  'listings_public_dealer_last_edit_idx',
+  'listings_public_dealer_price_idx',
+  'listings_public_dealer_mileage_idx',
+  'listings_public_dealer_year_idx',
 ] as const;
 
 const REQUIRED_TRIGGERS = [

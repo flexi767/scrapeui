@@ -8,6 +8,7 @@ import { streamJsonEvents } from '@/lib/streaming-job';
 import { errorMessage, isAbortError } from '@/lib/utils';
 import { revertDraftToSource, startBatchSync, stopBatchSync } from './api';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { appendBounded } from '@/components/shared/render-window';
 import {
   applyRowResult,
   countBatchRows,
@@ -39,7 +40,7 @@ export function useBatchSync(initialRows: EditOwnSyncRow[], autoRun: boolean) {
   const rowCounts = useMemo(() => countBatchRows(rows), [rows]);
   const recentResults = useMemo(() => recentCompletedRows(rows), [rows]);
 
-  const appendLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
+  const appendLog = (entry: LogEntry) => setLogs((prev) => appendBounded(prev, entry));
 
   async function revertDraft(row: BatchRow) {
     setRevertingId(row.backup_id);

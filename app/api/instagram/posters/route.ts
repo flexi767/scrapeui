@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NextRequest } from "next/server";
 import { raw } from "@/db/client";
+import { createConcurrencyGate, withConcurrencyGate } from "@/lib/api/concurrency";
 import { requireAuth } from "@/lib/api/auth-helpers";
 import { logger } from "@/lib/logger";
 import { buildInstagramListingPayload } from "@/lib/instagram/listing-payload";
@@ -27,6 +28,7 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const log = logger.child("api:instagram:posters");
+const posterGenerationGate = createConcurrencyGate(Number(process.env.POSTER_GENERATION_CONCURRENCY ?? 2));
 
 const PosterBodySchema = z.object({
   backupId: z.unknown().optional(),
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  try {
+  return withConcurrencyGate(posterGenerationGate, async () => {
     const imageResults = await generatePosterVariants({
       listing,
       prompt,
@@ -168,10 +170,8 @@ export async function POST(request: NextRequest) {
       { variants: variantId ? imageResults : variantsToCache, cached: false },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Could not generate AI posters", variants: [] },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  }
+  }).catch((error) => Response.json(
+    { error: error instanceof Error ? error.message : "Could not generate AI posters", variants: [] },
+    { headers: { "Cache-Control": "no-store" } },
+  ));
 }

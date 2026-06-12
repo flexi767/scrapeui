@@ -219,6 +219,7 @@ function getListingPage(
       .all(...queryParams, queryLimit, offset) as ListingListRow[]);
 
   const countListings = () => {
+    if (usesCursor) return Math.max(0, offset + Math.min(rows.length, limit));
     const { count } = timedQuery('listings.count', queryDetails, () => raw
         .prepare(
           `

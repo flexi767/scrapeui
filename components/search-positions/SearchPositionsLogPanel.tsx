@@ -1,4 +1,5 @@
 import type { Ref } from 'react';
+import { tailRenderWindow } from '@/components/shared/render-window';
 import type { SearchPositionLogEntry } from '@/components/search-positions/types';
 
 interface SearchPositionsLogPanelProps {
@@ -8,15 +9,21 @@ interface SearchPositionsLogPanelProps {
 
 export function SearchPositionsLogPanel({ logs, logRef }: SearchPositionsLogPanelProps) {
   if (logs.length === 0) return null;
+  const visibleLogs = tailRenderWindow(logs);
 
   return (
     <div
       ref={logRef}
       className="max-h-[600px] space-y-1 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 p-3"
     >
-      {logs.map((entry, index) => (
+      {visibleLogs.hiddenCount > 0 && (
+        <div className="py-0.5 font-mono text-xs text-gray-500">
+          {visibleLogs.hiddenCount} older entries hidden
+        </div>
+      )}
+      {visibleLogs.items.map((entry, index) => (
         <div
-          key={`${index}-${entry.message}`}
+          key={`${visibleLogs.startIndex + index}-${entry.message}`}
           className={
             entry.kind === 'error'
               ? 'py-0.5 font-mono text-xs text-red-400'

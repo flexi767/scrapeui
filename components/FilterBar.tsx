@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import MultiSelectDropdown from './filter-bar/MultiSelectDropdown';
 import PriceChangeFilter from './PriceChangeFilter';
@@ -47,6 +47,30 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
   const currentOrder = searchParams.get('order') ?? 'desc';
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dealerOptions = useMemo(
+    () => allDealers.map((dealer) => ({
+      value: dealer.slug,
+      label: dealer.name,
+      badge: dealer.own ? 'own' : undefined,
+    })),
+    [allDealers],
+  );
+  const categoryOptions = useMemo(
+    () => allCategories.map((category) => ({ value: category, label: category })),
+    [allCategories],
+  );
+  const fuelOptions = useMemo(
+    () => allFuels.map((fuel) => ({ value: fuel, label: fuel })),
+    [allFuels],
+  );
+  const extraOptions = useMemo(
+    () => allExtras.map((extra) => ({ value: extra, label: extra })),
+    [allExtras],
+  );
+  const yearOptions = useMemo(
+    () => allYears.map((year) => ({ value: year, label: year })),
+    [allYears],
+  );
 
   function buildParams(overrides: Record<string, string | string[]> = {}) {
     const p = new URLSearchParams();
@@ -196,11 +220,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <MultiSelectDropdown
         buttonText={currentDealers.length === 0 ? t('dealers') : currentDealers.length === 1 ? allDealers.find(d => d.slug === currentDealers[0])?.name ?? currentDealers[0] : `${currentDealers.length} ${t('dealers_count')}`}
         clearLabel={t('clear_dealers')}
-        options={allDealers.map((dealer) => ({
-          value: dealer.slug,
-          label: dealer.name,
-          badge: dealer.own ? 'own' : undefined,
-        }))}
+        options={dealerOptions}
         selectedValues={currentDealers}
         onToggle={onDealerToggle}
         onClear={() => router.push(`${basePath}?${buildParams({ dealer: [] })}`)}
@@ -210,7 +230,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <MultiSelectDropdown
         buttonText={currentCategories.length === 0 ? t('body') : currentCategories.length === 1 ? currentCategories[0] : `${currentCategories.length} ${t('body_types')}`}
         clearLabel={t('clear_body')}
-        options={allCategories.map((category) => ({ value: category, label: category }))}
+        options={categoryOptions}
         selectedValues={currentCategories}
         onToggle={onCategoryToggle}
         onClear={() => router.push(`${basePath}?${buildParams({ category: [] })}`)}
@@ -246,7 +266,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <MultiSelectDropdown
         buttonText={currentFuels.length === 0 ? t('fuel') : `${t('fuel')} (${currentFuels.length})`}
         clearLabel={t('clear_fuel')}
-        options={allFuels.map((fuel) => ({ value: fuel, label: fuel }))}
+        options={fuelOptions}
         selectedValues={currentFuels}
         onToggle={onFuelToggle}
         onClear={() => router.push(`${basePath}?${buildParams({ fuel: [] })}`)}
@@ -257,7 +277,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
         <MultiSelectDropdown
           buttonText={currentExtras.length === 0 ? t('extras') : `${t('extras')} (${currentExtras.length})`}
           clearLabel={t('clear_extras')}
-          options={allExtras.map((extra) => ({ value: extra, label: extra }))}
+          options={extraOptions}
           selectedValues={currentExtras}
           onToggle={onExtraToggle}
           onClear={() => router.push(`${basePath}?${buildParams({ extra: [] })}`)}
@@ -268,7 +288,7 @@ export default function FilterBar({ makes, makeModels, allDealers, allYears, all
       <MultiSelectDropdown
         buttonText={currentYears.length === 0 ? t('years') : currentYears.length === 1 ? currentYears[0] : `${currentYears.length} ${t('years_count')}`}
         clearLabel={t('clear_years')}
-        options={allYears.map((year) => ({ value: year, label: year }))}
+        options={yearOptions}
         selectedValues={currentYears}
         onToggle={onYearToggle}
         onClear={() => router.push(`${basePath}?${buildParams({ year: [] })}`)}

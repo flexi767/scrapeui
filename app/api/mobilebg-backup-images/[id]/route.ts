@@ -69,7 +69,7 @@ export async function GET(
   return streamFileResponse(resolved, {
     contentType,
     headers: {
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'public, max-age=31536000, immutable',
       ...CORS_HEADERS,
     },
   });

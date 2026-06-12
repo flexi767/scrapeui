@@ -1,10 +1,17 @@
 
 import { auth } from "@/lib/auth";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requirePagePermission } from "@/lib/api/auth-helpers";
 import { listDealerTemplateConfigRowsForSession, listDealerTemplateDealerOptions } from "@/lib/queries";
-import { TemplatesClient } from "./TemplatesClient";
+
+const TemplatesClient = dynamic(
+  () => import("./TemplatesClient").then((mod) => mod.TemplatesClient),
+  {
+    loading: () => <div className="rounded-lg border border-gray-700/60 bg-gray-900/40 p-6 text-sm text-gray-400">Loading templates...</div>,
+  },
+);
 
 export default async function TemplatesPage() {
   const pageAccess = await requirePagePermission('templates');

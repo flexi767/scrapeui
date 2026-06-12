@@ -8,6 +8,7 @@ import { ScrapeLogPanel } from '@/components/scrape-runner/ScrapeLogPanel';
 import type { ScrapeDealer, ScrapeLogEntry } from '@/components/scrape-runner/types';
 import { useScrapeDealerSelection } from '@/components/scrape-runner/useScrapeDealerSelection';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { appendBounded } from '@/components/shared/render-window';
 import { useStreamingRun } from '@/components/shared/useStreamingRun';
 import { startJsonStream, stopJsonStream } from '@/lib/streaming-job';
 
@@ -41,12 +42,12 @@ export default function ScrapeRunner({ initialDealers, onRunStart }: { initialDe
     }),
     stop: () => stopJsonStream('/api/scrape', 'Failed to stop scraper'),
     onEvent: (obj) => {
-      setLog(prev => [...prev, obj]);
+      setLog(prev => appendBounded(prev, obj));
       if (obj.type === 'complete') setDone(true);
     },
     onStartError: (message) => setLog([{ type: 'error', message }]),
-    onStreamError: (message) => setLog((prev) => [...prev, { type: 'error', message }]),
-    onStopError: (message) => setLog((prev) => [...prev, { type: 'error', message: `Failed to stop scraper: ${message}` }]),
+    onStreamError: (message) => setLog((prev) => appendBounded(prev, { type: 'error', message })),
+    onStopError: (message) => setLog((prev) => appendBounded(prev, { type: 'error', message: `Failed to stop scraper: ${message}` })),
   });
 
   const run = async () => {

@@ -11,6 +11,7 @@ import { SearchPositionsRecentResults } from '@/components/search-positions/Sear
 import { SearchPositionsControlPanel } from '@/components/search-positions/SearchPositionsControlPanel';
 import type { RankStats, SearchPositionLogEntry, SearchPositionPreview, SearchPositionStreamEntry, SearchPositionSummary } from '@/components/search-positions/types';
 import { useAutoScroll } from '@/components/shared/useAutoScroll';
+import { appendBounded } from '@/components/shared/render-window';
 import { useStreamingRun } from '@/components/shared/useStreamingRun';
 
 export default function SearchPositionsRunner() {
@@ -30,7 +31,7 @@ export default function SearchPositionsRunner() {
     () => logs.filter((entry): entry is SearchPositionLogEntry & { kind: 'result'; found: boolean } => entry.kind === 'result' && typeof entry.found === 'boolean'),
     [logs],
   );
-  const appendLog = (entry: SearchPositionLogEntry) => setLogs((prev) => [...prev, entry]);
+  const appendLog = (entry: SearchPositionLogEntry) => setLogs((prev) => appendBounded(prev, entry));
 
   function resetRunState(missingOnly: boolean) {
     missingOnlyRef.current = missingOnly;

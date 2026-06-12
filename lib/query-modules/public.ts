@@ -1,4 +1,5 @@
 import { raw } from "@/db/client";
+import type Database from "better-sqlite3";
 import { currentIsoTimestamp } from "@/lib/date-format";
 import { decodeListingCursor, encodeListingCursor } from "@/lib/listing-url";
 import { runInsert } from "@/lib/listings/sql";
@@ -97,6 +98,7 @@ const dealerByDomainCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000,
 const publicListingsCache = createTtlCache<PublicListingsResult>({ ttlMs: 60_000, maxEntries: 500 });
 const publicListingCache = createTtlCache<PublicListingDetail | null>({ ttlMs: 60_000, maxEntries: 2000 });
 const relatedListingsCache = createTtlCache<PublicListing[]>({ ttlMs: 60_000, maxEntries: 1000 });
+const publicListingMakesCache = createTtlCache<string[]>({ ttlMs: 60_000, maxEntries: 200 });
 
 // ── Allowed sort fields (whitelist) ────────────────────────────────────────
 
@@ -153,6 +155,31 @@ const DEALER_SELECT = `
   mobile_url as mobileUrl,
   public_content as publicContentRaw`;
 
+let publicDealerBySlugStmt: Database.Statement<[string], unknown> | null = null;
+let publicDealerByDomainStmt: Database.Statement<[string], unknown> | null = null;
+let publicListingMakesStmt: Database.Statement<[number], unknown> | null = null;
+
+function getPublicDealerBySlugStmt() {
+  publicDealerBySlugStmt ??= raw.prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`);
+  return publicDealerBySlugStmt;
+}
+
+function getPublicDealerByDomainStmt() {
+  publicDealerByDomainStmt ??= raw.prepare(
+    `SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`,
+  );
+  return publicDealerByDomainStmt;
+}
+
+function getPublicListingMakesStmt() {
+  publicListingMakesStmt ??= raw.prepare(
+    `SELECT DISTINCT make FROM listings
+     WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
+     ORDER BY make`,
+  );
+  return publicListingMakesStmt;
+}
+
 /** Parse the stored JSON content blob, tolerating null/legacy/invalid values. */
 function hydrateDealer(row: (PublicDealer & { publicContentRaw?: string | null }) | undefined): PublicDealer | null {
   if (!row) return null;
@@ -171,8 +198,7 @@ function hydrateDealer(row: (PublicDealer & { publicContentRaw?: string | null }
 
 export function getPublicDealer(slug: string): PublicDealer | null {
   return dealerBySlugCache.get(slug, () => {
-    const row = raw
-      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE slug = ? AND active = 1 LIMIT 1`)
+    const row = getPublicDealerBySlugStmt()
       .get(slug) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
     return hydrateDealer(row);
   });
@@ -180,8 +206,7 @@ export function getPublicDealer(slug: string): PublicDealer | null {
 
 export function getDealerByDomain(domain: string): PublicDealer | null {
   return dealerByDomainCache.get(domain, () => {
-    const row = raw
-      .prepare(`SELECT ${DEALER_SELECT} FROM dealers WHERE public_domain = ? AND public_enabled = 1 AND active = 1 LIMIT 1`)
+    const row = getPublicDealerByDomainStmt()
       .get(domain) as (PublicDealer & { publicContentRaw?: string | null }) | undefined;
     return hydrateDealer(row);
   });
@@ -322,19 +347,18 @@ export function getPublicListings(
         .all(...params, queryLimit, offset) as PublicListing[]);
 
     const countListings = () => {
+      if (usesCursor) return Math.max(0, offset + Math.min(rows.length, safeLimit));
       const row = timedQuery("public.listings.count", queryDetails, () => raw
-          .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${countWhere}`)
-          .get(...countParams) as { n: number });
+        .prepare(`SELECT COUNT(*) as n FROM listings l WHERE ${countWhere}`)
+        .get(...countParams) as { n: number });
       return row.n;
     };
 
-    const makeRows = raw
-      .prepare(
-        `SELECT DISTINCT make FROM listings
-       WHERE dealer_id = ? AND is_active = 1 AND make IS NOT NULL
-       ORDER BY make`,
-      )
-      .all(dealerId) as { make: string }[];
+    const makes = publicListingMakesCache.get(String(dealerId), () => {
+      const makeRows = timedQuery("public.listings.makes", { dealerId }, () => getPublicListingMakesStmt()
+        .all(dealerId) as { make: string }[]);
+      return makeRows.map((r) => r.make);
+    });
 
     const pageRows = rows.slice(0, safeLimit);
     const hasNextPage = rows.length > safeLimit;
@@ -345,7 +369,7 @@ export function getPublicListings(
       page: safePage,
       limit: safeLimit,
       nextCursor: hasNextPage ? getPublicNextCursor(pageRows[pageRows.length - 1], sort) : null,
-      makes: makeRows.map((r) => r.make),
+      makes,
     };
   });
 }

@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { tailRenderWindow } from '@/components/shared/render-window';
 import type { LogEntry } from './types';
 
 export function LogPanel({
@@ -10,14 +11,21 @@ export function LogPanel({
   panelRef: RefObject<HTMLDivElement | null>;
   keyPrefix?: string;
 }) {
+  const visibleEntries = tailRenderWindow(entries);
+
   return (
     <div
       ref={panelRef}
       className="rounded-lg border border-gray-700 bg-gray-900 p-3 space-y-1 max-h-[420px] overflow-y-auto"
     >
-      {entries.map((entry, index) => (
+      {visibleEntries.hiddenCount > 0 && (
+        <div className="text-xs py-0.5 font-mono text-gray-500">
+          {visibleEntries.hiddenCount} older entries hidden
+        </div>
+      )}
+      {visibleEntries.items.map((entry, index) => (
         <div
-          key={`${keyPrefix}-${index}-${entry.message}`}
+          key={`${keyPrefix}-${visibleEntries.startIndex + index}-${entry.message}`}
           className={
             entry.kind === 'error'
               ? 'text-xs py-0.5 font-mono text-red-400'

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { memo } from 'react';
 import { ListingThumbPreview } from '@/components/ListingThumbPreview';
 import ListingSearchPrefillButton from '@/components/ListingSearchPrefillButton';
 import { AdStatusBadge } from './AdStatusBadge';
@@ -21,7 +22,7 @@ interface Props {
   };
 }
 
-export function ListingTableRow({ row, currentParams, statuses, basePath, labels }: Props) {
+function ListingTableRowComponent({ row, currentParams, statuses, basePath, labels }: Props) {
   const thumb = getListingThumbSrcFromParts(row);
   const thumbAlt = getListingThumbAlt(row);
   const listingSlug = row.mobile_id || row.cars_id || String(row.id);
@@ -188,3 +189,5 @@ export function ListingTableRow({ row, currentParams, statuses, basePath, labels
     </tr>
   );
 }
+
+export const ListingTableRow = memo(ListingTableRowComponent);

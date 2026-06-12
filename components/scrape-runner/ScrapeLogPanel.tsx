@@ -4,6 +4,7 @@ import type { Ref } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatCount, formatPrice } from '@/lib/utils';
 import { ScrapeThumbnail } from '@/components/scrape-runner/ScrapeThumbnail';
+import { tailRenderWindow } from '@/components/shared/render-window';
 import type { ScrapeLogEntry } from '@/components/scrape-runner/types';
 
 interface ScrapeLogPanelProps {
@@ -14,16 +15,23 @@ interface ScrapeLogPanelProps {
 export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
   const t = useTranslations('ui');
   if (log.length === 0) return null;
+  const visibleLog = tailRenderWindow(log);
 
   return (
     <div
       ref={logRef}
       className="max-h-[600px] space-y-1 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 p-3"
     >
-      {log.map((entry, i) => {
+      {visibleLog.hiddenCount > 0 && (
+        <div className="py-1 font-mono text-xs text-gray-500">
+          {formatCount(visibleLog.hiddenCount)} older entries hidden
+        </div>
+      )}
+      {visibleLog.items.map((entry, i) => {
+        const key = visibleLog.startIndex + i;
         if (entry.type === 'listing') {
           return (
-            <div key={i} className="flex items-start gap-3 border-b border-gray-800 py-1.5 last:border-0">
+            <div key={key} className="flex items-start gap-3 border-b border-gray-800 py-1.5 last:border-0">
               <ScrapeThumbnail src={entry.thumb} href={entry.url} />
               <div className="min-w-0 flex-1 text-xs">
                 {(entry.make || entry.model) && (
@@ -73,15 +81,15 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
 
         if (entry.type === 'done') {
           return (
-            <div key={i} className="py-1 font-mono text-xs text-green-400">
-              ✅ {t('listings_scraped', { dealer: entry.dealer, count: entry.count })}
+            <div key={key} className="py-1 font-mono text-xs text-green-400">
+              ✅ {t('listings_scraped', { dealer: entry.dealer ?? '', count: entry.count ?? 0 })}
             </div>
           );
         }
 
         if (entry.type === 'seeded') {
           return (
-            <div key={i} className="py-1 font-mono text-xs text-blue-400">
+            <div key={key} className="py-1 font-mono text-xs text-blue-400">
               💾 {entry.message || t('data_saved')}
             </div>
           );
@@ -89,7 +97,7 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
 
         if (entry.type === 'error') {
           return (
-            <div key={i} className="py-1 font-mono text-xs text-red-400">
+            <div key={key} className="py-1 font-mono text-xs text-red-400">
               ❌ {entry.message}
             </div>
           );
@@ -97,7 +105,7 @@ export function ScrapeLogPanel({ log, logRef }: ScrapeLogPanelProps) {
 
         if (entry.type === 'log') {
           return (
-            <div key={i} className={`py-0.5 font-mono text-xs ${entry.level === 'stderr' ? 'text-yellow-500/80' : 'text-gray-400'}`}>
+            <div key={key} className={`py-0.5 font-mono text-xs ${entry.level === 'stderr' ? 'text-yellow-500/80' : 'text-gray-400'}`}>
               {entry.level === 'stderr' ? '⚠ ' : ''}{entry.message}
             </div>
           );

@@ -1,12 +1,16 @@
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { requirePagePermission } from '@/lib/api/auth-helpers';
 import ReparseRunner from '@/components/ReparseRunner';
-import MobileBgMakeModelSyncRunner from '@/components/MobileBgMakeModelSyncRunner';
 import { getActiveDealers, getMakeModelMappings } from '@/lib/queries';
 import { formatDate } from '@/lib/utils';
+
+const MobileBgMakeModelSyncRunner = dynamic(() => import('@/components/MobileBgMakeModelSyncRunner'), {
+  loading: () => <div className="rounded border border-gray-700 bg-gray-950/40 p-4 text-sm text-gray-400">Loading sync tool...</div>,
+});
 
 function mappingStatus(row: {
   mobile_make_id: number | null;
