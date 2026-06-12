@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LazyTiptapEditor } from '@/components/editor/LazyTiptapEditor';
 import { apiRequest } from '@/lib/utils';
 import type { ArticleDetailRow, ArticleRow, LabelRow } from '@/lib/queries';
 
@@ -73,7 +73,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
         </div>
         <div className="space-y-2">
           <Label>{t('content')}</Label>
-          <TiptapEditor content={content} onChange={setContent} />
+          <LazyTiptapEditor content={content} onChange={setContent} />
         </div>
         <div className="space-y-2">
           <Label>{t('labels')}</Label>

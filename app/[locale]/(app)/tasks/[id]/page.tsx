@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
-import { TiptapViewer } from '@/components/editor/TiptapViewer';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LazyTiptapViewer } from '@/components/editor/LazyTiptapViewer';
+import { LazyTiptapEditor } from '@/components/editor/LazyTiptapEditor';
 import { formatDateInputValue, formatDateOnly } from '@/lib/date-format';
 import { apiRequest } from '@/lib/utils';
 
@@ -210,7 +210,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       {/* Description */}
       {task.description && (
         <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4">
-          <TiptapViewer content={task.description} />
+          <LazyTiptapViewer content={task.description} />
         </div>
       )}
 
@@ -249,12 +249,12 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 <span className="font-medium text-gray-200">{c.author_name}</span>
                 <span>{formatDateOnly(c.created_at)}</span>
               </div>
-              <TiptapViewer content={c.body} />
+              <LazyTiptapViewer content={c.body} />
             </div>
           ))}
 
           <div className="space-y-2">
-            <TiptapEditor
+            <LazyTiptapEditor
               content={commentBody}
               onChange={setCommentBody}
               placeholder={t('write_a_comment')}

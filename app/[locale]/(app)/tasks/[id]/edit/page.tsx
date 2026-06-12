@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LazyTiptapEditor } from '@/components/editor/LazyTiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import { apiRequest } from '@/lib/utils';
 import type { LabelRow, TaskRow, UserRow } from '@/lib/queries';
@@ -87,7 +87,7 @@ export default function EditTaskPage({ params }: { params: Promise<{ id: string 
 
         <div className="space-y-2">
           <Label>{t('description')}</Label>
-          <TiptapEditor content={description} onChange={setDescription} />
+          <LazyTiptapEditor content={description} onChange={setDescription} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

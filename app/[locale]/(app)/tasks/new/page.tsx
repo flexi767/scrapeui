@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LazyTiptapEditor } from '@/components/editor/LazyTiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow, UserRow } from '@/lib/queries';
 import { apiRequest } from '@/lib/utils';
@@ -73,7 +73,7 @@ export default function NewTaskPage() {
 
         <div className="space-y-2">
           <Label>{t('description')}</Label>
-          <TiptapEditor
+          <LazyTiptapEditor
             content={description}
             onChange={setDescription}
             placeholder={t('describe_the_task')}

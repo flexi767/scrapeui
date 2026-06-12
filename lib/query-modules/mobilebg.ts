@@ -22,7 +22,7 @@ import {
   rankedBackupsCte,
 } from "./types";
 
-export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
+export function getMakeModelMappings(limit = 500, offset = 0): MakeModelMappingRow[] {
   return raw
     .prepare(
       `
@@ -57,9 +57,10 @@ export function getMakeModelMappings(limit = 500): MakeModelMappingRow[] {
       l.make,
       l.model
     LIMIT ?
+    OFFSET ?
   `,
     )
-    .all(limit) as MakeModelMappingRow[];
+    .all(limit, offset) as MakeModelMappingRow[];
 }
 
 export function getMobileBgDashboardSummary(): MobileBgDashboardSummary {

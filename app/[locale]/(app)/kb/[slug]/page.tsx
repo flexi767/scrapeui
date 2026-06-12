@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { TiptapViewer } from '@/components/editor/TiptapViewer';
+import { LazyTiptapViewer } from '@/components/editor/LazyTiptapViewer';
 import { formatDateOnly } from '@/lib/date-format';
 import { apiRequest } from '@/lib/utils';
 import type { ArticleDetailRow, ArticleRow } from '@/lib/queries';
@@ -82,7 +82,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
       )}
 
       <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
-        <TiptapViewer content={article.body} />
+        <LazyTiptapViewer content={article.body} />
       </div>
 
       {article.uploads?.length > 0 && (

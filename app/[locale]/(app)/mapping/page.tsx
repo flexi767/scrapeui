@@ -25,13 +25,35 @@ function mappingStatus(row: {
   return { labelKey: 'unresolved' as const, className: 'bg-red-900/40 text-red-300 border-red-700/60' };
 }
 
-export default async function MappingPage() {
+interface MappingSearchParams {
+  page?: string;
+  limit?: string;
+}
+
+function mappingPageHref(page: number, limit: number) {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  return `/mapping?${params.toString()}`;
+}
+
+export default async function MappingPage({
+  searchParams,
+}: {
+  searchParams: Promise<MappingSearchParams>;
+}) {
   const pageAccess = await requirePagePermission('mapping');
   if ('redirect' in pageAccess) redirect(pageAccess.redirect);
 
+  const sp = await searchParams;
+  const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
+  const limit = Math.min(250, Math.max(25, Number.parseInt(sp.limit ?? '100', 10) || 100));
+  const offset = (page - 1) * limit;
   const t = await getTranslations('ui');
   const dealers = getActiveDealers();
-  const rows = getMakeModelMappings(1000);
+  const pageRows = getMakeModelMappings(limit + 1, offset);
+  const hasNextPage = pageRows.length > limit;
+  const rows = pageRows.slice(0, limit);
   const unresolvedCount = rows.filter((row) => !row.mobile_make_id || !row.mobile_model_id || !row.cars_make_id || !row.cars_model_id).length;
 
   return (
@@ -74,8 +96,8 @@ export default async function MappingPage() {
       </section>
 
       <div className="rounded-lg border border-gray-700 bg-gray-900/40 px-4 py-3 text-sm text-gray-300">
-        {t('found')} <span className="font-semibold text-white">{rows.length}</span> {t('mapping_pairs_with')}{' '}
-        <span className="font-semibold text-red-300">{unresolvedCount}</span> {t('incomplete_pairs')}.
+        Showing <span className="font-semibold text-white">{rows.length}</span> {t('mapping_pairs_with')}{' '}
+        <span className="font-semibold text-red-300">{unresolvedCount}</span> {t('incomplete_pairs')} on page {page}.
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-700/60">
@@ -136,6 +158,28 @@ export default async function MappingPage() {
           </tbody>
         </table>
       </div>
+
+      {(page > 1 || hasNextPage) && (
+        <div className="flex items-center justify-center gap-2 text-sm">
+          {page > 1 && (
+            <Link
+              href={mappingPageHref(page - 1, limit)}
+              className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
+            >
+              {t('prev')}
+            </Link>
+          )}
+          <span className="rounded border border-gray-700 px-3 py-1.5 text-gray-400">Page {page}</span>
+          {hasNextPage && (
+            <Link
+              href={mappingPageHref(page + 1, limit)}
+              className="rounded border border-gray-600 px-3 py-1.5 text-gray-300 hover:border-gray-400 hover:text-white"
+            >
+              {t('next')}
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

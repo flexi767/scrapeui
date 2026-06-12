@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import { LazyTiptapEditor } from '@/components/editor/LazyTiptapEditor';
 import { LinkedCarsSelector } from '@/components/shared/LinkedCarsSelector';
 import type { LabelRow } from '@/lib/queries';
 import { apiRequest } from '@/lib/utils';
@@ -56,7 +56,7 @@ export default function NewArticlePage() {
 
         <div className="space-y-2">
           <Label>{t('content')}</Label>
-          <TiptapEditor content={content} onChange={setContent} placeholder={t('write_your_article')} />
+          <LazyTiptapEditor content={content} onChange={setContent} placeholder={t('write_your_article')} />
         </div>
 
         <div className="space-y-2">
