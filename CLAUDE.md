@@ -360,6 +360,14 @@ sqlite3 /Users/v/dev/scraped/listings.db
 2. **Single-node only**: Job state lives in memory (`lib/api/child-stream.ts`). Horizontal scaling not supported without moving job state to DB and decoupling workers.
 3. **Key env variables**: `CREDENTIALS_ENCRYPTION_KEY` (64 hex, REQUIRED, must match across environments), `ALLOW_DEV_LOGIN=1` (dev login), optional `LM_STUDIO_URL` / `OPENAI_API_KEY` / `OPENAI_FALLBACK_MODEL` (chat LLM fallback).
 
+## Deliberate Non-Refactors
+
+Reviewed and rejected — do not re-propose unless requirements change:
+
+1. **Do not merge `lib/listing-thumb.ts` and `lib/listing-thumbs.ts`.** Despite the names they are not duplicates: `listing-thumb.ts` is client-safe URL building; `listing-thumbs.ts` is server-only filesystem code (`fs/promises`). Merging would pull Node imports toward client bundles.
+2. **No unified MarketplaceAdapter abstraction (yet).** The mobile.bg/cars.bg "fork" is already deduped where it matters (`lib/listings/*`, `scraper/lib/runner.ts`, `lib/dealers/*`); the remaining parallel code (upserts, `run-*-for-ui.ts` main loops) diverges in substance — crawl-run bookkeeping vs. stats totals, different tracked fields. Revisit only when a third marketplace is added.
+3. **No DB-backed job queue.** In-memory job state in `lib/api/child-stream.ts` is fine for the single-node constraint above; jobs already survive client disconnects. Revisit only if multi-node deployment becomes a requirement.
+
 ## Updating This File
 
 **Process:** When you discover a pattern, mistake, or best practice:
