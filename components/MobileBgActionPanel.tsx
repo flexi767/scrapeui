@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
-import { apiRequest, errorMessage } from '@/lib/utils';
+import { runStreamedAction } from '@/lib/streaming-job';
+import { errorMessage } from '@/lib/utils';
 interface DealerOption {
   slug: string;
   name: string;
@@ -40,10 +41,7 @@ export function MobileBgActionPanel({ dealers, defaultDealerSlug, mobileId, back
   ) {
     setRunning(true);
     try {
-      await apiRequest<unknown>(endpoint, t('action_failed'), {
-        method: 'POST',
-        json: payload,
-      });
+      await runStreamedAction(endpoint, payload, t('action_failed'));
       toast.success(successMessage);
       if (typeof window !== 'undefined') window.location.reload();
     } catch (error) {

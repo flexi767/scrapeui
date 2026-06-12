@@ -34,6 +34,33 @@ export async function stopJsonStream(url: string, fallback: string): Promise<voi
   if (!response.ok) throw new Error(await readJsonError(response, fallback));
 }
 
+/**
+ * Run a server-side child-process action (createChildJobRoute endpoint) and
+ * wait for its outcome. Resolves on a `result` event; throws on an `error`
+ * event, a non-OK start response, or a stream that ends without a result.
+ */
+export async function runStreamedAction(
+  url: string,
+  json: unknown,
+  fallbackError: string,
+): Promise<void> {
+  const response = await startJsonStream(url, { json });
+  if (!response.ok || !response.body) {
+    throw new Error(await readJsonError(response, fallbackError));
+  }
+
+  let succeeded = false;
+  let failureMessage: string | null = null;
+  await streamJsonEvents<{ type: string; message?: string }>(response, (event) => {
+    if (event.type === 'result') succeeded = true;
+    if (event.type === 'error') failureMessage = event.message ?? null;
+  });
+
+  if (!succeeded) {
+    throw new Error(failureMessage ?? fallbackError);
+  }
+}
+
 export async function streamJsonEvents<T>(
   response: Response,
   onEvent: (event: T) => void,

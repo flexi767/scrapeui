@@ -1,4 +1,5 @@
 import { OwnListingRow } from '@/lib/queries';
+import { runStreamedAction } from '@/lib/streaming-job';
 import { apiRequest } from '@/lib/utils';
 import {
   buildOwnListingPatchBody,
@@ -14,13 +15,11 @@ export async function saveOwnListingEdit(row: OwnListingRow, form: OwnListingEdi
 }
 
 export async function syncOwnListingToMobileBg(row: OwnListingRow) {
-  await apiRequest<unknown>('/api/mobilebg/updates', 'Sync failed', {
-    method: 'POST',
-    json: {
-      dealerSlug: row.dealer_slug,
-      backupId: row.backup_id,
-    },
-  });
+  await runStreamedAction(
+    '/api/mobilebg/updates',
+    { dealerSlug: row.dealer_slug, backupId: row.backup_id },
+    'Sync failed',
+  );
 }
 
 export async function launchFacebookMarketplaceDraft(row: OwnListingRow) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-helpers';
 import {
   DEFAULT_SUB_LOCATION_OPTIONS,
   fetchSubLocationOptions,
@@ -10,6 +11,9 @@ const log = logger.child('mobilebg');
 export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
+  const check = await requireAuth();
+  if ('error' in check) return check.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const location = (searchParams.get('location') || '').trim();

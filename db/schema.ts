@@ -483,7 +483,10 @@ export const mobileBgBackups = sqliteTable("mobilebg_backups", {
   imageCount: integer("image_count").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => ({
+  dealerMobileIdx: index("idx_mobilebg_backups_dealer_mobile").on(table.dealerId, table.mobileId),
+  listingIdIdx: index("idx_mobilebg_backups_listing_id").on(table.listingId),
+}));
 
 export const mobileBgBackupExtras = sqliteTable(
   "mobilebg_backup_extras",

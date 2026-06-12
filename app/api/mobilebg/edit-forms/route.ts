@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { raw } from '@/db/client';
-import { requireAuth } from '@/lib/api/auth-helpers';
+import { createChildJobRoute } from '@/lib/api/child-stream';
 import { getMobileBgDealerConfig } from '@/lib/dealers/mobileBgDealer';
-import { captureEditFormSnapshot } from '@/lib/mobile-bg/edit-form';
 import { getDealerBySlug } from '@/lib/queries';
 import { z } from 'zod';
 
@@ -13,27 +10,35 @@ const editFormsBodySchema = z.object({
 
 export const runtime = 'nodejs';
 
-export async function POST(req: NextRequest) {
-  const check = await requireAuth();
-  if ('error' in check) return check.error;
+const route = createChildJobRoute({
+  alreadyRunning: 'An edit-form capture is already in progress',
+  disconnectedMessage: 'Client disconnected. Stopping capture…',
+  async prepare(req) {
+    const parsed = editFormsBodySchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return Response.json(
+        { error: 'Invalid request body', details: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const { dealerSlug, mobileId } = parsed.data;
 
-  const rawBody: unknown = await req.json();
-  const parsed = editFormsBodySchema.safeParse(rawBody);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-  const { dealerSlug, mobileId } = parsed.data;
+    if (!getMobileBgDealerConfig(getDealerBySlug(dealerSlug))) {
+      return Response.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
+    }
 
-  const dealer = getDealerBySlug(dealerSlug);
-  const mobileBgDealer = getMobileBgDealerConfig(dealer);
-  if (!mobileBgDealer) {
-    return NextResponse.json({ error: 'Dealer not found or missing mobile.bg credentials' }, { status: 400 });
-  }
+    return {
+      scriptPath: 'scraper/scripts/run-mobilebg-action.ts',
+      scriptArgs: ['--action', 'capture-edit-form', '--dealer', dealerSlug, '--mobile-id', mobileId],
+      options: { silentNonJsonStdout: true },
+    };
+  },
+  stopMessages: {
+    notRunning: 'No edit-form capture is currently running',
+    stopping: 'Stop requested. Terminating capture…',
+    forcingShutdown: 'Capture did not stop in time. Forcing shutdown…',
+  },
+});
 
-  const result = await captureEditFormSnapshot(raw, mobileBgDealer, mobileId);
-
-  return NextResponse.json(result);
-}
+export const POST = route.POST;
+export const DELETE = route.DELETE;

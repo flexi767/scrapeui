@@ -132,12 +132,11 @@ scripts/            # Migration & seed scripts
 
 ### Route Pattern
 
-### Route Pattern
-
 - GET routes: queries only, return `Response.json(data)`
 - POST/PUT routes: mutations, validate session first
 - Always validate query params (use `parseInt` with fallbacks)
 - Limit pagination: max 100 per page
+- Every route must call an auth helper (`requireAuth`, `requireAdmin`, `requireDealerScope`, `requireApiPagePermission`, or `createChildJobRoute`) or be listed in `PUBLIC_ROUTES` in `tests/api-auth-coverage.test.ts` — the middleware skips `/api/` entirely, and that test enforces coverage
 
 ### Error Handling
 
@@ -292,6 +291,7 @@ scripts/            # Migration & seed scripts
 - Draft sync state lives on `mobilebg_backups`: `draft_needs_sync`, `last_mobile_sync_status`, `last_mobile_sync_error`, `last_mobile_sync_at`
 - Mobile.bg repost and update flows use backup draft values plus captured structure from `mobilebg_edit_form_snapshots`
 - If an update needs an edit-form snapshot and none exists, auto-capture it instead of failing hard
+- **Never run Playwright inside an API route handler.** All browser automation (repost, update, edit-form capture, scraping, batch sync) runs in a spawned child process via `createChildJobRoute` (`lib/api/child-stream.ts`); single actions go through `scraper/scripts/run-mobilebg-action.ts`, and clients consume the SSE stream with `runStreamedAction` from `lib/streaming-job.ts`
 - Store Mobile.bg backup images locally under stable per-listing paths, not date-based folders
 - Never store raw HTML long-term; persist structured fields, metadata, and screenshots instead
 
