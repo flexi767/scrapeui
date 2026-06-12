@@ -52,3 +52,6 @@ fb-session/
 .superpowers/
 *.png
 /output/
+
+# Stale local SQLite file — the real DB lives at DB_PATH (../scraped/listings.db)
+/db/data.db
