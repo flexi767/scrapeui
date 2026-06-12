@@ -3,8 +3,9 @@ import type Database from "better-sqlite3";
 import { currentIsoTimestamp } from "@/lib/date-format";
 import { decodeListingCursor, encodeListingCursor } from "@/lib/listing-url";
 import { runInsert } from "@/lib/listings/sql";
-import { createTtlCache } from "@/lib/ttl-cache";
+import { createSharedCache } from "@/lib/cache/shared-cache";
 import { timedQuery } from "./query-utils";
+import { getDealerMakeFacets } from "./facets";
 import { notDuplicateLExpr } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -93,12 +94,12 @@ export interface PublicListingsResult {
 // fresh enough for the app's scrape cadence. These caches are single-node /
 // in-process only (see CLAUDE.md).
 
-const dealerBySlugCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
-const dealerByDomainCache = createTtlCache<PublicDealer | null>({ ttlMs: 60_000, maxEntries: 200 });
-const publicListingsCache = createTtlCache<PublicListingsResult>({ ttlMs: 60_000, maxEntries: 500 });
-const publicListingCache = createTtlCache<PublicListingDetail | null>({ ttlMs: 60_000, maxEntries: 2000 });
-const relatedListingsCache = createTtlCache<PublicListing[]>({ ttlMs: 60_000, maxEntries: 1000 });
-const publicListingMakesCache = createTtlCache<string[]>({ ttlMs: 60_000, maxEntries: 200 });
+const dealerBySlugCache = createSharedCache<PublicDealer | null>({ namespace: "dealer:slug", ttlMs: 60_000, maxEntries: 200 });
+const dealerByDomainCache = createSharedCache<PublicDealer | null>({ namespace: "dealer:domain", ttlMs: 60_000, maxEntries: 200 });
+const publicListingsCache = createSharedCache<PublicListingsResult>({ namespace: "public-listings", ttlMs: 60_000, maxEntries: 500 });
+const publicListingCache = createSharedCache<PublicListingDetail | null>({ namespace: "public-listing", ttlMs: 60_000, maxEntries: 2000 });
+const relatedListingsCache = createSharedCache<PublicListing[]>({ namespace: "related-listings", ttlMs: 60_000, maxEntries: 1000 });
+const publicListingMakesCache = createSharedCache<string[]>({ namespace: "public-makes", ttlMs: 60_000, maxEntries: 200 });
 
 // ── Allowed sort fields (whitelist) ────────────────────────────────────────
 
@@ -355,9 +356,11 @@ export function getPublicListings(
     };
 
     const makes = publicListingMakesCache.get(String(dealerId), () => {
-      const makeRows = timedQuery("public.listings.makes", { dealerId }, () => getPublicListingMakesStmt()
-        .all(dealerId) as { make: string }[]);
-      return makeRows.map((r) => r.make);
+      return getDealerMakeFacets(dealerId, () => {
+        const makeRows = timedQuery("public.listings.makes", { dealerId }, () => getPublicListingMakesStmt()
+          .all(dealerId) as { make: string }[]);
+        return makeRows.map((r) => r.make);
+      });
     });
 
     const pageRows = rows.slice(0, safeLimit);

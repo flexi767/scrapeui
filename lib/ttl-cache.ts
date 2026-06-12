@@ -19,6 +19,8 @@ export interface TtlCache<T> {
   get(key: string, compute: () => T): T;
   /** Store a value using the configured TTL. */
   set(key: string, value: T): void;
+  /** Evict one entry. */
+  delete(key: string): void;
   /** Evict all entries. */
   clear(): void;
 }
@@ -85,6 +87,10 @@ export function createTtlCache<T>(opts: TtlCacheOptions): TtlCache<T> {
 
     set(key: string, value: T): void {
       insert(key, value);
+    },
+
+    delete(key: string): void {
+      store.delete(key);
     },
 
     clear(): void {
