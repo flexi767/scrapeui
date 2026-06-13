@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "backup:db": "tsx scripts/backup-db.ts",
     "perf:query-plans": "tsx scripts/check-hot-query-plans.ts",
     "perf:load": "tsx scripts/load-test.ts",
     "perf:image-cache": "tsx scripts/audit-image-cache.ts",
+    "perf:metrics-smoke": "tsx scripts/metrics-smoke.ts",
+    "facets:rebuild": "tsx scripts/rebuild-dealer-listing-facets.ts",
     "sync:mobilebg-makes-models": "tsx scraper/scripts/sync-mobilebg-makes-models.ts"
   },
   "dependencies": {

@@ -10,6 +10,10 @@ This app now has local guards for hot query plans, load checks, image cache head
    `LOAD_TEST_PATH=/d/example-dealer npm run perf:load`
 4. Audit at least one listing image route:
    `IMAGE_AUDIT_URL=http://localhost:3000/api/images/example.webp npm run perf:image-cache`
+5. Rebuild materialized facets after bulk listing changes:
+   `npm run facets:rebuild`
+6. Smoke-check local metrics collection:
+   `npm run perf:metrics-smoke`
 
 ## Shared Cache
 
@@ -150,6 +154,8 @@ Validation:
 
 The current app has per-process concurrency protection for poster generation and child-job single-run guards for scrape/sync flows. For horizontal scale, this needs a shared queue.
 
+The local foundation is `InMemoryJobQueue` in `lib/queue/job-queue.ts`. It provides dedupe keys, bounded queue size, concurrency, queue age stats, and a worker interface. It is intentionally in-process only; replace the implementation with Redis/Postgres while preserving the same call shape.
+
 Recommended queue shape:
 
 - one queue for scrape/import jobs
@@ -218,3 +224,5 @@ Alert thresholds to start with:
 - Queue provider: Redis-backed, Postgres-backed, managed platform queue, or external worker service.
 - Database target: managed Postgres provider and migration window.
 - CDN purge mechanism: tag-based purge, path purge, or short TTL only.
+
+Track the database migration in `docs/todo-postgres-migration.md`.
